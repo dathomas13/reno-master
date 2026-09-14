@@ -59,7 +59,6 @@ export function useCollection<T>(
       },
     );
     return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collectionName, key]);
 
   return { data, loading, error };

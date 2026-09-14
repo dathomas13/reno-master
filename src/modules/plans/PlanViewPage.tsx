@@ -121,7 +121,7 @@ export default function PlanViewPage() {
       <TopBar title={plan.title} back="/plaene" />
       <div ref={container} className="flex-1 overflow-hidden relative bg-bg touch-none">
         {svg && (
-          // eslint-disable-next-line react/no-danger
+          // the SVG comes from our own build output under public/plans, never from a user
           <div className="origin-top-left w-full h-full" onClick={onSvgClick} dangerouslySetInnerHTML={{ __html: svg }} />
         )}
         {!svg && url && plan.kind === 'pdf' && (
