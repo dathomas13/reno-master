@@ -77,3 +77,39 @@ npm run check:offline   # Syntax, projektinterne Importe und die Unit-Tests
 
 Das 3D-Modell lässt sich ebenfalls ohne Installation prüfen: siehe Abschnitt
 „Verifikation“ in `tools/model/README-MODELL.md`.
+
+## Einrichtung ohne lokale Entwicklungsumgebung
+
+Alles, was für den Betrieb nötig ist, geht über den Browser. Gebaut und veröffentlicht
+wird von GitHub Actions, die Firebase-Einrichtung passiert in der Firebase-Konsole.
+
+1. **Firebase-Projekt** anlegen, Tarif **Blaze** aktivieren (für Storage und Functions
+   nötig, die Nutzung bleibt im Gratis-Kontingent), unter *Abrechnung* einen Budgetalarm
+   auf 1 € setzen.
+2. **Authentication** → *Sign-in method* → **E-Mail/Passwort** aktivieren. Unter *Users*
+   die zwei Konten anlegen. Unter *Settings* → *User actions* die Selbstregistrierung
+   abschalten, sonst könnte sich jeder mit dem öffentlichen API-Key ein Konto anlegen.
+   Unter *Settings* → *Authorized domains* `dathomas13.github.io` ergänzen.
+3. **Firestore Database** anlegen, Region `europe-west3`, Production mode.
+4. **Storage** anlegen, gleiche Region.
+5. **Cloud Messaging** → *Web Push certificates* → Schlüsselpaar erzeugen, den
+   öffentlichen Schlüssel notieren (wird erst für die Abend-Erinnerung gebraucht).
+6. **Projekteinstellungen** → *Meine Apps* → **Web-App registrieren**. Die sechs Werte aus
+   dem Config-Objekt notieren.
+7. **Sicherheitsregeln** aus `firestore.rules` und `storage.rules` in die jeweiligen
+   *Rules*-Editoren der Konsole kopieren und die beiden E-Mail-Adressen einsetzen. Die
+   Adressen bleiben absichtlich aus dem öffentlichen Repo heraus. Achtung: wer später
+   `firebase deploy --only firestore,storage` ausführt, überschreibt die Konsolen-Version
+   mit der aus dem Repo.
+8. **GitHub** → *Settings* → *Secrets and variables* → *Actions* → Reiter **Variables** →
+   die sieben `VITE_...`-Werte als Repository variables anlegen (siehe `.env.example`).
+   Sie sind nicht geheim, sie identifizieren nur das Projekt.
+9. Im Reiter **Actions** den letzten Workflow erneut ausführen (*Re-run all jobs*). Danach
+   läuft die App mit dem Projekt.
+
+**Zusammengesetzte Indizes:** Beim ersten Aufruf einer gefilterten Liste meldet Firestore
+in der Browser-Konsole einen Link „Create index“. Einmal anklicken genügt, die nötigen
+Indizes stehen zusätzlich in `firestore.indexes.json`.
+
+**Was ohne CLI nicht geht:** Cloud Functions lassen sich nur mit der Firebase-CLI
+veröffentlichen. Bis dahin gibt es keine Abend-Erinnerung; alles andere funktioniert.

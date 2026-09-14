@@ -5,9 +5,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Accounts are created by hand in the Firebase console and are NOT e-mail verified,
+    // so do not check email_verified here - it would lock both of us out.
+    // Second layer: disable sign-up in the console (Authentication, Settings, User actions).
     function allowed() {
       return request.auth != null
-        && request.auth.token.email_verified != false
         && request.auth.token.email in [
              'THOMAS_EMAIL_HIER_EINTRAGEN',
              'SARAH_EMAIL_HIER_EINTRAGEN'
