@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
+import { isNative } from '@/platform';
 
 /**
  * The service worker is registered with registerType 'prompt', so a new build never
@@ -10,6 +11,9 @@ export function UpdateBanner() {
   const [update, setUpdate] = useState<(() => Promise<void>) | null>(null);
 
   useEffect(() => {
+    // in the Android app the assets ship with the bundle, there is nothing to cache and
+    // no new version to pick up - updates come through a new APK
+    if (isNative()) return;
     const updateSW = registerSW({
       immediate: true,
       onNeedRefresh() {

@@ -71,7 +71,10 @@ Offen:
 4. `public/img/nordansicht.jpg` ergänzen.
 5. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
-6. Danach Meilenstein M8: Capacitor-APK, MediaStore-Plugin, ML Kit.
+6. **APK**: Die Basis steht (Capacitor 6, Workflow *Android APK*, Debug-Build als
+   Artefakt). Es fehlen noch das eigene MediaStore-Plugin für die Galerie-Auswahl des
+   Tages, ML Kit für das Beleg-Auslesen auf dem Gerät und Push. Push braucht zusätzlich
+   `google-services.json` und den google-services-Gradle-Plugin-Eintrag.
 
 **Achtung bei den Regeln:** `firestore.rules` und `storage.rules` im Repo tragen
 Platzhalter statt der echten Adressen. Die gültige Fassung steht in der Firebase-Konsole.

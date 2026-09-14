@@ -1,0 +1,68 @@
+name: Android APK
+
+# The Android project is generated on the runner instead of being committed: Capacitor
+# regenerates it from capacitor.config.ts and the installed plugins, so it always matches
+# the dependency versions. Commit android/ later if a native file needs editing by hand -
+# the workflow then skips the generation step and only syncs.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'capacitor.config.ts'
+      - 'package.json'
+      - '.github/workflows/android.yml'
+      - 'android/**'
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Abhängigkeiten
+        run: npm install --no-audit --no-fund
+
+      - name: Web-Build für die App (base = /)
+        run: npm run build:app
+        env:
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+          VITE_VAPID_KEY: ${{ vars.VITE_VAPID_KEY }}
+
+      - name: Android-Projekt anlegen, falls es noch keines gibt
+        run: |
+          if [ ! -d android ]; then
+            npx cap add android
+          fi
+
+      - name: Web-Assets und Plugins übernehmen
+        run: npx cap sync android
+
+      - name: Berechtigungen und Icons ergänzen
+        run: node tools/android/patch-android.mjs
+
+      - name: Debug-APK bauen
+        run: ./gradlew --no-daemon assembleDebug
+        working-directory: android
+
+      - name: APK als Artefakt hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: reno-master-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30

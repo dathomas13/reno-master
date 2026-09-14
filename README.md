@@ -113,3 +113,31 @@ Indizes stehen zusätzlich in `firestore.indexes.json`.
 
 **Was ohne CLI nicht geht:** Cloud Functions lassen sich nur mit der Firebase-CLI
 veröffentlichen. Bis dahin gibt es keine Abend-Erinnerung; alles andere funktioniert.
+
+## Android-App (APK)
+
+Die APK ist dieselbe Web-App in einem Capacitor-WebView. Gebaut wird sie von GitHub
+Actions, ein lokales Android Studio ist dafür nicht nötig.
+
+```
+Actions → "Android APK" → Run workflow
+```
+
+Am Ende des Laufs hängt unter *Artifacts* die Datei `reno-master-debug-apk`. Herunterladen,
+auf das Handy kopieren, Installation aus unbekannter Quelle erlauben, installieren. Es ist
+ein Debug-Build, signiert mit dem Standard-Debug-Schlüssel: gut zum Ausprobieren, nicht für
+den Play Store.
+
+Das Verzeichnis `android/` liegt bewusst **nicht** im Repo. Capacitor erzeugt es im Lauf neu
+aus `capacitor.config.ts` und den installierten Plugins, damit es nie zu den Abhängigkeiten
+aus dem Takt gerät. `tools/android/patch-android.mjs` trägt danach unsere Berechtigungen,
+den App-Namen und den dunklen Fensterhintergrund ein. Sobald eine native Datei von Hand
+bearbeitet werden muss, kann `android/` committet werden; der Workflow überspringt dann das
+Erzeugen und synchronisiert nur noch.
+
+Lokal, falls doch einmal ein Rechner mit Android SDK da ist:
+
+```bash
+npm run android:sync     # Web-Build mit base=/ und cap sync
+npm run android:open     # Android Studio
+```
