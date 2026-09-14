@@ -93,7 +93,7 @@ describe('budgetPerTrade', () => {
 describe('toCsv', () => {
   it('writes a German CSV Excel can open', () => {
     const csv = toCsv([cost({ date: '2026-09-01', amountGross: 1234.5, vendor: 'Bau "Meier"' })], formatAmount);
-    expect(csv.startsWith('﻿')).toBe(true);
+    expect(csv.startsWith('\ufeff')).toBe(true);
     expect(csv).toContain('"1.234,50"');
     expect(csv).toContain('"Bau ""Meier"""');
     expect(csv.split('\r\n')).toHaveLength(2);

@@ -51,7 +51,7 @@ function plausibleDate(year: number, month: number, day: number): string | undef
 /** all dates in a line, German and ISO notation */
 function datesIn(line: string): string[] {
   const found: string[] = [];
-  for (const match of line.matchAll(/\b(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{2,4})\b/g)) {
+  for (const match of line.matchAll(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})\b/g)) {
     const day = Number(match[1]);
     const month = Number(match[2]);
     let year = Number(match[3]);
@@ -177,7 +177,7 @@ export function parseReceiptText(rawText: string): ReceiptFields {
   // ---------------------------------------------------------------- invoice number
   for (const line of lines) {
     if (!INVOICE_KEYWORDS.test(line)) continue;
-    const match = /(?:nr|nummer)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-/]{2,})/i.exec(line);
+    const match = /(?:nr|nummer)\.?\s*[:#]?\s*([A-Z0-9][A-Z0-9/-]{2,})/i.exec(line);
     if (match) {
       fields.invoiceNumber = match[1];
       break;

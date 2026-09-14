@@ -93,5 +93,6 @@ export function toCsv(costs: Cost[], formatAmount: (value: number) => string): s
     cost.invoiceNumber ?? '',
   ]);
   const escape = (cell: unknown) => `"${String(cell ?? '').replace(/"/g, '""')}"`;
-  return `﻿${[header, ...rows].map((row) => row.map(escape).join(';')).join('\r\n')}`;
+  // \uFEFF is the byte order mark that makes Excel read the file as UTF-8
+  return `\ufeff${[header, ...rows].map((row) => row.map(escape).join(';')).join('\r\n')}`;
 }

@@ -34,7 +34,8 @@ describe('parseAmount', () => {
 
 describe('formatting', () => {
   it('formats euro amounts in German', () => {
-    expect(formatEuro(1234.5).replace(/ /g, ' ')).toBe('1.234,50 €');
+    // Intl separates the amount from the sign with a non breaking space
+    expect(formatEuro(1234.5).replace(/[\u00a0\u202f]/g, ' ')).toBe('1.234,50 €');
     expect(formatAmount(0.5)).toBe('0,50');
   });
 });

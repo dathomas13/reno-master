@@ -25,11 +25,8 @@ jobs:
       # no package-lock.json yet: it is generated on the first local install and should
       # be committed afterwards, then this can go back to `npm ci`
       - run: npm install --no-audit --no-fund
-      # lint and tests must not block the first deployments; CI on pull requests is strict
       - run: npm run lint
-        continue-on-error: true
       - run: npm run test
-        continue-on-error: true
       - run: npm run build
         env:
           VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}

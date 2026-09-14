@@ -7,12 +7,14 @@ service cloud.firestore {
 
     // Accounts are created by hand in the Firebase console and are NOT e-mail verified,
     // so do not check email_verified here - it would lock both of us out.
+    // Firebase stores addresses lower cased, so compare lower cased and keep the entries
+    // below in lower case too; a capital letter in the list would deny that account.
     // Second layer: disable sign-up in the console (Authentication, Settings, User actions).
     function allowed() {
       return request.auth != null
-        && request.auth.token.email in [
-             'THOMAS_EMAIL_HIER_EINTRAGEN',
-             'SARAH_EMAIL_HIER_EINTRAGEN'
+        && request.auth.token.email.lower() in [
+             'thomas_email_hier_eintragen',
+             'sarah_email_hier_eintragen'
            ];
     }
 

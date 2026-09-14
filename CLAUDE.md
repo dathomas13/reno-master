@@ -50,24 +50,33 @@ unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
 
 ## Stand (14.09.2026)
 
-Fertig und geprüft:
+Live unter <https://dathomas13.github.io/reno-master/>, gebaut und veröffentlicht von
+GitHub Actions aus dem Branch `claude/sweet-franklin-t348jz`.
 
-- Modell-Pipeline: `public/models/ist.json` (132 Bauteile), Räume (40), Grundriss-SVGs,
-  Manifest. Im Chromium-Harness gerendert, Raumauswahl getestet.
-- App-Code vollständig geschrieben: Shell, Login, Start, Tagebuch, 3D, Pläne, Kosten,
-  Aufgaben, Kontakte, Einstellungen, Service Worker, Cloud Function.
-- 119 Unit-Tests (Beträge, Datum, Belegparser, Claude-Antwortprüfung, Kostenauswertung).
-- Syntax und alle projektinternen Importe geprüft.
+Steht:
 
-Offen, weil in dieser Umgebung keine npm-Registry erreichbar war:
+- Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
+  Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
+- Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
+- Modell-Pipeline, alle Bildschirme, Service Worker, 119 Unit-Tests.
 
-1. `npm install` und danach einmal `npm run typecheck`, `npm run lint`, `npm run build`.
-   Erwartbar sind kleinere Typkorrekturen an den Stellen, wo React-, Firebase- oder
-   three.js-Typen genau geprüft werden – die Logik selbst ist getestet.
-2. Firebase-Projekt anlegen und `.env` füllen (siehe README).
-3. `public/img/nordansicht.jpg` ergänzen.
-4. Notion-Import ausführen (`tools/import`).
-5. Danach Meilenstein M8: Capacitor-APK, MediaStore-Plugin, ML Kit.
+Offen:
+
+1. **Blaze-Tarif.** Ohne ihn gibt es kein Cloud Storage, also keine Fotos und keine Belege,
+   und keine Cloud Functions, also keine Abend-Erinnerung. Text-Einträge, Kosten, Aufgaben,
+   Kontakte, 3D und Pläne laufen ohne.
+2. **Cloud Function veröffentlichen** (`cd functions && npm install && npm run deploy`),
+   sobald eine Kommandozeile mit Firebase-CLI verfügbar ist.
+3. **Notion-Import** (`tools/import`), braucht `firebase-admin` und einen Service-Account.
+4. `public/img/nordansicht.jpg` ergänzen.
+5. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
+   wieder durch `npm ci` ersetzen.
+6. Danach Meilenstein M8: Capacitor-APK, MediaStore-Plugin, ML Kit.
+
+**Achtung bei den Regeln:** `firestore.rules` und `storage.rules` im Repo tragen
+Platzhalter statt der echten Adressen. Die gültige Fassung steht in der Firebase-Konsole.
+Wer `firebase deploy --only firestore,storage` ausführt, überschreibt sie mit den
+Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein geschrieben.
 
 ## Regeln
 

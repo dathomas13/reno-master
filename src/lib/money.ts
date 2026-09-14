@@ -34,7 +34,8 @@ export function formatEuroShort(amount: number): string {
  */
 export function parseAmount(input: string): number | null {
   if (typeof input !== 'string') return null;
-  let text = input.replace(/[€\s ]/g, '').replace(/^EUR/i, '');
+  // \u00A0 and \u202F are the (narrow) non breaking spaces Intl puts before the euro sign
+  let text = input.replace(/[\u20ac\s\u00a0\u202f]/g, '').replace(/^EUR/i, '');
   if (!text) return null;
   const negative = /^-/.test(text) || /-$/.test(text);
   text = text.replace(/-/g, '');
