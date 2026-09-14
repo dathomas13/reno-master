@@ -55,6 +55,20 @@ jobs:
       - name: Berechtigungen und Icons ergänzen
         run: node tools/android/patch-android.mjs
 
+      - name: Prüfen, dass die Anpassungen wirklich drinstehen
+        run: |
+          set -e
+          manifest=android/app/src/main/AndroidManifest.xml
+          for permission in CAMERA POST_NOTIFICATIONS READ_MEDIA_IMAGES READ_EXTERNAL_STORAGE; do
+            grep -q "android.permission.$permission" "$manifest" \
+              || { echo "Berechtigung fehlt im Manifest: $permission"; exit 1; }
+          done
+          grep -q ">Reno Master<" android/app/src/main/res/values/strings.xml \
+            || { echo "App-Name wurde nicht gesetzt"; exit 1; }
+          test -f android/app/src/main/assets/public/index.html \
+            || { echo "Web-Assets fehlen im Projekt"; exit 1; }
+          echo "Manifest, App-Name und Web-Assets sind in Ordnung."
+
       - name: Debug-APK bauen
         run: ./gradlew --no-daemon assembleDebug
         working-directory: android

@@ -26,7 +26,8 @@ const config: CapacitorConfig = {
       androidSplashResourceName: 'splash',
     },
     LocalNotifications: {
-      smallIcon: 'ic_stat_icon',
+      // no smallIcon on purpose: naming a drawable that the template does not ship makes
+      // notifications fail silently at runtime. Add one with the icon, then set it here.
       iconColor: '#c9a86a',
     },
   },
