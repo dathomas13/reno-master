@@ -48,6 +48,27 @@ Belege, Pläne) kann Storage nicht offline puffern, deshalb gehen sie über die 
 Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
 
+## Stand (14.09.2026)
+
+Fertig und geprüft:
+
+- Modell-Pipeline: `public/models/ist.json` (132 Bauteile), Räume (40), Grundriss-SVGs,
+  Manifest. Im Chromium-Harness gerendert, Raumauswahl getestet.
+- App-Code vollständig geschrieben: Shell, Login, Start, Tagebuch, 3D, Pläne, Kosten,
+  Aufgaben, Kontakte, Einstellungen, Service Worker, Cloud Function.
+- 119 Unit-Tests (Beträge, Datum, Belegparser, Claude-Antwortprüfung, Kostenauswertung).
+- Syntax und alle projektinternen Importe geprüft.
+
+Offen, weil in dieser Umgebung keine npm-Registry erreichbar war:
+
+1. `npm install` und danach einmal `npm run typecheck`, `npm run lint`, `npm run build`.
+   Erwartbar sind kleinere Typkorrekturen an den Stellen, wo React-, Firebase- oder
+   three.js-Typen genau geprüft werden – die Logik selbst ist getestet.
+2. Firebase-Projekt anlegen und `.env` füllen (siehe README).
+3. `public/img/nordansicht.jpg` ergänzen.
+4. Notion-Import ausführen (`tools/import`).
+5. Danach Meilenstein M8: Capacitor-APK, MediaStore-Plugin, ML Kit.
+
 ## Regeln
 
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
