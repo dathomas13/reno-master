@@ -18,6 +18,7 @@ import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitCo
 import { RoomPanel } from './RoomPanel';
 import { loadManifest, loadRooms, loadScene, type ModelManifest, type Variant } from '@/data/models';
 import { loadSettings, saveSettings } from '@/lib/settings';
+import { isAuthenticated } from '@/firebase/auth';
 import { Spinner } from '@/components/Fields';
 
 export default function ViewerPage() {
@@ -223,9 +224,13 @@ export default function ViewerPage() {
   }
 
   const info = manifest?.[variant];
+  // the preview has no bottom navigation, so the controls can use that space
+  const bottomOffset = isAuthenticated()
+    ? 'bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-2'
+    : 'bottom-[max(0.5rem,env(safe-area-inset-bottom))]';
 
   return (
-    <div className="relative h-[100dvh] md:h-screen overflow-hidden">
+    <div className="relative h-[calc(100dvh-2.25rem)] md:h-screen overflow-hidden">
       <canvas ref={canvasRef} className="canvas-3d absolute inset-0 w-full h-full block" />
 
       {/* header */}
@@ -278,7 +283,7 @@ export default function ViewerPage() {
       {room && <RoomPanel room={room} onClose={() => { setRoom(null); houseRef.current?.highlightRoom(null); renderRef.current?.(); }} />}
 
       {/* controls */}
-      <div className="absolute left-2 right-2 bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-2 flex flex-wrap gap-1.5">
+      <div className={`absolute left-2 right-2 ${bottomOffset} flex flex-wrap gap-1.5`}>
         {LAYERS.map((layer) => (
           <button
             key={layer}
