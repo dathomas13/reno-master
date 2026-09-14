@@ -8,6 +8,7 @@
     "android:open": "npx cap open android",
     "android:sync": "npm run build:app && npx cap sync android",
     "build": "tsc --noEmit && vite build",
+    "icons": "node tools/icon/build-icons.mjs",
     "build:app": "CAP=1 vite build",
     "check:offline": "node tools/verify/typecheck-without-npm.mjs && node tools/verify/run-tests-without-npm.mjs",
     "dev": "vite",

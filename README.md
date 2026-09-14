@@ -188,6 +188,22 @@ Wegwerf-Schlüssel, deshalb verweigert Android die Installation über die alte F
 in Firestore und sind davon nicht betroffen; verloren gehen nur lokale Einstellungen und
 noch nicht hochgeladene Dateien.
 
+### App-Icon
+
+Die Zeichnung liegt als `tools/icon/icon.svg`: das Haus von der Giebelseite mit der echten
+Dachneigung von 36°, entlang des Firsts geteilt — links der Bestand, rechts der Zielzustand
+in der Akzentfarbe, die Tür auf der Naht gehört beiden Hälften. Nach einer Änderung:
+
+```bash
+npm run icons
+```
+
+Das erzeugt die PWA-Icons in `public/img/` und die Launcher-Icons in `tools/icon/android/`
+(alle Bildschirmdichten, dazu das Vordergrundbild für Androids adaptives Icon). Die PNGs
+sind committet, der CI-Lauf kopiert sie nur noch; er bricht ab, wenn sie nicht im
+erzeugten Projekt landen. Zum Rendern braucht `npm run icons` ein Chromium auf der
+Maschine — notfalls den Pfad über `CHROMIUM=` vorgeben.
+
 ### Eigenes Plugin
 
 `plugins/mediastore` liest die Fotogalerie nach Aufnahmedatum, damit das Bautagebuch beim

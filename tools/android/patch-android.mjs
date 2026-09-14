@@ -22,6 +22,17 @@ if (!fs.existsSync(root)) {
 
 const changes = [];
 
+/** replaces a file in the generated project with one of ours, if the template has it */
+function replaceFile(file, source, note) {
+  const full = path.join(root, file);
+  if (!fs.existsSync(full)) return false;
+  const wanted = fs.readFileSync(source);
+  if (fs.readFileSync(full).equals(wanted)) return true;
+  fs.writeFileSync(full, wanted);
+  changes.push(`${file}: ${note}`);
+  return true;
+}
+
 function edit(file, change, note) {
   const full = path.join(root, file);
   if (!fs.existsSync(full)) {
@@ -86,6 +97,34 @@ edit(
             '\n        <item name="android:windowBackground">#1d2126</item>',
         ),
   'dunkler Fensterhintergrund',
+);
+
+// ---------------------------------------------------------------- launcher icon
+// Capacitor ships its own placeholder icon. Ours is generated from tools/icon/icon.svg
+// (see tools/icon/build-icons.mjs) and committed, so the build only copies it.
+const DENSITIES = ['mdpi', 'hdpi', 'xhdpi', 'xxhdpi', 'xxxhdpi'];
+const ICON_SOURCE = path.join(process.cwd(), 'tools/icon/android');
+
+let iconsFound = 0;
+for (const density of DENSITIES) {
+  for (const name of ['ic_launcher', 'ic_launcher_round', 'ic_launcher_foreground']) {
+    const source = path.join(ICON_SOURCE, `${name}-${density}.png`);
+    if (!fs.existsSync(source)) continue;
+    if (replaceFile(`app/src/main/res/mipmap-${density}/${name}.png`, source, 'App-Icon ersetzt')) {
+      iconsFound += 1;
+    }
+  }
+}
+if (iconsFound === 0) {
+  console.error('Kein einziges Launcher-Icon gefunden - hat Capacitor die Pfade geändert?');
+  process.exit(1);
+}
+
+// the adaptive icon shows this colour behind our drawing
+edit(
+  'app/src/main/res/values/ic_launcher_background.xml',
+  (xml) => xml.replace(/>#[0-9a-fA-F]{6,8}</, '>#1d2126<'),
+  'Icon-Hintergrund auf das App-Dunkel gesetzt',
 );
 
 // ---------------------------------------------------------------- version

@@ -107,6 +107,9 @@ jobs:
             || { echo "Die Versionsnummer wurde nicht gesetzt"; exit 1; }
           grep -q "signingConfigs" android/app/build.gradle \
             || { echo "Der Signatur-Block fehlt in app/build.gradle"; exit 1; }
+          cmp -s tools/icon/android/ic_launcher-xxxhdpi.png \
+                 android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png \
+            || { echo "Das App-Icon wurde nicht übernommen"; exit 1; }
           echo "Manifest, App-Name, Web-Assets, Plugins und Version sind in Ordnung."
 
       - name: APK bauen

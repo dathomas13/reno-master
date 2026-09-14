@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Reno Master app icon.
+
+    The house of Schlesierstraße 31 from the gable end, with the roof pitch the real
+    building has (36 degrees). It is split along the ridge: left the house as it stands,
+    right the renovated one in the app's accent colour. The door sits on the seam and
+    belongs to both halves - the whole app in one mark: Ist and Soll, one house.
+
+    Keep it readable at 48 px: two solid shapes, two windows, one door, nothing else.
+    Regenerate the PNGs with: node tools/icon/build-icons.mjs
+  -->
+  <defs>
+    <path id="house"
+          d="M 256 131 L 444 268 L 408 268 L 408 410 L 104 410 L 104 268 L 68 268 Z" />
+    <clipPath id="left"><rect x="0" y="0" width="256" height="512" /></clipPath>
+    <clipPath id="right"><rect x="256" y="0" width="256" height="512" /></clipPath>
+  </defs>
+
+  <!-- chimney first: the roof edge cuts it off where it meets the tiles -->
+  <rect x="336" y="168" width="38" height="70" fill="#a98a4f" />
+
+  <!-- left: the building as it is -->
+  <g clip-path="url(#left)">
+    <use href="#house" fill="#4a5765" />
+    <rect x="146" y="300" width="68" height="60" rx="5" fill="#1d2126" />
+  </g>
+
+  <!-- right: the same house renovated -->
+  <g clip-path="url(#right)">
+    <use href="#house" fill="#c9a86a" />
+    <rect x="298" y="300" width="68" height="60" rx="5" fill="#1d2126" />
+  </g>
+
+  <!-- the ridge seam holds the two halves apart at every size -->
+  <rect x="253" y="131" width="6" height="279" fill="#1d2126" />
+
+  <!-- one door for both states, straddling the seam -->
+  <path d="M 218 410 V 374 A 38 38 0 0 1 294 374 V 410 Z" fill="#1d2126" />
+</svg>
