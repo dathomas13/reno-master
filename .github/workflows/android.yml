@@ -67,7 +67,9 @@ jobs:
             || { echo "App-Name wurde nicht gesetzt"; exit 1; }
           test -f android/app/src/main/assets/public/index.html \
             || { echo "Web-Assets fehlen im Projekt"; exit 1; }
-          echo "Manifest, App-Name und Web-Assets sind in Ordnung."
+          grep -q "reno-mediastore" android/capacitor.settings.gradle \
+            || { echo "Das MediaStore-Plugin wurde nicht eingebunden"; exit 1; }
+          echo "Manifest, App-Name, Web-Assets und Plugins sind in Ordnung."
 
       - name: Debug-APK bauen
         run: ./gradlew --no-daemon assembleDebug

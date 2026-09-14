@@ -3,6 +3,7 @@ import { PhotoImage } from '@/components/PhotoView';
 import { addPhoto, deletePhoto } from '@/data/photos';
 import {
   pickPhotos, pickFiles, galleryPickerAvailable, listGalleryPhotosForDay, readGalleryPhoto,
+  galleryThumbnail, type GalleryPhoto,
 } from '@/platform/photos';
 import { formatDate } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
@@ -21,13 +22,6 @@ interface PhotoAttachProps {
   onFileChosen?(file: Blob, contentType: string): void;
   /** open the camera as soon as the screen is shown (app shortcut "Beleg erfassen") */
   autoCapture?: boolean;
-}
-
-interface GalleryItem {
-  uri: string;
-  name: string;
-  takenAt: string;
-  bytes: number;
 }
 
 /**
@@ -52,7 +46,8 @@ export function PhotoAttach({
   const [busy, setBusy] = useState(false);
   const captured = useRef(false);
   const [dayOpen, setDayOpen] = useState(false);
-  const [dayPhotos, setDayPhotos] = useState<GalleryItem[]>([]);
+  const [dayPhotos, setDayPhotos] = useState<GalleryPhoto[]>([]);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [warning, setWarning] = useState<string | null>(null);
 
   async function addFromBlobs(items: { blob: Blob; name?: string; takenAt?: string; sourceUri?: string }[]) {
@@ -101,11 +96,18 @@ export function PhotoAttach({
 
   async function openDayGallery() {
     if (!forDate) return;
-    setDayPhotos(await listGalleryPhotosForDay(forDate));
+    const photos = await listGalleryPhotosForDay(forDate);
+    setDayPhotos(photos);
+    setThumbs({});
     setDayOpen(true);
+    // load the previews one by one so the sheet appears immediately
+    for (const photo of photos.slice(0, 60)) {
+      const url = await galleryThumbnail(photo.uri);
+      if (url) setThumbs((current) => ({ ...current, [photo.uri]: url }));
+    }
   }
 
-  async function addFromGallery(item: GalleryItem) {
+  async function addFromGallery(item: GalleryPhoto) {
     const blob = await readGalleryPhoto(item.uri);
     if (!blob) return;
     onFileChosen?.(blob, blob.type || 'image/jpeg');
@@ -181,10 +183,17 @@ export function PhotoAttach({
               <button
                 key={item.uri}
                 type="button"
-                className="aspect-square bg-panel2 rounded-lg overflow-hidden"
+                className="aspect-square bg-panel2 rounded-lg overflow-hidden relative"
                 onClick={() => void addFromGallery(item).then(() => setDayOpen(false))}
               >
-                <span className="text-[10px] text-muted p-1 block truncate">{item.name}</span>
+                {thumbs[item.uri] ? (
+                  <img src={thumbs[item.uri]} alt={item.name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-[10px] text-muted p-1 block truncate">{item.name}</span>
+                )}
+                <span className="absolute bottom-0 inset-x-0 text-[10px] bg-bg/70 truncate px-1">
+                  {item.takenAt.slice(11, 16)}
+                </span>
               </button>
             ))}
           </div>

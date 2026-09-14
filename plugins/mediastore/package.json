@@ -1,0 +1,17 @@
+{
+  "name": "@reno/mediastore",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Liest die Galerie des Geräts nach Tag und öffnet Originale, ohne sie zu kopieren",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["android/", "index.js", "index.d.ts"],
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.2.0"
+  }
+}

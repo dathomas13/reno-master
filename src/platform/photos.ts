@@ -31,10 +31,18 @@ export interface PickOptions {
   multiple?: boolean;
 }
 
+export interface GalleryPhoto {
+  uri: string;
+  name: string;
+  takenAt: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
+
 interface MediaStorePlugin {
-  listPhotos(options: { from: string; to: string; limit?: number }): Promise<{
-    photos: { uri: string; name: string; takenAt: string; bytes: number }[];
-  }>;
+  listPhotos(options: { from: string; to: string; limit?: number }): Promise<{ photos: GalleryPhoto[] }>;
+  getThumbnail(options: { uri: string; size?: number }): Promise<{ base64: string; mime: string }>;
   readImage(options: { uri: string; maxEdge: number }): Promise<{ base64: string; mime: string }>;
   openInGallery(options: { uri: string }): Promise<void>;
 }
@@ -52,11 +60,28 @@ function base64ToBlob(base64: string, mime: string): Blob {
 }
 
 /** photos of one day straight from the gallery index, newest first (native only) */
-export async function listGalleryPhotosForDay(date: string, limit = 200) {
+export async function listGalleryPhotosForDay(date: string, limit = 200): Promise<GalleryPhoto[]> {
   const plugin = mediaStore();
   if (!plugin) return [];
-  const { photos } = await plugin.listPhotos({ from: date, to: date, limit });
-  return photos;
+  try {
+    const { photos } = await plugin.listPhotos({ from: date, to: date, limit });
+    return photos;
+  } catch {
+    // permission denied or no gallery access - the file picker stays as the way in
+    return [];
+  }
+}
+
+/** small preview for the day grid, as a data URL */
+export async function galleryThumbnail(uri: string, size = 320): Promise<string | null> {
+  const plugin = mediaStore();
+  if (!plugin) return null;
+  try {
+    const { base64, mime } = await plugin.getThumbnail({ uri, size });
+    return `data:${mime};base64,${base64}`;
+  } catch {
+    return null;
+  }
 }
 
 export async function openOriginalInGallery(sourceUri: string): Promise<boolean> {
