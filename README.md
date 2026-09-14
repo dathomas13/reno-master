@@ -114,6 +114,26 @@ Indizes stehen zusätzlich in `firestore.indexes.json`.
 **Was ohne CLI nicht geht:** Cloud Functions lassen sich nur mit der Firebase-CLI
 veröffentlichen. Bis dahin gibt es keine Abend-Erinnerung; alles andere funktioniert.
 
+## Fotos, Originale und Archiv
+
+Hochgeladen wird normalerweise eine verkleinerte Fassung (1600 px) plus Vorschaubild; das
+Original bleibt in der Galerie. Für Aufnahmen, die Jahre später noch in voller Auflösung
+gebraucht werden — Kabelverläufe, Leitungen, alles was hinter einer Wand verschwindet —
+gibt es über der Fotoleiste den Schalter **Original sichern**: dann geht die unveränderte
+Datei zusätzlich in den Speicher, und die Vollbildansicht bietet „Original laden".
+
+Wichtig zu wissen: die gespeicherte `content://`-Adresse des Galeriebilds ist eine
+laufende Nummer in der Mediendatenbank *dieses* Geräts. Nach einem Handywechsel zeigt sie
+ins Leere. Nur das gesicherte Original überlebt den Wechsel.
+
+**Archiv:** Einstellungen → *Archiv exportieren* packt alles in eine ZIP-Datei — Fotos nach
+Tagen sortiert, das Tagebuch als lesbaren Text, die Daten als JSON. Der ZIP-Schreiber liegt
+als `src/lib/zip.ts` im Repo (ohne Abhängigkeit, ohne Kompression — JPEGs lassen sich
+ohnehin nicht weiter packen) und schreibt ZIP64, sobald ein Archiv über 4 GB geht.
+Geschrieben wird direkt in eine Datei, die im Speicherdialog ausgewählt wird; das geht nur
+im Desktop-Browser. Am Handy müsste das Archiv komplett in den Arbeitsspeicher, dafür
+reicht es bei dieser Größe nicht — die App sagt das dort auch.
+
 ## Android-App (APK)
 
 Die APK ist dieselbe Web-App in einem Capacitor-WebView. Gebaut wird sie von GitHub
