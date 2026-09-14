@@ -116,11 +116,14 @@ veröffentlichen. Bis dahin gibt es keine Abend-Erinnerung; alles andere funktio
 
 ## Fotos, Originale und Archiv
 
-Hochgeladen wird normalerweise eine verkleinerte Fassung (1600 px) plus Vorschaubild; das
-Original bleibt in der Galerie. Für Aufnahmen, die Jahre später noch in voller Auflösung
-gebraucht werden — Kabelverläufe, Leitungen, alles was hinter einer Wand verschwindet —
-gibt es über der Fotoleiste den Schalter **Original sichern**: dann geht die unveränderte
-Datei zusätzlich in den Speicher, und die Vollbildansicht bietet „Original laden".
+Hochgeladen werden eine verkleinerte Fassung (1600 px), ein Vorschaubild und — solange
+der Schalter **Original sichern** über der Fotoleiste an ist, was der Standard ist — die
+unveränderte Datei dazu. Die Vollbildansicht bietet dann „Original laden". Ausschalten
+lohnt nur, wenn der Speicher knapp wird: ein Original wiegt etwa das Zehnfache.
+
+Wer den Schalter zwischendurch aus hatte, holt das in den Einstellungen unter **Originale
+nachladen** nach. Das geht nur in der App auf dem Gerät, das die Fotos aufgenommen hat,
+und nur solange die Bilder dort noch in der Galerie liegen.
 
 Wichtig zu wissen: die gespeicherte `content://`-Adresse des Galeriebilds ist eine
 laufende Nummer in der Mediendatenbank *dieses* Geräts. Nach einem Handywechsel zeigt sie

@@ -6,6 +6,7 @@ import { signOut } from '@/firebase/auth';
 import { APP_VERSION, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
 import { ExportSection } from './ExportSection';
+import { BackfillOriginals } from './BackfillOriginals';
 import { loadManifest, type ModelManifest } from '@/data/models';
 import { listJobs, retryAll, type OutboxJob } from '@/offline/outbox';
 import { activeExtractor } from '@/platform/ocr';
@@ -98,6 +99,8 @@ export default function SettingsPage() {
           </button>
           {pushMessage && <p className="text-sm text-muted mt-2">{pushMessage}</p>}
         </section>
+
+        <BackfillOriginals />
 
         <ExportSection />
 
