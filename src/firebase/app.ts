@@ -31,7 +31,16 @@ export const useEmulators = import.meta.env.VITE_USE_EMULATORS === '1';
 export const isFirebaseConfigured = Boolean(config.apiKey && config.projectId);
 
 export const app: FirebaseApp = initializeApp(
-  isFirebaseConfigured ? config : { apiKey: 'demo', projectId: 'demo-reno-master', appId: 'demo' },
+  isFirebaseConfigured
+    ? config
+    : {
+        // placeholder project so the preview starts before Firebase exists
+        apiKey: 'demo',
+        projectId: 'demo-reno-master',
+        appId: 'demo',
+        storageBucket: 'demo-reno-master.appspot.com',
+        authDomain: 'demo-reno-master.firebaseapp.com',
+      },
 );
 
 export const db: Firestore = initializeFirestore(app, {

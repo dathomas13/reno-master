@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { Spinner } from '@/components/Fields';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { startOutboxWorker } from '@/offline/outbox';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import LoginPage from '@/modules/auth/LoginPage';
 import HomePage from '@/modules/home/HomePage';
@@ -94,11 +95,13 @@ function Protected() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <HashRouter>
-        <UpdateBanner />
-        <Protected />
-      </HashRouter>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <HashRouter>
+          <UpdateBanner />
+          <Protected />
+        </HashRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
