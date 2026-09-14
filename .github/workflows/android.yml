@@ -155,10 +155,16 @@ jobs:
           else
             hinweis="Debug-Build mit Wegwerf-Schlüssel. Android verweigert die Installation über eine ältere Fassung - die alte App vorher deinstallieren."
           fi
-          gh release create "$tag" \
-            reno-master.apk \
-            --title "Reno Master $(git log -1 --format=%cs) ($(git rev-parse --short HEAD))" \
-            --notes "$(git log -1 --format=%s)
+          # ein erneut gestarteter Lauf trägt dieselbe Nummer, der Tag ist dann schon da:
+          # in dem Fall nur die Datei ersetzen, statt am vorhandenen Release zu scheitern
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" reno-master.apk --clobber
+          else
+            gh release create "$tag" \
+              reno-master.apk \
+              --title "Reno Master $(git log -1 --format=%cs) ($(git rev-parse --short HEAD))" \
+              --notes "$(git log -1 --format=%s)
 
           $hinweis" \
-            --latest
+              --latest
+          fi
