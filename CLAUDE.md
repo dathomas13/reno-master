@@ -27,11 +27,18 @@ python3 tools/model/build_plans_svg.py
 python3 tools/model/make_manifest.py
 ```
 
-Wenn kein npm-Registry erreichbar ist, laufen die reinen Logiktests trotzdem:
+Wenn kein npm-Registry erreichbar ist (abgeschottete Umgebung), greifen zwei Ersatzprüfungen:
 
 ```bash
-node tools/verify/run-tests-without-npm.mjs
+npm run check:offline
+# entspricht:
+node tools/verify/typecheck-without-npm.mjs   # Syntax + alle projektinternen Importe
+node tools/verify/run-tests-without-npm.mjs   # die Unit-Tests ohne externe Pakete
 ```
+
+Sie ersetzen `npm run build` nicht, finden aber Tippfehler, kaputte Importe und
+Logikfehler. Das 3D-Modell lässt sich zusätzlich mit dem Chromium-Harness prüfen
+(`tools/model/_verify`, siehe tools/model/README-MODELL.md).
 
 ## Architektur in drei Sätzen
 

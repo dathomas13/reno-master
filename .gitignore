@@ -31,6 +31,9 @@ tools/model/.venv/
 # notion export (contains private data)
 tools/import/notion/
 
+.tmp-node-tests/
+.tmp-typecheck/
+
 # verification output (the harness itself is tracked, its build output is not)
 tools/model/_verify/js/
 tools/model/_verify/*.png

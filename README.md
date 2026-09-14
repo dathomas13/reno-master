@@ -69,5 +69,11 @@ npm run test    # Unit: Beträge, Datum, Belegparser, Claude-Antwortprüfung
 npm run e2e     # Playwright: Start, Modelldateien, Grundrisse
 ```
 
-Das 3D-Modell lässt sich ohne Installation prüfen: siehe Abschnitt „Verifikation“ in
-`tools/model/README-MODELL.md`.
+Ohne erreichbare npm-Registry:
+
+```bash
+npm run check:offline   # Syntax, projektinterne Importe und die Unit-Tests
+```
+
+Das 3D-Modell lässt sich ebenfalls ohne Installation prüfen: siehe Abschnitt
+„Verifikation“ in `tools/model/README-MODELL.md`.
