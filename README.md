@@ -135,6 +135,30 @@ den App-Namen und den dunklen Fensterhintergrund ein. Sobald eine native Datei v
 bearbeitet werden muss, kann `android/` committet werden; der Workflow überspringt dann das
 Erzeugen und synchronisiert nur noch.
 
+### Updates
+
+Jeder Push baut beides: die Web-Version auf GitHub Pages und eine APK, die als Release
+veröffentlicht wird. Die Seite legt dabei `version.json` mit dem Commit ab, aus dem sie
+gebaut wurde. Die App fragt diese Datei beim Start und bei jeder Rückkehr in den
+Vordergrund ab und zeigt ein Banner, sobald der veröffentlichte Commit ein anderer ist als
+der laufende.
+
+- **Im Browser** genügt „Neu laden“, der Service Worker tauscht die Dateien aus.
+- **In der App** führt „Laden“ auf die neueste APK unter
+  `releases/latest/download/app-debug.apk`. Android zeigt dann seinen Installationsdialog.
+  Eine per Sideload installierte App darf sich nicht still selbst überschreiben, dieser
+  eine Tipp bleibt.
+
+**Wichtig, solange kein fester Signaturschlüssel eingerichtet ist:** Jeder CI-Lauf erzeugt
+einen neuen Debug-Schlüssel, deshalb verweigert Android die Installation über die alte
+Fassung („App nicht installiert“). Bis dahin die alte App vorher deinstallieren. Die
+Daten liegen in Firestore und sind davon nicht betroffen; verloren gehen nur lokale
+Einstellungen und noch nicht hochgeladene Dateien.
+
+Dauerhaft lösen lässt sich das mit einem Release-Schlüssel: einmal einen Keystore
+erzeugen, ihn als Base64 zusammen mit dem Passwort in den GitHub-Secrets ablegen und den
+Gradle-Build damit signieren. Danach installiert sich jede neue APK über die alte.
+
 ### Eigenes Plugin
 
 `plugins/mediastore` liest die Fotogalerie nach Aufnahmedatum, damit das Bautagebuch beim

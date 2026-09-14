@@ -38,6 +38,21 @@ jobs:
           VITE_VAPID_KEY: ${{ vars.VITE_VAPID_KEY }}
       # a hash router needs no rewrite rules, this is only a safety net
       - run: cp dist/index.html dist/404.html
+
+      # the app asks this file whether a newer build exists; the commit is the identity,
+      # because the web version and the APK are built from the same one
+      - name: version.json schreiben
+        run: |
+          cat > dist/version.json <<JSON
+          {
+            "sha": "$(git rev-parse --short HEAD)",
+            "date": "$(git log -1 --format=%cs)",
+            "subject": "$(git log -1 --format=%s | sed 's/"/\\"/g' | cut -c1-80)",
+            "build": "${{ github.run_number }}",
+            "apk": "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk"
+          }
+          JSON
+          cat dist/version.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

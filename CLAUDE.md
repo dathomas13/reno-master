@@ -71,7 +71,10 @@ Offen:
 4. `public/img/nordansicht.jpg` ergänzen.
 5. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
-6. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
+6. **Fester Signaturschlüssel für die APK.** Ohne ihn signiert jeder Lauf anders und
+   Android verweigert das Update über die alte Fassung. Keystore erzeugen, als Base64 und
+   Passwort in die GitHub-Secrets, im Gradle-Build verwenden.
+7. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
    Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
    Tages). Offen sind ML Kit für das Beleg-Auslesen auf dem Gerät, die lokale
    Abend-Erinnerung und Push. Push braucht zusätzlich `google-services.json` und den

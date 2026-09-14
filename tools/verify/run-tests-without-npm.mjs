@@ -80,7 +80,8 @@ for (const file of collect(outDir).concat(collectJs(outDir))) {
   if (!file.endsWith('.js')) continue;
   let code = fs.readFileSync(file, 'utf8');
   code = code.replace(/from '@\/([^']+)'/g, (_m, rest) => {
-    const target = path.join(outDir, rest + '.js');
+    const direct = path.join(outDir, rest + '.js');
+    const target = fs.existsSync(direct) ? direct : path.join(outDir, rest, 'index.js');
     let rel = path.relative(path.dirname(file), target).replace(/\\/g, '/');
     if (!rel.startsWith('.')) rel = './' + rel;
     return `from '${rel}'`;
@@ -140,6 +141,9 @@ const describe = (name, fn) => { suite.push(name); fn(); suite.pop(); };
 const it = (name, fn) => { suite.push(name); try { fn(); } catch (error) { results.fail++; results.failures.push(`${suite.join(' › ')}: threw ${error}`); } suite.pop(); };
 
 Object.assign(globalThis, { describe, it, test: it, expect, beforeEach: (fn) => fn() });
+
+// the constants Vite injects at build time
+Object.assign(globalThis, { __APP_VERSION__: 'test', __BUILD_DATE__: '2026-01-01' });
 
 // make `import { describe } from 'vitest'` resolve
 const shimDir = path.join(outDir, 'node_modules', 'vitest');

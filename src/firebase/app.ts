@@ -59,5 +59,4 @@ if (useEmulators) {
   connectStorageEmulator(storage, '127.0.0.1', 9199);
 }
 
-export const APP_VERSION = __APP_VERSION__;
-export const BUILD_DATE = __BUILD_DATE__;
+export { APP_VERSION, BUILD_DATE } from '@/lib/buildInfo';

@@ -8,11 +8,10 @@ on:
   workflow_dispatch:
   push:
     branches: [main, 'claude/**']
-    paths:
-      - 'capacitor.config.ts'
-      - 'package.json'
-      - '.github/workflows/android.yml'
-      - 'android/**'
+
+# the release is updated from here
+permissions:
+  contents: write
 
 jobs:
   apk:
@@ -82,3 +81,21 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      # a release gives the APK a permanent address that works without a GitHub login,
+      # which is what the update banner in the app links to
+      - name: Release veröffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="build-${{ github.run_number }}"
+          gh release create "$tag" \
+            android/app/build/outputs/apk/debug/app-debug.apk \
+            --title "Reno Master $(git log -1 --format=%cs) ($(git rev-parse --short HEAD))" \
+            --notes "$(git log -1 --format=%s)
+
+          Debug-Build zum Seitwärts-Installieren. Achtung: solange kein fester
+          Signaturschlüssel eingerichtet ist, signiert jeder Lauf mit einem anderen
+          Debug-Schlüssel. Android verweigert dann die Installation über eine ältere
+          Fassung - die alte App vorher deinstallieren." \
+            --latest
