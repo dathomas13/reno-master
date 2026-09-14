@@ -224,13 +224,16 @@ export default function ViewerPage() {
   }
 
   const info = manifest?.[variant];
-  // the preview has no bottom navigation, so the controls can use that space
-  const bottomOffset = isAuthenticated()
+  // signed in there is a bottom navigation below and nothing above; in the preview it is
+  // the other way round, a banner on top and the full width of the screen below
+  const signedIn = isAuthenticated();
+  const bottomOffset = signedIn
     ? 'bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-2'
     : 'bottom-[max(0.5rem,env(safe-area-inset-bottom))]';
+  const containerHeight = signedIn ? 'h-[100dvh] md:h-screen' : 'h-[calc(100dvh-2.25rem)]';
 
   return (
-    <div className="relative h-[calc(100dvh-2.25rem)] md:h-screen overflow-hidden">
+    <div className={`relative ${containerHeight} overflow-hidden`}>
       <canvas ref={canvasRef} className="canvas-3d absolute inset-0 w-full h-full block" />
 
       {/* header */}
