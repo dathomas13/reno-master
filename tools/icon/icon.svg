@@ -3,11 +3,11 @@
     Reno Master app icon.
 
     The house of Schlesierstraße 31 from the gable end, with the roof pitch the real
-    building has (36 degrees). It is split along the ridge: left the house as it stands,
-    right the renovated one in the app's accent colour. The door sits on the seam and
-    belongs to both halves - the whole app in one mark: Ist and Soll, one house.
+    building has (36 degrees), drawn like a section: the two lines are the floors, so
+    the mark shows KG, EG and OG under the roof. It is split along the ridge - left the
+    house as it stands, right the renovated one in the app's accent colour.
 
-    Keep it readable at 48 px: two solid shapes, two windows, one door, nothing else.
+    No windows and no door on purpose: two openings above a third one read as a face.
     Regenerate the PNGs with: node tools/icon/build-icons.mjs
   -->
   <defs>
@@ -18,23 +18,22 @@
   </defs>
 
   <!-- chimney first: the roof edge cuts it off where it meets the tiles -->
-  <rect x="336" y="168" width="38" height="70" fill="#a98a4f" />
+  <rect x="330" y="164" width="38" height="74" fill="#a98a4f" />
 
   <!-- left: the building as it is -->
   <g clip-path="url(#left)">
     <use href="#house" fill="#4a5765" />
-    <rect x="146" y="300" width="68" height="60" rx="5" fill="#1d2126" />
   </g>
 
   <!-- right: the same house renovated -->
   <g clip-path="url(#right)">
     <use href="#house" fill="#c9a86a" />
-    <rect x="298" y="300" width="68" height="60" rx="5" fill="#1d2126" />
   </g>
 
-  <!-- the ridge seam holds the two halves apart at every size -->
-  <rect x="253" y="131" width="6" height="279" fill="#1d2126" />
+  <!-- the floors: ground floor, upper floor, roof space -->
+  <rect x="104" y="306" width="304" height="9" fill="#1d2126" />
+  <rect x="104" y="358" width="304" height="9" fill="#1d2126" />
 
-  <!-- one door for both states, straddling the seam -->
-  <path d="M 218 410 V 374 A 38 38 0 0 1 294 374 V 410 Z" fill="#1d2126" />
+  <!-- the ridge seam holds the two halves apart at every size -->
+  <rect x="252" y="131" width="8" height="279" fill="#1d2126" />
 </svg>
