@@ -11,7 +11,7 @@
             process and can only read the file through this.
         -->
         <provider
-            android:name="androidx.core.content.FileProvider"
+            android:name="de.friedl.renomaster.appupdate.UpdateFileProvider"
             android:authorities="${applicationId}.updateprovider"
             android:exported="false"
             android:grantUriPermissions="true">

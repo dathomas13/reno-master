@@ -30,5 +30,8 @@ Geräteeigentümer. Alles davor gehört uns.
   halben Datei.
 - **Eigener FileProvider** (`${applicationId}.updateprovider`) mit eigenem Pfad, damit das
   Plugin nicht davon abhängt, was die App in ihrer `file_paths.xml` stehen hat. Seit
-  Android 7 wird eine `file://`-Adresse an einen anderen Prozess abgelehnt.
+  Android 7 wird eine `file://`-Adresse an einen anderen Prozess abgelehnt. Er ist eine
+  eigene Klasse (`UpdateFileProvider`), weil der Manifest-Merger Provider über den
+  Klassennamen zusammenführt — Capacitor bringt bereits einen mit, zwei Einträge derselben
+  Klasse brechen den Build.
 - Die Berechtigung `REQUEST_INSTALL_PACKAGES` bringt das Plugin selbst mit.
