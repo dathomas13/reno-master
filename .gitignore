@@ -41,3 +41,8 @@ tools/model/_verify/*.png
 # os
 .DS_Store
 Thumbs.db
+
+# Signaturschlüssel: gehört niemals ins Repo
+*.jks
+*.keystore
+keystore.properties
