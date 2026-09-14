@@ -1,0 +1,40 @@
+# dependencies / build output
+node_modules/
+dist/
+dev-dist/
+.vite/
+coverage/
+playwright-report/
+test-results/
+
+# secrets – never commit
+*.sa.json
+serviceAccount*.json
+service-account*.json
+google-services.json
+.env
+.env.local
+.env.*.local
+
+# large / generated model inputs (kept locally, not in git)
+tools/model/vendor/
+tools/model/Haus_Rohbau.step
+tools/model/Haus_3D.html
+tools/model/*.stl
+tools/model/scene.json
+tools/model/model_*.png
+tools/model/plan-*.png
+tools/model/package/
+tools/model/__pycache__/
+tools/model/.venv/
+
+# notion export (contains private data)
+tools/import/notion/
+
+# verification output (the harness itself is tracked, its build output is not)
+tools/model/_verify/js/
+tools/model/_verify/*.png
+
+# os
+.DS_Store
+Thumbs.db

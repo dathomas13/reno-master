@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d2126">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Haus Tirschenreuth – 3D-Modell v0.1</title>
+<style>
+  :root { --bg:#1d2126; --panel:#2a3038; --ink:#e8e4da; --muted:#9aa3ad; --accent:#c9a86a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  html,body { height:100%; background:var(--bg); color:var(--ink); font-family: "Avenir Next","Segoe UI",system-ui,sans-serif; overflow:hidden; }
+  #c { position:fixed; inset:0; width:100%; height:100%; touch-action:none; display:block; }
+  header { position:fixed; top:0; left:0; right:0; padding:8px 12px 4px; pointer-events:none; }
+  header h1 { font-size:13px; font-weight:600; letter-spacing:.2px; }
+  header p { font-size:11px; color:var(--muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #layers { position:fixed; left:8px; right:8px; bottom:10px; display:flex; flex-wrap:wrap; gap:5px; align-items:center; }
+  #layers button, #layers select { pointer-events:auto; background:var(--panel); color:var(--ink); border:1px solid #3a424c; border-radius:16px; padding:6px 10px; font-size:12px; font-family:inherit; }
+  #layers select { appearance:none; -webkit-appearance:none; padding-right:22px; background-image:linear-gradient(45deg,transparent 50%,var(--accent) 50%),linear-gradient(135deg,var(--accent) 50%,transparent 50%); background-position:calc(100% - 12px) 55%,calc(100% - 8px) 55%; background-size:4px 4px,4px 4px; background-repeat:no-repeat; border-color:var(--accent); color:var(--accent); }
+  #layers .spacer { flex-basis:100%; height:0; }
+  #layers button::before { content:"● "; color:#7fc98a; }
+  #layers button.off { color:var(--muted); background:transparent; }
+  #layers button.off::before { content:"○ "; color:var(--muted); }
+  #layers button.view::before, #layers button.mode::before { content:""; }
+  #layers button.mode { border-color:#e07b6a; color:#e07b6a; }
+  #layers button.mode.on { background:#e07b6a; color:#1d2126; }
+  #layers button.view { border-color:var(--accent); color:var(--accent); }
+  #info { position:fixed; left:8px; right:8px; bottom:84px; background:var(--panel); border-left:3px solid var(--accent);
+          padding:8px 12px; font-size:13px; border-radius:6px; display:none; }
+  #info b { font-weight:600; } #info span { color:var(--muted); }
+  #fs { position:fixed; right:10px; top:8px; pointer-events:auto; background:var(--panel); color:var(--ink); border:1px solid #3a424c; border-radius:8px; width:34px; height:30px; font-size:16px; line-height:28px; text-align:center; }
+  #legend { position:fixed; right:10px; top:44px; font-size:10px; color:var(--muted); text-align:right; line-height:1.5; }
+  #legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-left:6px; vertical-align:middle; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<header>
+  <h1>Schlesierstraße 31 · Rohbau nach Plan 1967</h1>
+  <p>Ziehen: drehen · 2 Finger: zoomen · Tippen: Bauteil-Info</p>
+</header>
+<button id="fs" title="Vollbild">⛶</button>
+<div id="legend">Konfidenz<br>gesichert<i style="background:#d9d3c5"></i><br>abgeleitet<i style="background:#c9b990"></i><br>Annahme<i style="background:#b8845a"></i></div>
+<div id="info"></div>
+<div id="layers"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const SCENE = __SCENE_JSON__;
+const S = 0.001; // mm -> m
+const KIND_COLOR = { wall:0xd9d3c5, slab:0xb5b9bd, roof:0x4a5563, glass:0x8ec6e6, door:0x7a5a3a, stair:0xa88a5c, rail:0x2b2f34 };
+const TAG_COLOR  = { A:0xd9d3c5, B:0xc9b990, C:0xb8845a };
+const LAYERS = ["KG","EG","OG","DACH","GAR"];
+const LAYER_LABEL = { KG:"Keller", EG:"Erdgeschoss", OG:"Obergeschoss", DACH:"Dach + Gaube", GAR:"Garage" };
+const LAYER_SHORT = { KG:"KG", EG:"EG", OG:"OG", DACH:"Dach", GAR:"Garage" };
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x1d2126);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x334455, 0.85));
+const sun = new THREE.DirectionalLight(0xffffff, 0.7); sun.position.set(-10, 20, -8); scene.add(sun);
+const sun2 = new THREE.DirectionalLight(0xffffff, 0.35); sun2.position.set(12, 8, 10); scene.add(sun2);
+
+// Grundstücks-Ebene
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60,60), new THREE.MeshLambertMaterial({color:0x2a3a2e}));
+ground.rotation.x = -Math.PI/2; ground.position.y = -2.75 - 0.2 - 0.01; scene.add(ground);
+const grid = new THREE.GridHelper(60, 60, 0x3a4a3e, 0x2f3f33); grid.position.y = ground.position.y + 0.005; scene.add(grid);
+
+// Achsen-Markierung Norden
+function label(txt, x, y, z) {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+  const g = cv.getContext('2d'); g.fillStyle = '#c9a86a'; g.font = '600 40px sans-serif'; g.textAlign='center'; g.fillText(txt, 128, 46);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true}));
+  sp.scale.set(3, .75, 1); sp.position.set(x, y, z); scene.add(sp);
+}
+label('NORD / Garten', 6.6, -1.5, -14.5);
+label('SÜD / Straße', 6.6, -1.5, 2.5);
+label('WEST / Garage', -10, -0.8, -8.5);
+
+const groups = {}; LAYERS.forEach(l => { groups[l] = new THREE.Group(); scene.add(groups[l]); });
+const pickables = [];
+const toV = (x,y,z) => new THREE.Vector3(x*S, z*S, -y*S);   // Modell (x,y,z) -> three (X,Y,Z), Norden = -Z
+
+let showStructural = false;
+function wallColor(p) {
+  if (showStructural) return p.tragend ? 0xc0392b : 0xe6e2d8;
+  return TAG_COLOR[p.tag] || KIND_COLOR.wall;
+}
+function material(p) {
+  if (p.kind === 'glass') return new THREE.MeshPhongMaterial({color:KIND_COLOR.glass, transparent:true, opacity:0.45, shininess:80});
+  let col = KIND_COLOR[p.kind];
+  if (p.kind === 'wall') col = wallColor(p);
+  return new THREE.MeshLambertMaterial({color:col});
+}
+function recolorWalls() {
+  for (const mesh of pickables) if (mesh.userData.kind === 'wall') mesh.material.color.setHex(wallColor(mesh.userData));
+}
+function addMesh(geo, p) {
+  const mesh = new THREE.Mesh(geo, material(p));
+  mesh.userData = p; groups[p.layer].add(mesh); pickables.push(mesh);
+  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo, 25), new THREE.LineBasicMaterial({color:0x1d2126, transparent:true, opacity:0.55}));
+  mesh.add(edges);
+}
+function buildMesh(p) {
+  const pos = new Float32Array(p.v.length);
+  for (let i = 0; i < p.v.length; i += 3) { const v = toV(p.v[i], p.v[i+1], p.v[i+2]); pos[i] = v.x; pos[i+1] = v.y; pos[i+2] = v.z; }
+  let geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setIndex(p.t);
+  geo = geo.toNonIndexed(); geo.computeVertexNormals();   // Flächennormalen → harte Kanten
+  const mat = material(p); if (p.kind !== 'glass') mat.side = THREE.DoubleSide;
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.userData = p; groups[p.layer].add(mesh); pickables.push(mesh);
+  if (p.kind !== 'glass') mesh.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20), new THREE.LineBasicMaterial({color:0x1d2126, transparent:true, opacity:0.6})));
+}
+for (const p of SCENE.prims) buildMesh(p);
+
+// ---------- Kamera / Steuerung (eigene Orbit-Steuerung, Touch-fähig)
+const target = new THREE.Vector3(6.6, 1.0, -5.9);
+let theta = -0.75, phi = 1.05, dist = 40;
+function updateCam() {
+  camera.position.set(target.x + dist*Math.sin(phi)*Math.sin(theta), target.y + dist*Math.cos(phi), target.z + dist*Math.sin(phi)*Math.cos(theta));
+  camera.lookAt(target);
+}
+let ptrs = new Map(), lastPinch = 0, lastMid = null, moved = false;
+canvas.addEventListener('pointerdown', e => { ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY}); moved = false; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener('pointerup', e => { ptrs.delete(e.pointerId); lastMid = null; lastPinch = 0; if (!moved) pick(e.clientX, e.clientY); });
+canvas.addEventListener('pointercancel', e => ptrs.delete(e.pointerId));
+canvas.addEventListener('pointermove', e => {
+  if (!ptrs.has(e.pointerId)) return;
+  const prev = ptrs.get(e.pointerId); const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
+  ptrs.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if (Math.abs(dx) + Math.abs(dy) > 2) moved = true;
+  if (ptrs.size === 1) {
+    if (e.shiftKey || e.buttons === 2 || e.buttons === 4) pan(dx, dy);
+    else { theta -= dx * 0.006; phi = Math.min(Math.max(phi - dy * 0.006, 0.08), Math.PI/2 - 0.02); }
+  } else if (ptrs.size === 2) {
+    const [a, b] = [...ptrs.values()];
+    const pinch = Math.hypot(a.x-b.x, a.y-b.y); const mid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+    if (lastPinch) dist = Math.min(Math.max(dist * lastPinch / pinch, 4), 120);
+    if (lastMid) pan(mid.x - lastMid.x, mid.y - lastMid.y);
+    lastPinch = pinch; lastMid = mid;
+  }
+  updateCam();
+});
+canvas.addEventListener('wheel', e => { dist = Math.min(Math.max(dist * (1 + e.deltaY*0.001), 4), 120); updateCam(); }, {passive:true});
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+function pan(dx, dy) {
+  const right = new THREE.Vector3(), up = new THREE.Vector3();
+  camera.matrix.extractBasis(right, up, new THREE.Vector3());
+  const k = dist * 0.0015; target.addScaledVector(right, -dx*k).addScaledVector(up, dy*k);
+}
+// ---------- Auswahl
+const ray = new THREE.Raycaster(), info = document.getElementById('info');
+let selected = null;
+function pick(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((cx - r.left)/r.width)*2-1, -((cy - r.top)/r.height)*2+1), camera);
+  const hits = ray.intersectObjects(pickables.filter(m => m.parent.visible), false);
+  if (selected) { selected.material.emissive && selected.material.emissive.setHex(0); selected = null; }
+  if (!hits.length) { info.style.display = 'none'; return; }
+  const m = hits[0].object, p = m.userData; selected = m;
+  if (m.material.emissive) m.material.emissive.setHex(0x554422);
+  const dims = `${p.bb[3]-p.bb[0]} × ${p.bb[4]-p.bb[1]} × ${p.bb[5]-p.bb[2]} mm`;
+  const tag = ({A:'Maßkette gelesen', B:'abgeleitet', C:'Annahme – prüfen'}[p.tag] || '') + (p.kind === 'wall' ? (p.tragend ? ' · tragend' : ' · nicht tragend') : '');
+  info.innerHTML = `<b>${p.name}</b> <span>· ${LAYER_LABEL[p.layer]}</span><br><span>${dims} · x ${p.bb[0]}–${p.bb[3]} / y ${p.bb[1]}–${p.bb[4]} / z ${p.bb[2]}–${p.bb[5]} · ${tag}</span>`;
+  info.style.display = 'block';
+}
+// ---------- Layer-Buttons + Ansichten
+const bar = document.getElementById('layers');
+for (const l of LAYERS) {
+  const b = document.createElement('button'); b.textContent = LAYER_SHORT[l];
+  b.onclick = () => { groups[l].visible = !groups[l].visible; b.classList.toggle('off', !groups[l].visible); };
+  bar.appendChild(b);
+}
+const modeBtn = document.createElement('button'); modeBtn.textContent = 'Tragwände'; modeBtn.className = 'mode';
+modeBtn.onclick = () => { showStructural = !showStructural; modeBtn.classList.toggle('on', showStructural); recolorWalls();
+  document.getElementById('legend').innerHTML = showStructural ? 'tragend<i style="background:#c0392b"></i><br>nicht tragend<i style="background:#e6e2d8"></i>' : LEGEND_DEFAULT; };
+const LEGEND_DEFAULT = document.getElementById('legend').innerHTML;
+const views = { 'Außen': () => { LAYERS.forEach(l => groups[l].visible = true); theta=-0.75; phi=1.05; dist=46; target.set(6.6,1.0,-5.9); },
+                'EG-Grundriss': () => { LAYERS.forEach(l => groups[l].visible = (l==='EG')); theta=0; phi=0.12; dist=36; target.set(6.6,0,-5.9); },
+                'OG-Grundriss': () => { LAYERS.forEach(l => groups[l].visible = (l==='OG')); theta=0; phi=0.12; dist=36; target.set(6.6,2.75,-5.9); },
+                'KG-Grundriss': () => { LAYERS.forEach(l => groups[l].visible = (l==='KG')); theta=0; phi=0.12; dist=36; target.set(6.6,-2.75,-5.9); } };
+const spacer = document.createElement('div'); spacer.className = 'spacer'; bar.appendChild(spacer);
+bar.appendChild(modeBtn);
+const sel = document.createElement('select');
+for (const k of Object.keys(views)) { const o = document.createElement('option'); o.value = k; o.textContent = 'Ansicht: ' + k; sel.appendChild(o); }
+sel.onchange = () => { views[sel.value](); syncButtons(); updateCam(); };
+bar.appendChild(sel);
+function syncButtons() { [...bar.children].forEach((c, i) => { if (i < LAYERS.length) c.classList.toggle('off', !groups[LAYERS[i]].visible); }); }
+document.getElementById('fs').onclick = () => { const d = document.documentElement; if (!document.fullscreenElement) (d.requestFullscreen || d.webkitRequestFullscreen).call(d); else document.exitFullscreen(); };
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h); camera.aspect = w/h; camera.updateProjectionMatrix(); }
+window.addEventListener('resize', resize); resize(); updateCam();
+(function loop(){ renderer.render(scene, camera); requestAnimationFrame(loop); })();
+</script>
+</body>
+</html>

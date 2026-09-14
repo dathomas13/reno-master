@@ -1,0 +1,181 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1100 -1100 15440 15020" data-variant="soll" data-floor="KG" data-version="0.0" role="img" aria-label="Kellergeschoss Zielzustand">
+<style>
+  svg { --bg:#1d2126; --ink:#e8e4da; --muted:#9aa3ad; --accent:#c9a86a;
+        --wall-a:#d9d3c5; --wall-b:#c9b990; --wall-c:#b8845a; --room:#c9a86a;
+        --window:#8ec6e6; --door:#7fc98a; --open:#e8e4da; --stair:#a88a5c;
+        background:var(--bg); font-family:"Segoe UI",system-ui,sans-serif; }
+  svg.light { --bg:#ffffff; --ink:#1d2126; --muted:#666e76; --accent:#8a6d2f;
+        --wall-a:#3a3a36; --wall-b:#6b6354; --wall-c:#8a6242; --room:#8a6d2f;
+        --window:#2f7fae; --door:#2e7d46; --open:#999; --stair:#7a6338; }
+  .room { fill:var(--room); fill-opacity:.14; stroke:var(--room); stroke-opacity:.35;
+          stroke-width:12; cursor:pointer; }
+  .room:hover, .room.selected { fill-opacity:.28; }
+  .room-label { fill:var(--ink); font-size:230px; text-anchor:middle; pointer-events:none;
+                paint-order:stroke; stroke:var(--bg); stroke-width:70px; stroke-linejoin:round; }
+  .room-area { fill:var(--muted); font-size:170px; text-anchor:middle; pointer-events:none;
+               paint-order:stroke; stroke:var(--bg); stroke-width:70px; stroke-linejoin:round; }
+  .wall { stroke:none; }
+  .window { fill:var(--window); }
+  .door { fill:var(--door); }
+  .open { fill:var(--open); fill-opacity:.35; }
+  .stair { fill:none; stroke:var(--stair); stroke-width:30; }
+  .dim { stroke:var(--muted); stroke-width:14; }
+  .dim-text { fill:var(--muted); font-size:200px; text-anchor:middle; }
+  .title { fill:var(--ink); font-size:400px; font-weight:600; }
+  .subtitle { fill:var(--muted); font-size:220px; }
+  .north { fill:var(--accent); }
+  .north-text { fill:var(--accent); font-size:300px; text-anchor:middle; font-weight:600; }
+  @media print { svg { --bg:#fff; } }
+</style>
+<rect x="-1100" y="-1100" width="15440" height="15020" fill="var(--bg)"/>
+<g id="rooms">
+<g class="room-group" data-room-id="kg-esskueche">
+<rect class="room" x="365" y="6945" width="2385" height="4510" data-room-id="kg-esskueche"/>
+</g>
+<g class="room-group" data-room-id="kg-wohnzimmer">
+<rect class="room" x="2865" y="6945" width="5510" height="4510" data-room-id="kg-wohnzimmer"/>
+</g>
+<g class="room-group" data-room-id="kg-schlafzimmer">
+<rect class="room" x="8615" y="7695" width="4260" height="3760" data-room-id="kg-schlafzimmer"/>
+</g>
+<g class="room-group" data-room-id="kg-flur">
+<rect class="room" x="8615" y="4820" width="1635" height="2635" data-room-id="kg-flur"/>
+</g>
+<g class="room-group" data-room-id="kg-bad">
+<rect class="room" x="10365" y="4820" width="2510" height="2635" data-room-id="kg-bad"/>
+</g>
+<g class="room-group" data-room-id="kg-heizung">
+<rect class="room" x="8615" y="2970" width="4260" height="1610" data-room-id="kg-heizung"/>
+</g>
+<g class="room-group" data-room-id="kg-oellager">
+<rect class="room" x="8615" y="365" width="4260" height="2490" data-room-id="kg-oellager"/>
+</g>
+<g class="room-group" data-room-id="kg-treppenhaus">
+<rect class="room" x="365" y="4445" width="4510" height="2260" data-room-id="kg-treppenhaus"/>
+</g>
+<g class="room-group" data-room-id="kg-diele">
+<rect class="room" x="5115" y="4445" width="3260" height="2260" data-room-id="kg-diele"/>
+</g>
+<g class="room-group" data-room-id="kg-keller1">
+<rect class="room" x="365" y="365" width="3260" height="3840" data-room-id="kg-keller1"/>
+</g>
+<g class="room-group" data-room-id="kg-kellerflur">
+<rect class="room" x="3740" y="2970" width="4635" height="1235" data-room-id="kg-kellerflur"/>
+</g>
+<g class="room-group" data-room-id="kg-obst">
+<rect class="room" x="3740" y="365" width="1135" height="2490" data-room-id="kg-obst"/>
+</g>
+<g class="room-group" data-room-id="kg-keller2">
+<rect class="room" x="5115" y="365" width="3260" height="2490" data-room-id="kg-keller2"/>
+</g>
+</g>
+<g id="walls">
+<rect class="wall" x="0" y="11455" width="13240" height="365" fill="var(--wall-a)" data-wall="Außenwand Süd"/>
+<rect class="wall" x="0" y="0" width="13240" height="365" fill="var(--wall-a)" data-wall="Außenwand Nord"/>
+<rect class="wall" x="0" y="0" width="365" height="11820" fill="var(--wall-a)" data-wall="Außenwand West"/>
+<rect class="wall" x="12875" y="0" width="365" height="11820" fill="var(--wall-a)" data-wall="Außenwand Ost"/>
+<rect class="wall" x="4875" y="4205" width="240" height="2740" fill="var(--wall-a)" data-wall="Tragwand x=4875 (Diele West)"/>
+<rect class="wall" x="4875" y="0" width="240" height="2970" fill="var(--wall-a)" data-wall="Tragwand x=4875 (Obst|Keller2)"/>
+<rect class="wall" x="8375" y="0" width="240" height="11820" fill="var(--wall-a)" data-wall="Tragwand x=8375 (Diele Ost)"/>
+<rect class="wall" x="0" y="6705" width="8615" height="240" fill="var(--wall-a)" data-wall="Tragwand y=4875 (Süd)"/>
+<rect class="wall" x="8615" y="7455" width="4260" height="240" fill="var(--wall-a)" data-wall="Schlafzimmer Nord 240"/>
+<rect class="wall" x="0" y="4205" width="8615" height="240" fill="var(--wall-a)" data-wall="Tragwand y=7375 (Nord)"/>
+<rect class="wall" x="8615" y="4580" width="4260" height="240" fill="var(--wall-a)" data-wall="Bad/Flur Nord 240"/>
+<rect class="wall" x="2750" y="6945" width="115" height="4510" fill="var(--wall-a)" data-wall="Essküche|Wohnzimmer 115"/>
+<rect class="wall" x="3625" y="365" width="115" height="3840" fill="var(--wall-a)" data-wall="Keller1|Obst 115"/>
+<rect class="wall" x="3740" y="2855" width="1135" height="115" fill="var(--wall-b)" data-wall="Obst Süd 115"/>
+<rect class="wall" x="5115" y="2855" width="3260" height="115" fill="var(--wall-b)" data-wall="Keller2 Süd 115"/>
+<rect class="wall" x="8615" y="2855" width="4260" height="115" fill="var(--wall-b)" data-wall="Öllager|Heizung 115"/>
+<rect class="wall" x="10250" y="4820" width="115" height="2635" fill="var(--wall-a)" data-wall="Flur|Bad 115"/>
+</g>
+<g id="openings">
+<rect class="door" x="0" y="5120" width="365" height="1000"/>
+<rect class="window" x="1370" y="11455" width="1375" height="365"/>
+<rect class="window" x="2865" y="11455" width="4015" height="365"/>
+<rect class="window" x="9740" y="11455" width="2010" height="365"/>
+<rect class="window" x="2155" y="0" width="800" height="365"/>
+<rect class="window" x="5845" y="0" width="800" height="365"/>
+<rect class="window" x="12875" y="5260" width="365" height="1260"/>
+<rect class="window" x="12875" y="3320" width="365" height="800"/>
+<rect class="window" x="12875" y="1920" width="365" height="800"/>
+<rect class="door" x="6200" y="6705" width="1010" height="240"/>
+<rect class="door" x="9240" y="7455" width="885" height="240"/>
+<rect class="door" x="2750" y="8445" width="115" height="760"/>
+<rect class="door" x="10250" y="5745" width="115" height="760"/>
+<rect class="door" x="3770" y="2855" width="760" height="115"/>
+<rect class="door" x="5740" y="2855" width="885" height="115"/>
+<rect class="door" x="3625" y="2935" width="115" height="885"/>
+<rect class="door" x="8990" y="2855" width="885" height="115"/>
+<rect class="door" x="3805" y="4205" width="1010" height="240"/>
+<rect class="door" x="4875" y="5535" width="240" height="1010"/>
+<rect class="door" x="8375" y="5535" width="240" height="885"/>
+<rect class="door" x="8375" y="3220" width="240" height="700"/>
+</g>
+<g id="stairs">
+<rect class="stair" x="1200" y="4545" width="2160" height="1000"/>
+<line class="stair" x1="1470" y1="5545" x2="1470" y2="4545"/>
+<line class="stair" x1="1740" y1="5545" x2="1740" y2="4545"/>
+<line class="stair" x1="2010" y1="5545" x2="2010" y2="4545"/>
+<line class="stair" x1="2280" y1="5545" x2="2280" y2="4545"/>
+<line class="stair" x1="2550" y1="5545" x2="2550" y2="4545"/>
+<line class="stair" x1="2820" y1="5545" x2="2820" y2="4545"/>
+<line class="stair" x1="3090" y1="5545" x2="3090" y2="4545"/>
+<rect class="stair" x="1200" y="5605" width="2160" height="1000"/>
+<line class="stair" x1="1470" y1="6605" x2="1470" y2="5605"/>
+<line class="stair" x1="1740" y1="6605" x2="1740" y2="5605"/>
+<line class="stair" x1="2010" y1="6605" x2="2010" y2="5605"/>
+<line class="stair" x1="2280" y1="6605" x2="2280" y2="5605"/>
+<line class="stair" x1="2550" y1="6605" x2="2550" y2="5605"/>
+<line class="stair" x1="2820" y1="6605" x2="2820" y2="5605"/>
+<line class="stair" x1="3090" y1="6605" x2="3090" y2="5605"/>
+</g>
+<g id="room-labels">
+<text class="room-label" x="1558" y="9200" font-size="230px">Essküche (WE2)</text>
+<text class="room-area" x="1558" y="9430">10.8 m²</text>
+<text class="room-label" x="5620" y="9200" font-size="230px">Wohnzimmer (WE2)</text>
+<text class="room-area" x="5620" y="9430">24.9 m²</text>
+<text class="room-label" x="10745" y="9575" font-size="230px">Schlafzimmer (WE2)</text>
+<text class="room-area" x="10745" y="9805">16.0 m²</text>
+<text class="room-label" x="9432" y="6138" font-size="230px">Flur (WE2)</text>
+<text class="room-area" x="9432" y="6368">4.3 m²</text>
+<text class="room-label" x="11620" y="6138" font-size="230px">Bad (WE2)</text>
+<text class="room-area" x="11620" y="6368">6.6 m²</text>
+<text class="room-label" x="10745" y="3775" font-size="230px">Heizung</text>
+<text class="room-area" x="10745" y="4005">6.9 m²</text>
+<text class="room-label" x="10745" y="1610" font-size="230px">Öllager</text>
+<text class="room-area" x="10745" y="1840">10.6 m²</text>
+<text class="room-label" x="2620" y="5575" font-size="230px">Treppenhaus</text>
+<text class="room-area" x="2620" y="5805">10.2 m²</text>
+<text class="room-label" x="6745" y="5575" font-size="230px">Diele</text>
+<text class="room-area" x="6745" y="5805">7.4 m²</text>
+<text class="room-label" x="1995" y="2285" font-size="230px">Keller 1</text>
+<text class="room-area" x="1995" y="2515">12.5 m²</text>
+<text class="room-label" x="6058" y="3588" font-size="230px">Kellerflur (?)</text>
+<text class="room-area" x="6058" y="3818">5.7 m²</text>
+<text class="room-label" x="4308" y="1610" font-size="159px">Obstkeller</text>
+<text class="room-area" x="4308" y="1840">2.8 m²</text>
+<text class="room-label" x="6745" y="1610" font-size="230px">Keller 2</text>
+<text class="room-area" x="6745" y="1840">8.1 m²</text>
+</g>
+<g id="dimensions">
+<line class="dim" x1="0" y1="12340" x2="13240" y2="12340"/>
+<line class="dim" x1="0" y1="12250" x2="0" y2="12430"/>
+<line class="dim" x1="13240" y1="12250" x2="13240" y2="12430"/>
+<text class="dim-text" x="6620" y="12600">13.24 m</text>
+<line class="dim" x1="-520" y1="0" x2="-520" y2="11820"/>
+<line class="dim" x1="-610" y1="0" x2="-430" y2="0"/>
+<line class="dim" x1="-610" y1="11820" x2="-430" y2="11820"/>
+<text class="dim-text" x="-650" y="5910" transform="rotate(-90 -650 5910)">11.82 m</text>
+</g>
+<g id="north"><path class="north" d="M 13620 -380 l 150 380 l -150 -120 l -150 120 z"/><text class="north-text" x="13620" y="320">N</text></g>
+<g id="scale"><line class="dim" x1="0" y1="12980" x2="5000" y2="12980"/>
+<line class="dim" x1="0" y1="12910" x2="0" y2="13050"/>
+<line class="dim" x1="1000" y1="12910" x2="1000" y2="13050"/>
+<line class="dim" x1="2000" y1="12910" x2="2000" y2="13050"/>
+<line class="dim" x1="3000" y1="12910" x2="3000" y2="13050"/>
+<line class="dim" x1="4000" y1="12910" x2="4000" y2="13050"/>
+<line class="dim" x1="5000" y1="12910" x2="5000" y2="13050"/>
+<text class="dim-text" x="2500" y="13260">5 m</text></g>
+<text class="title" x="0" y="-620">Kellergeschoss</text>
+<text class="subtitle" x="0" y="-300">Zielzustand · Modell v0.0 · Schlesierstraße 31</text>
+</svg>

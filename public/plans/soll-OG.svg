@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1100 -1100 15440 15020" data-variant="soll" data-floor="OG" data-version="0.0" role="img" aria-label="Obergeschoss Zielzustand">
+<style>
+  svg { --bg:#1d2126; --ink:#e8e4da; --muted:#9aa3ad; --accent:#c9a86a;
+        --wall-a:#d9d3c5; --wall-b:#c9b990; --wall-c:#b8845a; --room:#c9a86a;
+        --window:#8ec6e6; --door:#7fc98a; --open:#e8e4da; --stair:#a88a5c;
+        background:var(--bg); font-family:"Segoe UI",system-ui,sans-serif; }
+  svg.light { --bg:#ffffff; --ink:#1d2126; --muted:#666e76; --accent:#8a6d2f;
+        --wall-a:#3a3a36; --wall-b:#6b6354; --wall-c:#8a6242; --room:#8a6d2f;
+        --window:#2f7fae; --door:#2e7d46; --open:#999; --stair:#7a6338; }
+  .room { fill:var(--room); fill-opacity:.14; stroke:var(--room); stroke-opacity:.35;
+          stroke-width:12; cursor:pointer; }
+  .room:hover, .room.selected { fill-opacity:.28; }
+  .room-label { fill:var(--ink); font-size:230px; text-anchor:middle; pointer-events:none;
+                paint-order:stroke; stroke:var(--bg); stroke-width:70px; stroke-linejoin:round; }
+  .room-area { fill:var(--muted); font-size:170px; text-anchor:middle; pointer-events:none;
+               paint-order:stroke; stroke:var(--bg); stroke-width:70px; stroke-linejoin:round; }
+  .wall { stroke:none; }
+  .window { fill:var(--window); }
+  .door { fill:var(--door); }
+  .open { fill:var(--open); fill-opacity:.35; }
+  .stair { fill:none; stroke:var(--stair); stroke-width:30; }
+  .dim { stroke:var(--muted); stroke-width:14; }
+  .dim-text { fill:var(--muted); font-size:200px; text-anchor:middle; }
+  .title { fill:var(--ink); font-size:400px; font-weight:600; }
+  .subtitle { fill:var(--muted); font-size:220px; }
+  .north { fill:var(--accent); }
+  .north-text { fill:var(--accent); font-size:300px; text-anchor:middle; font-weight:600; }
+  @media print { svg { --bg:#fff; } }
+</style>
+<rect x="-1100" y="-1100" width="15440" height="15020" fill="var(--bg)"/>
+<g id="rooms">
+<g class="room-group" data-room-id="og-abstell-sw">
+<rect class="room" x="365" y="10435" width="4630" height="1020" data-room-id="og-abstell-sw"/>
+</g>
+<g class="room-group" data-room-id="og-kind2">
+<rect class="room" x="365" y="6315" width="4630" height="4000" data-room-id="og-kind2"/>
+</g>
+<g class="room-group" data-room-id="og-kind1">
+<rect class="room" x="365" y="2155" width="4630" height="4040" data-room-id="og-kind1"/>
+</g>
+<g class="room-group" data-room-id="og-abstell-nw">
+<rect class="room" x="365" y="365" width="4630" height="1670" data-room-id="og-abstell-nw"/>
+</g>
+<g class="room-group" data-room-id="og-kind3">
+<rect class="room" x="5115" y="7445" width="4260" height="4010" data-room-id="og-kind3"/>
+</g>
+<g class="room-group" data-room-id="og-diele">
+<rect class="room" x="5115" y="5190" width="4260" height="2135" data-room-id="og-diele"/>
+</g>
+<g class="room-group" data-room-id="og-treppe">
+<rect class="room" x="5115" y="1820" width="1010" height="3370" data-room-id="og-treppe"/>
+</g>
+<g class="room-group" data-room-id="og-g">
+<rect class="room" x="6245" y="4520" width="800" height="670" data-room-id="og-g"/>
+</g>
+<g class="room-group" data-room-id="og-treppenkopf">
+<rect class="room" x="5115" y="365" width="1010" height="1335" data-room-id="og-treppenkopf"/>
+</g>
+<g class="room-group" data-room-id="og-dusche">
+<rect class="room" x="6245" y="3450" width="800" height="950" data-room-id="og-dusche"/>
+</g>
+<g class="room-group" data-room-id="og-wc">
+<rect class="room" x="7165" y="3450" width="1835" height="1620" data-room-id="og-wc"/>
+</g>
+<g class="room-group" data-room-id="og-abstell">
+<rect class="room" x="6245" y="365" width="2755" height="2965" data-room-id="og-abstell"/>
+</g>
+<g class="room-group" data-room-id="og-abstell-so">
+<rect class="room" x="9495" y="10435" width="3380" height="1020" data-room-id="og-abstell-so"/>
+</g>
+<g class="room-group" data-room-id="og-hwr">
+<rect class="room" x="9495" y="6315" width="3380" height="4000" data-room-id="og-hwr"/>
+</g>
+<g class="room-group" data-room-id="og-waescheboden">
+<rect class="room" x="9495" y="4670" width="3380" height="1525" data-room-id="og-waescheboden"/>
+<rect class="room" x="9120" y="365" width="3755" height="4305" data-room-id="og-waescheboden"/>
+</g>
+</g>
+<g id="walls">
+<rect class="wall" x="0" y="11455" width="13240" height="365" fill="var(--wall-a)" data-wall="Außenwand Süd"/>
+<rect class="wall" x="0" y="0" width="13240" height="365" fill="var(--wall-a)" data-wall="Außenwand Nord"/>
+<rect class="wall" x="0" y="0" width="365" height="11820" fill="var(--wall-a)" data-wall="Außenwand West"/>
+<rect class="wall" x="12875" y="0" width="365" height="11820" fill="var(--wall-a)" data-wall="Außenwand Ost"/>
+<rect class="wall" x="365" y="10315" width="4630" height="120" fill="var(--wall-a)" data-wall="Abstellwand Kind2 120"/>
+<rect class="wall" x="9495" y="10315" width="3380" height="120" fill="var(--wall-a)" data-wall="Abstellwand HWR 120"/>
+<rect class="wall" x="365" y="2035" width="4630" height="120" fill="var(--wall-b)" data-wall="Abstellwand Kind1 120"/>
+<rect class="wall" x="5115" y="1700" width="1010" height="120" fill="var(--wall-b)" data-wall="Abstellwand Treppenkopf 120"/>
+<rect class="wall" x="4995" y="365" width="120" height="11090" fill="var(--wall-a)" data-wall="Westspalte | Mitte 120"/>
+<rect class="wall" x="9375" y="4670" width="120" height="6785" fill="var(--wall-a)" data-wall="Kind3 | HWR 120"/>
+<rect class="wall" x="9000" y="4670" width="495" height="520" fill="var(--wall-a)" data-wall="Kamin"/>
+<rect class="wall" x="9000" y="365" width="120" height="4825" fill="var(--wall-a)" data-wall="WC/Abst | Wäscheboden 120"/>
+<rect class="wall" x="365" y="6195" width="4630" height="120" fill="var(--wall-a)" data-wall="Kind1 | Kind2 120"/>
+<rect class="wall" x="9495" y="6195" width="3380" height="120" fill="var(--wall-a)" data-wall="HWR | Wäscheboden 120"/>
+<rect class="wall" x="5115" y="7325" width="4260" height="120" fill="var(--wall-a)" data-wall="Kind3 Nord 120"/>
+<rect class="wall" x="7045" y="5070" width="1955" height="120" fill="var(--wall-a)" data-wall="WC Süd 120"/>
+<rect class="wall" x="6125" y="365" width="120" height="4825" fill="var(--wall-a)" data-wall="Treppe | G/DU/Abst 120"/>
+<rect class="wall" x="7045" y="3450" width="120" height="1620" fill="var(--wall-a)" data-wall="G/DU | WC 120"/>
+<rect class="wall" x="6245" y="4400" width="800" height="120" fill="var(--wall-b)" data-wall="G | DU 120"/>
+<rect class="wall" x="6245" y="3330" width="2755" height="120" fill="var(--wall-b)" data-wall="DU/WC | Abst 120"/>
+</g>
+<g id="openings">
+<rect class="door" x="4995" y="6375" width="120" height="885"/>
+<rect class="door" x="4995" y="5250" width="120" height="885"/>
+<rect class="door" x="9375" y="6375" width="120" height="885"/>
+<rect class="door" x="9375" y="5250" width="120" height="885"/>
+<rect class="door" x="9000" y="2420" width="120" height="750"/>
+<rect class="door" x="6240" y="7325" width="885" height="120"/>
+<rect class="door" x="7165" y="5070" width="760" height="120"/>
+<rect class="door" x="7045" y="3560" width="120" height="760"/>
+<rect class="door" x="0" y="4125" width="365" height="2010"/>
+<rect class="door" x="0" y="6375" width="365" height="2010"/>
+<rect class="window" x="12875" y="6375" width="365" height="1135"/>
+<rect class="window" x="12875" y="5000" width="365" height="1135"/>
+</g>
+<g id="stairs">
+</g>
+<g id="room-labels">
+<text class="room-label" x="2680" y="10945" font-size="230px">Abstellraum Süd-West</text>
+<text class="room-area" x="2680" y="11175">4.7 m²</text>
+<text class="room-label" x="2680" y="8315" font-size="230px">Kind 2</text>
+<text class="room-area" x="2680" y="8545">18.5 m²</text>
+<text class="room-label" x="2680" y="4175" font-size="230px">Kind 1</text>
+<text class="room-area" x="2680" y="4405">18.7 m²</text>
+<text class="room-label" x="2680" y="1200" font-size="230px">Abstellraum Nord-West</text>
+<text class="room-area" x="2680" y="1430">7.7 m²</text>
+<text class="room-label" x="7245" y="9450" font-size="230px">Kind 3</text>
+<text class="room-area" x="7245" y="9680">17.1 m²</text>
+<text class="room-label" x="7245" y="6258" font-size="230px">Diele</text>
+<text class="room-area" x="7245" y="6488">9.1 m²</text>
+<text class="room-label" x="5620" y="3505" font-size="230px">Treppe</text>
+<text class="room-area" x="5620" y="3735">3.4 m²</text>
+<text class="room-label" x="6645" y="4813" font-size="120px" textLength="620" lengthAdjust="spacingAndGlyphs">Garderobe (?)</text>
+<text class="room-label" x="5620" y="1032" font-size="120px" textLength="830" lengthAdjust="spacingAndGlyphs">Abstell Treppenkopf</text>
+<text class="room-area" x="5620" y="1262">1.4 m²</text>
+<text class="room-label" x="6645" y="3865" font-size="172px">Dusche</text>
+<text class="room-label" x="8082" y="4260" font-size="230px">WC</text>
+<text class="room-area" x="8082" y="4490">3.0 m²</text>
+<text class="room-label" x="7622" y="1848" font-size="230px">Abstellraum</text>
+<text class="room-area" x="7622" y="2078">8.2 m²</text>
+<text class="room-label" x="11185" y="10945" font-size="230px">Abstellraum Süd-Ost</text>
+<text class="room-area" x="11185" y="11175">3.5 m²</text>
+<text class="room-label" x="11185" y="8315" font-size="230px">Hauswirtschaftsraum</text>
+<text class="room-area" x="11185" y="8545">13.5 m²</text>
+<text class="room-label" x="10998" y="2518" font-size="230px">Wäscheboden</text>
+<text class="room-area" x="10998" y="2748">21.3 m²</text>
+</g>
+<g id="dimensions">
+<line class="dim" x1="0" y1="12340" x2="13240" y2="12340"/>
+<line class="dim" x1="0" y1="12250" x2="0" y2="12430"/>
+<line class="dim" x1="13240" y1="12250" x2="13240" y2="12430"/>
+<text class="dim-text" x="6620" y="12600">13.24 m</text>
+<line class="dim" x1="-520" y1="0" x2="-520" y2="11820"/>
+<line class="dim" x1="-610" y1="0" x2="-430" y2="0"/>
+<line class="dim" x1="-610" y1="11820" x2="-430" y2="11820"/>
+<text class="dim-text" x="-650" y="5910" transform="rotate(-90 -650 5910)">11.82 m</text>
+</g>
+<g id="north"><path class="north" d="M 13620 -380 l 150 380 l -150 -120 l -150 120 z"/><text class="north-text" x="13620" y="320">N</text></g>
+<g id="scale"><line class="dim" x1="0" y1="12980" x2="5000" y2="12980"/>
+<line class="dim" x1="0" y1="12910" x2="0" y2="13050"/>
+<line class="dim" x1="1000" y1="12910" x2="1000" y2="13050"/>
+<line class="dim" x1="2000" y1="12910" x2="2000" y2="13050"/>
+<line class="dim" x1="3000" y1="12910" x2="3000" y2="13050"/>
+<line class="dim" x1="4000" y1="12910" x2="4000" y2="13050"/>
+<line class="dim" x1="5000" y1="12910" x2="5000" y2="13050"/>
+<text class="dim-text" x="2500" y="13260">5 m</text></g>
+<text class="title" x="0" y="-620">Obergeschoss</text>
+<text class="subtitle" x="0" y="-300">Zielzustand · Modell v0.0 · Schlesierstraße 31</text>
+</svg>

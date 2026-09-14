@@ -1,0 +1,65 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verify houseScene</title>
+<style>
+  html,body{height:100%;margin:0;background:#1d2126;color:#e8e4da;font:13px system-ui}
+  #c{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+  #hud{position:fixed;left:8px;top:8px;background:#2a3038cc;padding:6px 10px;border-radius:6px;white-space:pre}
+</style>
+<canvas id="c"></canvas>
+<div id="hud">…</div>
+<script src="../vendor/three.min.js"></script>
+<script type="module">
+import { buildHouse, LAYERS, isVisible } from './js/houseScene.js';
+import { createOrbitControls, VIEW_PRESETS } from './js/orbitControls.js';
+
+const params = new URLSearchParams(location.search);
+const preset = VIEW_PRESETS.find(v => v.label === (params.get('view') || 'Außen')) || VIEW_PRESETS[0];
+const variant = params.get('variant') || 'ist';
+
+const [doc, rooms] = await Promise.all([
+  fetch(`/public/models/${variant}.json`).then(r => r.json()),
+  fetch(`/public/models/rooms-${variant}.json`).then(r => r.json()),
+]);
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1d2126);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
+
+const house = buildHouse(THREE, scene, doc, { rooms });
+house.setRoomsVisible(Boolean(preset.rooms));
+if (preset.layers) for (const l of LAYERS) house.groups[l].visible = preset.layers[l];
+if (params.get('structural') === '1') house.setStructuralMode(true);
+
+let needsRender = true;
+const controls = createOrbitControls(canvas, camera, THREE, {
+  theta: preset.theta, phi: preset.phi, distance: preset.distance,
+  target: new THREE.Vector3(...preset.target),
+}, { onChange: () => { needsRender = true; }, onTap: pick });
+
+const ray = new THREE.Raycaster();
+function pick(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), camera);
+  const targets = [...house.roomPickables.filter(isVisible), ...house.pickables.filter(isVisible)];
+  const hits = ray.intersectObjects(targets, false);
+  const found = hits.length ? house.resolve(hits[0].object) : null;
+  window.__lastPick = found ? (found.type === 'room' ? found.room.name : found.prim.name) : null;
+  hud.textContent = `Pick: ${window.__lastPick ?? '–'}`;
+}
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); needsRender = true;
+}
+addEventListener('resize', resize); resize();
+(function loop() { if (needsRender) { renderer.render(scene, camera); needsRender = false; } requestAnimationFrame(loop); })();
+
+const tris = doc.prims.reduce((n, p) => n + p.t.length / 3, 0);
+hud.textContent = `${doc.prims.length} Bauteile · ${tris} Dreiecke · ${rooms.rooms.length} Räume\nv${doc.meta.version} (${variant}) · ${preset.label}`;
+window.__ready = true;
+</script>
