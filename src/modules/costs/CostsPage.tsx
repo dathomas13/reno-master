@@ -8,6 +8,7 @@ import { orderBy } from '@/firebase/db';
 import { formatEuro, formatAmount } from '@/lib/money';
 import { formatDate, monthKey, today } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
+import { sumGross, byCategory, byMonth, totalForMonth, budgetPerTrade, toCsv } from '@/data/costAggregation';
 
 type Tab = 'liste' | 'uebersicht';
 
@@ -35,54 +36,14 @@ export default function CostsPage() {
     });
   }, [costs, search, roomFilter, categoryFilter]);
 
-  const total = filtered.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
-  const thisMonth = costs
-    .filter((cost) => monthKey(cost.date) === monthKey(today()))
-    .reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
-
-  const byCategory = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const cost of filtered) {
-      map.set(cost.category || 'ohne Kategorie', (map.get(cost.category || 'ohne Kategorie') ?? 0) + cost.amountGross);
-    }
-    return [...map.entries()].sort((a, b) => b[1] - a[1]);
-  }, [filtered]);
-
-  const byMonth = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const cost of filtered) map.set(monthKey(cost.date), (map.get(monthKey(cost.date)) ?? 0) + cost.amountGross);
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [filtered]);
-
-  const byTrade = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const cost of filtered) {
-      if (!cost.tradeId) continue;
-      map.set(cost.tradeId, (map.get(cost.tradeId) ?? 0) + cost.amountGross);
-    }
-    return trades
-      .map((trade) => ({ trade, actual: map.get(trade.id) ?? 0 }))
-      .filter((row) => row.actual > 0 || (row.trade.budgetPlanned ?? 0) > 0)
-      .sort((a, b) => b.actual - a.actual);
-  }, [filtered, trades]);
+  const total = sumGross(filtered);
+  const thisMonth = totalForMonth(costs, monthKey(today()));
+  const categories = useMemo(() => byCategory(filtered), [filtered]);
+  const months = useMemo(() => byMonth(filtered), [filtered]);
+  const tradeBudgets = useMemo(() => budgetPerTrade(filtered, trades), [filtered, trades]);
 
   function exportCsv() {
-    const header = ['Datum', 'Händler', 'Beschreibung', 'Kategorie', 'Brutto', 'Netto', 'MwSt-Satz', 'Status', 'Rechnungsnr'];
-    const rows = filtered.map((cost) => [
-      cost.date,
-      cost.vendor,
-      cost.description,
-      cost.category,
-      formatAmount(cost.amountGross),
-      cost.amountNet !== undefined ? formatAmount(cost.amountNet) : '',
-      cost.vatRate ?? '',
-      cost.paymentStatus,
-      cost.invoiceNumber ?? '',
-    ]);
-    const csv = [header, ...rows]
-      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(';'))
-      .join('\r\n');
-    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob([toCsv(filtered, formatAmount)], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -184,29 +145,31 @@ export default function CostsPage() {
             <div className="text-muted text-sm">{filtered.length} Positionen</div>
           </div>
 
-          <Bars title="Nach Kategorie" rows={byCategory} onPick={(key) => setParams({ kategorie: key })} />
-          <Bars title="Nach Monat" rows={byMonth} />
+          <Bars
+            title="Nach Kategorie"
+            rows={categories.map((bucket) => [bucket.key, bucket.total] as [string, number])}
+            onPick={(key) => setParams({ kategorie: key })}
+          />
+          <Bars title="Nach Monat" rows={months.map((bucket) => [bucket.key, bucket.total] as [string, number])} />
 
-          {byTrade.length > 0 && (
+          {tradeBudgets.length > 0 && (
             <div className="card p-4">
               <h3 className="text-sm text-muted uppercase tracking-wide mb-3">Gewerke: Budget und Ist</h3>
               <ul className="flex flex-col gap-2">
-                {byTrade.map(({ trade, actual }) => {
-                  const budget = trade.budgetPlanned ?? 0;
-                  const share = budget ? Math.min(actual / budget, 1) : 0;
+                {tradeBudgets.map(({ trade, actual, planned, share, over }) => {
                   return (
                     <li key={trade.id}>
                       <div className="flex justify-between text-sm">
                         <span className="truncate pr-2">{trade.name}</span>
                         <span className="text-muted shrink-0">
                           {formatEuro(actual)}
-                          {budget ? ` / ${formatEuro(budget)}` : ''}
+                          {planned ? ` / ${formatEuro(planned)}` : ''}
                         </span>
                       </div>
-                      {budget > 0 && (
+                      {planned > 0 && (
                         <div className="h-1.5 bg-panel2 rounded mt-1">
                           <div
-                            className={`h-full rounded ${actual > budget ? 'bg-bad' : 'bg-accent'}`}
+                            className={`h-full rounded ${over ? 'bg-bad' : 'bg-accent'}`}
                             style={{ width: `${Math.max(share, 0.02) * 100}%` }}
                           />
                         </div>

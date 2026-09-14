@@ -50,22 +50,16 @@ export default function ViewerPage() {
     const house = houseRef.current;
     const controls = controlsRef.current;
     if (!preset || !house || !controls) return;
-    if (preset.layers) {
-      const next = { ...layerState };
-      for (const layer of LAYERS) {
-        const visible = preset.layers[layer] ?? true;
-        house.groups[layer].visible = visible;
-        next[layer] = visible;
-      }
-      setLayerState(next);
-    } else {
-      const next = { ...layerState };
-      for (const layer of LAYERS) {
-        house.groups[layer].visible = true;
-        next[layer] = true;
-      }
-      setLayerState(next);
+
+    // build the next visibility from the preset itself, never from a captured state
+    const next = {} as Record<Layer, boolean>;
+    for (const layer of LAYERS) {
+      const visible = preset.layers ? (preset.layers[layer] ?? false) : true;
+      house.groups[layer].visible = visible;
+      next[layer] = visible;
     }
+    setLayerState(next);
+
     const rooms = preset.rooms ?? false;
     house.setRoomsVisible(rooms);
     setShowRooms(rooms);
@@ -76,7 +70,6 @@ export default function ViewerPage() {
       target: new THREE.Vector3(...preset.target),
     });
     setViewLabel(label);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // build the scene; runs again when the variant changes
@@ -213,10 +206,12 @@ export default function ViewerPage() {
   function toggleLayer(layer: Layer) {
     const house = houseRef.current;
     if (!house) return;
-    const next = !layerState[layer];
-    house.groups[layer].visible = next;
-    setLayerState({ ...layerState, [layer]: next });
-    renderRef.current?.();
+    setLayerState((current) => {
+      const visible = !current[layer];
+      house.groups[layer].visible = visible;
+      renderRef.current?.();
+      return { ...current, [layer]: visible };
+    });
   }
 
   function switchVariant(next: Variant) {

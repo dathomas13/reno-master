@@ -33,6 +33,7 @@ function usePanZoom(target: React.RefObject<HTMLDivElement>) {
       pointers.delete(event.pointerId);
       lastPinch = 0;
     };
+
     const move = (event: PointerEvent) => {
       const previous = pointers.get(event.pointerId);
       if (!previous) return;
