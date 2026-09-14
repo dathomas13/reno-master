@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc -b --noEmit
+      - run: npm run test
+
+  model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      # the generated model files must match the data base they come from
+      - run: python3 tools/model/build_rooms.py
+      - run: python3 tools/model/build_plans_svg.py
+      - run: python3 tools/model/make_manifest.py
+      - run: git diff --exit-code public/models public/plans

@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// Photos, receipts and uploaded plans. Same two accounts, 30 MB per file.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email in [
+             'THOMAS_EMAIL_HIER_EINTRAGEN',
+             'SARAH_EMAIL_HIER_EINTRAGEN'
+           ];
+    }
+
+    match /{allPaths=**} {
+      allow read: if allowed();
+      allow write: if allowed() && request.resource.size < 30 * 1024 * 1024;
+    }
+  }
+}

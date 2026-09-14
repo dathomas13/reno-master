@@ -1,0 +1,35 @@
+<!doctype html>
+<meta charset="utf-8">
+<style>
+  html,body{margin:0;background:transparent}
+  .icon{display:grid;place-items:center;background:#1d2126}
+  svg{display:block}
+</style>
+<div class="icon" id="box">
+  <svg viewBox="0 0 100 100" id="art">
+    <!-- roof -->
+    <path d="M12 47 L50 17 L88 47" fill="none" stroke="#c9a86a" stroke-width="8"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- walls -->
+    <path d="M22 46 V82 H78 V46" fill="none" stroke="#e8e4da" stroke-width="7"
+          stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- window -->
+    <rect x="33" y="55" width="15" height="14" fill="#8ec6e6"/>
+    <!-- door -->
+    <path d="M57 82 V63 H70 V82" fill="none" stroke="#c9a86a" stroke-width="6"
+          stroke-linejoin="round"/>
+  </svg>
+</div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const size = +(params.get('size') || 192);
+  const pad = +(params.get('pad') || 0);
+  const box = document.getElementById('box');
+  box.style.width = size + 'px';
+  box.style.height = size + 'px';
+  const art = document.getElementById('art');
+  const inner = Math.round(size * (1 - pad));
+  art.setAttribute('width', inner);
+  art.setAttribute('height', inner);
+  document.title = 'ready';
+</script>

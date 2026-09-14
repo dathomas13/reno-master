@@ -1,0 +1,51 @@
+# Reno Master – Kurzanleitung für Agenten
+
+Renovierungs-App für das Haus Schlesierstraße 31. Mobil zuerst (Galaxy S24), offline-fähig,
+PWA auf GitHub Pages, später APK über Capacitor. UI-Texte auf Deutsch, Code auf Englisch.
+
+**Die verbindliche Spezifikation steht in `PLAN.md`.** Wer hier etwas ändert, liest die
+betreffenden Abschnitte dort zuerst.
+
+## Befehle
+
+```bash
+npm install            # einmalig
+npm run dev            # Entwicklung gegen das echte Firebase-Projekt
+npm run dev:emu        # Entwicklung gegen die lokalen Emulatoren
+npm run emulators      # Emulatoren starten (auth, firestore, storage)
+npm run lint
+npm run test           # Unit-Tests (vitest)
+npm run e2e            # Playwright, baut und startet die App selbst
+npm run build          # Produktionsbuild nach dist/
+```
+
+Modell und Pläne neu erzeugen (Python, ohne Abhängigkeiten außer für `build_scene.py`):
+
+```bash
+python3 tools/model/build_rooms.py
+python3 tools/model/build_plans_svg.py
+python3 tools/model/make_manifest.py
+```
+
+Wenn kein npm-Registry erreichbar ist, laufen die reinen Logiktests trotzdem:
+
+```bash
+node tools/verify/run-tests-without-npm.mjs
+```
+
+## Architektur in drei Sätzen
+
+Firestore mit persistentem lokalem Cache ist die Datenbasis; Lesen läuft immer über
+`onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Dateien (Fotos,
+Belege, Pläne) kann Storage nicht offline puffern, deshalb gehen sie über die eigene
+Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
+unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
+
+## Regeln
+
+- Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
+- Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
+- Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
+- Keine Geheimnisse ins Repo: Service-Account-JSON, `google-services.json`, `.env` sind gitignored.
+- Der Claude API-Key liegt nur im localStorage des Geräts, nie in Firestore.
+- Vor dem Push: `npm run lint`, `npm run test`, `npm run build`.

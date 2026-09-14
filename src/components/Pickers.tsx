@@ -1,0 +1,119 @@
+import { useMemo, useState } from 'react';
+import { Sheet } from './Sheet';
+import { useRooms } from '@/data/RoomsContext';
+import { useCollection } from '@/data/hooks';
+import { COL, type Phase, type Trade } from '@/data/types';
+import { LAYER_LABEL, type Layer } from '@/modules/viewer3d/houseScene';
+
+interface MultiPickerProps {
+  label: string;
+  value: string[];
+  onChange(value: string[]): void;
+  options: { id: string; name: string; group?: string }[];
+  emptyLabel?: string;
+}
+
+/** compact multi select: shows the picked names, opens a sheet with the full list */
+export function MultiPicker({ label, value, onChange, options, emptyLabel = 'keine' }: MultiPickerProps) {
+  const [open, setOpen] = useState(false);
+  const byId = useMemo(() => new Map(options.map((option) => [option.id, option])), [options]);
+  const groups = useMemo(() => {
+    const map = new Map<string, typeof options>();
+    for (const option of options) {
+      const key = option.group ?? '';
+      map.set(key, [...(map.get(key) ?? []), option]);
+    }
+    return [...map.entries()];
+  }, [options]);
+
+  const picked = value.map((id) => byId.get(id)?.name ?? id);
+
+  return (
+    <>
+      <button type="button" className="field text-left flex items-center gap-2" onClick={() => setOpen(true)}>
+        <span className={`flex-1 truncate ${picked.length ? '' : 'text-muted'}`}>
+          {picked.length ? picked.join(', ') : emptyLabel}
+        </span>
+        <span className="text-muted">›</span>
+      </button>
+      <Sheet open={open} onClose={() => setOpen(false)} title={label}>
+        <div className="pb-4">
+          {groups.map(([group, entries]) => (
+            <div key={group}>
+              {group && <div className="section-title">{group}</div>}
+              {entries.map((option) => {
+                const on = value.includes(option.id);
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className="list-row w-full text-left"
+                    onClick={() =>
+                      onChange(on ? value.filter((id) => id !== option.id) : [...value, option.id])
+                    }
+                  >
+                    <span className={`w-5 ${on ? 'text-accent' : 'text-transparent'}`}>✓</span>
+                    <span className="flex-1">{option.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+          {value.length > 0 && (
+            <button type="button" className="btn btn-ghost w-full mt-2" onClick={() => onChange([])}>
+              Auswahl leeren
+            </button>
+          )}
+        </div>
+      </Sheet>
+    </>
+  );
+}
+
+export function RoomPicker({ value, onChange }: { value: string[]; onChange(value: string[]): void }) {
+  const { rooms } = useRooms();
+  const options = rooms.map((room) => ({
+    id: room.id,
+    name: room.name,
+    group: LAYER_LABEL[room.floor as Layer] ?? room.floor,
+  }));
+  return <MultiPicker label="Räume" value={value} onChange={onChange} options={options} emptyLabel="kein Raum" />;
+}
+
+export function TradePicker({ value, onChange }: { value: string[]; onChange(value: string[]): void }) {
+  const { data } = useCollection<Trade>(COL.trades);
+  const options = [...data]
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'))
+    .map((trade) => ({ id: trade.id, name: trade.name }));
+  return <MultiPicker label="Gewerke" value={value} onChange={onChange} options={options} emptyLabel="kein Gewerk" />;
+}
+
+export function PhaseSelect({ value, onChange }: { value?: string; onChange(value: string | undefined): void }) {
+  const { data } = useCollection<Phase>(COL.phases);
+  const phases = [...data].sort((a, b) => a.order - b.order);
+  return (
+    <select className="field" value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
+      <option value="">keine Phase</option>
+      {phases.map((phase) => (
+        <option key={phase.id} value={phase.id}>
+          {phase.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+export function TradeSelect({ value, onChange }: { value?: string; onChange(value: string | undefined): void }) {
+  const { data } = useCollection<Trade>(COL.trades);
+  const trades = [...data].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  return (
+    <select className="field" value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
+      <option value="">kein Gewerk</option>
+      {trades.map((trade) => (
+        <option key={trade.id} value={trade.id}>
+          {trade.name}
+        </option>
+      ))}
+    </select>
+  );
+}

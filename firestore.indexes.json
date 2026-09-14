@@ -1,0 +1,37 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "diary",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "roomIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "costs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "roomIds", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "costs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "due", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

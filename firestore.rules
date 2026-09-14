@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// Two people use this app. Everything is readable and writable by them and by nobody
+// else. The allowlist lives here, not in the client, so a stolen web config is useless.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function allowed() {
+      return request.auth != null
+        && request.auth.token.email_verified != false
+        && request.auth.token.email in [
+             'THOMAS_EMAIL_HIER_EINTRAGEN',
+             'SARAH_EMAIL_HIER_EINTRAGEN'
+           ];
+    }
+
+    // a profile belongs to exactly one account
+    match /users/{uid} {
+      allow read, write: if allowed() && request.auth.uid == uid;
+    }
+
+    match /diary/{doc}    { allow read, write: if allowed(); }
+    match /photos/{doc}   { allow read, write: if allowed(); }
+    match /costs/{doc}    { allow read, write: if allowed(); }
+    match /tasks/{doc}    { allow read, write: if allowed(); }
+    match /contacts/{doc} { allow read, write: if allowed(); }
+    match /trades/{doc}   { allow read, write: if allowed(); }
+    match /phases/{doc}   { allow read, write: if allowed(); }
+    match /plans/{doc}    { allow read, write: if allowed(); }
+    match /meta/{doc}     { allow read, write: if allowed(); }
+
+    // anything not listed above stays closed
+    match /{document=**} { allow read, write: if false; }
+  }
+}
