@@ -143,10 +143,13 @@ Vordergrund ab und zeigt ein Banner, sobald der veröffentlichte Commit ein ande
 der laufende.
 
 - **Im Browser** genügt „Neu laden“, der Service Worker tauscht die Dateien aus.
-- **In der App** führt „Laden“ auf die neueste APK unter
-  `releases/latest/download/reno-master.apk`. Android zeigt dann seinen Installationsdialog.
-  Eine per Sideload installierte App darf sich nicht still selbst überschreiben, dieser
-  eine Tipp bleibt.
+- **In der App** lädt „Installieren“ die neue APK innerhalb der App herunter — mit
+  eigenem Fortschrittsbalken, ohne Umweg über den Browser — und übergibt sie an Androids
+  Installer. Dessen Rückfrage („App aktualisieren?") bleibt: eine per Sideload
+  installierte App darf sich nicht ungefragt selbst ersetzen. Beim ersten Mal fragt
+  Android zusätzlich nach der Erlaubnis „Apps aus dieser Quelle installieren"; das Banner
+  führt direkt auf die passende Systemseite. Details in
+  [plugins/appupdate/README.md](plugins/appupdate/README.md).
 
 ### Signaturschlüssel
 

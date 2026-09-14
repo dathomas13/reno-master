@@ -37,6 +37,7 @@
     "@capacitor/splash-screen": "^6.0.3",
     "@capacitor/status-bar": "^6.0.2",
     "@reno/mediastore": "file:plugins/mediastore",
+    "@reno/appupdate": "file:plugins/appupdate",
     "exifr": "^7.1.3",
     "firebase": "^11.0.2",
     "idb": "^8.0.0",

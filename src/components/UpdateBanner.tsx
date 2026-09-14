@@ -2,22 +2,35 @@ import { useCallback, useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { isNative } from '@/platform/index';
 import { checkForUpdate, dismissUpdate, APK_URL, type RemoteVersion } from '@/data/appVersion';
+import {
+  canSelfUpdate,
+  formatProgress,
+  installUpdate,
+  openSourceSettings,
+  percentOf,
+  UpdateBlocked,
+  type UpdateProgress,
+} from '@/platform/appUpdate';
 import { formatDate } from '@/lib/date';
 
 /**
- * Tells the user when a newer build has been published.
+ * Tells the user when a newer build has been published, and installs it.
  *
  * In the browser the service worker does the work: registerType is 'prompt', so a new
  * build never swaps itself in while a diary entry is half written. The version check on
  * top of it also catches the case where the service worker reports nothing.
  *
- * In the Android app there is no service worker and no way to install an APK over itself
- * without the system dialog, so the button opens the download and Android takes over.
+ * In the Android app the download runs here, with its own progress, and the finished file
+ * goes to Android's installer. The confirmation dialog at the end belongs to the system
+ * and stays - a side loaded app may not replace itself unasked.
  */
 export function UpdateBanner() {
   const [swReady, setSwReady] = useState(false);
   const [update, setUpdate] = useState<(() => Promise<void>) | null>(null);
   const [remote, setRemote] = useState<RemoteVersion | null>(null);
+  const [progress, setProgress] = useState<UpdateProgress | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<'blocked' | 'failed' | null>(null);
 
   const look = useCallback(() => {
     void checkForUpdate().then(setRemote);
@@ -50,11 +63,32 @@ export function UpdateBanner() {
     if (remote) dismissUpdate(remote.sha);
     setRemote(null);
     setSwReady(false);
+    setProblem(null);
+    setProgress(null);
+  }
+
+  async function installNative() {
+    setBusy(true);
+    setProblem(null);
+    setProgress({ loaded: 0, total: 0 });
+    try {
+      await installUpdate(remote?.apk ?? APK_URL, setProgress);
+      // from here Android's installer is on screen; the app is replaced and restarts
+    } catch (error) {
+      setProblem(error instanceof UpdateBlocked ? 'blocked' : 'failed');
+      setProgress(null);
+    } finally {
+      setBusy(false);
+    }
   }
 
   function apply() {
     if (isNative()) {
-      // Android shows its installer; a sideloaded app cannot install silently
+      if (canSelfUpdate()) {
+        void installNative();
+        return;
+      }
+      // an older build without the update plugin: the browser has to do it
       window.open(remote?.apk ?? APK_URL, '_blank');
       return;
     }
@@ -65,23 +99,69 @@ export function UpdateBanner() {
     window.location.reload();
   }
 
+  const percent = progress ? percentOf(progress) : null;
+
   return (
-    <div className="fixed top-[env(safe-area-inset-top)] inset-x-0 z-50 m-2 card p-3 flex items-center gap-3">
-      <span className="flex-1 text-sm min-w-0">
-        <span className="block">Neue Version verfügbar</span>
-        {remote?.date && (
-          <span className="block text-xs text-muted truncate">
-            {formatDate(remote.date)}
-            {remote.subject ? ` · ${remote.subject}` : ''}
+    <div className="fixed top-[env(safe-area-inset-top)] inset-x-0 z-50 m-2 card p-3">
+      <div className="flex items-center gap-3">
+        <span className="flex-1 text-sm min-w-0">
+          <span className="block">
+            {busy ? 'Neue Version wird geladen…' : 'Neue Version verfügbar'}
           </span>
+          {busy && progress ? (
+            <span className="block text-xs text-muted truncate">{formatProgress(progress)}</span>
+          ) : (
+            remote?.date && (
+              <span className="block text-xs text-muted truncate">
+                {formatDate(remote.date)}
+                {remote.subject ? ` · ${remote.subject}` : ''}
+              </span>
+            )
+          )}
+        </span>
+        {!busy && (
+          <>
+            <button type="button" className="btn btn-ghost px-3 py-1 min-h-0" onClick={later}>
+              Später
+            </button>
+            <button type="button" className="btn btn-primary px-3 py-1 min-h-0" onClick={apply}>
+              {isNative() ? 'Installieren' : 'Neu laden'}
+            </button>
+          </>
         )}
-      </span>
-      <button type="button" className="btn btn-ghost px-3 py-1 min-h-0" onClick={later}>
-        Später
-      </button>
-      <button type="button" className="btn btn-primary px-3 py-1 min-h-0" onClick={apply}>
-        {isNative() ? 'Laden' : 'Neu laden'}
-      </button>
+      </div>
+
+      {busy && (
+        <div className="mt-2 h-1.5 rounded bg-black/30 overflow-hidden" aria-hidden="true">
+          <div
+            className="h-full bg-accent transition-[width] duration-200"
+            style={{ width: percent === null ? '100%' : `${percent}%` }}
+          />
+        </div>
+      )}
+
+      {problem === 'blocked' && (
+        <div className="mt-2 text-xs text-muted">
+          Android erlaubt der App das Installieren noch nicht.{' '}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => {
+              void openSourceSettings();
+            }}
+          >
+            Erlaubnis erteilen
+          </button>{' '}
+          und danach erneut auf „Installieren“ tippen.
+        </div>
+      )}
+
+      {problem === 'failed' && (
+        <div className="mt-2 text-xs text-muted">
+          Das Laden hat nicht geklappt – im WLAN meist stabiler. Noch einmal auf
+          „Installieren“ tippen.
+        </div>
+      )}
     </div>
   );
 }

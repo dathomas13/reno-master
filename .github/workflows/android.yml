@@ -93,7 +93,7 @@ jobs:
         run: |
           set -e
           manifest=android/app/src/main/AndroidManifest.xml
-          for permission in CAMERA POST_NOTIFICATIONS READ_MEDIA_IMAGES READ_EXTERNAL_STORAGE; do
+          for permission in CAMERA POST_NOTIFICATIONS READ_MEDIA_IMAGES READ_EXTERNAL_STORAGE REQUEST_INSTALL_PACKAGES; do
             grep -q "android.permission.$permission" "$manifest" \
               || { echo "Berechtigung fehlt im Manifest: $permission"; exit 1; }
           done
@@ -101,8 +101,10 @@ jobs:
             || { echo "App-Name wurde nicht gesetzt"; exit 1; }
           test -f android/app/src/main/assets/public/index.html \
             || { echo "Web-Assets fehlen im Projekt"; exit 1; }
-          grep -q "reno-mediastore" android/capacitor.settings.gradle \
-            || { echo "Das MediaStore-Plugin wurde nicht eingebunden"; exit 1; }
+          for plugin in reno-mediastore reno-appupdate; do
+            grep -q "$plugin" android/capacitor.settings.gradle \
+              || { echo "Plugin nicht eingebunden: $plugin"; exit 1; }
+          done
           grep -q "versionCode ${{ github.run_number }}" android/app/build.gradle \
             || { echo "Die Versionsnummer wurde nicht gesetzt"; exit 1; }
           grep -q "signingConfigs" android/app/build.gradle \

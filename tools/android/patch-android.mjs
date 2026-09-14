@@ -56,6 +56,8 @@ const PERMISSIONS = [
   '<uses-permission android:name="android.permission.CAMERA" />',
   '<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />',
   '<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />',
+  // lets the app install its own next version; Android still asks the user
+  '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />',
   '<uses-permission\n        android:name="android.permission.READ_EXTERNAL_STORAGE"\n        android:maxSdkVersion="32" />',
 ];
 

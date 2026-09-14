@@ -1,0 +1,17 @@
+{
+  "name": "@reno/appupdate",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Lädt die neue APK in der App herunter und übergibt sie an Androids Installer",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["android/", "index.js", "index.d.ts"],
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.2.0"
+  }
+}
