@@ -135,6 +135,13 @@ den App-Namen und den dunklen Fensterhintergrund ein. Sobald eine native Datei v
 bearbeitet werden muss, kann `android/` committet werden; der Workflow überspringt dann das
 Erzeugen und synchronisiert nur noch.
 
+### Eigenes Plugin
+
+`plugins/mediastore` liest die Fotogalerie nach Aufnahmedatum, damit das Bautagebuch beim
+Eintrag vom 4. September die Bilder dieses Tages vorschlagen kann und sich merkt, wo das
+Original liegt. Es hängt als `file:`-Abhängigkeit in der `package.json`, Capacitor findet
+es beim Sync von selbst. Details in [plugins/mediastore/README.md](plugins/mediastore/README.md).
+
 Lokal, falls doch einmal ein Rechner mit Android SDK da ist:
 
 ```bash
