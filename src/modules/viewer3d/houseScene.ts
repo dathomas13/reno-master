@@ -202,10 +202,16 @@ export function buildHouse(
   const center = toWorld(THREE, houseW / 2, houseD / 2, 1000);
 
   // ---------------------------------------------------------------- lights
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x334455, 0.85);
-  const sun = new THREE.DirectionalLight(0xffffff, 0.7);
+  // The intensities are the ones from the handover viewer. That viewer ran on a three
+  // before r155, which multiplied every light by PI ("legacy lights"); newer versions
+  // take the number as given and removed the switch, which made the same scene about
+  // three times darker. The factor is applied here instead, so the numbers below stay
+  // comparable with viewer_template.html.
+  const LEGACY = Math.PI;
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x334455, 0.85 * LEGACY);
+  const sun = new THREE.DirectionalLight(0xffffff, 0.7 * LEGACY);
   sun.position.set(-10, 20, -8);
-  const fill = new THREE.DirectionalLight(0xffffff, 0.35);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.35 * LEGACY);
   fill.position.set(12, 8, 10);
   root.add(hemi, sun, fill);
 

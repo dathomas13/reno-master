@@ -83,9 +83,15 @@ export default function ViewerPage() {
     setSelected(null);
     setRoom(null);
 
+    // Keep the look of the handover viewer, which predates three's colour management:
+    // with it enabled every material colour is converted from sRGB into the linear
+    // working space, and with a linear output nothing converts it back - the model came
+    // out noticeably darker than the one in Haus_3D.html. Off plus linear output is
+    // exactly what the old viewer did. Must be set before any colour is created.
+    if ('ColorManagement' in THREE) THREE.ColorManagement.enabled = false;
+
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    // keep the look of the handover viewer, which predates three's colour management
     if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1d2126);
