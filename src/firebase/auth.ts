@@ -15,10 +15,22 @@ import { auth, db } from './app';
 import { COL, type UserProfile } from '@/data/types';
 
 /** the session survives restarts and works offline once established */
-void setPersistence(auth, browserLocalPersistence);
+void setPersistence(auth, browserLocalPersistence).catch(() => undefined);
+
+/** true when somebody is signed in; the preview mode runs without an account */
+export function isAuthenticated(): boolean {
+  return auth.currentUser !== null;
+}
 
 export function watchUser(callback: (user: User | null) => void): () => void {
-  return onAuthStateChanged(auth, callback);
+  try {
+    // the error callback fires when the project is not configured yet - the preview
+    // mode has to keep working in that case
+    return onAuthStateChanged(auth, callback, () => callback(null));
+  } catch {
+    callback(null);
+    return () => undefined;
+  }
 }
 
 export async function signIn(email: string, password: string): Promise<void> {

@@ -11,6 +11,7 @@ import { pickFiles } from '@/platform/photos';
 import { enqueue } from '@/offline/outbox';
 import { newId } from '@/lib/ids';
 import { formatBytes } from '@/lib/image';
+import { isAuthenticated } from '@/firebase/auth';
 
 const GROUP_LABEL: Record<string, string> = {
   original: 'Originalpläne 1967',
@@ -89,9 +90,11 @@ export default function PlansPage() {
         title="Pläne"
         subtitle={`${all.length} Pläne`}
         action={
-          <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => setUploadOpen(true)}>
-            Hochladen
-          </button>
+          isAuthenticated() ? (
+            <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => setUploadOpen(true)}>
+              Hochladen
+            </button>
+          ) : undefined
         }
       />
 

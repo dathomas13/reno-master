@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { Spinner } from '@/components/Fields';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { startOutboxWorker } from '@/offline/outbox';
+import { PreviewBanner } from '@/components/PreviewBanner';
 import LoginPage from '@/modules/auth/LoginPage';
 import HomePage from '@/modules/home/HomePage';
 import DiaryListPage from '@/modules/diary/DiaryListPage';
@@ -26,7 +27,45 @@ function Protected() {
   useEffect(() => (user ? startOutboxWorker() : undefined), [user]);
 
   if (!ready) return <Spinner label="Wird geladen…" />;
-  if (!user) return <LoginPage />;
+
+  // Without an account the model and the generated plans are still worth showing: they
+  // ship with the app and need no database. Everything that touches real data does not.
+  if (!user) {
+    return (
+      <RoomsProvider>
+        <Routes>
+          <Route
+            path="/3d"
+            element={
+              <>
+                <PreviewBanner />
+                <ViewerPage />
+              </>
+            }
+          />
+          <Route
+            path="/plaene"
+            element={
+              <>
+                <PreviewBanner />
+                <PlansPage />
+              </>
+            }
+          />
+          <Route
+            path="/plaene/:id"
+            element={
+              <>
+                <PreviewBanner />
+                <PlanViewPage />
+              </>
+            }
+          />
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      </RoomsProvider>
+    );
+  }
 
   return (
     <RoomsProvider>

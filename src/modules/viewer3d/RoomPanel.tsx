@@ -3,6 +3,7 @@ import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Photo, type Task } from '@/data/types';
 import { where } from '@/firebase/db';
 import { formatEuroShort } from '@/lib/money';
+import { isAuthenticated } from '@/firebase/auth';
 import { LAYER_LABEL, type Layer, type Room } from './houseScene';
 
 /**
@@ -32,6 +33,13 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
         </button>
       </div>
 
+      {!isAuthenticated() && (
+        <p className="text-xs text-muted mt-2">
+          Einträge, Fotos und Kosten zu diesem Raum erscheinen nach der Anmeldung.
+        </p>
+      )}
+
+      {isAuthenticated() && (
       <div className="grid grid-cols-4 gap-2 mt-3 text-center">
         <Link to={`/tagebuch?raum=${room.id}`} className="card py-2">
           <div className="text-lg">{entries.length}</div>
@@ -50,6 +58,7 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
           <div className="text-[11px] text-muted">offen</div>
         </Link>
       </div>
+      )}
 
       {entries.length > 0 && (
         <ul className="mt-3 text-sm">

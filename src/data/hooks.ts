@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { type QueryConstraint } from 'firebase/firestore';
 import { watchCollection, watchDoc } from '@/firebase/db';
+import { isAuthenticated } from '@/firebase/auth';
 
 export interface QueryResult<T> {
   data: T[];
@@ -37,6 +38,12 @@ export function useCollection<T>(
   latest.current = constraints;
 
   useEffect(() => {
+    // the preview runs without an account; querying would only produce denied reads
+    if (!isAuthenticated()) {
+      setData([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const unsubscribe = watchCollection<T>(
       collectionName,
@@ -68,7 +75,7 @@ export function useDocument<T>(collectionName: string, id: string | undefined): 
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!id) {
+    if (!id || !isAuthenticated()) {
       setData(null);
       setLoading(false);
       return;
