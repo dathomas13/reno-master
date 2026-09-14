@@ -4,7 +4,13 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 
 export default tseslint.config(
-  { ignores: ['dist', 'dev-dist', 'functions/lib', '.tmp-node-tests', 'tools/model/_verify/js'] },
+  {
+    ignores: [
+      'dist', 'dev-dist', 'functions/lib', '.tmp-node-tests', '.tmp-typecheck',
+      // helper scripts that run under Node, not part of the app bundle
+      'tools/**', 'public/**', 'android/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

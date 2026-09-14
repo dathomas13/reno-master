@@ -54,24 +54,22 @@ export const claudeExtractor: ReceiptExtractor = {
     const data = await toBase64(file);
     const isPdf = contentType === 'application/pdf';
 
+    const instruction = categories.length
+      ? `Lies diesen Beleg aus. Mögliche Kategorien: ${categories.join(', ')}.`
+      : 'Lies diesen Beleg aus.';
+
+    // PDF document blocks are accepted by the API but are not in the type definitions of
+    // the pinned SDK version, so the block list is assembled loosely and handed over as
+    // the parameter type. Drop the cast once the SDK is bumped.
     const content = [
       isPdf
-        ? { type: 'document' as const, source: { type: 'base64' as const, media_type: 'application/pdf' as const, data } }
+        ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data } }
         : {
-            type: 'image' as const,
-            source: {
-              type: 'base64' as const,
-              media_type: (contentType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
-              data,
-            },
+            type: 'image',
+            source: { type: 'base64', media_type: contentType || 'image/jpeg', data },
           },
-      {
-        type: 'text' as const,
-        text: categories.length
-          ? `Lies diesen Beleg aus. Mögliche Kategorien: ${categories.join(', ')}.`
-          : 'Lies diesen Beleg aus.',
-      },
-    ];
+      { type: 'text', text: instruction },
+    ] as unknown as Anthropic.MessageParam['content'];
 
     const response = await client().messages.create({
       model: settings.claudeModel || 'claude-opus-5',

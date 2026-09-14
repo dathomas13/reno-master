@@ -115,7 +115,7 @@ export default function ViewerPage() {
     };
 
     const raycaster = new THREE.Raycaster();
-    function pick(clientX: number, clientY: number) {
+    const pick = (clientX: number, clientY: number) => {
       const house = houseRef.current;
       if (!house) return;
       const rect = canvas.getBoundingClientRect();
@@ -134,7 +134,7 @@ export default function ViewerPage() {
       setSelected(found);
       setRoom(found?.type === 'room' ? found.room : null);
       invalidate();
-    }
+    };
 
     void (async () => {
       try {

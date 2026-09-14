@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent, type RefObject } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Spinner } from '@/components/Fields';
@@ -11,7 +11,7 @@ import { useRooms } from '@/data/RoomsContext';
 import type { Room } from '@/modules/viewer3d/houseScene';
 
 /** pinch to zoom, drag to pan - the same gestures as the 3D view */
-function usePanZoom(target: React.RefObject<HTMLDivElement>) {
+function usePanZoom(target: RefObject<HTMLDivElement | null>) {
   useEffect(() => {
     const element = target.current;
     if (!element) return;
@@ -108,7 +108,7 @@ export default function PlanViewPage() {
   }, [id, uploaded]);
 
   /** the generated plans carry data-room-id, so a tap opens the same panel as in 3D */
-  function onSvgClick(event: React.MouseEvent<HTMLDivElement>) {
+  function onSvgClick(event: MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
     const roomId = target.closest('[data-room-id]')?.getAttribute('data-room-id');
     if (roomId) setRoom(byId.get(roomId) ?? null);

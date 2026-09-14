@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { resolveFileUrl } from '@/offline/fileUrls';
 import type { Photo } from '@/data/types';
 
@@ -59,7 +59,7 @@ interface LightboxProps {
   index: number;
   onClose(): void;
   onIndexChange(index: number): void;
-  footer?: (photo: Photo) => React.ReactNode;
+  footer?: (photo: Photo) => ReactNode;
 }
 
 /** full screen viewer with swipe, used from the diary and the cost detail */
