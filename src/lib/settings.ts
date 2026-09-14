@@ -8,6 +8,12 @@ export interface LocalSettings {
   ocrEngine: 'auto' | 'mlkit' | 'claude' | 'off';
   defaultModelVariant: 'ist' | 'soll';
   showRoomsInPlanViews: boolean;
+  /**
+   * Upload the untouched photo next to the 1600 px copy. Off by default because it
+   * costs roughly ten times the storage; on for the pictures that have to stay
+   * readable years later - cable runs, pipes, anything that disappears behind a wall.
+   */
+  keepOriginals: boolean;
 }
 
 const KEY = 'reno.settings';
@@ -18,6 +24,7 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   ocrEngine: 'auto',
   defaultModelVariant: 'ist',
   showRoomsInPlanViews: true,
+  keepOriginals: false,
 };
 
 export const CLAUDE_MODELS = [

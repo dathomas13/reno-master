@@ -6,15 +6,21 @@ import type { Photo } from '@/data/types';
 export function PhotoImage({
   photo,
   thumb = false,
+  full = false,
   className = '',
   alt = '',
 }: {
   photo: Photo;
   thumb?: boolean;
+  /** show the archived original instead of the 1600 px copy, if there is one */
+  full?: boolean;
   className?: string;
   alt?: string;
 }) {
-  const path = thumb && photo.thumbPath ? photo.thumbPath : photo.storagePath;
+  const path =
+    thumb && photo.thumbPath
+      ? photo.thumbPath
+      : (full && photo.originalPath) || photo.storagePath;
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -65,6 +71,12 @@ interface LightboxProps {
 /** full screen viewer with swipe, used from the diary and the cost detail */
 export function Lightbox({ photos, index, onClose, onIndexChange, footer }: LightboxProps) {
   const photo = photos[index];
+  // the original can be several megabytes, so it is only fetched when asked for
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  useEffect(() => {
+    setShowOriginal(false);
+  }, [index]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -85,9 +97,23 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
         <span className="text-sm">
           {index + 1} / {photos.length}
         </span>
-        <button type="button" className="btn btn-ghost" onClick={onClose}>
-          Schließen
-        </button>
+        <span className="flex items-center gap-2">
+          {photo.originalPath &&
+            (showOriginal ? (
+              <span className="text-xs text-accent">Original</span>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setShowOriginal(true)}
+              >
+                Original laden
+              </button>
+            ))}
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            Schließen
+          </button>
+        </span>
       </div>
       <div
         className="flex-1 flex items-center justify-center overflow-hidden"
@@ -100,7 +126,11 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
           if (delta > 50) onIndexChange(Math.max(index - 1, 0));
         }}
       >
-        <PhotoImage photo={photo} className="max-h-full max-w-full object-contain" />
+        <PhotoImage
+          photo={photo}
+          full={showOriginal}
+          className="max-h-full max-w-full object-contain"
+        />
       </div>
       {footer && <div className="p-4 text-xs text-muted">{footer(photo)}</div>}
     </div>

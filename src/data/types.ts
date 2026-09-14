@@ -49,6 +49,12 @@ export interface Photo extends BaseDoc {
   takenAt?: IsoDateTime;
   originalName?: string;
   originalBytes?: number;
+  /**
+   * The untouched file in Cloud Storage. Set when the photo was archived, which is what
+   * makes it survive a lost phone: the content:// URI below is an id in one device's
+   * media database and means nothing on the next phone.
+   */
+  originalPath?: string;
   /** content:// URI of the untouched original in the phone gallery (APK only) */
   sourceUri?: string;
   /** which device holds that original */

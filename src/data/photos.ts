@@ -20,6 +20,19 @@ export interface AddPhotoInput {
   takenAt?: string;
   caption?: string;
   roomIds?: string[];
+  /** also store the untouched file, so it survives a lost phone */
+  keepOriginal?: boolean;
+  /**
+   * The untouched bytes. On the web the picked file already is the original; on the
+   * phone the picker hands over a downsized copy, so the caller reads the original from
+   * the gallery first and passes it here.
+   */
+  originalFile?: Blob;
+}
+
+/** the archive copy sits next to the working copy, under the same id */
+export function originalPathFor(id: string, extension: string): string {
+  return `photos/${id}_original.${extension}`;
 }
 
 function storagePathFor(kind: PhotoKind, id: string, costId: string | undefined, extension: string): string {
@@ -70,6 +83,22 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
     });
   }
 
+  // the archive copy: the untouched file, uploaded unchanged. Pointless for a PDF,
+  // which is never resized, and pointless when the caller has nothing better than the
+  // copy we just made.
+  const original = input.originalFile ?? input.file;
+  if (input.keepOriginal && !isPdf && original.size > main.blob.size) {
+    const originalExtension = original.type === 'image/png' ? 'png' : 'jpg';
+    photo.originalPath = originalPathFor(id, originalExtension);
+    photo.originalBytes = original.size;
+    await enqueue({
+      id: `${id}-original`,
+      storagePath: photo.originalPath,
+      contentType: original.type || 'image/jpeg',
+      blob: original,
+    });
+  }
+
   // strip undefined, Firestore rejects it
   const clean = Object.fromEntries(Object.entries(photo).filter(([, value]) => value !== undefined));
   await saveDoc<Photo>(COL.photos, clean as unknown as Photo);
@@ -94,6 +123,7 @@ export async function updatePhoto(id: string, patch: Partial<Photo>): Promise<vo
 export async function deletePhoto(photo: Photo): Promise<void> {
   await dropLocalBlob(photo.storagePath);
   if (photo.thumbPath) await dropLocalBlob(photo.thumbPath);
+  if (photo.originalPath) await dropLocalBlob(photo.originalPath);
   await removeDoc(COL.photos, photo.id);
   // the file in Cloud Storage is left in place on purpose: deleting it needs network,
   // and an orphaned 300 KB file is cheaper than a failed delete that loses the document

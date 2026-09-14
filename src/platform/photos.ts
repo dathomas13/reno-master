@@ -44,6 +44,7 @@ interface MediaStorePlugin {
   listPhotos(options: { from: string; to: string; limit?: number }): Promise<{ photos: GalleryPhoto[] }>;
   getThumbnail(options: { uri: string; size?: number }): Promise<{ base64: string; mime: string }>;
   readImage(options: { uri: string; maxEdge: number }): Promise<{ base64: string; mime: string }>;
+  copyOriginal?(options: { uri: string }): Promise<{ path: string; mime: string; bytes: number }>;
   openInGallery(options: { uri: string }): Promise<void>;
 }
 
@@ -97,6 +98,31 @@ export async function readGalleryPhoto(uri: string, maxEdge = 1600): Promise<Blo
   if (!plugin) return null;
   const { base64, mime } = await plugin.readImage({ uri, maxEdge });
   return base64ToBlob(base64, mime);
+}
+
+/**
+ * The untouched original from the gallery, for the archive copy.
+ *
+ * It comes back as a file in the app's cache rather than as base64: a 12 megapixel photo
+ * would otherwise cross the bridge as a 6 MB string. The WebView can read that file
+ * through Capacitor's own file server.
+ */
+export async function readGalleryOriginal(uri: string): Promise<Blob | null> {
+  const plugin = mediaStore();
+  if (!plugin?.copyOriginal) return null;
+  try {
+    const { path, mime } = await plugin.copyOriginal({ uri });
+    const capacitor = (globalThis as { Capacitor?: { convertFileSrc?: (path: string) => string } })
+      .Capacitor;
+    const url = capacitor?.convertFileSrc ? capacitor.convertFileSrc(path) : path;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return blob.type ? blob : new Blob([blob], { type: mime || 'image/jpeg' });
+  } catch {
+    // an older build of the plugin, or the file vanished - the downsized copy still works
+    return null;
+  }
 }
 
 /** browser file picker; resolves once the user picked something or cancelled */

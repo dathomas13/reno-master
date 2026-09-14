@@ -3,8 +3,9 @@ import { PhotoImage } from '@/components/PhotoView';
 import { addPhoto, deletePhoto } from '@/data/photos';
 import {
   pickPhotos, pickFiles, galleryPickerAvailable, listGalleryPhotosForDay, readGalleryPhoto,
-  galleryThumbnail, type GalleryPhoto,
+  readGalleryOriginal, galleryThumbnail, type GalleryPhoto,
 } from '@/platform/photos';
+import { loadSettings, saveSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
 import type { Photo } from '@/data/types';
@@ -49,8 +50,18 @@ export function PhotoAttach({
   const [dayPhotos, setDayPhotos] = useState<GalleryPhoto[]>([]);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [warning, setWarning] = useState<string | null>(null);
+  // remembered per device: whoever photographs cable runs wants it on for a whole day
+  const [keepOriginals, setKeepOriginals] = useState(() => loadSettings().keepOriginals);
 
-  async function addFromBlobs(items: { blob: Blob; name?: string; takenAt?: string; sourceUri?: string }[]) {
+  function toggleOriginals() {
+    const next = !keepOriginals;
+    setKeepOriginals(next);
+    saveSettings({ keepOriginals: next });
+  }
+
+  async function addFromBlobs(
+    items: { blob: Blob; name?: string; takenAt?: string; sourceUri?: string; original?: Blob }[],
+  ) {
     setBusy(true);
     try {
       for (const item of items) {
@@ -62,6 +73,8 @@ export function PhotoAttach({
           originalName: item.name,
           takenAt: item.takenAt,
           sourceUri: item.sourceUri,
+          keepOriginal: keepOriginals && kind === 'photo',
+          originalFile: item.original,
         });
         onAdded(photo);
       }
@@ -111,7 +124,13 @@ export function PhotoAttach({
     const blob = await readGalleryPhoto(item.uri);
     if (!blob) return;
     onFileChosen?.(blob, blob.type || 'image/jpeg');
-    await addFromBlobs([{ blob, name: item.name, takenAt: item.takenAt, sourceUri: item.uri }]);
+    // the picker only ever hands over a downsized copy, so the untouched file has to be
+    // read separately - and only when it is actually going to be kept
+    const original =
+      keepOriginals && kind === 'photo' ? ((await readGalleryOriginal(item.uri)) ?? undefined) : undefined;
+    await addFromBlobs([
+      { blob, name: item.name, takenAt: item.takenAt, sourceUri: item.uri, original },
+    ]);
   }
 
   async function remove(photo: Photo) {
@@ -145,6 +164,18 @@ export function PhotoAttach({
             PDF / Datei
           </button>
         )}
+        {kind === 'photo' && (
+          <button
+            type="button"
+            className={`btn ${keepOriginals ? 'btn-primary' : ''}`}
+            aria-pressed={keepOriginals}
+            onClick={toggleOriginals}
+            disabled={busy}
+            title="Zusätzlich die unveränderte Datei sichern – für Fotos, die später in voller Auflösung gebraucht werden"
+          >
+            Original sichern
+          </button>
+        )}
         {busy && <span className="text-muted text-sm self-center">wird verarbeitet…</span>}
       </div>
 
@@ -160,6 +191,14 @@ export function PhotoAttach({
               )}
               {photo.uploadState === 'failed' && (
                 <span className="absolute bottom-1 left-1 text-[10px] bg-bad/90 text-bg px-1 rounded">Fehler</span>
+              )}
+              {photo.originalPath && photo.uploadState === 'uploaded' && (
+                <span
+                  className="absolute bottom-1 right-1 text-[10px] bg-accent/90 text-bg px-1 rounded"
+                  title="Das Original liegt gesichert in der Cloud"
+                >
+                  Original
+                </span>
               )}
               <button
                 type="button"

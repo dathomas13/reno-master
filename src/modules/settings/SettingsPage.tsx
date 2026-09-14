@@ -99,6 +99,27 @@ export default function SettingsPage() {
         </section>
 
         <section className="card p-4">
+          <h2 className="font-semibold mb-3">Fotos</h2>
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              className="w-5 h-5 accent-[#c9a86a] mt-0.5"
+              checked={settings.keepOriginals}
+              onChange={(event) => update({ keepOriginals: event.target.checked })}
+            />
+            <span>
+              Originale mitsichern
+              <span className="block text-sm text-muted">
+                Neben der verkleinerten Fassung wird die unveränderte Datei gespeichert – nötig,
+                wenn du Jahre später noch in einen Kabelverlauf hineinzoomen willst. Braucht etwa
+                das Zehnfache an Speicher, deshalb am besten nur für solche Aufnahmen einschalten.
+                Der Schalter steht auch direkt über der Fotoleiste im Eintrag.
+              </span>
+            </span>
+          </label>
+        </section>
+
+        <section className="card p-4">
           <h2 className="font-semibold mb-3">Beleg-Auslesen</h2>
           <p className="text-sm text-muted mb-3">Aktiv: {engine}</p>
           <Field label="Verfahren">

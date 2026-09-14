@@ -24,6 +24,8 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -50,6 +52,8 @@ public class MediaStorePlugin extends Plugin {
     public static final String PHOTOS = "photos";
     public static final String STORAGE = "storage";
 
+    private static final String ORIGINALS = "originals";
+    private static final long ORIGINAL_MAX_AGE_MS = 24 * 60 * 60 * 1000L;
     private static final int DEFAULT_LIMIT = 300;
     private static final int DEFAULT_MAX_EDGE = 1600;
     private static final int JPEG_QUALITY = 82;
@@ -257,6 +261,79 @@ public class MediaStorePlugin extends Plugin {
             call.resolve();
         } catch (Exception error) {
             call.reject("Die Galerie konnte nicht geöffnet werden", error);
+        }
+    }
+
+    /**
+     * Copies the untouched original into the app's cache and returns the path.
+     *
+     * readImage always downsizes, which is right for showing a picture but wrong for the
+     * archive copy: a photo of a cable run has to stay readable years from now. The bytes
+     * go through a file rather than through base64, because a 12 megapixel photo would
+     * otherwise cross the bridge as a 6 MB string.
+     */
+    @PluginMethod
+    public void copyOriginal(PluginCall call) {
+        String uri = call.getString("uri");
+        if (uri == null) {
+            call.reject("uri fehlt");
+            return;
+        }
+        try {
+            File folder = new File(getContext().getCacheDir(), ORIGINALS);
+            if (!folder.exists() && !folder.mkdirs()) {
+                call.reject("Kein Platz im Zwischenspeicher");
+                return;
+            }
+            prune(folder);
+
+            Uri source = Uri.parse(uri);
+            ContentResolver resolver = getContext().getContentResolver();
+            String mime = resolver.getType(source);
+            File target = new File(folder, "original-" + System.currentTimeMillis() + extensionFor(mime));
+
+            long bytes = 0;
+            try (InputStream input = resolver.openInputStream(source);
+                 FileOutputStream output = new FileOutputStream(target)) {
+                if (input == null) {
+                    call.reject("Das Original lässt sich nicht lesen");
+                    return;
+                }
+                byte[] buffer = new byte[64 * 1024];
+                int read;
+                while ((read = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, read);
+                    bytes += read;
+                }
+            }
+
+            JSObject result = new JSObject();
+            result.put("path", target.getAbsolutePath());
+            result.put("mime", mime == null ? "image/jpeg" : mime);
+            result.put("bytes", bytes);
+            call.resolve(result);
+        } catch (Exception error) {
+            call.reject("Das Original lässt sich nicht kopieren", error);
+        }
+    }
+
+    private String extensionFor(String mime) {
+        if ("image/png".equals(mime)) return ".png";
+        if ("image/webp".equals(mime)) return ".webp";
+        return ".jpg";
+    }
+
+    /** yesterday's copies are of no use to anyone and would fill the cache */
+    private void prune(File folder) {
+        File[] files = folder.listFiles();
+        if (files == null) return;
+        long cutoff = System.currentTimeMillis() - ORIGINAL_MAX_AGE_MS;
+        for (File file : files) {
+            if (file.lastModified() < cutoff) {
+                // a failed delete is not worth failing the call over
+                //noinspection ResultOfMethodCallIgnored
+                file.delete();
+            }
         }
     }
 
