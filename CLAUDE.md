@@ -71,9 +71,10 @@ Offen:
 4. `public/img/nordansicht.jpg` ergänzen.
 5. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
-6. **Fester Signaturschlüssel für die APK.** Ohne ihn signiert jeder Lauf anders und
-   Android verweigert das Update über die alte Fassung. Keystore erzeugen, als Base64 und
-   Passwort in die GitHub-Secrets, im Gradle-Build verwenden.
+6. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
+   `ANDROID_*`-Secrets vor, baut und signiert er eine Release-APK, die sich über die alte
+   legt (Anleitung im README unter „Signaturschlüssel“). Ohne sie bleibt es beim
+   Debug-Schlüssel, und Android verweigert das Update über die alte Fassung.
 7. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
    Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
    Tages). Offen sind ML Kit für das Beleg-Auslesen auf dem Gerät, die lokale

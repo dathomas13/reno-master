@@ -6,6 +6,10 @@
  * nothing.
  *
  *   node tools/android/patch-android.mjs
+ *
+ * Two values come from the environment, because they change with every build:
+ *   RENO_VERSION_CODE  integer, must grow for Android to accept an update (CI run number)
+ *   RENO_VERSION_NAME  what the user sees, e.g. "1.0.14 (06904d6)"
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -82,6 +86,84 @@ edit(
             '\n        <item name="android:windowBackground">#1d2126</item>',
         ),
   'dunkler Fensterhintergrund',
+);
+
+// ---------------------------------------------------------------- version
+// Android only installs an APK over an existing one when versionCode is at least as high
+// as the installed one, so the build number becomes the version code.
+const versionCode = process.env.RENO_VERSION_CODE;
+const versionName = process.env.RENO_VERSION_NAME;
+if (versionCode || versionName) {
+  edit(
+    'app/build.gradle',
+    (gradle) => {
+      let out = gradle;
+      if (versionCode) out = out.replace(/versionCode\s+\d+/, `versionCode ${Number(versionCode)}`);
+      if (versionName) out = out.replace(/versionName\s+"[^"]*"/, `versionName "${versionName}"`);
+      return out;
+    },
+    `Version gesetzt (${versionCode ?? '-'} / ${versionName ?? '-'})`,
+  );
+}
+
+// ---------------------------------------------------------------- release signing
+// Without a fixed key every CI run signs with a different throwaway debug key and Android
+// refuses to install the new APK over the old one. If android/keystore.properties exists
+// (the workflow writes it from the repository secrets), the release build uses it; if it
+// does not, nothing changes and the debug key stays in charge.
+const SIGNING_MARKER = 'renoKeystoreFile';
+
+const SIGNING_HEAD = `
+// Release-Signatur: android/keystore.properties und android/keystore.jks legt der
+// Workflow aus den GitHub-Secrets an. Fehlen sie, bleibt es beim Debug-Schlüssel.
+def ${SIGNING_MARKER} = rootProject.file("keystore.properties")
+def renoKeystore = new Properties()
+if (${SIGNING_MARKER}.exists()) {
+    ${SIGNING_MARKER}.withInputStream { renoKeystore.load(it) }
+}
+`;
+
+const SIGNING_CONFIG = `    signingConfigs {
+        release {
+            if (${SIGNING_MARKER}.exists()) {
+                storeFile rootProject.file(renoKeystore.getProperty('storeFile'))
+                storePassword renoKeystore.getProperty('storePassword')
+                keyAlias renoKeystore.getProperty('keyAlias')
+                keyPassword renoKeystore.getProperty('keyPassword')
+            }
+        }
+    }
+`;
+
+edit(
+  'app/build.gradle',
+  (gradle) => {
+    if (gradle.includes(SIGNING_MARKER)) return gradle;
+    let out = gradle;
+
+    // 1. the properties file, read once at the top of the script
+    const applyLine = /^apply plugin: ['"]com\.android\.application['"].*$/m;
+    if (!applyLine.test(out)) throw new Error('app/build.gradle sieht anders aus als erwartet');
+    out = out.replace(applyLine, (match) => `${match}\n${SIGNING_HEAD}`);
+
+    // 2. the signing config itself, right before the build types that use it
+    const buildTypes = /^(\s*)buildTypes \{/m;
+    if (!buildTypes.test(out)) throw new Error('buildTypes fehlt in app/build.gradle');
+    out = out.replace(buildTypes, (match) => `${SIGNING_CONFIG}${match}`);
+
+    // 3. use it for the release build - but only when the key is actually there
+    const releaseType = /(buildTypes \{[^]*?\n(\s*)release \{)/;
+    if (!releaseType.test(out)) throw new Error('buildTypes.release fehlt in app/build.gradle');
+    out = out.replace(
+      releaseType,
+      (match, whole, indent) =>
+        `${whole}\n${indent}    if (${SIGNING_MARKER}.exists()) {\n` +
+        `${indent}        signingConfig signingConfigs.release\n` +
+        `${indent}    }`,
+    );
+    return out;
+  },
+  'Release-Signatur vorbereitet',
 );
 
 if (changes.length === 0) {

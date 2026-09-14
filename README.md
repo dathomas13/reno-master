@@ -123,10 +123,9 @@ Actions, ein lokales Android Studio ist dafür nicht nötig.
 Actions → "Android APK" → Run workflow
 ```
 
-Am Ende des Laufs hängt unter *Artifacts* die Datei `reno-master-debug-apk`. Herunterladen,
-auf das Handy kopieren, Installation aus unbekannter Quelle erlauben, installieren. Es ist
-ein Debug-Build, signiert mit dem Standard-Debug-Schlüssel: gut zum Ausprobieren, nicht für
-den Play Store.
+Am Ende des Laufs hängt unter *Artifacts* die Datei `reno-master-apk`, und dieselbe APK
+liegt als `reno-master.apk` am Release des Laufs. Herunterladen, Installation aus unbekannter
+Quelle erlauben, installieren.
 
 Das Verzeichnis `android/` liegt bewusst **nicht** im Repo. Capacitor erzeugt es im Lauf neu
 aus `capacitor.config.ts` und den installierten Plugins, damit es nie zu den Abhängigkeiten
@@ -145,19 +144,49 @@ der laufende.
 
 - **Im Browser** genügt „Neu laden“, der Service Worker tauscht die Dateien aus.
 - **In der App** führt „Laden“ auf die neueste APK unter
-  `releases/latest/download/app-debug.apk`. Android zeigt dann seinen Installationsdialog.
+  `releases/latest/download/reno-master.apk`. Android zeigt dann seinen Installationsdialog.
   Eine per Sideload installierte App darf sich nicht still selbst überschreiben, dieser
   eine Tipp bleibt.
 
-**Wichtig, solange kein fester Signaturschlüssel eingerichtet ist:** Jeder CI-Lauf erzeugt
-einen neuen Debug-Schlüssel, deshalb verweigert Android die Installation über die alte
-Fassung („App nicht installiert“). Bis dahin die alte App vorher deinstallieren. Die
-Daten liegen in Firestore und sind davon nicht betroffen; verloren gehen nur lokale
-Einstellungen und noch nicht hochgeladene Dateien.
+### Signaturschlüssel
 
-Dauerhaft lösen lässt sich das mit einem Release-Schlüssel: einmal einen Keystore
-erzeugen, ihn als Base64 zusammen mit dem Passwort in den GitHub-Secrets ablegen und den
-Gradle-Build damit signieren. Danach installiert sich jede neue APK über die alte.
+Android nimmt eine neue APK nur über einer bereits installierten an, wenn beide mit
+demselben Schlüssel signiert sind. Der Workflow kann das, sobald vier Secrets hinterlegt
+sind (*Settings* → *Secrets and variables* → *Actions* → **Secrets**):
+
+| Secret | Inhalt |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | der Keystore (`.jks`) als Base64, eine Zeile |
+| `ANDROID_KEYSTORE_PASSWORD` | Passwort des Keystores |
+| `ANDROID_KEY_ALIAS` | Alias des Schlüssels, Vorgabe `reno` |
+| `ANDROID_KEY_PASSWORD` | Passwort des Schlüssels, Vorgabe = Keystore-Passwort |
+
+Fehlt `ANDROID_KEYSTORE_BASE64`, baut der Workflow wie bisher eine Debug-APK — nichts
+geht kaputt, nur das Update über die alte Fassung bleibt dann aus.
+
+Einen Keystore erzeugt man einmalig mit dem JDK:
+
+```bash
+keytool -genkeypair -v -keystore reno-master.jks -alias reno \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=Reno Master, O=Privat, C=DE"
+base64 -w0 reno-master.jks      # dieser Text kommt in das Secret
+```
+
+**Den `.jks` gut aufbewahren und niemals ins Repo legen.** Geht er verloren, lässt sich
+keine Aktualisierung mehr über die installierte App legen; dann hilft nur deinstallieren
+und neu installieren.
+
+Der Workflow schreibt den Schlüssel im Lauf nach `android/keystore.jks` und legt
+`android/keystore.properties` daneben; `tools/android/patch-android.mjs` hat den passenden
+`signingConfig` schon in `app/build.gradle` eingetragen. Die Versionsnummer der App ist die
+Nummer des CI-Laufs (`versionCode`), sie wächst dadurch mit jedem Build.
+
+**Solange kein Schlüssel hinterlegt ist:** Jeder CI-Lauf signiert mit einem anderen
+Wegwerf-Schlüssel, deshalb verweigert Android die Installation über die alte Fassung
+(„App nicht installiert“). Bis dahin die alte App vorher deinstallieren. Die Daten liegen
+in Firestore und sind davon nicht betroffen; verloren gehen nur lokale Einstellungen und
+noch nicht hochgeladene Dateien.
 
 ### Eigenes Plugin
 

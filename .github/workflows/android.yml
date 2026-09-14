@@ -51,7 +51,42 @@ jobs:
       - name: Web-Assets und Plugins übernehmen
         run: npx cap sync android
 
-      - name: Berechtigungen und Icons ergänzen
+      - name: Signaturschlüssel bereitstellen
+        id: signing
+        # Ohne festen Schlüssel signiert jeder Lauf anders und Android lehnt die
+        # Installation über die alte Fassung ab. Liegt das Secret vor, wird ab hier mit
+        # dem Release-Schlüssel gebaut; fehlt es, bleibt alles wie bisher.
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -e
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+            echo "Kein ANDROID_KEYSTORE_BASE64 hinterlegt - Debug-Build mit Wegwerf-Schlüssel."
+            exit 0
+          fi
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "ANDROID_KEYSTORE_BASE64 ist gesetzt, ANDROID_KEYSTORE_PASSWORD fehlt." >&2
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/keystore.jks
+          cat > android/keystore.properties <<PROPS
+          storeFile=keystore.jks
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=${KEY_ALIAS:-reno}
+          keyPassword=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}
+          PROPS
+          echo "signed=true" >> "$GITHUB_OUTPUT"
+          echo "Release-Schlüssel eingerichtet."
+
+      - name: Berechtigungen, Version und Signatur eintragen
+        env:
+          # Android nimmt eine neue APK nur an, wenn versionCode nicht kleiner wird
+          RENO_VERSION_CODE: ${{ github.run_number }}
+          RENO_VERSION_NAME: 1.0.${{ github.run_number }}
         run: node tools/android/patch-android.mjs
 
       - name: Prüfen, dass die Anpassungen wirklich drinstehen
@@ -68,17 +103,43 @@ jobs:
             || { echo "Web-Assets fehlen im Projekt"; exit 1; }
           grep -q "reno-mediastore" android/capacitor.settings.gradle \
             || { echo "Das MediaStore-Plugin wurde nicht eingebunden"; exit 1; }
-          echo "Manifest, App-Name, Web-Assets und Plugins sind in Ordnung."
+          grep -q "versionCode ${{ github.run_number }}" android/app/build.gradle \
+            || { echo "Die Versionsnummer wurde nicht gesetzt"; exit 1; }
+          grep -q "signingConfigs" android/app/build.gradle \
+            || { echo "Der Signatur-Block fehlt in app/build.gradle"; exit 1; }
+          echo "Manifest, App-Name, Web-Assets, Plugins und Version sind in Ordnung."
 
-      - name: Debug-APK bauen
-        run: ./gradlew --no-daemon assembleDebug
+      - name: APK bauen
         working-directory: android
+        run: |
+          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+            ./gradlew --no-daemon assembleRelease
+          else
+            ./gradlew --no-daemon assembleDebug
+          fi
+
+      - name: APK einsammeln und Signatur prüfen
+        run: |
+          set -e
+          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+            built=android/app/build/outputs/apk/release/app-release.apk
+          else
+            built=android/app/build/outputs/apk/debug/app-debug.apk
+          fi
+          test -f "$built" || { echo "APK nicht gefunden: $built"; exit 1; }
+          # immer derselbe Dateiname, damit der Link in der App stabil bleibt
+          cp "$built" reno-master.apk
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | tail -1 || true)
+          if [ -n "$apksigner" ]; then
+            "$apksigner" verify --print-certs reno-master.apk | head -4
+          fi
+          ls -lh reno-master.apk
 
       - name: APK als Artefakt hochladen
         uses: actions/upload-artifact@v4
         with:
-          name: reno-master-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: reno-master-apk
+          path: reno-master.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -89,13 +150,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="build-${{ github.run_number }}"
+          if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
+            hinweis="Signiert mit dem festen Release-Schlüssel: diese Fassung installiert sich über die vorige."
+          else
+            hinweis="Debug-Build mit Wegwerf-Schlüssel. Android verweigert die Installation über eine ältere Fassung - die alte App vorher deinstallieren."
+          fi
           gh release create "$tag" \
-            android/app/build/outputs/apk/debug/app-debug.apk \
+            reno-master.apk \
             --title "Reno Master $(git log -1 --format=%cs) ($(git rev-parse --short HEAD))" \
             --notes "$(git log -1 --format=%s)
 
-          Debug-Build zum Seitwärts-Installieren. Achtung: solange kein fester
-          Signaturschlüssel eingerichtet ist, signiert jeder Lauf mit einem anderen
-          Debug-Schlüssel. Android verweigert dann die Installation über eine ältere
-          Fassung - die alte App vorher deinstallieren." \
+          $hinweis" \
             --latest

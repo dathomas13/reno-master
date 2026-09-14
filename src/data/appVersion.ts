@@ -78,4 +78,4 @@ export async function checkForUpdate(): Promise<RemoteVersion | null> {
 }
 
 /** where the newest APK lives; the release tracks the latest build */
-export const APK_URL = 'https://github.com/dathomas13/reno-master/releases/latest/download/app-debug.apk';
+export const APK_URL = 'https://github.com/dathomas13/reno-master/releases/latest/download/reno-master.apk';

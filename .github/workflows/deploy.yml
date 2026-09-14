@@ -49,7 +49,7 @@ jobs:
             "date": "$(git log -1 --format=%cs)",
             "subject": "$(git log -1 --format=%s | sed 's/"/\\"/g' | cut -c1-80)",
             "build": "${{ github.run_number }}",
-            "apk": "https://github.com/${{ github.repository }}/releases/latest/download/app-debug.apk"
+            "apk": "https://github.com/${{ github.repository }}/releases/latest/download/reno-master.apk"
           }
           JSON
           cat dist/version.json
