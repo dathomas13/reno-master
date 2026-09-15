@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shouldOfferUpdate, type RemoteVersion } from '@/data/appVersion';
+import { newerVersions, shouldOfferUpdate, type RemoteVersion } from '@/data/appVersion';
 
 function remote(build: number): RemoteVersion {
   return {
@@ -42,5 +42,38 @@ describe('shouldOfferUpdate', () => {
   it('offers the update to a build that predates the numbering', () => {
     // the installed app has no build number yet, so anything published is newer
     expect(shouldOfferUpdate(0, remote(35), null)).toBe(true);
+  });
+});
+
+describe('newerVersions', () => {
+  const history = [
+    { version: '0.17.1', build: 17001, sha: '', date: '2026-09-15', subject: 'Behebung' },
+    { version: '0.17.0', build: 17000, sha: '', date: '2026-09-15', subject: 'Ordner-Export' },
+    { version: '0.9.36', build: 9036, sha: '', date: '2026-09-15', subject: 'Notizen' },
+  ];
+
+  it('brings along what was skipped in between', () => {
+    // updating from 0.9.36 to 0.17.1 also installs what 0.17.0 changed
+    expect(newerVersions(9036, history).map((entry) => entry.version)).toEqual(['0.17.1', '0.17.0']);
+  });
+
+  it('leaves out what is already running', () => {
+    expect(newerVersions(17001, history)).toEqual([]);
+  });
+
+  it('sorts newest first, whatever order it arrives in', () => {
+    const shuffled = [history[2]!, history[0]!, history[1]!];
+    expect(newerVersions(0, shuffled).map((entry) => entry.build)).toEqual([17001, 17000, 9036]);
+  });
+
+  it('does not flood the banner with years of history', () => {
+    const many = Array.from({ length: 30 }, (_, index) => ({
+      version: `0.1.${index}`,
+      build: 1000 + index,
+      sha: '',
+      date: '',
+      subject: '',
+    }));
+    expect(newerVersions(0, many)).toHaveLength(12);
   });
 });

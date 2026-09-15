@@ -19,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # die Versionshistorie wird aus den Tags gelesen
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -62,6 +65,11 @@ jobs:
             '{version: $version, build: $build, sha: $sha, date: $date, subject: $subject, notes: $notes, apk: $apk}' \
             > dist/version.json
           cat dist/version.json
+
+          # dazu die ganze Liste, damit die App auch zeigen kann, was in übersprungenen
+          # Fassungen steckte
+          node --experimental-strip-types tools/release-notes.mjs > dist/versions.json
+          node -p "'Versionen in der Historie: ' + require('./dist/versions.json').length"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

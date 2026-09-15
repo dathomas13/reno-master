@@ -190,7 +190,11 @@ der laufende.
 
 - **Im Browser** genügt „Neu laden“, der Service Worker tauscht die Dateien aus.
 Das Banner nennt die verfügbare Version und die laufende; ein Tipp darauf klappt die
-Änderungen aus (Betreff und Rumpf des letzten Commits, aus `version.json`).
+Änderungen aus — und zwar **alle seit der installierten Fassung**. Wer von 0.9.36 auf
+0.17.1 springt, liest auch, was 0.17.0 gebracht hat; drin ist es ja. Die Liste steht als
+`versions.json` neben der `version.json` und wird beim Deploy aus den Tags erzeugt
+(`tools/release-notes.mjs`), damit sie auch dann noch funktioniert, wenn das Repo einmal
+privat wird.
 
 - **In der App** lädt „Installieren“ die neue APK innerhalb der App herunter — mit
   eigenem Fortschrittsbalken, ohne Umweg über den Browser — und übergibt sie an Androids

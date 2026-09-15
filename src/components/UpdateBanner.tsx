@@ -5,9 +5,12 @@ import {
   APK_URL,
   checkForUpdate,
   dismissUpdate,
+  fetchVersionHistory,
+  newerVersions,
   runningVersion,
   type RemoteVersion,
 } from '@/data/appVersion';
+import { APP_BUILD } from '@/lib/buildInfo';
 import {
   canSelfUpdate,
   formatProgress,
@@ -38,6 +41,8 @@ export function UpdateBanner() {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<'blocked' | 'failed' | null>(null);
   const [open, setOpen] = useState(false);
+  /** what changed since the installed version; fetched when the notes are unfolded */
+  const [history, setHistory] = useState<RemoteVersion[] | null>(null);
 
   const look = useCallback(() => {
     void checkForUpdate().then(setRemote);
@@ -114,7 +119,12 @@ export function UpdateBanner() {
         <button
           type="button"
           className="flex-1 text-sm min-w-0 text-left"
-          onClick={() => setOpen((shown) => !shown)}
+          onClick={() => {
+            setOpen((shown) => !shown);
+            if (history === null) {
+              void fetchVersionHistory().then((all) => setHistory(newerVersions(APP_BUILD, all)));
+            }
+          }}
           aria-expanded={open}
         >
           <span className="block">
@@ -147,16 +157,20 @@ export function UpdateBanner() {
       </div>
 
       {open && remote && !busy && (
-        <div className="mt-2 text-xs border-t border-line pt-2">
-          {remote.subject && <p className="text-ink">{remote.subject}</p>}
-          {remote.notes && (
-            <pre className="mt-1 whitespace-pre-wrap font-sans text-muted max-h-40 overflow-y-auto">
-              {remote.notes}
-            </pre>
-          )}
-          <p className="mt-1 text-muted">
-            {remote.version} · {remote.date} · {remote.sha}
-          </p>
+        <div className="mt-2 text-xs border-t border-line pt-2 max-h-56 overflow-y-auto">
+          {(history && history.length > 0 ? history : [remote]).map((entry) => (
+            <div key={entry.build} className="mb-3 last:mb-0">
+              <p className="text-ink">
+                {entry.version}
+                {entry.date ? ` · ${formatDate(entry.date)}` : ''}
+              </p>
+              {entry.subject && <p className="text-muted">{entry.subject}</p>}
+              {entry.notes && (
+                <pre className="mt-1 whitespace-pre-wrap font-sans text-muted">{entry.notes}</pre>
+              )}
+            </div>
+          ))}
+          {history === null && <p className="text-muted">Änderungen werden geladen…</p>}
         </div>
       )}
 

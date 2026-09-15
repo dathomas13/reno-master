@@ -30,8 +30,17 @@ export interface RemoteVersion {
 
 const DISMISSED_KEY = 'reno.update.dismissed';
 
+function publishedUrl(file: string): string {
+  return isNative() ? `${PUBLIC_URL}${file}` : `${import.meta.env.BASE_URL}${file}`;
+}
+
 export function versionUrl(): string {
-  return isNative() ? `${PUBLIC_URL}version.json` : `${import.meta.env.BASE_URL}version.json`;
+  return publishedUrl('version.json');
+}
+
+/** every published version, newest first */
+export function historyUrl(): string {
+  return publishedUrl('versions.json');
 }
 
 /**
@@ -67,6 +76,43 @@ export async function fetchRemoteVersion(): Promise<RemoteVersion | null> {
   } catch {
     // offline, or the site is not reachable - simply no update today
     return null;
+  }
+}
+
+/**
+ * The versions between the one running and the newest.
+ *
+ * Someone who skips two updates should still read what the skipped one brought: those
+ * changes are in the app they are installing, whether that version was ever on the phone
+ * or not.
+ */
+export function newerVersions(localBuild: number, history: RemoteVersion[]): RemoteVersion[] {
+  return history
+    .filter((entry) => Number.isFinite(entry.build) && entry.build > localBuild)
+    .sort((a, b) => b.build - a.build)
+    .slice(0, 12);
+}
+
+/** the published history; empty when the site does not carry one (yet) */
+export async function fetchVersionHistory(): Promise<RemoteVersion[]> {
+  try {
+    const response = await fetch(historyUrl(), { cache: 'no-store' });
+    if (!response.ok) return [];
+    const data = (await response.json()) as unknown;
+    if (!Array.isArray(data)) return [];
+    return data
+      .map((entry) => entry as Partial<RemoteVersion>)
+      .filter((entry) => Number.isFinite(Number(entry.build)))
+      .map((entry) => ({
+        version: entry.version ?? '',
+        build: Number(entry.build),
+        sha: entry.sha ?? '',
+        date: entry.date ?? '',
+        subject: entry.subject ?? '',
+        notes: entry.notes,
+      }));
+  } catch {
+    return [];
   }
 }
 
