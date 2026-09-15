@@ -19,12 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # die Build-Nummer ist die Anzahl der Commits, dafür braucht es die Historie
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
       # no package-lock.json yet: it is generated on the first local install and should
       # be committed afterwards, then this can go back to `npm ci`
       - run: npm install --no-audit --no-fund
@@ -45,16 +42,18 @@ jobs:
       # the app asks this file whether a newer build exists; the commit is the identity,
       # because the web version and the APK are built from the same one
       - name: version.json schreiben
-        # The build number is the commit count, the same number the app bakes into its
-        # bundle - a CI run number would count differently in each workflow and the app
-        # could not tell newer from older. jq does the quoting, because a commit message
-        # brings quotes, backslashes and newlines along.
+        # The version comes from package.json, the same file the bundle and the APK read,
+        # so the app can compare what it runs with what is published. jq does the
+        # quoting, because a commit message brings quotes, backslashes and newlines.
         run: |
-          build=$(git rev-list --count HEAD)
-          series=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          version=$(node -p "require('./package.json').version")
+          code=$(node --experimental-strip-types -e "
+            import { versionCode } from './src/lib/version.ts';
+            process.stdout.write(String(versionCode(process.argv[1])));
+          " "$version")
           jq -n \
-            --arg version "$series.$build" \
-            --argjson build "$build" \
+            --arg version "$version" \
+            --argjson build "$code" \
             --arg sha "$(git rev-parse --short HEAD)" \
             --arg date "$(git log -1 --format=%cs)" \
             --arg subject "$(git log -1 --format=%s)" \

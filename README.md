@@ -164,11 +164,21 @@ Erzeugen und synchronisiert nur noch.
 
 ### Versionsnummern
 
-Die Version ist `0.9.<Anzahl der Commits>`, also etwa `0.9.35`. Dieselbe Zahl steht als
-`versionCode` in der APK, im Web-Bundle und in `version.json` — deshalb die Anzahl der
-Commits und nicht die Nummer des CI-Laufs: die beiden Workflows zählen getrennt, und die
-App könnte neuer nicht von älter unterscheiden. Die erste Stelle (`0.9`) steht in der
-`package.json` und wird von Hand erhöht.
+Die Version steht in der **`package.json`** und wird von Hand erhöht — sie ist die einzige
+Quelle. Das Web-Bundle, der `versionCode` der APK und `version.json` leiten sich daraus ab,
+deshalb kann die App vergleichen, was sie ausführt, mit dem, was veröffentlicht ist.
+
+`0.17.0` ist der Stand, bei dem umgestellt wurde: bis dahin waren 16 Fassungen draußen, das
+war die siebzehnte. Danach gilt die übliche Lesart:
+
+- letzte Stelle: Fehlerbehebung (`0.17.1`)
+- mittlere Stelle: neue Funktion (`0.18.0`)
+- erste Stelle: wenn die App erwachsen ist (`1.0.0`)
+
+Zum Vergleichen wird daraus eine Zahl (`src/lib/version.ts`): `0.17.0` → `17000`. „Neuer"
+heißt größer, ein Rückschritt ist damit nicht möglich. Wer die Version zu erhöhen vergisst,
+merkt es im Android-Workflow: der bricht ab, wenn der Tag schon für einen anderen Stand
+existiert.
 
 ### Updates
 

@@ -18,18 +18,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          # die Build-Nummer ist die Anzahl der Commits, dafür braucht es die Historie
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
+      - name: Version muss angehoben sein
+        # Die Versionsnummer wird von Hand gepflegt, und genau deshalb kann man sie
+        # vergessen. Existiert der Tag schon für einen anderen Commit, bekäme niemand
+        # das Update angeboten - also lieber hier scheitern als still danebenliegen.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          tag="v$version"
+          tagged=$(gh api "repos/${{ github.repository }}/git/ref/tags/$tag" --jq .object.sha 2>/dev/null || true)
+          if [ -n "$tagged" ] && [ "$tagged" != "${{ github.sha }}" ]; then
+            echo "Version $version ist schon als $tag veröffentlicht, für einen anderen Stand."
+            echo "Bitte die Version in package.json erhöhen (Fehlerbehebung: letzte Stelle,"
+            echo "neue Funktion: mittlere Stelle)."
+            exit 1
+          fi
+          echo "Version $version ist frei."
 
       - name: Abhängigkeiten
         run: npm install --no-audit --no-fund
@@ -89,9 +104,13 @@ jobs:
         # Dieselbe Nummer wie im Web-Bundle und in version.json: die Anzahl der Commits.
         # Android nimmt eine neue APK nur an, wenn versionCode nicht kleiner wird.
         run: |
-          build=$(git rev-list --count HEAD)
-          series=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
-          RENO_VERSION_CODE="$build" RENO_VERSION_NAME="$series.$build" \
+          version=$(node -p "require('./package.json').version")
+          code=$(node --experimental-strip-types -e "
+            import { versionCode } from './src/lib/version.ts';
+            process.stdout.write(String(versionCode(process.argv[1])));
+          " "$version")
+          echo "Version $version (Code $code)"
+          RENO_VERSION_CODE="$code" RENO_VERSION_NAME="$version" \
             node tools/android/patch-android.mjs
 
       - name: Prüfen, dass die Anpassungen wirklich drinstehen
@@ -110,7 +129,7 @@ jobs:
             grep -q "$plugin" android/capacitor.settings.gradle \
               || { echo "Plugin nicht eingebunden: $plugin"; exit 1; }
           done
-          grep -q "versionCode $(git rev-list --count HEAD)" android/app/build.gradle \
+          grep -q "versionName \"$(node -p "require('./package.json').version")\"" android/app/build.gradle \
             || { echo "Die Versionsnummer wurde nicht gesetzt"; exit 1; }
           grep -q "signingConfigs" android/app/build.gradle \
             || { echo "Der Signatur-Block fehlt in app/build.gradle"; exit 1; }
@@ -159,9 +178,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          build=$(git rev-list --count HEAD)
-          series=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
-          version="$series.$build"
+          version=$(node -p "require('./package.json').version")
           tag="v$version"
           if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
             hinweis="Signiert mit dem festen Release-Schlüssel: diese Fassung installiert sich über die vorige."

@@ -2,7 +2,9 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { versionCode } from './src/lib/version';
 
 /**
  * GitHub Pages serves the app from /reno-master/, the Capacitor WebView from /.
@@ -19,29 +21,19 @@ function git(command: string, fallback: string): string {
 }
 
 /**
- * The build number is the number of commits on this branch.
- *
- * It has to be the same number in the web build and in the Android build - they run as
- * separate workflows, so a CI run number would count differently in each and the app
- * could not tell a newer build from an older one. The commit count is the same
- * everywhere and only ever grows.
+ * The version in package.json is the one and only source; it is raised by hand, because
+ * only a person can say whether a change is a fix or a new ability.
  */
-function buildNumber(): number {
-  const counted = Number(git('git rev-list --count HEAD', '0'));
-  return Number.isFinite(counted) && counted > 0 ? counted : 0;
-}
-
-/** "0.9.34" - the series from package.json, the build number as the last part */
-function versionName(build: number): string {
-  const series = String(process.env.npm_package_version ?? '0.9.0').split('.').slice(0, 2).join('.');
-  return `${series}.${build}`;
+function versionName(): string {
+  const file = fileURLToPath(new URL('./package.json', import.meta.url));
+  return String((JSON.parse(readFileSync(file, 'utf8')) as { version?: string }).version ?? '0.0.0');
 }
 
 export default defineConfig({
   base,
   define: {
-    __APP_VERSION__: JSON.stringify(versionName(buildNumber())),
-    __APP_BUILD__: JSON.stringify(buildNumber()),
+    __APP_VERSION__: JSON.stringify(versionName()),
+    __APP_BUILD__: JSON.stringify(versionCode(versionName())),
     __APP_SHA__: JSON.stringify(git('git rev-parse --short HEAD', 'dev')),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
   },
