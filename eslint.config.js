@@ -14,6 +14,30 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    // der Worker läuft auf Cloudflare, sein Selbsttest unter Node - beides kennt
+    // andere Globals als der Browser
+    files: ['worker/**/*.{js,mjs}'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'module',
+      globals: {
+        crypto: 'readonly',
+        fetch: 'readonly',
+        Request: 'readonly',
+        Response: 'readonly',
+        Headers: 'readonly',
+        URL: 'readonly',
+        TextEncoder: 'readonly',
+        TextDecoder: 'readonly',
+        atob: 'readonly',
+        btoa: 'readonly',
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+      },
+    },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: { ecmaVersion: 2022 },
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
