@@ -122,10 +122,6 @@ werden, gibt es über der Fotoleiste den Schalter **Original sichern** — dann 
 unveränderte Datei zusätzlich in den Speicher und die Vollbildansicht bietet „Original
 laden". Der Schalter ist aus, weil ein Original etwa das Zehnfache wiegt.
 
-Wer den Schalter zwischendurch aus hatte, holt das in den Einstellungen unter **Originale
-nachladen** nach. Das geht nur in der App auf dem Gerät, das die Fotos aufgenommen hat,
-und nur solange die Bilder dort noch in der Galerie liegen.
-
 Wichtig zu wissen: die gespeicherte `content://`-Adresse des Galeriebilds ist eine
 laufende Nummer in der Mediendatenbank *dieses* Geräts. Nach einem Handywechsel zeigt sie
 ins Leere. Nur das gesicherte Original überlebt den Wechsel.

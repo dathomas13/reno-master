@@ -116,25 +116,6 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
   return photo;
 }
 
-/**
- * Archives the untouched file of a photo that was added without one.
- *
- * Only works while the gallery link still resolves, which means: on the phone that took
- * the picture, before it is replaced. That is exactly why the app offers it as a batch
- * over everything still reachable.
- */
-export async function archiveOriginal(photo: Photo, original: Blob): Promise<void> {
-  const extension = original.type === 'image/png' ? 'png' : 'jpg';
-  const storagePath = originalPathFor(photo.id, extension);
-  await enqueue({
-    id: `${photo.id}-original`,
-    storagePath,
-    contentType: original.type || 'image/jpeg',
-    blob: original,
-  });
-  await patchDoc(COL.photos, photo.id, { originalPath: storagePath, originalBytes: original.size });
-}
-
 export async function updatePhoto(id: string, patch: Partial<Photo>): Promise<void> {
   await patchDoc(COL.photos, id, patch as Record<string, unknown>);
 }
