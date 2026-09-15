@@ -19,13 +19,19 @@ npm run e2e            # Playwright, baut und startet die App selbst
 npm run build          # Produktionsbuild nach dist/
 ```
 
-Modell und Pläne neu erzeugen (Python, ohne Abhängigkeiten außer für `build_scene.py`):
+Modell und Pläne neu erzeugen (Python, nur Standardbibliothek):
 
 ```bash
+python3 tools/model/build_scene_lite.py --variant ist --version 0.23   # 3D-Szene
 python3 tools/model/build_rooms.py
 python3 tools/model/build_plans_svg.py
 python3 tools/model/make_manifest.py
+python3 tools/model/check_scene.py public/models/ist.json --against <alte Fassung>
 ```
+
+`build_scene.py` baut dieselbe Szene aus Volumenkörpern, braucht aber CadQuery (~150 MB).
+Das ist nur für STL (`build_print.py`) und STEP/FreeCAD (`build_cad.py`) nötig – der Viewer
+braucht keine wasserdichten Körper. Details in `tools/model/README-MODELL.md`.
 
 Wenn kein npm-Registry erreichbar ist (abgeschottete Umgebung), greifen zwei Ersatzprüfungen:
 
@@ -37,8 +43,9 @@ node tools/verify/run-tests-without-npm.mjs   # die Unit-Tests ohne externe Pake
 ```
 
 Sie ersetzen `npm run build` nicht, finden aber Tippfehler, kaputte Importe und
-Logikfehler. Das 3D-Modell lässt sich zusätzlich mit dem Chromium-Harness prüfen
-(`tools/model/_verify`, siehe tools/model/README-MODELL.md).
+Logikfehler. Für das 3D-Modell prüft `tools/model/check_scene.py` ohne Abhängigkeiten
+(Exitcode != 0 bei Problemen); das Chromium-Harness in `tools/model/_verify` rendert
+zusätzlich Bilder, braucht dafür aber `three.min.js` unter `tools/model/vendor/`.
 
 ## Architektur in drei Sätzen
 
