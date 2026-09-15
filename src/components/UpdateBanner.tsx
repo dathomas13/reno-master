@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { registerSW } from 'virtual:pwa-register';
 import { isNative } from '@/platform/index';
-import { checkForUpdate, dismissUpdate, APK_URL, type RemoteVersion } from '@/data/appVersion';
+import {
+  APK_URL,
+  checkForUpdate,
+  dismissUpdate,
+  runningVersion,
+  type RemoteVersion,
+} from '@/data/appVersion';
 import {
   canSelfUpdate,
   formatProgress,
@@ -31,6 +37,7 @@ export function UpdateBanner() {
   const [progress, setProgress] = useState<UpdateProgress | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<'blocked' | 'failed' | null>(null);
+  const [open, setOpen] = useState(false);
 
   const look = useCallback(() => {
     void checkForUpdate().then(setRemote);
@@ -60,7 +67,7 @@ export function UpdateBanner() {
   if (!visible) return null;
 
   function later() {
-    if (remote) dismissUpdate(remote.sha);
+    if (remote) dismissUpdate(remote.build);
     setRemote(null);
     setSwReady(false);
     setProblem(null);
@@ -104,21 +111,29 @@ export function UpdateBanner() {
   return (
     <div className="fixed top-[env(safe-area-inset-top)] inset-x-0 z-50 m-2 card p-3">
       <div className="flex items-center gap-3">
-        <span className="flex-1 text-sm min-w-0">
+        <button
+          type="button"
+          className="flex-1 text-sm min-w-0 text-left"
+          onClick={() => setOpen((shown) => !shown)}
+          aria-expanded={open}
+        >
           <span className="block">
-            {busy ? 'Neue Version wird geladen…' : 'Neue Version verfügbar'}
+            {busy
+              ? 'Neue Version wird geladen…'
+              : remote
+                ? `Version ${remote.version} verfügbar`
+                : 'Neue Version verfügbar'}
           </span>
           {busy && progress ? (
             <span className="block text-xs text-muted truncate">{formatProgress(progress)}</span>
           ) : (
-            remote?.date && (
-              <span className="block text-xs text-muted truncate">
-                {formatDate(remote.date)}
-                {remote.subject ? ` · ${remote.subject}` : ''}
-              </span>
-            )
+            <span className="block text-xs text-muted truncate">
+              {remote ? `du hast ${runningVersion()}` : ''}
+              {remote?.date ? ` · ${formatDate(remote.date)}` : ''}
+              {remote ? ' · tippen für Details' : ''}
+            </span>
           )}
-        </span>
+        </button>
         {!busy && (
           <>
             <button type="button" className="btn btn-ghost px-3 py-1 min-h-0" onClick={later}>
@@ -130,6 +145,20 @@ export function UpdateBanner() {
           </>
         )}
       </div>
+
+      {open && remote && !busy && (
+        <div className="mt-2 text-xs border-t border-line pt-2">
+          {remote.subject && <p className="text-ink">{remote.subject}</p>}
+          {remote.notes && (
+            <pre className="mt-1 whitespace-pre-wrap font-sans text-muted max-h-40 overflow-y-auto">
+              {remote.notes}
+            </pre>
+          )}
+          <p className="mt-1 text-muted">
+            {remote.version} · {remote.date} · {remote.sha}
+          </p>
+        </div>
+      )}
 
       {busy && (
         <div className="mt-2 h-1.5 rounded bg-black/30 overflow-hidden" aria-hidden="true">

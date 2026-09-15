@@ -59,4 +59,4 @@ if (useEmulators) {
   connectStorageEmulator(storage, '127.0.0.1', 9199);
 }
 
-export { APP_VERSION, BUILD_DATE } from '@/lib/buildInfo';
+export { APP_VERSION, APP_BUILD, APP_SHA, BUILD_DATE } from '@/lib/buildInfo';

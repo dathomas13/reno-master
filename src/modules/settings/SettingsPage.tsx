@@ -3,7 +3,7 @@ import { TopBar } from '@/components/TopBar';
 import { Field } from '@/components/Fields';
 import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/firebase/auth';
-import { APP_VERSION, BUILD_DATE } from '@/firebase/app';
+import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
@@ -214,7 +214,10 @@ export default function SettingsPage() {
         <section className="card p-4">
           <h2 className="font-semibold mb-2">App</h2>
           <p className="text-sm text-muted">
-            Version {APP_VERSION} · Build {BUILD_DATE}
+            Version {APP_VERSION}
+          </p>
+          <p className="text-xs text-muted mt-1">
+            gebaut am {BUILD_DATE} · Stand {APP_SHA}
           </p>
         </section>
       </div>

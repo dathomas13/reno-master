@@ -19,6 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # die Build-Nummer ist die Anzahl der Commits, dafür braucht es die Historie
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -42,16 +45,23 @@ jobs:
       # the app asks this file whether a newer build exists; the commit is the identity,
       # because the web version and the APK are built from the same one
       - name: version.json schreiben
+        # The build number is the commit count, the same number the app bakes into its
+        # bundle - a CI run number would count differently in each workflow and the app
+        # could not tell newer from older. jq does the quoting, because a commit message
+        # brings quotes, backslashes and newlines along.
         run: |
-          cat > dist/version.json <<JSON
-          {
-            "sha": "$(git rev-parse --short HEAD)",
-            "date": "$(git log -1 --format=%cs)",
-            "subject": "$(git log -1 --format=%s | sed 's/"/\\"/g' | cut -c1-80)",
-            "build": "${{ github.run_number }}",
-            "apk": "https://github.com/${{ github.repository }}/releases/latest/download/reno-master.apk"
-          }
-          JSON
+          build=$(git rev-list --count HEAD)
+          series=$(node -p "require('./package.json').version.split('.').slice(0,2).join('.')")
+          jq -n \
+            --arg version "$series.$build" \
+            --argjson build "$build" \
+            --arg sha "$(git rev-parse --short HEAD)" \
+            --arg date "$(git log -1 --format=%cs)" \
+            --arg subject "$(git log -1 --format=%s)" \
+            --arg notes "$(git log -1 --format=%b)" \
+            --arg apk "https://github.com/${{ github.repository }}/releases/latest/download/reno-master.apk" \
+            '{version: $version, build: $build, sha: $sha, date: $date, subject: $subject, notes: $notes, apk: $apk}' \
+            > dist/version.json
           cat dist/version.json
       - uses: actions/upload-pages-artifact@v3
         with:

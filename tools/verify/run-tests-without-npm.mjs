@@ -212,7 +212,12 @@ const vi = {
 Object.assign(globalThis, { describe, it, test: it, expect, vi, beforeEach: (fn) => fn() });
 
 // the constants Vite injects at build time
-Object.assign(globalThis, { __APP_VERSION__: 'test', __BUILD_DATE__: '2026-01-01' });
+Object.assign(globalThis, {
+  __APP_VERSION__: '0.9.0',
+  __APP_BUILD__: 0,
+  __APP_SHA__: 'test',
+  __BUILD_DATE__: '2026-01-01',
+});
 
 // make `import { describe } from 'vitest'` resolve
 const shimDir = path.join(outDir, 'node_modules', 'vitest');

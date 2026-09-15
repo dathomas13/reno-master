@@ -162,6 +162,14 @@ den App-Namen und den dunklen Fensterhintergrund ein. Sobald eine native Datei v
 bearbeitet werden muss, kann `android/` committet werden; der Workflow überspringt dann das
 Erzeugen und synchronisiert nur noch.
 
+### Versionsnummern
+
+Die Version ist `0.9.<Anzahl der Commits>`, also etwa `0.9.35`. Dieselbe Zahl steht als
+`versionCode` in der APK, im Web-Bundle und in `version.json` — deshalb die Anzahl der
+Commits und nicht die Nummer des CI-Laufs: die beiden Workflows zählen getrennt, und die
+App könnte neuer nicht von älter unterscheiden. Die erste Stelle (`0.9`) steht in der
+`package.json` und wird von Hand erhöht.
+
 ### Updates
 
 Jeder Push baut beides: die Web-Version auf GitHub Pages und eine APK, die als Release
@@ -171,6 +179,9 @@ Vordergrund ab und zeigt ein Banner, sobald der veröffentlichte Commit ein ande
 der laufende.
 
 - **Im Browser** genügt „Neu laden“, der Service Worker tauscht die Dateien aus.
+Das Banner nennt die verfügbare Version und die laufende; ein Tipp darauf klappt die
+Änderungen aus (Betreff und Rumpf des letzten Commits, aus `version.json`).
+
 - **In der App** lädt „Installieren“ die neue APK innerhalb der App herunter — mit
   eigenem Fortschrittsbalken, ohne Umweg über den Browser — und übergibt sie an Androids
   Installer. Dessen Rückfrage („App aktualisieren?") bleibt: eine per Sideload

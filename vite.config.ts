@@ -10,18 +10,39 @@ import { execSync } from 'node:child_process';
  */
 const base = process.env.CAP ? '/' : '/reno-master/';
 
-function gitSha(): string {
+function git(command: string, fallback: string): string {
   try {
-    return execSync('git rev-parse --short HEAD').toString().trim();
+    return execSync(command).toString().trim();
   } catch {
-    return 'dev';
+    return fallback;
   }
+}
+
+/**
+ * The build number is the number of commits on this branch.
+ *
+ * It has to be the same number in the web build and in the Android build - they run as
+ * separate workflows, so a CI run number would count differently in each and the app
+ * could not tell a newer build from an older one. The commit count is the same
+ * everywhere and only ever grows.
+ */
+function buildNumber(): number {
+  const counted = Number(git('git rev-list --count HEAD', '0'));
+  return Number.isFinite(counted) && counted > 0 ? counted : 0;
+}
+
+/** "0.9.34" - the series from package.json, the build number as the last part */
+function versionName(build: number): string {
+  const series = String(process.env.npm_package_version ?? '0.9.0').split('.').slice(0, 2).join('.');
+  return `${series}.${build}`;
 }
 
 export default defineConfig({
   base,
   define: {
-    __APP_VERSION__: JSON.stringify(gitSha()),
+    __APP_VERSION__: JSON.stringify(versionName(buildNumber())),
+    __APP_BUILD__: JSON.stringify(buildNumber()),
+    __APP_SHA__: JSON.stringify(git('git rev-parse --short HEAD', 'dev')),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
   },
   resolve: {
