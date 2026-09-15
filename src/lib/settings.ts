@@ -24,9 +24,7 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   ocrEngine: 'auto',
   defaultModelVariant: 'ist',
   showRoomsInPlanViews: true,
-  // on by default: the whole point of the diary is that it still answers questions in
-  // ten years, and a 1600 px picture of a cable run does not
-  keepOriginals: true,
+  keepOriginals: false,
 };
 
 export const CLAUDE_MODELS = [

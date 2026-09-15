@@ -116,10 +116,11 @@ veröffentlichen. Bis dahin gibt es keine Abend-Erinnerung; alles andere funktio
 
 ## Fotos, Originale und Archiv
 
-Hochgeladen werden eine verkleinerte Fassung (1600 px), ein Vorschaubild und — solange
-der Schalter **Original sichern** über der Fotoleiste an ist, was der Standard ist — die
-unveränderte Datei dazu. Die Vollbildansicht bietet dann „Original laden". Ausschalten
-lohnt nur, wenn der Speicher knapp wird: ein Original wiegt etwa das Zehnfache.
+Hochgeladen werden eine verkleinerte Fassung (1600 px) und ein Vorschaubild; das Original
+bleibt in der Galerie. Für einzelne Aufnahmen, die später in voller Auflösung gebraucht
+werden, gibt es über der Fotoleiste den Schalter **Original sichern** — dann geht die
+unveränderte Datei zusätzlich in den Speicher und die Vollbildansicht bietet „Original
+laden". Der Schalter ist aus, weil ein Original etwa das Zehnfache wiegt.
 
 Wer den Schalter zwischendurch aus hatte, holt das in den Einstellungen unter **Originale
 nachladen** nach. Das geht nur in der App auf dem Gerät, das die Fotos aufgenommen hat,
