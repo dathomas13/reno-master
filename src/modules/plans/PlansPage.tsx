@@ -10,6 +10,7 @@ import { loadBundledPlans, type BundledPlan } from '@/data/models';
 import { pickFiles } from '@/platform/photos';
 import { enqueue } from '@/offline/outbox';
 import { newId } from '@/lib/ids';
+import { safeExtension } from '@/lib/storagePath';
 import { formatBytes } from '@/lib/image';
 import { isAuthenticated } from '@/firebase/auth';
 
@@ -56,7 +57,7 @@ export default function PlansPage() {
     setBusy(true);
     try {
       const id = newId();
-      const extension = draft.file.name.split('.').pop()?.toLowerCase() ?? 'pdf';
+      const extension = safeExtension(draft.file.name, draft.file.type);
       const path = `plans/${id}.${extension}`;
       const plan: Plan = {
         id,

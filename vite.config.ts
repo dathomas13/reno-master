@@ -47,7 +47,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           three: ['three'],
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore', 'firebase/storage'],
+          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           pdf: ['pdfjs-dist'],
           charts: ['recharts'],
         },

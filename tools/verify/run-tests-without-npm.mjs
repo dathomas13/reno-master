@@ -134,6 +134,11 @@ function matchers(actual, negate) {
     toBeTruthy: () => check(Boolean(actual), `expected truthy, got ${JSON.stringify(actual)}`),
     toBeFalsy: () => check(!actual, `expected falsy, got ${JSON.stringify(actual)}`),
     toContain: (want) => check(actual?.includes?.(want), `expected ${JSON.stringify(actual)} to contain ${JSON.stringify(want)}`),
+    toMatch: (want) =>
+      check(
+        want instanceof RegExp ? want.test(String(actual)) : String(actual).includes(want),
+        `expected ${JSON.stringify(actual)} to match ${want}`,
+      ),
     toBeCloseTo: (want, digits = 2) =>
       check(Math.abs(actual - want) < Math.pow(10, -digits) / 2, `expected ~${want}, got ${actual}`),
     toBeGreaterThan: (want) => check(actual > want, `expected > ${want}, got ${actual}`),
