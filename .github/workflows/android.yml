@@ -30,24 +30,28 @@ jobs:
 
       - name: Version muss angehoben sein
         # Die Versionsnummer wird von Hand gepflegt, und genau deshalb kann man sie
-        # vergessen. Existiert der Tag schon für einen anderen Commit, bekäme niemand
-        # das Update angeboten - also lieber hier scheitern als still danebenliegen.
+        # vergessen. Dann bekäme niemand das Update angeboten - also lieber hier
+        # scheitern als still danebenliegen. Verglichen wird mit der zuletzt
+        # veröffentlichten Fassung; ein erneut gestarteter Lauf darf dieselbe behalten.
+        if: ${{ github.event_name != 'workflow_dispatch' && github.run_attempt == 1 }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          code_of() {
+            node --experimental-strip-types -e "
+              import { versionCode } from './src/lib/version.ts';
+              process.stdout.write(String(versionCode(process.argv[1])));
+            " "$1"
+          }
           version=$(node -p "require('./package.json').version")
-          tag="v$version"
-          # "// empty" ist wichtig: bei einem unbekannten Tag antwortet die API mit einem
-          # Fehlerobjekt, und .object.sha darauf ergibt das Wort "null" - das sähe wie ein
-          # vorhandener Tag aus und würde jeden Build blockieren
-          tagged=$(gh api "repos/${{ github.repository }}/git/ref/tags/$tag" --jq '.object.sha // empty' 2>/dev/null || true)
-          if [ -n "$tagged" ] && [ "$tagged" != "${{ github.sha }}" ]; then
-            echo "Version $version ist schon als $tag veröffentlicht, für einen anderen Stand."
-            echo "Bitte die Version in package.json erhöhen (Fehlerbehebung: letzte Stelle,"
-            echo "neue Funktion: mittlere Stelle)."
+          latest=$(gh release view --json tagName --jq .tagName 2>/dev/null || true)
+          latest=${latest#v}
+          echo "diese Fassung: $version, zuletzt veröffentlicht: ${latest:-keine}"
+          if [ -n "$latest" ] && [ "$(code_of "$version")" -le "$(code_of "$latest")" ]; then
+            echo "Die Version in package.json ist nicht höher als die veröffentlichte."
+            echo "Bitte erhöhen - Fehlerbehebung: letzte Stelle, neue Funktion: mittlere."
             exit 1
           fi
-          echo "Version $version ist frei."
 
       - name: Abhängigkeiten
         run: npm install --no-audit --no-fund
