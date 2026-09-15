@@ -113,14 +113,19 @@ function equal(a, b) {
 }
 
 function expect(actual) {
+  return matchers(actual, false);
+}
+
+function matchers(actual, negate) {
+  const where = running;
   const check = (ok, message) => {
-    if (ok) results.pass++;
+    if (negate ? !ok : ok) results.pass++;
     else {
       results.fail++;
-      results.failures.push(`${suite.join(' › ')}: ${message}`);
+      results.failures.push(`${where}: ${negate ? 'nicht erwartet: ' : ''}${message}`);
     }
   };
-  return {
+  const api = {
     toBe: (want) => check(Object.is(actual, want), `expected ${JSON.stringify(want)}, got ${JSON.stringify(actual)}`),
     toEqual: (want) => check(equal(actual, want), `expected ${JSON.stringify(want)}, got ${JSON.stringify(actual)}`),
     toBeNull: () => check(actual === null, `expected null, got ${JSON.stringify(actual)}`),
@@ -134,13 +139,77 @@ function expect(actual) {
     toBeGreaterThan: (want) => check(actual > want, `expected > ${want}, got ${actual}`),
     toBeLessThan: (want) => check(actual < want, `expected < ${want}, got ${actual}`),
     toHaveLength: (want) => check(actual?.length === want, `expected length ${want}, got ${actual?.length}`),
+    // spies, so a test can state what was not done either
+    toHaveBeenCalled: () => check((actual?.mock?.calls.length ?? 0) > 0, 'expected the function to be called'),
+    toHaveBeenCalledTimes: (want) =>
+      check(actual?.mock?.calls.length === want, `expected ${want} calls, got ${actual?.mock?.calls.length}`),
+    toHaveBeenCalledWith: (...want) =>
+      check(
+        (actual?.mock?.calls ?? []).some((call) => equal(call, want)),
+        `expected a call with ${JSON.stringify(want)}, got ${JSON.stringify(actual?.mock?.calls)}`,
+      ),
+    toThrow: () => {
+      try {
+        actual();
+        check(false, 'expected it to throw');
+      } catch {
+        check(true, '');
+      }
+    },
   };
+
+  // await expect(promise).rejects.toThrow()
+  api.rejects = {
+    toThrow: async () => {
+      try {
+        await actual;
+        check(false, 'expected the promise to reject');
+      } catch {
+        check(true, '');
+      }
+    },
+  };
+  api.resolves = {
+    toBe: async (want) => {
+      const value = await actual;
+      check(Object.is(value, want), `expected ${JSON.stringify(want)}, got ${JSON.stringify(value)}`);
+    },
+  };
+
+  if (!negate) api.not = matchers(actual, true);
+  return api;
 }
 
 const describe = (name, fn) => { suite.push(name); fn(); suite.pop(); };
-const it = (name, fn) => { suite.push(name); try { fn(); } catch (error) { results.fail++; results.failures.push(`${suite.join(' › ')}: threw ${error}`); } suite.pop(); };
 
-Object.assign(globalThis, { describe, it, test: it, expect, beforeEach: (fn) => fn() });
+/**
+ * Tests are collected while the files are imported and run afterwards, one after the
+ * other. Running them right away meant an async test was never awaited: it looked green
+ * whatever it asserted, because nothing waited for its assertions. Running them in order
+ * also keeps the name of the failing test attached to the failure.
+ */
+const tests = [];
+const it = (name, fn) => {
+  tests.push({ where: [...suite, name].join(' › '), fn });
+};
+
+/** the test whose assertions are being counted right now */
+let running = '';
+
+/** just enough of vitest's spies to say what was called */
+const vi = {
+  fn: (implementation = () => undefined) => {
+    const calls = [];
+    const spy = (...args) => {
+      calls.push(args);
+      return implementation(...args);
+    };
+    spy.mock = { calls };
+    return spy;
+  },
+};
+
+Object.assign(globalThis, { describe, it, test: it, expect, vi, beforeEach: (fn) => fn() });
 
 // the constants Vite injects at build time
 Object.assign(globalThis, { __APP_VERSION__: 'test', __BUILD_DATE__: '2026-01-01' });
@@ -151,11 +220,21 @@ fs.mkdirSync(shimDir, { recursive: true });
 fs.writeFileSync(path.join(shimDir, 'package.json'), JSON.stringify({ name: 'vitest', type: 'module', main: 'index.js' }));
 fs.writeFileSync(
   path.join(shimDir, 'index.js'),
-  'export const describe = globalThis.describe;\nexport const it = globalThis.it;\nexport const test = globalThis.it;\nexport const expect = globalThis.expect;\nexport const beforeEach = globalThis.beforeEach;\n',
+  'export const describe = globalThis.describe;\nexport const it = globalThis.it;\nexport const test = globalThis.it;\nexport const expect = globalThis.expect;\nexport const vi = globalThis.vi;\nexport const beforeEach = globalThis.beforeEach;\n',
 );
 
 const testFiles = collectJs(outDir).filter((f) => /\.test\.js$/.test(f) && f.includes(pattern));
 for (const file of testFiles) await import(pathToFileURL(file).href);
+
+for (const test of tests) {
+  running = test.where;
+  try {
+    await test.fn();
+  } catch (error) {
+    results.fail++;
+    results.failures.push(`${test.where}: threw ${error}`);
+  }
+}
 
 console.log(`\n${results.pass} passed, ${results.fail} failed  (${testFiles.length} Dateien)`);
 for (const failure of results.failures) console.log('  ✗ ' + failure);

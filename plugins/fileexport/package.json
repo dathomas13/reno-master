@@ -1,0 +1,17 @@
+{
+  "name": "@reno/fileexport",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Schreibt den Export Datei für Datei in einen Ordner, den der Nutzer auswählt",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["android/", "index.js", "index.d.ts"],
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.2.0"
+  }
+}

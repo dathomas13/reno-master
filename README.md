@@ -126,7 +126,15 @@ Wichtig zu wissen: die gespeicherte `content://`-Adresse des Galeriebilds ist ei
 laufende Nummer in der Mediendatenbank *dieses* Geräts. Nach einem Handywechsel zeigt sie
 ins Leere. Nur das gesicherte Original überlebt den Wechsel.
 
-**Archiv:** Einstellungen → *Archiv exportieren* packt alles in eine ZIP-Datei — Fotos nach
+**Archiv, zwei Wege.** In der App: Einstellungen → *Export in einen Ordner*. Android fragt
+nach einem Zielordner, dann schreibt die App das Tagebuch als einzelne Dateien hinein —
+die Fotos dieses Geräts in voller Auflösung direkt aus der Galerie, alles andere in der
+Fassung, die in der Cloud liegt. Kein Archiv, das erst entstehen muss, also auch kein
+Platz für eine zweite Kopie nötig; ein zweiter Lauf schreibt nur, was noch fehlt
+(Merkliste in `daten/.export-index.json`). Details in
+[plugins/fileexport/README.md](plugins/fileexport/README.md).
+
+Am Laptop: Einstellungen → *Archiv exportieren* packt alles in eine ZIP-Datei — Fotos nach
 Tagen sortiert, das Tagebuch als lesbaren Text, die Daten als JSON. Der ZIP-Schreiber liegt
 als `src/lib/zip.ts` im Repo (ohne Abhängigkeit, ohne Kompression — JPEGs lassen sich
 ohnehin nicht weiter packen) und schreibt ZIP64, sobald ein Archiv über 4 GB geht.

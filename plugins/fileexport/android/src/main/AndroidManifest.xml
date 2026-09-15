@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+        No permission is declared on purpose: the folder is granted by the user through
+        the system picker, which hands out access to exactly that one tree.
+    -->
+</manifest>

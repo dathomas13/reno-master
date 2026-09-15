@@ -32,6 +32,16 @@ export interface ExportFile {
   bytes: number;
   /** true when this is the untouched original rather than the working copy */
   original?: boolean;
+  /** what to write it as; a folder export has to name the type up front */
+  mime?: string;
+  /**
+   * The gallery entry this photo came from. Only the folder export uses it, and only on
+   * the phone that took the picture: there it yields the full resolution original
+   * without any upload having happened.
+   */
+  sourceUri?: string;
+  /** which device holds that gallery entry */
+  deviceId?: string;
 }
 
 export interface ExportPlan {
@@ -151,6 +161,9 @@ export function planExport(source: ExportSource, createdAt = new Date()): Export
       storagePath: photo.originalPath ?? photo.storagePath,
       bytes: photo.originalPath ? (photo.originalBytes ?? photo.bytes) : photo.bytes,
       original: Boolean(photo.originalPath),
+      mime: photo.contentType,
+      sourceUri: photo.sourceUri,
+      deviceId: photo.deviceId,
     });
   };
 
@@ -184,7 +197,11 @@ export function planExport(source: ExportSource, createdAt = new Date()): Export
         2,
       ),
     },
-  ].map((file) => ({ ...file, bytes: new TextEncoder().encode(file.text ?? '').length }));
+  ].map((file) => ({
+    ...file,
+    bytes: new TextEncoder().encode(file.text ?? '').length,
+    mime: file.name.endsWith('.json') ? 'application/json' : 'text/plain',
+  }));
 
   const all = [...texts, ...files];
   return {

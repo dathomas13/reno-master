@@ -101,7 +101,7 @@ jobs:
             || { echo "App-Name wurde nicht gesetzt"; exit 1; }
           test -f android/app/src/main/assets/public/index.html \
             || { echo "Web-Assets fehlen im Projekt"; exit 1; }
-          for plugin in reno-mediastore reno-appupdate; do
+          for plugin in reno-mediastore reno-appupdate reno-fileexport; do
             grep -q "$plugin" android/capacitor.settings.gradle \
               || { echo "Plugin nicht eingebunden: $plugin"; exit 1; }
           done
