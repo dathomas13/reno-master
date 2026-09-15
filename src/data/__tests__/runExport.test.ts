@@ -1,6 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { memoryTarget, writeArchive, type ExportProgress } from '@/data/runExport';
+import { memoryTarget, writeArchive, type ArchiveTarget, type ExportProgress } from '@/data/runExport';
 import type { ExportPlan } from '@/data/exportArchive';
+
+/**
+ * Collects the bytes without a Blob: jsdom's Blob has no arrayBuffer, and the archive is
+ * a stream of bytes anyway - going through a Blob to read them back tests the browser,
+ * not the writer.
+ */
+function collecting(): ArchiveTarget & { bytes(): Uint8Array } {
+  const chunks: Uint8Array[] = [];
+  return {
+    write: (chunk) => {
+      chunks.push(new Uint8Array(chunk));
+    },
+    close: async () => {},
+    result: () => null,
+    bytes() {
+      const size = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+      const all = new Uint8Array(size);
+      let at = 0;
+      for (const chunk of chunks) {
+        all.set(chunk, at);
+        at += chunk.length;
+      }
+      return all;
+    },
+  };
+}
 
 function plan(files: ExportPlan['files']): ExportPlan {
   return {
@@ -50,28 +76,35 @@ describe('writeArchive', () => {
   });
 
   it('produces an archive that starts and ends like a zip', async () => {
+    const target = collecting();
+    await writeArchive(plan([{ name: 'a.txt', text: 'x', bytes: 1 }]), target, () => {}, async () => {
+      throw new Error('kein Abruf nötig');
+    });
+    const bytes = target.bytes();
+    const view = new DataView(bytes.buffer);
+    expect(view.getUint32(0, true)).toBe(0x04034b50);
+    expect(view.getUint32(bytes.length - 22, true)).toBe(0x06054b50);
+  });
+
+  it('hands over a blob for the browsers without a file picker', async () => {
     const target = memoryTarget();
     await writeArchive(plan([{ name: 'a.txt', text: 'x', bytes: 1 }]), target, () => {}, async () => {
       throw new Error('kein Abruf nötig');
     });
     const blob = target.result();
     expect(blob).not.toBeNull();
-    const bytes = new Uint8Array(await blob!.arrayBuffer());
-    const view = new DataView(bytes.buffer);
-    expect(view.getUint32(0, true)).toBe(0x04034b50);
-    expect(view.getUint32(bytes.length - 22, true)).toBe(0x06054b50);
+    expect(blob!.size).toBeGreaterThan(0);
   });
 
   it('gives a file inside the archive the date of its day', async () => {
-    const target = memoryTarget();
+    const target = collecting();
     await writeArchive(
       plan([{ name: 'fotos/2026-08-22/01_bild.jpg', storagePath: 'photos/p.jpg', bytes: 1 }]),
       target,
       () => {},
       async () => new Uint8Array([1]),
     );
-    const bytes = new Uint8Array(await target.result()!.arrayBuffer());
-    const date = new DataView(bytes.buffer).getUint16(12, true);
+    const date = new DataView(target.bytes().buffer).getUint16(12, true);
     expect((date >> 9) + 1980).toBe(2026);
     expect((date >> 5) & 0x0f).toBe(8);
     expect(date & 0x1f).toBe(22);
