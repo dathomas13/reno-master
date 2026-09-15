@@ -12,7 +12,7 @@ betreffenden Abschnitte dort zuerst.
 npm install            # einmalig
 npm run dev            # Entwicklung gegen das echte Firebase-Projekt
 npm run dev:emu        # Entwicklung gegen die lokalen Emulatoren
-npm run emulators      # Emulatoren starten (auth, firestore, storage)
+npm run emulators      # Emulatoren starten (auth, firestore)
 npm run lint
 npm run test           # Unit-Tests (vitest)
 npm run e2e            # Playwright, baut und startet die App selbst
@@ -44,8 +44,8 @@ Logikfehler. Das 3D-Modell lässt sich zusätzlich mit dem Chromium-Harness prü
 
 Firestore mit persistentem lokalem Cache ist die Datenbasis; Lesen läuft immer über
 `onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Dateien (Fotos,
-Belege, Pläne) kann Storage nicht offline puffern, deshalb gehen sie über die eigene
-Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
+Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files.js` und
+gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
 
 ## Stand (14.09.2026)
@@ -81,9 +81,9 @@ Offen:
    Abend-Erinnerung und Push. Push braucht zusätzlich `google-services.json` und den
    google-services-Eintrag in Gradle.
 
-**Achtung bei den Regeln:** `firestore.rules` und `storage.rules` im Repo tragen
+**Achtung bei den Regeln:** `firestore.rules` im Repo trägt
 Platzhalter statt der echten Adressen. Die gültige Fassung steht in der Firebase-Konsole.
-Wer `firebase deploy --only firestore,storage` ausführt, überschreibt sie mit den
+Wer `firebase deploy --only firestore` ausführt, überschreibt sie mit den
 Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein geschrieben.
 
 ## Regeln

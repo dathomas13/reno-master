@@ -39,6 +39,7 @@ jobs:
           VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
           VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
           VITE_VAPID_KEY: ${{ vars.VITE_VAPID_KEY }}
+          VITE_FILES_URL: ${{ vars.VITE_FILES_URL }}
       # a hash router needs no rewrite rules, this is only a safety net
       - run: cp dist/index.html dist/404.html
 

@@ -1,6 +1,6 @@
 {
   "name": "reno-master",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "private": true,
   "type": "module",
   "description": "Renovierungs-App für Schlesierstraße 31 – 3D-Modell, Bautagebuch, Pläne, Kosten, Aufgaben, Kontakte",
@@ -14,7 +14,7 @@
     "dev": "vite",
     "dev:emu": "VITE_USE_EMULATORS=1 vite",
     "e2e": "playwright test",
-    "emulators": "firebase emulators:start --only auth,firestore,storage",
+    "emulators": "firebase emulators:start --only auth,firestore",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "lint": "eslint .",
     "model:manifest": "python3 tools/model/make_manifest.py",
@@ -23,7 +23,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "worker:test": "node worker/selftest.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

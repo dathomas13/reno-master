@@ -1,16 +1,19 @@
 /**
- * Resolves a Cloud Storage path to something an <img> or <iframe> can display, in this
- * order: a blob still sitting in the outbox, a cached download URL, the network.
- * Download URLs are stable, so they are remembered in IndexedDB and keep working offline
- * together with the service worker cache.
+ * Macht aus einem Speicherpfad etwas, das ein <img> oder <iframe> anzeigen kann.
+ *
+ * Der Reihe nach: der Blob, der noch in der Warteschlange liegt; die Datei, die schon
+ * einmal geholt wurde; sonst das Netz.
+ *
+ * Gespeichert werden die Bilddaten, nicht die Adresse. Die Adressen vom Worker gelten nur
+ * eine Stunde – eine gemerkte Adresse wäre am nächsten Tag wertlos, und offline gäbe es
+ * dann gar nichts zu sehen. Die Daten selbst altern nicht.
  */
 import { openDB, type IDBPDatabase } from 'idb';
-import { ref, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/firebase/app';
+import { getFile } from '@/platform/fileStore';
 import { localBlob } from './outbox';
 
-const DB_NAME = 'reno-urls';
-const STORE = 'urls';
+const DB_NAME = 'reno-files';
+const STORE = 'files';
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 function database(): Promise<IDBPDatabase> {
@@ -22,46 +25,68 @@ function database(): Promise<IDBPDatabase> {
   return dbPromise;
 }
 
+/** Pfad → Objekt-Adresse, damit dasselbe Bild nicht zweimal im Speicher landet */
 const memory = new Map<string, string>();
-const objectUrls = new Map<string, string>();
+
+function objectUrlFor(storagePath: string, blob: Blob): string {
+  const existing = memory.get(storagePath);
+  if (existing) return existing;
+  const url = URL.createObjectURL(blob);
+  memory.set(storagePath, url);
+  return url;
+}
 
 export async function resolveFileUrl(storagePath: string): Promise<string | null> {
   if (!storagePath) return null;
   const cached = memory.get(storagePath);
   if (cached) return cached;
 
-  const blob = await localBlob(storagePath);
-  if (blob) {
-    const url = URL.createObjectURL(blob);
-    objectUrls.set(storagePath, url);
-    memory.set(storagePath, url);
-    return url;
-  }
+  // noch nicht hochgeladen: der Blob liegt in der Warteschlange
+  const pending = await localBlob(storagePath);
+  if (pending) return objectUrlFor(storagePath, pending);
 
   const database_ = await database();
-  const stored = (await database_.get(STORE, storagePath)) as string | undefined;
-  if (stored) {
-    memory.set(storagePath, stored);
-    return stored;
-  }
+  const stored = (await database_.get(STORE, storagePath)) as Blob | undefined;
+  if (stored) return objectUrlFor(storagePath, stored);
 
   if (!navigator.onLine) return null;
   try {
-    const url = await getDownloadURL(ref(storage, storagePath));
-    memory.set(storagePath, url);
-    await database_.put(STORE, url, storagePath);
-    return url;
+    const blob = await getFile(storagePath);
+    if (!blob) return null;
+    await database_.put(STORE, blob, storagePath);
+    return objectUrlFor(storagePath, blob);
   } catch {
     return null;
   }
 }
 
-/** release object URLs created for local blobs */
+/** die Datei ohne Umweg über eine Adresse, für den Export */
+export async function readFileBytes(storagePath: string): Promise<Uint8Array | null> {
+  const pending = await localBlob(storagePath);
+  if (pending) return new Uint8Array(await pending.arrayBuffer());
+
+  const database_ = await database();
+  const stored = (await database_.get(STORE, storagePath)) as Blob | undefined;
+  if (stored) return new Uint8Array(await stored.arrayBuffer());
+
+  const blob = await getFile(storagePath);
+  if (!blob) return null;
+  await database_.put(STORE, blob, storagePath);
+  return new Uint8Array(await blob.arrayBuffer());
+}
+
+/** gibt die Objekt-Adresse frei; die Daten bleiben gespeichert */
 export function releaseFileUrl(storagePath: string): void {
-  const url = objectUrls.get(storagePath);
+  const url = memory.get(storagePath);
   if (url) {
     URL.revokeObjectURL(url);
-    objectUrls.delete(storagePath);
     memory.delete(storagePath);
   }
+}
+
+/** wirft die gespeicherten Dateien weg, für "Cache leeren" in den Einstellungen */
+export async function clearFileCache(): Promise<void> {
+  for (const path of [...memory.keys()]) releaseFileUrl(path);
+  const database_ = await database();
+  await database_.clear(STORE);
 }

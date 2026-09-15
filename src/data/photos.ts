@@ -6,6 +6,7 @@
 import { COL, type Photo, type PhotoKind } from './types';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
 import { enqueue, putLocalBlob, dropLocalBlob } from '@/offline/outbox';
+import { deleteFile } from '@/platform/fileStore';
 import { resizeImage, makeThumbnail, readTakenAt, PHOTO_MAX_EDGE, RECEIPT_MAX_EDGE } from '@/lib/image';
 import { newId, deviceId } from '@/lib/ids';
 import { toIsoDateTime } from '@/lib/date';
@@ -125,6 +126,9 @@ export async function deletePhoto(photo: Photo): Promise<void> {
   if (photo.thumbPath) await dropLocalBlob(photo.thumbPath);
   if (photo.originalPath) await dropLocalBlob(photo.originalPath);
   await removeDoc(COL.photos, photo.id);
-  // the file in Cloud Storage is left in place on purpose: deleting it needs network,
-  // and an orphaned 300 KB file is cheaper than a failed delete that loses the document
+  // the files go too, but a failure here must not undo the deletion: without network the
+  // document is already gone, and an orphaned 300 KB file is the lesser evil
+  for (const path of [photo.storagePath, photo.thumbPath, photo.originalPath]) {
+    if (path) await deleteFile(path).catch(() => undefined);
+  }
 }

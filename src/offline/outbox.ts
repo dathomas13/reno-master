@@ -8,9 +8,8 @@
  * cellar with no reception.
  */
 import { openDB, type IDBPDatabase } from 'idb';
-import { ref, uploadBytes } from 'firebase/storage';
-import { storage } from '@/firebase/app';
 import { patchDoc } from '@/firebase/db';
+import { putFile } from '@/platform/fileStore';
 
 export interface OutboxJob {
   id: string;
@@ -127,7 +126,7 @@ export async function processOutbox(force = false): Promise<void> {
       if (!force && job.nextAttemptAt > Date.now()) continue;
       if (!force && job.attempts >= MAX_ATTEMPTS) continue;
       try {
-        await uploadBytes(ref(storage, job.storagePath), job.blob, { contentType: job.contentType });
+        await putFile(job.storagePath, job.blob, job.contentType);
         if (job.docCollection && job.docId) {
           await patchDoc(job.docCollection, job.docId, { [job.docField ?? 'uploadState']: 'uploaded' });
         }

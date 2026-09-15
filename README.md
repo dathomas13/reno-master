@@ -30,11 +30,11 @@ npm run dev:emu       # Terminal 2
 3. **Firestore** und **Storage** in `europe-west3` anlegen.
 4. **Cloud Messaging**: Web-Push-Zertifikat erzeugen, den öffentlichen Schlüssel als
    `VITE_VAPID_KEY` eintragen.
-5. Die beiden E-Mail-Adressen in `firestore.rules` und `storage.rules` eintragen,
+5. Die beiden E-Mail-Adressen in `firestore.rules` eintragen,
    Projekt-ID in `.firebaserc`, dann:
 
 ```bash
-firebase deploy --only firestore,storage
+firebase deploy --only firestore
 cd functions && npm install && npm run deploy
 ```
 
@@ -96,13 +96,13 @@ wird von GitHub Actions, die Firebase-Einrichtung passiert in der Firebase-Konso
    öffentlichen Schlüssel notieren (wird erst für die Abend-Erinnerung gebraucht).
 6. **Projekteinstellungen** → *Meine Apps* → **Web-App registrieren**. Die sechs Werte aus
    dem Config-Objekt notieren.
-7. **Sicherheitsregeln** aus `firestore.rules` und `storage.rules` in die jeweiligen
-   *Rules*-Editoren der Konsole kopieren und die beiden E-Mail-Adressen einsetzen. Die
+7. **Sicherheitsregeln** aus `firestore.rules` in den
+   *Rules*-Editor der Konsole kopieren und die beiden E-Mail-Adressen einsetzen. Die
    Adressen bleiben absichtlich aus dem öffentlichen Repo heraus. Achtung: wer später
-   `firebase deploy --only firestore,storage` ausführt, überschreibt die Konsolen-Version
+   `firebase deploy --only firestore` ausführt, überschreibt die Konsolen-Version
    mit der aus dem Repo.
 8. **GitHub** → *Settings* → *Secrets and variables* → *Actions* → Reiter **Variables** →
-   die sieben `VITE_...`-Werte als Repository variables anlegen (siehe `.env.example`).
+   die `VITE_...`-Werte als Repository variables anlegen, inklusive `VITE_FILES_URL` (siehe `.env.example`).
    Sie sind nicht geheim, sie identifizieren nur das Projekt.
 9. Im Reiter **Actions** den letzten Workflow erneut ausführen (*Re-run all jobs*). Danach
    läuft die App mit dem Projekt.
@@ -113,6 +113,21 @@ Indizes stehen zusätzlich in `firestore.indexes.json`.
 
 **Was ohne CLI nicht geht:** Cloud Functions lassen sich nur mit der Firebase-CLI
 veröffentlichen. Bis dahin gibt es keine Abend-Erinnerung; alles andere funktioniert.
+
+## Dateispeicher: Cloudflare R2
+
+Fotos, Belege und Pläne liegen **nicht** bei Firebase, sondern in einem privaten R2-Bucket
+bei Cloudflare. Firebases kostenloses Kontingent gilt nur für Buckets in den USA; dieses
+Projekt liegt in Frankfurt und würde ab dem ersten Byte abgerechnet. R2 ist bis 10 GB frei
+und berechnet keinen Datenverkehr.
+
+Dazwischen steht ein kleiner Worker (`worker/reno-files.js`), der das Firebase-Anmeldeticket
+prüft und zum Anzeigen Adressen ausgibt, die eine Stunde gelten. Deshalb speichert die App
+offline die Bilddaten selbst statt der Adressen — eine gemerkte Adresse wäre am nächsten Tag
+wertlos. Einrichtung (alles im Browser) und Grenzen: [worker/README.md](worker/README.md).
+
+Firebase bleibt für Anmeldung und Firestore. `storage.rules` gibt es nicht mehr; die
+Zugriffsregeln für Dateien stehen jetzt im Worker.
 
 ## Fotos, Originale und Archiv
 
