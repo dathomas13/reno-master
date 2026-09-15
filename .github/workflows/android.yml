@@ -37,7 +37,10 @@ jobs:
         run: |
           version=$(node -p "require('./package.json').version")
           tag="v$version"
-          tagged=$(gh api "repos/${{ github.repository }}/git/ref/tags/$tag" --jq .object.sha 2>/dev/null || true)
+          # "// empty" ist wichtig: bei einem unbekannten Tag antwortet die API mit einem
+          # Fehlerobjekt, und .object.sha darauf ergibt das Wort "null" - das sähe wie ein
+          # vorhandener Tag aus und würde jeden Build blockieren
+          tagged=$(gh api "repos/${{ github.repository }}/git/ref/tags/$tag" --jq '.object.sha // empty' 2>/dev/null || true)
           if [ -n "$tagged" ] && [ "$tagged" != "${{ github.sha }}" ]; then
             echo "Version $version ist schon als $tag veröffentlicht, für einen anderen Stand."
             echo "Bitte die Version in package.json erhöhen (Fehlerbehebung: letzte Stelle,"
