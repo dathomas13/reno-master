@@ -48,7 +48,7 @@ Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files
 gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
 
-## Stand (14.09.2026)
+## Stand (15.09.2026)
 
 Live unter <https://dathomas13.github.io/reno-master/>, gebaut und veröffentlicht von
 GitHub Actions aus dem Branch `claude/sweet-franklin-t348jz`.
@@ -62,11 +62,14 @@ Steht:
 
 Offen:
 
-1. **Blaze-Tarif.** Ohne ihn gibt es kein Cloud Storage, also keine Fotos und keine Belege,
-   und keine Cloud Functions, also keine Abend-Erinnerung. Text-Einträge, Kosten, Aufgaben,
-   Kontakte, 3D und Pläne laufen ohne.
-2. **Cloud Function veröffentlichen** (`cd functions && npm install && npm run deploy`),
-   sobald eine Kommandozeile mit Firebase-CLI verfügbar ist.
+1. **Cloudflare einrichten** (Anleitung in `worker/README.md`): Bucket `reno-master`,
+   Worker `reno-files`, die Variablen und das Secret, die Bindung `BUCKET`, und die
+   Adresse des Workers als GitHub-Variable `VITE_FILES_URL`. Ohne sie gibt es keine
+   Fotos, Belege und Plan-Uploads; alles andere läuft. Firebase Storage wird nicht mehr
+   benutzt, der Blaze-Tarif ist dafür nicht nötig.
+2. **Abend-Erinnerung.** Die Cloud Function (`functions/`) liegt bereit, braucht aber
+   Blaze und eine Kommandozeile mit Firebase-CLI. Am Telefon geht es auch ohne, über
+   eine lokale Benachrichtigung – noch nicht gebaut.
 3. **Notion-Import** (`tools/import`), braucht `firebase-admin` und einen Service-Account.
 4. `public/img/nordansicht.jpg` ergänzen.
 5. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`

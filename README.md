@@ -25,9 +25,10 @@ npm run dev:emu       # Terminal 2
 
 ## Einrichtung des Firebase-Projekts
 
-1. Projekt anlegen, Blaze-Tarif aktivieren (nötig für Storage und Functions), Budgetalarm setzen.
+1. Projekt anlegen. Der Blaze-Tarif ist nur für die Cloud Functions nötig; die Dateien
+   liegen auf Cloudflare R2 (siehe `worker/README.md`).
 2. **Authentication**: E-Mail/Passwort aktivieren, die zwei Konten anlegen.
-3. **Firestore** und **Storage** in `europe-west3` anlegen.
+3. **Firestore** in `europe-west3` anlegen.
 4. **Cloud Messaging**: Web-Push-Zertifikat erzeugen, den öffentlichen Schlüssel als
    `VITE_VAPID_KEY` eintragen.
 5. Die beiden E-Mail-Adressen in `firestore.rules` eintragen,
@@ -83,15 +84,16 @@ Das 3D-Modell lässt sich ebenfalls ohne Installation prüfen: siehe Abschnitt
 Alles, was für den Betrieb nötig ist, geht über den Browser. Gebaut und veröffentlicht
 wird von GitHub Actions, die Firebase-Einrichtung passiert in der Firebase-Konsole.
 
-1. **Firebase-Projekt** anlegen, Tarif **Blaze** aktivieren (für Storage und Functions
-   nötig, die Nutzung bleibt im Gratis-Kontingent), unter *Abrechnung* einen Budgetalarm
-   auf 1 € setzen.
+1. **Firebase-Projekt** anlegen. Der Tarif **Blaze** wird nur für die Cloud Functions
+   gebraucht (Abend-Erinnerung); Fotos und Belege liegen auf Cloudflare R2, dafür genügt
+   der Gratis-Tarif. Wer Blaze aktiviert, setzt unter *Abrechnung* einen Budgetalarm auf 1 €.
 2. **Authentication** → *Sign-in method* → **E-Mail/Passwort** aktivieren. Unter *Users*
    die zwei Konten anlegen. Unter *Settings* → *User actions* die Selbstregistrierung
    abschalten, sonst könnte sich jeder mit dem öffentlichen API-Key ein Konto anlegen.
    Unter *Settings* → *Authorized domains* `dathomas13.github.io` ergänzen.
 3. **Firestore Database** anlegen, Region `europe-west3`, Production mode.
-4. **Storage** anlegen, gleiche Region.
+4. **Dateispeicher**: nicht bei Firebase, sondern bei Cloudflare – die Einrichtung steht
+   in `worker/README.md`.
 5. **Cloud Messaging** → *Web Push certificates* → Schlüsselpaar erzeugen, den
    öffentlichen Schlüssel notieren (wird erst für die Abend-Erinnerung gebraucht).
 6. **Projekteinstellungen** → *Meine Apps* → **Web-App registrieren**. Die sechs Werte aus
