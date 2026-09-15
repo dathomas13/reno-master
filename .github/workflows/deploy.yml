@@ -58,7 +58,7 @@ jobs:
             --arg sha "$(git rev-parse --short HEAD)" \
             --arg date "$(git log -1 --format=%cs)" \
             --arg subject "$(git log -1 --format=%s)" \
-            --arg notes "$(git log -1 --format=%b)" \
+            --arg notes "$(git log -1 --format=%b | sed '/^[A-Za-z-]*:[[:space:]]*http/d; /^Co-Authored-By:/d' | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba')" \
             --arg apk "https://github.com/${{ github.repository }}/releases/latest/download/reno-master.apk" \
             '{version: $version, build: $build, sha: $sha, date: $date, subject: $subject, notes: $notes, apk: $apk}' \
             > dist/version.json

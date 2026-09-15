@@ -178,7 +178,7 @@ jobs:
               --title "Reno Master $version ($(git log -1 --format=%cs))" \
               --notes "$(git log -1 --format=%s)
 
-          $(git log -1 --format=%b)
+          $(git log -1 --format=%b | sed '/^[A-Za-z-]*:[[:space:]]*http/d; /^Co-Authored-By:/d')
 
           $hinweis" \
               --latest
