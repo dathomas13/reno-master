@@ -18,6 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        # Verlauf und Tags, damit die Prüfung unten erkennen kann, ob diese
+        # Fassung schon veröffentlicht wurde
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -33,7 +37,13 @@ jobs:
         # vergessen. Dann bekäme niemand das Update angeboten - also lieber hier
         # scheitern als still danebenliegen. Verglichen wird mit der zuletzt
         # veröffentlichten Fassung; ein erneut gestarteter Lauf darf dieselbe behalten.
-        if: ${{ github.event_name != 'workflow_dispatch' && github.run_attempt == 1 }}
+        #
+        # Ein Merge nach main bringt eine Fassung mit, die vom Zweig aus schon
+        # veröffentlicht wurde. Da ist nichts vergessen worden und auch nichts Neues
+        # zu veröffentlichen: erkennbar daran, dass der Tag dieser Fassung bereits
+        # existiert und in dieser Historie steckt. Dann wird gebaut, aber kein Release
+        # angelegt - vorher ist main nach jedem Merge rot geworden.
+        id: version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -47,6 +57,29 @@ jobs:
           latest=$(gh release view --json tagName --jq .tagName 2>/dev/null || true)
           latest=${latest#v}
           echo "diese Fassung: $version, zuletzt veröffentlicht: ${latest:-keine}"
+
+          # von Hand gestartet oder noch einmal gestartet: die Nummer darf bleiben, und
+          # veröffentlicht wird trotzdem - sonst ließe sich ein abgebrochener Upload
+          # nicht nachholen
+          erneut=false
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.run_attempt }}" != "1" ]; then
+            erneut=true
+          fi
+
+          if [ "$erneut" = "false" ] \
+             && git rev-parse -q --verify "refs/tags/v$version" >/dev/null \
+             && git merge-base --is-ancestor "refs/tags/v$version" HEAD; then
+            echo "v$version ist schon veröffentlicht und steckt in dieser Historie."
+            echo "Es wird gebaut, aber kein Release angelegt."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+          if [ "$erneut" = "true" ]; then
+            exit 0
+          fi
+
           if [ -n "$latest" ] && [ "$(code_of "$version")" -le "$(code_of "$latest")" ]; then
             echo "Die Version in package.json ist nicht höher als die veröffentlichte."
             echo "Bitte erhöhen - Fehlerbehebung: letzte Stelle, neue Funktion: mittlere."
@@ -183,6 +216,7 @@ jobs:
       # a release gives the APK a permanent address that works without a GitHub login,
       # which is what the update banner in the app links to
       - name: Release veröffentlichen
+        if: ${{ steps.version.outputs.publish != 'false' }}
         # Aus jedem Branch, bewusst: das Telefon aktualisiert sich über releases/latest
         # selbst, und jeder Entwicklungsschritt soll dort ankommen, ohne vorher gemergt
         # zu werden. Dass die Nummer damit verbraucht ist, ist kein Problem - sie wird je
