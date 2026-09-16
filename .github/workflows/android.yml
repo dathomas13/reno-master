@@ -183,6 +183,10 @@ jobs:
       # a release gives the APK a permanent address that works without a GitHub login,
       # which is what the update banner in the app links to
       - name: Release veröffentlichen
+        # Aus jedem Branch, bewusst: das Telefon aktualisiert sich über releases/latest
+        # selbst, und jeder Entwicklungsschritt soll dort ankommen, ohne vorher gemergt
+        # zu werden. Dass die Nummer damit verbraucht ist, ist kein Problem - sie wird je
+        # Schritt sowieso angehoben, und genau daran erinnert die Prüfung oben.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -195,11 +199,16 @@ jobs:
           fi
           # ein erneut gestarteter Lauf trägt dieselbe Nummer, der Tag ist dann schon da:
           # in dem Fall nur die Datei ersetzen, statt am vorhandenen Release zu scheitern
+          #
+          # --target auf den gebauten Commit: ohne das setzt gh den Tag auf den Kopf des
+          # Default-Branch. Läuft der Workflow von einem Feature-Branch, hängt der Tag
+          # dann an Code, der die APK gar nicht enthält - v0.20.0 ist genau so entstanden.
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" reno-master.apk --clobber
           else
             gh release create "$tag" \
               reno-master.apk \
+              --target "$GITHUB_SHA" \
               --title "Reno Master $version ($(git log -1 --format=%cs))" \
               --notes "$(git log -1 --format=%s)
 

@@ -30,17 +30,23 @@ export interface RemoteVersion {
 
 const DISMISSED_KEY = 'reno.update.dismissed';
 
-function publishedUrl(file: string): string {
+/**
+ * A file on the published site.
+ *
+ * The web app reads it from its own origin; the APK has no server of its own, so it asks
+ * the published site. Also how the model channel reaches a new model without a new APK.
+ */
+export function publishedFileUrl(file: string): string {
   return isNative() ? `${PUBLIC_URL}${file}` : `${import.meta.env.BASE_URL}${file}`;
 }
 
 export function versionUrl(): string {
-  return publishedUrl('version.json');
+  return publishedFileUrl('version.json');
 }
 
 /** every published version, newest first */
 export function historyUrl(): string {
-  return publishedUrl('versions.json');
+  return publishedFileUrl('versions.json');
 }
 
 /**

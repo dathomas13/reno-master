@@ -19,13 +19,19 @@ npm run e2e            # Playwright, baut und startet die App selbst
 npm run build          # Produktionsbuild nach dist/
 ```
 
-Modell und Pläne neu erzeugen (Python, ohne Abhängigkeiten außer für `build_scene.py`):
+Modell und Pläne neu erzeugen (Python, nur Standardbibliothek):
 
 ```bash
+python3 tools/model/build_scene_lite.py --variant ist --version 0.23   # 3D-Szene
 python3 tools/model/build_rooms.py
 python3 tools/model/build_plans_svg.py
 python3 tools/model/make_manifest.py
+python3 tools/model/check_scene.py public/models/ist.json --against <alte Fassung>
 ```
+
+`build_scene.py` baut dieselbe Szene aus Volumenkörpern, braucht aber CadQuery (~150 MB).
+Das ist nur für STL (`build_print.py`) und STEP/FreeCAD (`build_cad.py`) nötig – der Viewer
+braucht keine wasserdichten Körper. Details in `tools/model/README-MODELL.md`.
 
 Wenn kein npm-Registry erreichbar ist (abgeschottete Umgebung), greifen zwei Ersatzprüfungen:
 
@@ -37,8 +43,9 @@ node tools/verify/run-tests-without-npm.mjs   # die Unit-Tests ohne externe Pake
 ```
 
 Sie ersetzen `npm run build` nicht, finden aber Tippfehler, kaputte Importe und
-Logikfehler. Das 3D-Modell lässt sich zusätzlich mit dem Chromium-Harness prüfen
-(`tools/model/_verify`, siehe tools/model/README-MODELL.md).
+Logikfehler. Für das 3D-Modell prüft `tools/model/check_scene.py` ohne Abhängigkeiten
+(Exitcode != 0 bei Problemen); das Chromium-Harness in `tools/model/_verify` rendert
+zusätzlich Bilder, braucht dafür aber `three.min.js` unter `tools/model/vendor/`.
 
 ## Architektur in drei Sätzen
 
@@ -47,6 +54,14 @@ Firestore mit persistentem lokalem Cache ist die Datenbasis; Lesen läuft immer 
 Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files.js` und
 gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
+
+**Die Modellversion hängt nicht am App-Build.** `src/data/modelSync.ts` nimmt die höchste
+Fassung, die es erreicht – gebündelt, aus dem Manifest der veröffentlichten Seite, oder
+aus `meta/model-<variante>` in Firestore – prüft sie und legt sie in IndexedDB
+(`src/data/modelStore.ts`). Der Viewer liest über `loadScene`, also offline aus dem Cache.
+Die Entscheidungslogik steht testbar in `src/data/modelRelease.ts`. Veröffentlichen geht
+per `git push` oder ohne Deploy über Einstellungen → 3D-Modelle → „Modell veröffentlichen“
+(Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5).
 
 ## Stand (15.09.2026)
 
@@ -58,7 +73,7 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, 119 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, 308 Unit-Tests.
 
 Offen:
 
@@ -94,6 +109,19 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
+- Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
+- **Jeder Entwicklungsschritt ist ein Release**, auch aus einem Sitzungsbranch: das
+  Telefon aktualisiert sich über `releases/latest` selbst, ein Umweg über Artefakte im
+  Browser ist nicht gewollt. Also bei jedem Push die Version in `package.json` anheben –
+  genau daran erinnert die Wächter-Prüfung im APK-Workflow, wenn sie scheitert. Mehrere
+  Commits mit derselben Nummer gehen nicht; wer das umgeht, nimmt dem Telefon das Update.
+- Der Tag eines Release hängt am gebauten Commit (`--target "$GITHUB_SHA"`). Ohne das
+  setzt `gh release create` ihn auf den Default-Branch, und aus einem Sitzungsbranch
+  heraus zeigt er dann auf Code, der die veröffentlichte APK nicht enthält.
+- Der Pages-Deploy läuft nur vom Pages-Quellbranch. Auf jedem anderen Branch ist der
+  `build`-Job grün und der `deploy`-Job wird von der Umgebung `github-pages` nach einer
+  Sekunde ohne Schritte abgewiesen. Das ist erwartet und kein Fehler im Code; solange es
+  so steht, bekommt das Telefon von dort auch kein neues `version.json`.
 - Keine Geheimnisse ins Repo: Service-Account-JSON, `google-services.json`, `.env` sind gitignored.
 - Der Claude API-Key liegt nur im localStorage des Geräts, nie in Firestore.
 - Vor dem Push: `npm run lint`, `npm run test`, `npm run build`.

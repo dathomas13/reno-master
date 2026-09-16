@@ -16,7 +16,9 @@ import {
 } from './houseScene';
 import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitControls';
 import { RoomPanel } from './RoomPanel';
-import { loadManifest, loadRooms, loadScene, type ModelManifest, type Variant } from '@/data/models';
+import { activeRelease, loadRooms, loadScene, type Variant } from '@/data/models';
+import { SOURCE_LABEL, type ReleaseInfo } from '@/data/modelRelease';
+import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { isAuthenticated } from '@/firebase/auth';
 import { Spinner } from '@/components/Fields';
@@ -30,7 +32,9 @@ export default function ViewerPage() {
 
   const initialVariant = (params.get('variant') as Variant) ?? loadSettings().defaultModelVariant;
   const [variant, setVariant] = useState<Variant>(initialVariant === 'soll' ? 'soll' : 'ist');
-  const [manifest, setManifest] = useState<ModelManifest | null>(null);
+  const [release, setRelease] = useState<ReleaseInfo | null>(null);
+  // bumped when the sync stored a newer model, which rebuilds the scene
+  const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [layerState, setLayerState] = useState<Record<Layer, boolean>>({
@@ -43,8 +47,18 @@ export default function ViewerPage() {
   const [room, setRoom] = useState<Room | null>(null);
 
   useEffect(() => {
-    void loadManifest().then(setManifest).catch(() => undefined);
-  }, []);
+    void activeRelease(variant).then(setRelease).catch(() => undefined);
+  }, [variant, reloadKey]);
+
+  // a model published from the other device arrives while the viewer is open
+  useEffect(() => {
+    const onModel = (event: Event) => {
+      const result = (event as CustomEvent<SyncResult>).detail;
+      if (result?.variant === variant) setReloadKey((key) => key + 1);
+    };
+    window.addEventListener(MODEL_EVENT, onModel);
+    return () => window.removeEventListener(MODEL_EVENT, onModel);
+  }, [variant]);
 
   const applyPreset = useCallback((label: string) => {
     const preset = VIEW_PRESETS.find((item) => item.label === label);
@@ -208,7 +222,7 @@ export default function ViewerPage() {
     };
     // rebuilding on variant change is the point; the other values are applied imperatively
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variant]);
+  }, [variant, reloadKey]);
 
   function toggleLayer(layer: Layer) {
     const house = houseRef.current;
@@ -229,7 +243,6 @@ export default function ViewerPage() {
     setParams(nextParams, { replace: true });
   }
 
-  const info = manifest?.[variant];
   // signed in there is a bottom navigation below and nothing above; in the preview it is
   // the other way round, a banner on top and the full width of the screen below
   const signedIn = isAuthenticated();
@@ -257,9 +270,10 @@ export default function ViewerPage() {
               </button>
             ))}
           </div>
-          {info && (
+          {release && (
             <span className="text-[11px] text-muted bg-bg/70 rounded px-2 py-1">
-              v{info.version} · {info.updatedAt}
+              v{release.version} · {release.updatedAt}
+              {release.source !== 'bundled' && ` · ${SOURCE_LABEL[release.origin ?? release.source]}`}
             </span>
           )}
         </div>

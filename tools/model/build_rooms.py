@@ -84,7 +84,11 @@ def build(variant: str) -> dict:
 
     doc = {
         "variant": variant,
-        "generatedAt": dt.date.today().isoformat(),
+        # the date of the scene these rooms belong to, not today's: the CI guard
+        # regenerates this file and compares it with the committed one, so the output has
+        # to depend only on the inputs. With the clock in it, the same commit passed today
+        # and failed tomorrow.
+        "generatedAt": scene_date(variant),
         "rooms": out_rooms,
     }
     if problems:
@@ -94,6 +98,17 @@ def build(variant: str) -> dict:
     else:
         print(f"--- {variant}: alle Räume konsistent ---")
     return doc
+
+
+def scene_date(variant: str) -> str:
+    """The generation date of the scene, or today when there is no scene yet."""
+    path = MODELS / f"{variant}.json"
+    if path.exists():
+        meta = json.loads(path.read_text(encoding="utf-8")).get("meta", {})
+        date = meta.get("generatedAt")
+        if isinstance(date, str) and date:
+            return date
+    return dt.date.today().isoformat()
 
 
 def main() -> int:

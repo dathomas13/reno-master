@@ -7,7 +7,7 @@ import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
-import { loadManifest, type ModelManifest } from '@/data/models';
+import { ModelSection } from './ModelSection';
 import { listJobs, retryAll, type OutboxJob } from '@/offline/outbox';
 import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
@@ -19,7 +19,6 @@ import { formatBytes } from '@/lib/image';
 export default function SettingsPage() {
   const { user, profile } = useAuth();
   const [settings, setSettings] = useState<LocalSettings>(() => loadSettings());
-  const [manifest, setManifest] = useState<ModelManifest | null>(null);
   const [jobs, setJobs] = useState<OutboxJob[]>([]);
   const [engine, setEngine] = useState<string>('wird geprüft…');
   const [storage, setStorage] = useState<string>('');
@@ -27,7 +26,6 @@ export default function SettingsPage() {
   const [pushMessage, setPushMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    void loadManifest().then(setManifest).catch(() => undefined);
     void listJobs().then(setJobs);
     void activeExtractor().then((extractor) => setEngine(extractor?.label ?? 'nicht eingerichtet'));
     void navigator.storage?.estimate?.().then((estimate) => {
@@ -167,34 +165,7 @@ export default function SettingsPage() {
           </Field>
         </section>
 
-        <section className="card p-4">
-          <h2 className="font-semibold mb-3">3D-Modelle</h2>
-          <table className="w-full text-sm">
-            <tbody>
-              {(['ist', 'soll'] as const).map((variant) => (
-                <tr key={variant} className="border-b border-line/60 last:border-0">
-                  <td className="py-2 pr-2">{variant === 'ist' ? 'Bestand' : 'Zielzustand'}</td>
-                  <td className="py-2 pr-2 text-muted">v{manifest?.[variant]?.version ?? '–'}</td>
-                  <td className="py-2 text-muted">{manifest?.[variant]?.updatedAt ?? ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <Field label="Standardvariante">
-            <select
-              className="field"
-              value={settings.defaultModelVariant}
-              onChange={(event) => update({ defaultModelVariant: event.target.value as 'ist' | 'soll' })}
-            >
-              <option value="ist">Bestand</option>
-              <option value="soll">Zielzustand</option>
-            </select>
-          </Field>
-          <p className="text-xs text-muted">
-            Modelle werden im Repo ausgetauscht (tools/model). Nach einem Push holt die App die neue Version,
-            sobald sie online ist.
-          </p>
-        </section>
+        <ModelSection signedIn={!!user} />
 
         <section className="card p-4">
           <h2 className="font-semibold mb-3">Offline</h2>

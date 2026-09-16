@@ -25,8 +25,10 @@ Die App rechnet beim Laden um: three.js-Punkt = `(x, z, −y) / 1000`. Norden is
 | `haus_model.py` | **Datenbasis Bestand (Ist).** Wände `W(...)`, Öffnungen `O(...)`, Treppen, Dach, Gaube, Balkon, Konfidenz-Tags A/B/C. Nur hier wird der Bestand geändert. |
 | `haus_model_soll.py` | **Datenbasis Zielzustand (Soll).** Startet als `from haus_model import *`. Hier die Wände/Öffnungen überschreiben, die sich durch die Sanierung ändern. |
 | `rooms_ist.py` / `rooms_soll.py` | Raumliste je Variante (Rechtecke, Innenkanten). |
-| `build_scene.py` | Baut `scene.json` aus sauberen Volumenkörpern. **Braucht CadQuery/OCP (~150 MB).** |
-| `extract_scene_from_html.py` | Fallback ohne CadQuery: zieht die Szene aus einer bereits gebauten `Haus_3D.html`. |
+| `build_scene_lite.py` | **Der übliche Weg.** Baut `public/models/<variante>.json` direkt aus der Datenbasis, nur mit der Standardbibliothek. |
+| `build_scene.py` | Dasselbe aus echten Volumenkörpern. **Braucht CadQuery/OCP (~150 MB)** – nötig für STEP/STL, nicht für den Viewer. |
+| `extract_scene_from_html.py` | Fallback: zieht die Szene aus einer bereits gebauten `Haus_3D.html`. |
+| `check_scene.py` | Prüft eine erzeugte Szene (Schema, geschlossene Hüllen, Orientierung) und vergleicht sie mit `--against` gegen eine Referenz. |
 | `build_rooms.py` | Erzeugt `public/models/rooms-<variante>.json` **und prüft** die Räume gegen die Wände. |
 | `build_plans_svg.py` | Erzeugt die 2D-Grundrisse `public/plans/<variante>-<geschoss>.svg` und `index.json`. |
 | `make_manifest.py` | Schreibt `public/models/manifest.json` (Versionen, Datum, Notiz) – die App zeigt das an. |
@@ -41,11 +43,14 @@ cd tools/model
 # 1. Geometrie anpassen
 $EDITOR haus_model.py
 # 2. prüfen - es darf kein "FREIES ENDE" und kein "AUSSERHALB" gemeldet werden
+#    (braucht numpy; ohne numpy übernimmt check_scene.py in Schritt 4 die Prüfung)
 python3 check_walls.py | grep -i "AUSSERHALB\|FREIES"
-# 3. Szene bauen (mit CadQuery) ...
-python3 build_scene.py --variant ist --out ../../public/models/ist.json
-#    ... oder ohne CadQuery aus einer gebauten Viewer-HTML:
-python3 extract_scene_from_html.py --html Haus_3D.html --variant ist --version 0.23
+# 3. Szene bauen - ohne Abhängigkeiten, das ist der übliche Weg:
+python3 build_scene_lite.py --variant ist --version 0.23 --note "Kurznotiz"
+#    Alternativen: build_scene.py (mit CadQuery) oder, aus einer gebauten Viewer-HTML,
+#    extract_scene_from_html.py --html Haus_3D.html --variant ist --version 0.23
+# 4. Szene gegen die vorige Fassung prüfen (Exitcode != 0 = Problem)
+python3 check_scene.py ../../public/models/ist.json --against /pfad/zur/alten/ist.json
 # 4. Räume und Pläne neu bauen, Manifest schreiben
 python3 build_rooms.py --variant ist
 python3 build_plans_svg.py --variant ist
@@ -55,9 +60,17 @@ python3 make_manifest.py
 Version in Schritt 3 **immer erhöhen** (`--version`). Die App zeigt sie an und erkennt daran,
 dass ein neues Modell vorliegt.
 
+`build_scene_lite.py` und `build_scene.py` beschreiben denselben Körper: gleiche 132 Bauteile,
+gleiches Volumen, in fünf Blickrichtungen kein Pixel Unterschied. Der Unterschied liegt nur in
+der Vernetzung (lite braucht etwa ein Drittel mehr Dreiecke, ~4500 statt ~3100, weil es Flächen
+in Rechtecke statt in minimale Polygone zerlegt). Wasserdichte Volumenkörper braucht nur
+`build_print.py` (STL) und `build_cad.py` (STEP/FreeCAD) – daher hängen die an CadQuery, der
+Viewer nicht.
+
 ## 4. Zielzustand (Soll) ändern
 
-Genauso, aber in `haus_model_soll.py` und `rooms_soll.py`, mit `--variant soll`.
+Genauso, aber in `haus_model_soll.py` und `rooms_soll.py`, mit `--variant soll`
+(`build_scene_lite.py` lädt dann `haus_model_soll` statt `haus_model`).
 `haus_model.py` bleibt unangetastet: es ist die abgeglichene Aufnahme des Bestands.
 
 Beispiel – eine Wand im Soll entfernen und eine neue setzen:
@@ -71,14 +84,38 @@ W("EG", "Neue Trennwand Bad 115", 9045, 7035, 9160, 8705, "C")
 
 ## 5. Veröffentlichen
 
+Die Modellversion hängt **nicht** am App-Build. Die App nimmt immer die höchste Fassung,
+die sie erreicht, legt sie in IndexedDB und behält sie offline. Drei Kanäle, gleichwertig
+nach Version verglichen (Details in `src/data/modelRelease.ts`):
+
+| Kanal | Wie er gefüllt wird | Wer ihn braucht |
+|---|---|---|
+| `bundled` | `public/models/` im Repo, mit dem Build ausgeliefert | die Untergrenze: offline ab dem ersten Start |
+| `site` | derselbe `git push`, gelesen aus `models/manifest.json` der **veröffentlichten** Seite | die APK, deren gebündelte Dateien sich nie ändern, und die Web-App, die sonst erst nach einer angenommenen App-Aktualisierung das neue Modell sähe |
+| `firestore` | Einstellungen → 3D-Modelle → „Modell veröffentlichen“ | ein neues Modell **ohne jeden Deploy**; das andere Gerät holt es beim nächsten Sync |
+
+**Weg A – über das Repo** (wie bisher, wirkt auf Web und APK):
+
 ```bash
 git add public/models public/plans tools/model
 git commit -m "model: EG Wand versetzt, v0.23"
 git push
 ```
 
-GitHub Actions baut und deployt automatisch. Am Handy: App öffnen, solange WLAN da ist –
-sie lädt die neuen Dateien in den Offline-Cache und meldet „Neue Version“.
+GitHub Actions baut und deployt. Danach genügt es, die App einmal online zu öffnen: sie
+holt das neue Modell in den Offline-Cache. Ein App-Update ist dafür nicht nötig.
+
+**Weg B – ohne Deploy**, direkt aus der App: Einstellungen → 3D-Modelle → „Modell
+veröffentlichen“, Variante wählen, die erzeugte `ist.json` (und optional
+`rooms-ist.json`) auswählen. Version und Datum liest die App aus `meta` der Datei – es
+gibt also keine zweite Stelle, die man nachziehen müsste. Das Modell landet in
+`meta/model-ist` in Firestore (~95 KB pro Szene, Grenze 1 MiB pro Dokument) und ist auf
+dem anderen Gerät beim nächsten Sync da, auch wenn dort eine ältere App läuft.
+
+In beiden Fällen: **Version immer erhöhen.** Die App vergleicht zahlenweise (`0.10` ist
+neuer als `0.9`) und rührt ein Modell mit gleicher oder kleinerer Version nicht an. Vor
+dem Ablegen prüft sie die Szene (`validateScene`); eine abgeschnittene Datei wird
+abgelehnt und das bisherige Modell bleibt in Betrieb.
 
 ## 6. Format der erzeugten Dateien
 
