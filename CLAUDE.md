@@ -110,12 +110,14 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
-- Die Version in `package.json` gehört mit dem Feature in denselben Branch: der
-  APK-Workflow veröffentlicht das Release nur vom Default-Branch (oder per „Run
-  workflow"), und nur dort prüft er auch, dass die Nummer über der veröffentlichten
-  liegt. Ein Feature-Branch baut die APK, lädt sie als Artefakt hoch und verbraucht keine
-  Nummer. Wer das je wieder aufweicht, holt sich das alte Laufband zurück: der erste Push
-  veröffentlichte die Nummer, jeder weitere und am Ende der Merge scheiterten daran.
+- **Jeder Entwicklungsschritt ist ein Release**, auch aus einem Sitzungsbranch: das
+  Telefon aktualisiert sich über `releases/latest` selbst, ein Umweg über Artefakte im
+  Browser ist nicht gewollt. Also bei jedem Push die Version in `package.json` anheben –
+  genau daran erinnert die Wächter-Prüfung im APK-Workflow, wenn sie scheitert. Mehrere
+  Commits mit derselben Nummer gehen nicht; wer das umgeht, nimmt dem Telefon das Update.
+- Der Tag eines Release hängt am gebauten Commit (`--target "$GITHUB_SHA"`). Ohne das
+  setzt `gh release create` ihn auf den Default-Branch, und aus einem Sitzungsbranch
+  heraus zeigt er dann auf Code, der die veröffentlichte APK nicht enthält.
 - Der Pages-Deploy läuft nur vom Pages-Quellbranch. Auf jedem anderen Branch ist der
   `build`-Job grün und der `deploy`-Job wird von der Umgebung `github-pages` nach einer
   Sekunde ohne Schritte abgewiesen. Das ist erwartet und kein Fehler im Code; solange es

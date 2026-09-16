@@ -33,11 +33,7 @@ jobs:
         # vergessen. Dann bekäme niemand das Update angeboten - also lieber hier
         # scheitern als still danebenliegen. Verglichen wird mit der zuletzt
         # veröffentlichten Fassung; ein erneut gestarteter Lauf darf dieselbe behalten.
-        #
-        # Nur auf dem Branch, der auch veröffentlicht: sonst verbraucht schon der erste
-        # Push eines Feature-Branch die Nummer, und jeder weitere Push - und am Ende der
-        # Merge - scheitert an einer Fassung, die dieser Branch selbst veröffentlicht hat.
-        if: ${{ github.ref_name == github.event.repository.default_branch && github.run_attempt == 1 }}
+        if: ${{ github.event_name != 'workflow_dispatch' && github.run_attempt == 1 }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -187,12 +183,10 @@ jobs:
       # a release gives the APK a permanent address that works without a GitHub login,
       # which is what the update banner in the app links to
       - name: Release veröffentlichen
-        # Ein Release gehört dem Branch, der auch die Website veröffentlicht: die App
-        # bietet "releases/latest" zum Herunterladen an, ein Release aus einem
-        # ungemergten Branch würde dem Telefon also einen unfertigen Build als neueste
-        # Fassung hinhalten. Feature-Branches bauen die APK weiter und laden sie als
-        # Artefakt hoch - nur veröffentlicht wird von hier aus nicht.
-        if: ${{ github.ref_name == github.event.repository.default_branch || github.event_name == 'workflow_dispatch' }}
+        # Aus jedem Branch, bewusst: das Telefon aktualisiert sich über releases/latest
+        # selbst, und jeder Entwicklungsschritt soll dort ankommen, ohne vorher gemergt
+        # zu werden. Dass die Nummer damit verbraucht ist, ist kein Problem - sie wird je
+        # Schritt sowieso angehoben, und genau daran erinnert die Prüfung oben.
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
