@@ -46,24 +46,12 @@ jobs:
       # the app asks this file whether a newer build exists; the commit is the identity,
       # because the web version and the APK are built from the same one
       - name: version.json schreiben
-        # The version comes from package.json, the same file the bundle and the APK read,
-        # so the app can compare what it runs with what is published. jq does the
-        # quoting, because a commit message brings quotes, backslashes and newlines.
+        # Beides kommt aus derselben Quelle: die Nummer aus package.json, die die App auch
+        # im Bundle trägt, und der Text aus RELEASE_NOTES.md - nicht aus der
+        # Commit-Nachricht, die für Entwickler geschrieben ist und im Banner auch so klingt.
         run: |
-          version=$(node -p "require('./package.json').version")
-          code=$(node --experimental-strip-types -e "
-            import { versionCode } from './src/lib/version.ts';
-            process.stdout.write(String(versionCode(process.argv[1])));
-          " "$version")
-          jq -n \
-            --arg version "$version" \
-            --argjson build "$code" \
-            --arg sha "$(git rev-parse --short HEAD)" \
-            --arg date "$(git log -1 --format=%cs)" \
-            --arg subject "$(git log -1 --format=%s)" \
-            --arg notes "$(git log -1 --format=%b | sed '/^[A-Za-z-]*:[[:space:]]*http/d; /^Co-Authored-By:/d' | sed -e :a -e '/^\n*$/{$d;N;};/\n$/ba')" \
-            --arg apk "https://github.com/${{ github.repository }}/releases/latest/download/reno-master.apk" \
-            '{version: $version, build: $build, sha: $sha, date: $date, subject: $subject, notes: $notes, apk: $apk}' \
+          node --experimental-strip-types tools/release-notes.mjs --current \
+            --apk "https://github.com/${{ github.repository }}/releases/latest/download/reno-master.apk" \
             > dist/version.json
           cat dist/version.json
 

@@ -15,6 +15,9 @@ import { KIND_BADGE, KIND_LABEL, KINDS } from '@/search/records';
 import { useSearchIndex } from '@/search/useSearch';
 import { clearRecent, loadRecent, rememberSearch } from '@/search/recent';
 
+/** how many results one kind shows before it hands over to its own filtered list */
+const PER_GROUP = 5;
+/** how many the filtered list of a single kind shows at once */
 const PAGE = 25;
 
 const KIND_COLOR: Record<SearchKind, string> = {
@@ -112,6 +115,22 @@ export default function SearchPage() {
   const hits = useMemo(() => search(index, needle), [index, needle]);
   const counts = useMemo(() => countByKind(hits), [hits]);
   const visible = useMemo(() => (kind ? hits.filter((hit) => hit.record.kind === kind) : hits), [hits, kind]);
+
+  /**
+   * Without a filter the results are grouped by kind. The groups come in the order of
+   * their best hit - the hits are already sorted by score, so the map hands them back
+   * that way by itself.
+   */
+  const groups = useMemo(() => {
+    if (kind) return [];
+    const map = new Map<SearchKind, SearchHit[]>();
+    for (const hit of hits) {
+      const rows = map.get(hit.record.kind);
+      if (rows) rows.push(hit);
+      else map.set(hit.record.kind, [hit]);
+    }
+    return [...map.entries()];
+  }, [hits, kind]);
 
   useEffect(() => setShown(PAGE), [needle, kind]);
 
@@ -253,7 +272,30 @@ export default function SearchPage() {
         />
       )}
 
-      {visible.length > 0 && (
+      {!kind &&
+        groups.map(([item, rows]) => (
+          <section key={item}>
+            <div className="section-title">
+              {KIND_LABEL[item]} · {rows.length}
+            </div>
+            <ul>
+              {rows.slice(0, PER_GROUP).map((hit) => (
+                <ResultRow key={hit.record.id} hit={hit} onOpen={keep} />
+              ))}
+            </ul>
+            {rows.length > PER_GROUP && (
+              <button
+                type="button"
+                className="w-full text-left px-4 py-3 text-sm text-accent border-b border-line/60"
+                onClick={() => setKind(item)}
+              >
+                Alle {rows.length} unter {KIND_LABEL[item]} anzeigen ›
+              </button>
+            )}
+          </section>
+        ))}
+
+      {kind && visible.length > 0 && (
         <>
           <ul>
             {visible.slice(0, shown).map((hit) => (

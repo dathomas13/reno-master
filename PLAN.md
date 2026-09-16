@@ -315,11 +315,13 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 2. **Dateien (Fotos, Belege, Pläne-Upload)** können Firebase Storage offline **nicht** in die Warteschlange stellen → eigene **Outbox** in IndexedDB (`idb`, Store `outbox`: `{id, storagePath, blob, contentType, docRef:{collection,id,field}, attempts, createdAt}`).
    - Beim Anlegen: Foto verkleinern → Blob in Outbox → Firestore-Dokument sofort mit `uploadState:'pending'` schreiben → UI zeigt Bild aus der lokalen Blob-URL.
    - `outbox.process()` läuft bei App-Start, bei `online`-Event, beim Sichtbarwerden der App und alle 60 s wenn online: sequentiell hochladen (`uploadBytes`), dann Dokument `uploadState:'uploaded'` setzen, Blob aus Outbox löschen, Blob zusätzlich in den `fileCache` (Cache API) legen, damit er ohne erneuten Download sichtbar bleibt. Fehler → `attempts++`, exponentielles Backoff, nach 10 Versuchen sichtbarer Fehlerstatus (nicht verwerfen).
+   - **Nichts darin darf unbegrenzt warten.** Der Upload hat ein Zeitlimit (90 s, `AbortController`); auf die Bestätigung des Firestore-Schreibens wird **nicht** gewartet, sondern nur kurz (10 s) darauf, dass es *scheitert* – Firestore hat seine eigene dauerhafte Warteschlange. Ein Lauf, der länger als 5 Minuten hängt, gilt als verloren, der nächste darf starten. Sonst genügt eine hängende Verbindung, damit die Anzeige dauerhaft „1 wird geladen“ zeigt, obwohl die Datei längst oben liegt, und auch „Jetzt versuchen“ nichts mehr tut.
+   - Ein Job, dessen Dokument gelöscht wurde, wird verworfen statt ewig wiederholt (er lädt sonst die gelöschte Datei wieder hoch); `deletePhoto` räumt die Jobs eines Fotos gleich mit weg. Die testbare Entscheidungslogik steht in `src/offline/outboxRules.ts`.
    - Background Sync API (`registration.sync.register('outbox')`) zusätzlich registrieren, wenn verfügbar.
 3. **Anzeige von Storage-Dateien**: Download-URLs werden über `getDownloadURL` geholt und im Dokument-Cache (`urlCache` in IndexedDB, `{storagePath → url}`) gespeichert; URLs sind stabil (Token). Workbox-Runtime-Route `CacheFirst` für `firebasestorage.googleapis.com` (max. 3000 Einträge, 180 Tage). Thumbnails werden beim Rendern der Liste geladen → danach offline verfügbar. Detailbilder nach erstem Öffnen offline.
 4. **Pläne offline**: Für Uploads (PDF) gibt es pro Plan einen Schalter "Offline verfügbar" → Datei wird in den Cache `plans-offline` gelegt (und Status im UI). Gebündelte SVGs und Modelle sind über den Precache immer offline da.
 5. **App-Shell** vollständig precached (Workbox `injectManifest`, `globPatterns: ['**/*.{js,css,html,svg,json,png,jpg,woff2}']`, `maximumFileSizeToCacheInBytes: 6 MB`). Update-Strategie: `registerType: 'prompt'` → Banner "Neue Version verfügbar – Neu laden".
-6. **Sync-Status** in der TopBar: grüner Punkt (online, alles synchron), gelber Punkt mit Zahl (ausstehende Uploads), grau (offline). Klick → Liste der ausstehenden Uploads mit "Jetzt versuchen".
+6. **Sync-Status** in der TopBar: grüner Punkt (online, alles synchron), gelber Punkt mit Zahl (ausstehende Uploads), grau (offline). Klick → Liste der ausstehenden Uploads: was es ist (Foto, Vorschaubild, Beleg, Plan), wie groß, wie lange es schon wartet, wie viele Versuche, und der letzte Fehler im Klartext, dazu "Jetzt versuchen" und "Verwerfen" je Datei. Eine Zahl allein sagt nicht, *was* hängt, und lässt keinen Ausweg.
 7. Konflikte: Last-write-wins (Firestore-Standard) reicht bei zwei Nutzern; Felder werden mit `updateDoc` partiell geschrieben, nie ganze Dokumente überschrieben.
 
 ---
@@ -411,9 +413,12 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   wiegen schwerer als in den Zusatzfeldern, die wiederum schwerer als im Fließtext; ein ganzes Wort schlägt
   einen Wortanfang, der einen Treffer im Wortinneren.
 - Darstellung: ein Suchfeld, darunter Filter-Chips je Art mit Trefferzahl ("Alle 24 · Tagebuch 7 · Kosten 5"),
-  dann eine Trefferliste nach Relevanz. Jede Zeile: Art-Plakette, Titel mit hervorgehobener Fundstelle,
-  Kontextzeile (Datum, Status, Kategorie) und – wenn der Treffer im Fließtext liegt – ein Textausschnitt um
-  die Fundstelle. Rechts der Betrag, wo es einen gibt. 25 Treffer, dann "Weitere anzeigen".
+  dann die Treffer **nach Abschnitten gruppiert** – ein Abschnitt je Art, in der Reihenfolge ihres besten
+  Treffers, je fünf Zeilen und darunter "Alle 12 unter Kosten anzeigen", was auf den Filter dieser Art
+  umschaltet. Mit gesetztem Filter wird daraus eine flache Liste, 25 Treffer, dann "Weitere anzeigen".
+  Jede Zeile: Art-Plakette, Titel mit hervorgehobener Fundstelle, Kontextzeile (Datum, Status, Kategorie)
+  und – wenn der Treffer im Fließtext liegt – ein Textausschnitt um die Fundstelle. Rechts der Betrag,
+  wo es einen gibt.
 - Ohne Eingabe: die letzten Suchen (nur auf dem Gerät, `localStorage`), Vorschlags-Chips und ein kurzer
   Hinweis, was durchsucht wird.
 - Technik (`src/search/`): `normalize.ts` faltet Text und Anfrage gleich und merkt sich, woher jedes Zeichen
@@ -556,6 +561,7 @@ export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wä
 - `vite.config.ts`: `base: '/reno-master/'`, `VitePWA({ strategies: 'injectManifest', srcDir: 'src', filename: 'sw.ts', registerType: 'prompt', manifest: {...}, injectManifest: { globPatterns: [...], maximumFileSizeToCacheInBytes: 6_000_000 } })`.
 - `.github/workflows/deploy.yml`: bei Push auf `main`: `npm ci` → `npm run lint && npm run typecheck && npm run test:unit` → `npm run build` → `actions/upload-pages-artifact` (`dist`) → `actions/deploy-pages`. `dist/404.html` = Kopie von `index.html` (Sicherheitsnetz). Build-Zeit-Variablen: `VITE_APP_VERSION` = Git-SHA, `VITE_BUILD_DATE`.
 - `.github/workflows/ci.yml`: bei PR: Lint, Typecheck, Unit, E2E gegen Emulator (`firebase emulators:exec --only auth,firestore,storage "npx playwright test"`).
+- **Release Notes**: was im Update-Banner steht, kommt aus `RELEASE_NOTES.md` (`## <Version> – <Schlagzeile>`, darunter ein bis drei Absätze), nicht aus der Commit-Nachricht. Der Deploy erzeugt daraus `version.json` und `versions.json` (`tools/release-notes.mjs --current` bzw. ohne Schalter), der APK-Workflow denselben Text für das GitHub-Release (`--text`). Fehlt eine Version in der Datei, bleibt es bei der Commit-Nachricht. Geschrieben wird für den, der die App benutzt: ganze Sätze, was sich an der Bedienung ändert – keine Dateinamen, keine Testzahlen, kein Changelog.
 - URL: `https://dathomas13.github.io/reno-master/`. Am S24: Chrome → Menü → "Zum Startbildschirm hinzufügen" / "App installieren".
 - Firebase-Auth "Authorized domains": `dathomas13.github.io` eintragen (nur nötig für OAuth-Provider; bei E-Mail/Passwort nicht erforderlich, trotzdem eintragen).
 

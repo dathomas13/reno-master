@@ -122,6 +122,29 @@ export async function fetchVersionHistory(): Promise<RemoteVersion[]> {
   }
 }
 
+/**
+ * The notes as the banner should show them.
+ *
+ * What is stored is a text file, hard wrapped at some width that has nothing to do with
+ * a phone screen. Printing it as it is would break every line twice. So the lines of a
+ * paragraph are joined again and only the blank lines survive - except in a list, where
+ * every item keeps its own line.
+ */
+export function notesParagraphs(notes: string | undefined): string[] {
+  if (!notes?.trim()) return [];
+  return notes
+    .split(/\n\s*\n/)
+    .map((block) => {
+      const out: string[] = [];
+      for (const line of block.split('\n').map((item) => item.trim()).filter(Boolean)) {
+        if (!out.length || /^([-*•]|\d+[.)])\s/.test(line)) out.push(line);
+        else out[out.length - 1] += ` ${line}`;
+      }
+      return out.join('\n');
+    })
+    .filter(Boolean);
+}
+
 export function dismissedBuild(): string | null {
   try {
     return localStorage.getItem(DISMISSED_KEY);

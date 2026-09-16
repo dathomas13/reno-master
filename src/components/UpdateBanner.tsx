@@ -7,6 +7,7 @@ import {
   dismissUpdate,
   fetchVersionHistory,
   newerVersions,
+  notesParagraphs,
   runningVersion,
   type RemoteVersion,
 } from '@/data/appVersion';
@@ -164,10 +165,12 @@ export function UpdateBanner() {
                 {entry.version}
                 {entry.date ? ` · ${formatDate(entry.date)}` : ''}
               </p>
-              {entry.subject && <p className="text-muted">{entry.subject}</p>}
-              {entry.notes && (
-                <pre className="mt-1 whitespace-pre-wrap font-sans text-muted">{entry.notes}</pre>
-              )}
+              {entry.subject && <p className="text-ink/90">{entry.subject}</p>}
+              {notesParagraphs(entry.notes).map((paragraph, position) => (
+                <p key={position} className="mt-1 whitespace-pre-line text-muted">
+                  {paragraph}
+                </p>
+              ))}
             </div>
           ))}
           {history === null && <p className="text-muted">Änderungen werden geladen…</p>}

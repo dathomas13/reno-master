@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { newerVersions, shouldOfferUpdate, type RemoteVersion } from '@/data/appVersion';
+import {
+  newerVersions,
+  notesParagraphs,
+  shouldOfferUpdate,
+  type RemoteVersion,
+} from '@/data/appVersion';
 
 function remote(build: number): RemoteVersion {
   return {
@@ -75,5 +80,24 @@ describe('newerVersions', () => {
       subject: '',
     }));
     expect(newerVersions(0, many)).toHaveLength(12);
+  });
+});
+
+describe('notesParagraphs', () => {
+  it('joins the hard wrapped lines of a paragraph back together', () => {
+    const notes = 'Die Suche sortiert ihre Treffer jetzt\nnach Bereichen.\n\nZweiter Absatz.';
+    expect(notesParagraphs(notes)).toEqual([
+      'Die Suche sortiert ihre Treffer jetzt nach Bereichen.',
+      'Zweiter Absatz.',
+    ]);
+  });
+
+  it('keeps a list readable instead of running it into one line', () => {
+    expect(notesParagraphs('Neu:\n- Suche\n- Uploads')).toEqual(['Neu:\n- Suche\n- Uploads']);
+  });
+
+  it('has nothing to show for nothing', () => {
+    expect(notesParagraphs(undefined)).toEqual([]);
+    expect(notesParagraphs('   \n\n  ')).toEqual([]);
   });
 });
