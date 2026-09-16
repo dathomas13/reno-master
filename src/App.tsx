@@ -6,6 +6,7 @@ import { AppShell } from '@/components/AppShell';
 import { Spinner } from '@/components/Fields';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { startOutboxWorker } from '@/offline/outbox';
+import { startModelSync } from '@/data/modelSync';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import LoginPage from '@/modules/auth/LoginPage';
@@ -26,6 +27,10 @@ function Protected() {
   const { user, ready } = useAuth();
 
   useEffect(() => (user ? startOutboxWorker() : undefined), [user]);
+  // Runs without an account too: the site channel needs no database, and the 3D preview
+  // should show the published model, not the one this build happens to carry. Only the
+  // listener for a released model waits for the login.
+  useEffect(() => startModelSync({ watchPublished: !!user }), [user]);
 
   if (!ready) return <Spinner label="Wird geladen…" />;
 

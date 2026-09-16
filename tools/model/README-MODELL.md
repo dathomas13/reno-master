@@ -84,14 +84,38 @@ W("EG", "Neue Trennwand Bad 115", 9045, 7035, 9160, 8705, "C")
 
 ## 5. Veröffentlichen
 
+Die Modellversion hängt **nicht** am App-Build. Die App nimmt immer die höchste Fassung,
+die sie erreicht, legt sie in IndexedDB und behält sie offline. Drei Kanäle, gleichwertig
+nach Version verglichen (Details in `src/data/modelRelease.ts`):
+
+| Kanal | Wie er gefüllt wird | Wer ihn braucht |
+|---|---|---|
+| `bundled` | `public/models/` im Repo, mit dem Build ausgeliefert | die Untergrenze: offline ab dem ersten Start |
+| `site` | derselbe `git push`, gelesen aus `models/manifest.json` der **veröffentlichten** Seite | die APK, deren gebündelte Dateien sich nie ändern, und die Web-App, die sonst erst nach einer angenommenen App-Aktualisierung das neue Modell sähe |
+| `firestore` | Einstellungen → 3D-Modelle → „Modell veröffentlichen“ | ein neues Modell **ohne jeden Deploy**; das andere Gerät holt es beim nächsten Sync |
+
+**Weg A – über das Repo** (wie bisher, wirkt auf Web und APK):
+
 ```bash
 git add public/models public/plans tools/model
 git commit -m "model: EG Wand versetzt, v0.23"
 git push
 ```
 
-GitHub Actions baut und deployt automatisch. Am Handy: App öffnen, solange WLAN da ist –
-sie lädt die neuen Dateien in den Offline-Cache und meldet „Neue Version“.
+GitHub Actions baut und deployt. Danach genügt es, die App einmal online zu öffnen: sie
+holt das neue Modell in den Offline-Cache. Ein App-Update ist dafür nicht nötig.
+
+**Weg B – ohne Deploy**, direkt aus der App: Einstellungen → 3D-Modelle → „Modell
+veröffentlichen“, Variante wählen, die erzeugte `ist.json` (und optional
+`rooms-ist.json`) auswählen. Version und Datum liest die App aus `meta` der Datei – es
+gibt also keine zweite Stelle, die man nachziehen müsste. Das Modell landet in
+`meta/model-ist` in Firestore (~95 KB pro Szene, Grenze 1 MiB pro Dokument) und ist auf
+dem anderen Gerät beim nächsten Sync da, auch wenn dort eine ältere App läuft.
+
+In beiden Fällen: **Version immer erhöhen.** Die App vergleicht zahlenweise (`0.10` ist
+neuer als `0.9`) und rührt ein Modell mit gleicher oder kleinerer Version nicht an. Vor
+dem Ablegen prüft sie die Szene (`validateScene`); eine abgeschnittene Datei wird
+abgelehnt und das bisherige Modell bleibt in Betrieb.
 
 ## 6. Format der erzeugten Dateien
 

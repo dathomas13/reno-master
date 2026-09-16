@@ -55,6 +55,14 @@ Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files
 gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
 
+**Die Modellversion hängt nicht am App-Build.** `src/data/modelSync.ts` nimmt die höchste
+Fassung, die es erreicht – gebündelt, aus dem Manifest der veröffentlichten Seite, oder
+aus `meta/model-<variante>` in Firestore – prüft sie und legt sie in IndexedDB
+(`src/data/modelStore.ts`). Der Viewer liest über `loadScene`, also offline aus dem Cache.
+Die Entscheidungslogik steht testbar in `src/data/modelRelease.ts`. Veröffentlichen geht
+per `git push` oder ohne Deploy über Einstellungen → 3D-Modelle → „Modell veröffentlichen“
+(Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5).
+
 ## Stand (15.09.2026)
 
 Live unter <https://dathomas13.github.io/reno-master/>, gebaut und veröffentlicht von
@@ -65,7 +73,7 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, 119 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, 308 Unit-Tests.
 
 Offen:
 
@@ -101,6 +109,7 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
+- Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
 - Keine Geheimnisse ins Repo: Service-Account-JSON, `google-services.json`, `.env` sind gitignored.
 - Der Claude API-Key liegt nur im localStorage des Geräts, nie in Firestore.
 - Vor dem Push: `npm run lint`, `npm run test`, `npm run build`.

@@ -9,7 +9,7 @@ when a check fails, which makes it usable before a commit or in a workflow.
 
 On its own it checks what the viewer relies on:
   * schema - layer, kind and tag are values src/modules/viewer3d/houseScene.ts knows,
-    triangle indices are in range, bb matches the vertices
+    triangle indices are in range and use every vertex, bb matches the vertices
   * closed shells - every edge shared by exactly two triangles with opposite direction.
     An unpaired edge is not cosmetic: EdgesGeometry treats it as an outline and draws a
     seam across the middle of the part.
@@ -106,6 +106,22 @@ def check_shells(prims) -> None:
             longest = max((math.dist(u, w) for u, w in unpaired + doubled), default=0)
             fail(f"{label(p)}: Hülle nicht geschlossen - {len(unpaired)} unpaarige, "
                  f"{len(doubled)} doppelte Kanten, längste {longest:.1f} mm")
+
+
+def check_indices(prims) -> None:
+    """Every vertex is referenced by a triangle.
+
+    Both generators emit a vertex only when a triangle uses it, so a gap here means the
+    vertex list was cut short or a face was dropped after the fact. The app itself stays
+    tolerant about this - there a false alarm would cost the user their model - so the
+    strict check belongs on this side.
+    """
+    for p in prims:
+        if not p["t"]:
+            continue
+        used, have = max(p["t"]) + 1, len(p["v"]) // 3
+        if used != have:
+            fail(f"{label(p)}: {have} Punkte, aber die Dreiecke brauchen {used}")
 
 
 def check_solids(prims) -> None:
@@ -259,10 +275,17 @@ def main() -> int:
     print(f'  kind: {dict(sorted(Counter(p["kind"] for p in prims).items()))}')
     print(f'  tag:  {dict(sorted(Counter(p["tag"] for p in prims).items()))}')
     check_schema(prims)
-    check_shells(prims)
-    check_solids(prims)
-    if args.against:
-        compare(prims, json.loads(args.against.read_text())["prims"], args.tol)
+    check_indices(prims)
+    # The geometry checks read a triangle through its indices, so they only run once the
+    # structure holds - on a broken index they would trip over the same defect and die
+    # with a traceback instead of naming it.
+    if not problems:
+        check_shells(prims)
+        check_solids(prims)
+        if args.against:
+            compare(prims, json.loads(args.against.read_text())["prims"], args.tol)
+    else:
+        print("  Struktur fehlerhaft - Geometrie und Vergleich übersprungen")
 
     print()
     if problems:

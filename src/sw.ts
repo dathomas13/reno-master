@@ -5,7 +5,7 @@
  */
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { CacheFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
@@ -28,10 +28,27 @@ registerRoute(
   }),
 );
 
-// model and plan files: serve fast, refresh in the background
+// The model channel asks the published site whether a newer model exists. That question
+// must reach the network: the precache above answers the bundled address, and with
+// registerType 'prompt' it keeps answering with the old model until an app update is
+// accepted - which is exactly the coupling the channel is there to remove. The channel
+// therefore appends a query parameter, which no precache entry matches, and this route
+// takes it from the network only. Offline the fetch fails, the app keeps its model.
+registerRoute(
+  ({ url }: { url: URL }) => url.pathname.endsWith('/models/manifest.json') && url.search !== '',
+  new NetworkOnly(),
+);
+
+// model and plan files: serve fast, refresh in the background. A model fetched over the
+// network carries its version in the query, so a new version is a new address and can
+// never be answered with the body of the old one. Capped, because those addresses would
+// otherwise pile up with every release.
 registerRoute(
   ({ url }: { url: URL }) => url.pathname.includes('/models/') || url.pathname.includes('/plans/'),
-  new StaleWhileRevalidate({ cacheName: 'reno-models' }),
+  new StaleWhileRevalidate({
+    cacheName: 'reno-models',
+    plugins: [new ExpirationPlugin({ maxEntries: 24, maxAgeSeconds: 60 * 24 * 60 * 60 })],
+  }),
 );
 
 self.addEventListener('message', (event) => {
