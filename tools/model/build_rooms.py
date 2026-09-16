@@ -2,9 +2,12 @@
 """Build public/models/rooms-<variant>.json from the room tables and sanity-check them.
 
 Checks performed (all mm):
-  * a room must not be crossed by a wall of the same floor (overlap area > TOL_AREA)
+  * a room must not be crossed by a wall of the same floor (overlap area > TOL_AREA).
+    Open passages ("loggia" openings) are cut out of the wall first: a niche such as the
+    EG Garderobe reaches into the wall zone and is not an error.
   * rooms of the same floor must not overlap each other
-  * a room must lie inside the building envelope (garage excluded)
+  * a room must lie inside the building envelope (garage excluded). The envelope comes
+    from the model as ENVELOPE, because the loggia wall panels project south of y = 0.
 
 Usage:
     python3 tools/model/build_rooms.py                 # both variants
@@ -37,6 +40,35 @@ def rect_overlap_area(a, b) -> float:
     return dx * dy / 1e6
 
 
+def wall_pieces(wall, openings):
+    """The wall rectangle split by its open passages, as (x0, y0, x1, y1) pieces.
+
+    Only openings of kind "loggia" count: those are open from the floor up over the full
+    height, so a room may legitimately reach into them. A door or a window leaves the
+    wall standing at floor level and must still be reported.
+    """
+    along = (wall["x1"] - wall["x0"]) >= (wall["y1"] - wall["y0"])
+    a0, a1 = (wall["x0"], wall["x1"]) if along else (wall["y0"], wall["y1"])
+    parts = [(a0, a1)]
+    for o in openings:
+        if o["kind"] != "loggia":
+            continue
+        c0, c1 = a0 + o["a0"], a0 + o["a0"] + o["width"]
+        rest = []
+        for p0, p1 in parts:
+            if c1 <= p0 or c0 >= p1:
+                rest.append((p0, p1))
+                continue
+            if p0 < c0:
+                rest.append((p0, c0))
+            if c1 < p1:
+                rest.append((c1, p1))
+        parts = rest
+    if along:
+        return [(p0, wall["y0"], p1, wall["y1"]) for p0, p1 in parts]
+    return [(wall["x0"], p0, wall["x1"], p1) for p0, p1 in parts]
+
+
 def build(variant: str) -> dict:
     rooms_mod = importlib.import_module("rooms_ist" if variant == "ist" else "rooms_soll")
     model_mod = importlib.import_module("haus_model" if variant == "ist" else "haus_model_soll")
@@ -53,7 +85,9 @@ def build(variant: str) -> dict:
         for x0, y0, x1, y1 in rects:
             if x1 <= x0 or y1 <= y0:
                 problems.append(f"{rid}: empty rectangle {(x0, y0, x1, y1)}")
-            if floor != "GAR" and not (0 <= x0 < x1 <= model_mod.HOUSE_W and 0 <= y0 < y1 <= model_mod.HOUSE_D):
+            ex0, ey0, ex1, ey1 = getattr(model_mod, "ENVELOPE",
+                                         (0, 0, model_mod.HOUSE_W, model_mod.HOUSE_D))
+            if floor != "GAR" and not (ex0 <= x0 < x1 <= ex1 and ey0 <= y0 < y1 <= ey1):
                 problems.append(f"{rid}: rectangle {(x0, y0, x1, y1)} outside the building envelope")
 
     for rid, name, floor, rects in rooms:
@@ -61,7 +95,9 @@ def build(variant: str) -> dict:
             for w in model_mod.WALLS:
                 if w["floor"] != floor:
                     continue
-                a = rect_overlap_area(rect, (w["x0"], w["y0"], w["x1"], w["y1"]))
+                openings = [o for o in model_mod.OPENINGS
+                            if (o["floor"], o["wall"]) == (w["floor"], w["name"])]
+                a = sum(rect_overlap_area(rect, piece) for piece in wall_pieces(w, openings))
                 if a > TOL_AREA:
                     problems.append(f"{rid} ({name}): wall {w['name']!r} cuts through it ({a:.2f} m²)")
             for other_id, _, other_floor, other_rects in rooms:

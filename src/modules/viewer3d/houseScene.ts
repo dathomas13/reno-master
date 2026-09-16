@@ -197,8 +197,9 @@ export function buildHouse(
     root.add(group);
   }
 
-  const houseW = meta.house_w ?? 13240;
-  const houseD = meta.house_d ?? 11820;
+  // every generated scene carries these; the fallback is the surveyed outer size (09/2026)
+  const houseW = meta.house_w ?? 12995;
+  const houseD = meta.house_d ?? 11815;
   const center = toWorld(THREE, houseW / 2, houseD / 2, 1000);
 
   // ---------------------------------------------------------------- lights

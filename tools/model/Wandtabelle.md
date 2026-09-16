@@ -1,5 +1,10 @@
 # Wand- und Öffnungstabelle – Haus Tirschenreuth (Modell v0.19)
 
+> **Stand 1967 (Rohbau).** Für das **Erdgeschoss** ist diese Tabelle überholt: dort gilt
+> das Aufmaß von 09/2026 (Fertigmaße) in `haus_model.py`. Haus jetzt 12.995 × 11.815,
+> Außenwand 400, tragende Innenwand 270. KG und OG stehen weiter auf dem Raster von 1967,
+> das KG allerdings auf die aufgemessenen Achsen geschoben.
+
 Koordinaten in mm. x = 0 Westkante Außenwand (Garagenseite), y = 0 Südkante (Straße), z = 0 OK Rohdecke EG.
 Wände als Grundrissrechtecke (Außenkante zu Außenkante). Öffnungen mit absoluter Lage entlang der Wand.
 Konfidenz: **A** = Maßkette/Scan gesichert · **B** = abgeleitet · **C** = Annahme, bitte prüfen.
