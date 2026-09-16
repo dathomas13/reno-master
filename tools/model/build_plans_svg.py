@@ -238,8 +238,12 @@ def main() -> int:
             })
             print(f"{out.relative_to(REPO)}: {out.stat().st_size // 1024} KB")
 
+    # the newest model date out of the manifest, not today's: the CI guard rebuilds this
+    # file and compares it with the committed one, so it must not depend on the clock
+    dates = [str(entry.get("updatedAt", "")) for entry in manifest.values()]
+    generated_at = max([d for d in dates if d], default=dt.date.today().isoformat())
     (PLANS / "index.json").write_text(
-        json.dumps({"generatedAt": dt.date.today().isoformat(), "plans": index},
+        json.dumps({"generatedAt": generated_at, "plans": index},
                    ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"public/plans/index.json: {len(index)} Pläne")
     return 0
