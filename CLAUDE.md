@@ -63,10 +63,12 @@ Die Entscheidungslogik steht testbar in `src/data/modelRelease.ts`. Veröffentli
 per `git push` oder ohne Deploy über Einstellungen → 3D-Modelle → „Modell veröffentlichen“
 (Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5).
 
-## Stand (15.09.2026)
+## Stand (16.09.2026)
 
 Live unter <https://dathomas13.github.io/reno-master/>, gebaut und veröffentlicht von
-GitHub Actions aus dem Branch `claude/sweet-franklin-t348jz`.
+GitHub Actions. Der Workflow läuft auf `main` und auf jedem `claude/**`-Branch, und der
+`deploy`-Job wird von keinem davon mehr abgewiesen: **der letzte Push gewinnt**, gleich
+aus welchem Branch.
 
 Steht:
 
@@ -74,26 +76,26 @@ Steht:
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
 - Modell-Pipeline, alle Bildschirme, Service Worker, 308 Unit-Tests.
+- **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
+  die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
+  Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
+  nötig. Einrichtung und Aufbau stehen in `worker/README.md`.
+- `public/img/nordansicht.jpg` liegt im Repo.
+- Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
+  (App oder Webansicht); es gibt keinen Import von außen mehr.
 
 Offen:
 
-1. **Cloudflare einrichten** (Anleitung in `worker/README.md`): Bucket `reno-master`,
-   Worker `reno-files`, die Variablen und das Secret, die Bindung `BUCKET`, und die
-   Adresse des Workers als GitHub-Variable `VITE_FILES_URL`. Ohne sie gibt es keine
-   Fotos, Belege und Plan-Uploads; alles andere läuft. Firebase Storage wird nicht mehr
-   benutzt, der Blaze-Tarif ist dafür nicht nötig.
-2. **Abend-Erinnerung.** Die Cloud Function (`functions/`) liegt bereit, braucht aber
+1. **Abend-Erinnerung.** Die Cloud Function (`functions/`) liegt bereit, braucht aber
    Blaze und eine Kommandozeile mit Firebase-CLI. Am Telefon geht es auch ohne, über
    eine lokale Benachrichtigung – noch nicht gebaut.
-3. **Notion-Import** (`tools/import`), braucht `firebase-admin` und einen Service-Account.
-4. `public/img/nordansicht.jpg` ergänzen.
-5. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
+2. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
-6. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
+3. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
    `ANDROID_*`-Secrets vor, baut und signiert er eine Release-APK, die sich über die alte
    legt (Anleitung im README unter „Signaturschlüssel“). Ohne sie bleibt es beim
    Debug-Schlüssel, und Android verweigert das Update über die alte Fassung.
-7. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
+4. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
    Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
    Tages). Offen sind ML Kit für das Beleg-Auslesen auf dem Gerät, die lokale
    Abend-Erinnerung und Push. Push braucht zusätzlich `google-services.json` und den
@@ -118,10 +120,10 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Der Tag eines Release hängt am gebauten Commit (`--target "$GITHUB_SHA"`). Ohne das
   setzt `gh release create` ihn auf den Default-Branch, und aus einem Sitzungsbranch
   heraus zeigt er dann auf Code, der die veröffentlichte APK nicht enthält.
-- Der Pages-Deploy läuft nur vom Pages-Quellbranch. Auf jedem anderen Branch ist der
-  `build`-Job grün und der `deploy`-Job wird von der Umgebung `github-pages` nach einer
-  Sekunde ohne Schritte abgewiesen. Das ist erwartet und kein Fehler im Code; solange es
-  so steht, bekommt das Telefon von dort auch kein neues `version.json`.
+- Der Pages-Deploy veröffentlicht aus **jedem** Branch, auf den der Workflow hört
+  (`main` und `claude/**`) – die Umgebung `github-pages` weist keinen mehr ab. Ein Push
+  aus einem Sitzungsbranch stellt die Seite also live und schickt dem Telefon ein neues
+  `version.json`. Wer das nicht will, veröffentlicht von dort nicht.
 - Keine Geheimnisse ins Repo: Service-Account-JSON, `google-services.json`, `.env` sind gitignored.
 - Der Claude API-Key liegt nur im localStorage des Geräts, nie in Firestore.
 - Vor dem Push: `npm run lint`, `npm run test`, `npm run build`.

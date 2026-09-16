@@ -19,7 +19,6 @@ function entry(patch: Partial<DiaryEntry> & { id: string; date: string }): Diary
     tradeIds: [],
     roomIds: [],
     photoIds: [],
-    source: 'app',
     ...patch,
   } as DiaryEntry;
 }

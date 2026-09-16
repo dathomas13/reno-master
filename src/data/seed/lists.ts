@@ -1,6 +1,6 @@
 import type { Lists } from '@/data/types';
 
-/** editable pick lists; seeded from what was already used in Notion */
+/** editable pick lists; seeded from what the project already used */
 export const SEED_LISTS: Lists = {
   people: [
     'Thomas', 'Sarah', 'Wolfgang', 'Christine', 'Laura', 'Matze', 'Julia', 'Tom',

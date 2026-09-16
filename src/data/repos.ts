@@ -24,7 +24,6 @@ export function emptyDiaryEntry(date = today()): DiaryEntry {
     tradeIds: [],
     roomIds: [],
     photoIds: [],
-    source: 'app',
   };
 }
 
@@ -76,7 +75,6 @@ export function emptyTask(): Task {
     priority: 'Mittel',
     assignees: [],
     roomIds: [],
-    source: 'app',
   };
 }
 
@@ -102,7 +100,7 @@ export async function deleteTask(id: string): Promise<void> {
 
 // ------------------------------------------------------------------ contacts
 export function emptyContact(): Contact {
-  return { id: newId(), name: '', tradeIds: [], source: 'app' };
+  return { id: newId(), name: '', tradeIds: [] };
 }
 
 export async function saveContact(contact: Contact): Promise<string> {

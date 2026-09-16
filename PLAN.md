@@ -10,12 +10,12 @@
 ## 0. Kontext
 
 Thomas (dathomas13, Kontakt tom.friedl@web.de) kernsaniert mit Sarah das Haus **Schlesierstraße 31, Tirschenreuth**
-(EFH Bj. 1966/67, 13,24 × 11,82 m, KG/EG/OG + Satteldach 36°, Garage westlich). Bisher wird alles in Notion
-(Workspace "Thomas's Notion", Bereich "Hausrenovierung") geführt: Bautagebuch, Aufgaben, Gewerke, Finanzen, Kontakte.
-Notion ist am Handy zu umständlich. Es gibt bereits ein 3D-Rohbaumodell (Python-Datenbasis `haus_model.py` →
+(EFH Bj. 1966/67, 13,24 × 11,82 m, KG/EG/OG + Satteldach 36°, Garage westlich). Bautagebuch, Aufgaben, Gewerke,
+Finanzen und Kontakte lagen vorher in einem allgemeinen Notiz-Werkzeug, das am Handy zu umständlich war.
+Es gibt bereits ein 3D-Rohbaumodell (Python-Datenbasis `haus_model.py` →
 three.js-Viewer `Haus_3D.html`, Stand v0.22).
 
-**Ziel:** Eine eigene, auf Thomas zugeschnittene App, die Notion für das Projekt ersetzt.
+**Ziel:** Eine eigene, auf Thomas zugeschnittene App, die all das an einer Stelle zusammenführt.
 
 - Nutzung fast ausschließlich am Handy (**Samsung Galaxy S24**, Android, Chrome; CSS-Viewport ≈ 360 × 780 px).
 - Phase 1: **PWA**, gehostet auf **GitHub Pages** (Repo `dathomas13/reno-master`, öffentlich), am Handy "zum Startbildschirm hinzufügen".
@@ -38,7 +38,6 @@ three.js-Viewer `Haus_3D.html`, Stand v0.22).
 | 3D-Modelle Ist/Soll | Liegen als JSON im Repo (`public/models/`), werden mit dem App-Build ausgeliefert und vom Service Worker vorgecacht – das ist die Untergrenze, die offline ab dem ersten Start da ist. **Die Version ist vom App-Build gelöst:** die App nimmt die höchste Fassung, die sie erreicht (gebündelt, Website-Manifest, oder ein in `meta/model-<variante>` veröffentlichtes Modell), legt sie in IndexedDB und behält sie offline. Austausch also per `git push` **oder** ohne Deploy über "Modell veröffentlichen" in den Einstellungen. Vollständig dokumentiert für den "Modell-Agenten" (Abschnitt 9). |
 | Neue 2D-Pläne | **Aus dem Modell generierte SVG-Grundrisse** (pro Geschoss × Variante Ist/Soll) + freier **Upload** (PDF/PNG/JPG) für Original-Baupläne und sonstige Pläne. Die Original-PDFs lädt Thomas selbst in der App hoch. |
 | Zusatzfeatures v1 | **Aufgaben/To-do**, **Kontakte/Handwerker**, **Raum-Verknüpfung im 3D-Modell** (Tagebuch, Fotos, Kosten, Aufgaben können Räumen zugeordnet werden; Tippen auf einen Raum zeigt alles dazu). |
-| Notion-Import | Bautagebuch (16 Einträge, Text + Eigenschaften + 18 Fotos), Aufgaben (33), Kontakte (19), Gewerke (18), Projektphasen (10), Anwesend-Liste, Kosten-Kategorien. |
 | Erinnerung | Ja, **Uhrzeit in den Einstellungen konfigurierbar, Default 20:00**, nur wenn für heute noch kein Eintrag existiert. PWA: Web-Push via FCM (Cloud Function). APK: zusätzlich lokale Benachrichtigung. |
 | Sprache | UI komplett **Deutsch**. Code, Kommentare, Commits: Englisch. |
 
@@ -61,7 +60,7 @@ gegen die Firebase-Emulatoren).
    - **Storage** anlegen (gleiche Region).
    - **Cloud Messaging**: Web-Push-Zertifikat (VAPID-Schlüsselpaar) erzeugen, öffentlichen Key notieren.
    - Projekteinstellungen → Web-App registrieren → **Web-Config-Objekt** (`apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`) kopieren und dem Chat geben. (Die Web-Config ist nicht geheim und wird committet.)
-   - **Service-Account-Key** (Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren", JSON) als Datei im Chat hochladen. Wird nur lokal im Sandbox des Agenten benutzt (Rules deployen, Notion-Import, Functions deployen) und ist per `.gitignore` vom Repo ausgeschlossen. **Niemals committen.**
+   - **Service-Account-Key** (Projekteinstellungen → Dienstkonten → "Neuen privaten Schlüssel generieren", JSON) als Datei im Chat hochladen. Wird nur lokal im Sandbox des Agenten benutzt (Rules deployen, Functions deployen) und ist per `.gitignore` vom Repo ausgeschlossen. **Niemals committen.**
    - Die beiden **E-Mail-Adressen** der Nutzer (für die Allowlist in den Rules).
 4. **GitHub Pages** aktivieren: Repo → Settings → Pages → Source **"GitHub Actions"** (nach dem ersten Push des Workflows).
 5. Für Phase 2 (APK): `google-services.json` aus der Firebase-Konsole (Android-App mit Package `de.friedl.renomaster` registrieren).
@@ -127,7 +126,7 @@ reno-master/
 ├── functions/                 Cloud Functions (Node 20, TS): reminder.ts (Scheduler + FCM)
 ├── tools/
 │   ├── model/                 komplette Modell-Toolchain aus der ZIP + README-MODELL.md + extract_scene_from_html.py + build_rooms.py + build_plans_svg.py + build_all.sh
-│   └── import/                notion/ (Export-JSON, gitignored), import_notion.mjs (firebase-admin), README.md
+│   └── verify/                Ersatzprüfungen ohne npm (typecheck-without-npm.mjs, run-tests-without-npm.mjs)
 ├── tests/                     e2e/ (Playwright), unit unter src/**/__tests__
 ├── firebase.json, firestore.rules, firestore.indexes.json, storage.rules, .firebaserc
 ├── capacitor.config.ts        (Phase 2), android/ (Phase 2, generiert)
@@ -136,7 +135,7 @@ reno-master/
 ```
 
 `.gitignore`: `node_modules`, `dist`, `dev-dist`, `*.sa.json`, `serviceAccount*.json`, `google-services.json`,
-`tools/import/notion/**`, `tools/model/Haus_Rohbau.step`, `tools/model/Haus_3D.html`, `tools/model/three.min.js`, `tools/model/package/`, `.env*`.
+`tools/model/Haus_Rohbau.step`, `tools/model/Haus_3D.html`, `tools/model/three.min.js`, `tools/model/package/`, `.env*`.
 
 ---
 
@@ -152,7 +151,7 @@ Jedes Dokument: `createdAt`, `updatedAt`, `createdBy` (E-Mail), `updatedBy`.
 interface DiaryEntry {
   id: string;
   date: string;              // 'YYYY-MM-DD' (Pflicht)
-  title: string;             // Default "Tagebuch DD.MM." (wie in Notion)
+  title: string;             // Default "Tagebuch DD.MM."
   text: string;              // Markdown-light (Absätze, Listen); Editor = Textarea
   weather?: 'Sonnig'|'Bewölkt'|'Regen'|'Frost'|'Schnee';
   present: string[];         // Namen aus meta/lists.people (frei erweiterbar)
@@ -161,8 +160,6 @@ interface DiaryEntry {
   tradeIds: string[];        // Gewerke
   roomIds: string[];         // Räume (Abschnitt 9.4)
   photoIds: string[];        // geordnete Referenzen auf photos/*
-  source: 'app'|'notion';
-  notionId?: string;         // Notion-Page-ID beim Import (Idempotenz)
 }
 ```
 Regel: pro Datum beliebig viele Einträge erlaubt, UX behandelt aber "Eintrag für heute" als Singleton (Öffnen des bestehenden statt neu anlegen).
@@ -197,7 +194,7 @@ interface Cost {
   description: string;
   amountGross: number;       // EUR, Pflicht
   amountNet?: number; vatRate?: 19|7|0|null; vatAmount?: number;
-  category: string;          // aus meta/lists.costCategories (Seed = Notion-Finanzen-Kategorien)
+  category: string;          // aus meta/lists.costCategories
   tradeId?: string;          // Gewerk
   roomIds: string[];
   paymentStatus: 'offen'|'bezahlt'|'erstattet';
@@ -218,9 +215,9 @@ interface Task {
   priority: 'Hoch'|'Mittel'|'Niedrig';
   due?: string;              // YYYY-MM-DD
   assignees: ('Thomas'|'Sarah'|'Handwerker'|'Beide')[];
-  area?: string;             // "Bereich" (Seed aus Notion: Kauf, Finanzen, Versicherung, Energieberatung, Förderung, Dach, Fenster, Heizung, Fassade, Elektrik, Sanitär, PV, Behörden, Planung, Innenausbau, Rückbau, Organisation, Keller, Gebäudehülle)
+  area?: string;             // "Bereich" (Seed: Kauf, Finanzen, Versicherung, Energieberatung, Förderung, Dach, Fenster, Heizung, Fassade, Elektrik, Sanitär, PV, Behörden, Planung, Innenausbau, Rückbau, Organisation, Keller, Gebäudehülle)
   tradeId?: string; phaseId?: string; roomIds: string[];
-  doneAt?: string; source: 'app'|'notion'; notionId?: string;
+  doneAt?: string;
 }
 ```
 
@@ -228,28 +225,28 @@ interface Task {
 ```ts
 interface Contact {
   id: string; name: string; company?: string;
-  role?: string;             // Seed aus Notion "Rolle/Gewerk" (Energieberater (iSFP), Immobilienmaklerin, Dachdecker, Heizungsbauer, Elektriker, Fensterbauer, Sanitär, Trockenbauer, Estrichleger, Fliesenleger, Maler, PV-Installateur, Statiker, Notar, Bank/Finanzierung)
+  role?: string;             // Seed "Rolle/Gewerk" (Energieberater (iSFP), Immobilienmaklerin, Dachdecker, Heizungsbauer, Elektriker, Fensterbauer, Sanitär, Trockenbauer, Estrichleger, Fliesenleger, Maler, PV-Installateur, Statiker, Notar, Bank/Finanzierung)
   phone?: string; email?: string;
   tradeIds: string[];
   status?: 'Angefragt'|'Angebot erhalten'|'Beauftragt'|'Aktiv'|'Abgeschlossen'|'Abgelehnt';
-  rating?: 1|2|3|4|5; notes?: string; source: 'app'|'notion'; notionId?: string;
+  rating?: 1|2|3|4|5; notes?: string;
 }
 ```
 
 ### 5.6 `trades` (Gewerke) und `phases`
 ```ts
-interface Trade { id: string; name: string; status: 'Noch offen'|'Geplant'|'Angebot einholen'|'Angebote vergleichen'|'Beauftragt'|'In Arbeit'|'Abnahme'|'Fertig'; priority: 'Hoch'|'Mittel'|'Niedrig'; budgetPlanned?: number; offer?: number; notes?: string; notionId?: string }
-interface Phase { id: string; name: string; status: 'Geplant'|'In Arbeit'|'Abgeschlossen'|'Blockiert'; start?: string; end?: string; order: number; notionId?: string }
+interface Trade { id: string; name: string; status: 'Noch offen'|'Geplant'|'Angebot einholen'|'Angebote vergleichen'|'Beauftragt'|'In Arbeit'|'Abnahme'|'Fertig'; priority: 'Hoch'|'Mittel'|'Niedrig'; budgetPlanned?: number; offer?: number; notes?: string }
+interface Phase { id: string; name: string; status: 'Geplant'|'In Arbeit'|'Abgeschlossen'|'Blockiert'; start?: string; end?: string; order: number }
 ```
 Seed (im Repo unter `src/data/seed/`, beim ersten App-Start eines eingeloggten Nutzers idempotent nach Firestore geschrieben, wenn Collection leer):
-- **trades** (18): Außenanlagen (Zufahrt/Garten/Terrasse), Dachsanierung (Aufdachdämmung), Elektrik komplett, Entkernung / Rückbau, Estrich / Bodenbeläge, Fassade / WDVS, Fenster & Türen, Fliesen (Bäder / Küche), Gaube Nordseite (optional), Heizung (Sole-Wasser-WP + Flächenkollektor), Innentüren, Kellersanierung (Boden + Feuchtigkeit), Loggia-Umbau (Einhausung), Lüftungsanlage, Malerarbeiten, PV-Anlage (~12 kWp) [Geplant, Budget 15000, Hoch], Sanitär / Wasser / Abwasser, Trockenbau / Innenausbau. Prioritäten laut Notion (Hoch: Dach, Elektrik, Entkernung, Fassade, Fenster, Heizung, Keller, PV; Mittel: Estrich, Fliesen, Loggia, Lüftung, Sanitär, Trockenbau; Niedrig: Außenanlagen, Gaube, Innentüren, Maler). Status alle "Noch offen" außer Dachsanierung "Angebot einholen", PV "Geplant".
+- **trades** (18): Außenanlagen (Zufahrt/Garten/Terrasse), Dachsanierung (Aufdachdämmung), Elektrik komplett, Entkernung / Rückbau, Estrich / Bodenbeläge, Fassade / WDVS, Fenster & Türen, Fliesen (Bäder / Küche), Gaube Nordseite (optional), Heizung (Sole-Wasser-WP + Flächenkollektor), Innentüren, Kellersanierung (Boden + Feuchtigkeit), Loggia-Umbau (Einhausung), Lüftungsanlage, Malerarbeiten, PV-Anlage (~12 kWp) [Geplant, Budget 15000, Hoch], Sanitär / Wasser / Abwasser, Trockenbau / Innenausbau. Prioritäten (Hoch: Dach, Elektrik, Entkernung, Fassade, Fenster, Heizung, Keller, PV; Mittel: Estrich, Fliesen, Loggia, Lüftung, Sanitär, Trockenbau; Niedrig: Außenanlagen, Gaube, Innentüren, Maler). Status alle "Noch offen" außer Dachsanierung "Angebot einholen", PV "Geplant".
 - **phases** (10, order 0–9): Phase 0: Kaufabwicklung (Abgeschlossen, 2026-04-01–2026-06-15), Phase 1: Planung & Förderanträge (Abgeschlossen, 2026-04-01–2026-06-05), Phase 2: Entkernung & Rückbau (In Arbeit, ab 2026-06-15), Phase 3: Rohbau & Keller, Phase 4: Dach & Fassade, Phase 5: Haustechnik, Phase 6: Innenausbau, Phase 7: PV-Anlage, Phase 8: Außenanlagen, Phase 9: Einzug (alle "Geplant").
 
 ### 5.7 `meta/lists` (ein Dokument)
 ```ts
 { people: string[]   // Seed: Thomas, Sarah, Laura, Matze, Christine, Julia, Tom, Jonas, Joni, Andre, Peter, Hannes, Wolfgang, Robert, Sabi, Handwerker
   weather: string[]  // Sonnig, Bewölkt, Regen, Frost, Schnee
-  costCategories: string[] // Seed (aus Notion Finanzen): Abriss/Entsorgung, Außendämmung/Fassade, Baustellenequipment, Bäder, Dach, Elektrik, Energieberater/Baubegleitung, Estrich, Fenster, Fußbodenheizung, Heizungsmontage, Wärmepumpe, Innenausbau, Küche, Lüftungsanlage, PV-Anlage, Werkzeug, Material allgemein, Verpflegung Helfer, Sonstiges
+  costCategories: string[] // Seed: Abriss/Entsorgung, Außendämmung/Fassade, Baustellenequipment, Bäder, Dach, Elektrik, Energieberater/Baubegleitung, Estrich, Fenster, Fußbodenheizung, Heizungsmontage, Wärmepumpe, Innenausbau, Küche, Lüftungsanlage, PV-Anlage, Werkzeug, Material allgemein, Verpflegung Helfer, Sonstiges
   taskAreas: string[]; contactRoles: string[] }
 ```
 In den Einstellungen editierbar (hinzufügen/umbenennen).
@@ -403,7 +400,6 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen", und – angemeldet – "Modell veröffentlichen": erzeugte `ist.json`/`rooms-ist.json` auswählen, Version und Datum kommen aus `meta` der Datei selbst.
 - Listen: Personen (Anwesend), Kosten-Kategorien, Aufgaben-Bereiche, Kontakt-Rollen – hinzufügen/umbenennen.
 - Offline: belegter Speicher (StorageManager.estimate), ausstehende Uploads, "Alle Thumbnails jetzt laden", "Cache leeren".
-- Import: Bereich für Notion-Import (nur Status/Log-Anzeige; der eigentliche Import läuft per Script, Abschnitt 10).
 - App-Version (Git-SHA + Build-Datum), "Nach Update suchen".
 
 ---
@@ -494,27 +490,7 @@ Trefferprüfung im 3D: Raum-Meshes sind pickbar (Raycaster); in SVG per `data-ro
 
 ---
 
-## 10. Notion-Import (einmalig, per Script)
-
-Der Entwicklungs-Chat hat den Notion-MCP-Connector. Vorgehen (Script + Dokumentation in `tools/import/README.md`):
-
-1. **Export (über MCP, im Chat):**
-   - Bautagebuch-Datenquelle `collection://33ccbf13-353a-80c3-8cdc-000b9d359219` (Datenbank `33ccbf13-353a-80f3-8bbc-eff7b3913cc7`, "Hausrenovierung / Bautagebuch"). 16 Einträge, Datum 2026-08-20 … 2026-09-11. Für **jede Seite** `notion-fetch` aufrufen (Seitentext steht im `<content>`, nicht im Feld "Notizen"): Titel, Datum, Wetter, Anwesend, Mängel, Phase (Relation → `notionId` der Phase → Mapping auf `phases`), Gewerk, Fotos (`file://…attachment:<id>:<name>` → mit `notion-download-attachment` herunterladen). `<br>` → Zeilenumbruch, Absätze erhalten.
-   - Aufgaben `collection://33bcbf13-353a-8188-938d-000b4019197a` (33 Zeilen: Aufgabe, Status, Priorität, Fällig am, Zuständig, Bereich, Phase, Gewerk, Notizen).
-   - Kontakte `collection://33bcbf13-353a-81aa-be74-000b0ef2979e` (19 Zeilen: Name, Firma, Rolle/Gewerk, Telefon, Email, Status, Bewertung (⭐-Anzahl → 1–5), Gewerke, Notizen).
-   - Gewerke `collection://33bcbf13-353a-8150-8fca-000bd433c726` und Phasen `collection://33bcbf13-353a-81c8-afd7-000b122f7314` liefern die `notionId`-Zuordnung für die Seeds (Seed-JSONs enthalten `notionId`, damit Relationen aufgelöst werden können). Phasen-URL-Beispiel: Phase 2 = `33bcbf13353a81cf984ce9bcab7a48f4`.
-   - Die alte, leere DB `4aea9d5f-4297-4596-8330-9bc1250d2881` ignorieren. Die Notion-DB "Finanzen" enthält Budget-Planwerte, keine Einzelrechnungen → **nicht** importieren (nur Kategorien als Seed, siehe 5.7); die 10 dort angehängten Rechnungs-PDFs (Baustellenequipment 2, Raiffeisen 8) **doch importieren** als Kosten-Einträge mit `description` = Kategorie, Betrag aus "Betrag tatsächlich" nur als Summe bekannt → als **eine** Position je Kategorie mit Hinweis in `notes` ("Import aus Notion, Einzelbeträge bitte prüfen"); Dateien über `notion-download-attachment`.
-   - Ergebnis: `tools/import/notion/{diary,tasks,contacts,costs}.json` + `tools/import/notion/files/<pageId>/<originalname>` (gitignored).
-2. **Import (Script `tools/import/import_notion.mjs`, Node + `firebase-admin`, Auth über `GOOGLE_APPLICATION_CREDENTIALS=sa.json`):**
-   - Idempotent über `notionId` (bestehende Dokumente werden aktualisiert, nicht dupliziert).
-   - Fotos verkleinern (sharp: 1600 px + 320 px Thumb, EXIF-Datum lesen, `originalName` = Notion-Dateiname, z. B. `20260828_191245.jpg`), nach Storage laden, `photos`-Dokumente + `photoIds` schreiben.
-   - Seeds (trades, phases, meta/lists) ebenfalls durch dieses Script schreiben (`--seed`).
-   - Trockenlauf `--dry-run` gibt Zusammenfassung aus. Log-Ausgabe mit Zählern; Abschluss-Report an Thomas (Anzahl Einträge/Fotos/Aufgaben/Kontakte, übersprungene Datensätze mit Grund).
-3. Nach dem Import prüft Thomas in der App stichprobenartig (Tagebuch 22.08. mit 1 Foto, 28.08. mit 5 Fotos, 11.09. mit 4 Fotos).
-
----
-
-## 11. Beleg-Auslesen (OCR / Extraktion)
+## 10. Beleg-Auslesen (OCR / Extraktion)
 
 `src/platform/ocr/index.ts`:
 ```ts
@@ -534,7 +510,7 @@ export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wä
 
 ---
 
-## 12. Erinnerung (Abend-Push)
+## 11. Erinnerung (Abend-Push)
 
 - `functions/src/reminder.ts`: `onSchedule({ schedule: 'every 10 minutes', timeZone: 'Europe/Berlin' })`. Für jeden `users/*` mit `reminderEnabled && fcmTokens.length`: wenn `reminderTime` in das aktuelle 10-Minuten-Fenster fällt (Berlin-Zeit) **und** kein `diary`-Dokument mit `date == heute` existiert → FCM-Nachricht (`notification: { title: 'Bautagebuch', body: 'Heute noch kein Eintrag – jetzt schreiben?' }`, `webpush.fcmOptions.link: 'https://dathomas13.github.io/reno-master/#/tagebuch/neu'`, `data: { route: '/tagebuch/neu' }`). Ungültige Tokens (Fehler `registration-token-not-registered`) aus dem Array entfernen.
 - Client: `messaging.ts` – `getToken(messaging, { vapidKey, serviceWorkerRegistration })` nach Berechtigungsanfrage in den Einstellungen; Token in `users/{uid}.fcmTokens` (arrayUnion). `sw.ts`: `onBackgroundMessage` zeigt Notification; `notificationclick` öffnet/fokussiert die App mit der Route.
@@ -543,7 +519,7 @@ export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wä
 
 ---
 
-## 13. PWA & Deployment (GitHub Pages)
+## 12. PWA & Deployment (GitHub Pages)
 
 - `vite.config.ts`: `base: '/reno-master/'`, `VitePWA({ strategies: 'injectManifest', srcDir: 'src', filename: 'sw.ts', registerType: 'prompt', manifest: {...}, injectManifest: { globPatterns: [...], maximumFileSizeToCacheInBytes: 6_000_000 } })`.
 - `.github/workflows/deploy.yml`: bei Push auf `main`: `npm ci` → `npm run lint && npm run typecheck && npm run test:unit` → `npm run build` → `actions/upload-pages-artifact` (`dist`) → `actions/deploy-pages`. `dist/404.html` = Kopie von `index.html` (Sicherheitsnetz). Build-Zeit-Variablen: `VITE_APP_VERSION` = Git-SHA, `VITE_BUILD_DATE`.
@@ -553,7 +529,7 @@ export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wä
 
 ---
 
-## 14. Phase 2 – Android-APK (Capacitor)
+## 13. Phase 2 – Android-APK (Capacitor)
 
 Erst nach Abnahme von Phase 1 (M0–M7).
 - `npm i @capacitor/core @capacitor/cli @capacitor/android`, `npx cap init "Reno Master" de.friedl.renomaster --web-dir dist`, `npx cap add android`. `capacitor.config.ts`: `server.androidScheme: 'https'`, `plugins.LocalNotifications`, `plugins.PushNotifications.presentationOptions`. `base` für den Capacitor-Build auf `/` setzen (Vite-Modus `native`: `base: process.env.CAP ? '/' : '/reno-master/'`).
@@ -566,14 +542,14 @@ Erst nach Abnahme von Phase 1 (M0–M7).
   - Berechtigung `READ_MEDIA_IMAGES` (API 33+) / `READ_EXTERNAL_STORAGE` (älter) über `@capacitor/core` Permissions-API.
 - `platform/photos.ts` schaltet per `Capacitor.isNativePlatform()` zwischen Web-Input und MediaStore-Picker um; `sourceUri` wird gespeichert; "Original in Galerie öffnen" im Foto-Info.
 - OCR: ML Kit aktiv; Claude bleibt optional.
-- Benachrichtigungen: LocalNotifications + Push (Abschnitt 12).
+- Benachrichtigungen: LocalNotifications + Push (Abschnitt 11).
 - Build: `android.yml` (GitHub Actions, JDK 17, `./gradlew assembleDebug`) lädt `app-debug.apk` als Artifact hoch; Thomas installiert per Sideload. Release-Signatur später (Keystore als Secret).
 - Auth/Firestore/Storage funktionieren im WebView unverändert (JS-SDK). `google-services.json` nur für Push nötig.
 - Danach: Repo privat stellen (Thomas), Pages-Deploy bleibt optional für die Laptop-Webapp (private Repos: Pages nur mit Pro/Student-Plan – Thomas hat den Student-Plan).
 
 ---
 
-## 15. Meilensteine (Reihenfolge, Definition of Done, Aufteilung)
+## 14. Meilensteine (Reihenfolge, Definition of Done, Aufteilung)
 
 Jeder Meilenstein: eigener Branch + PR **oder** direkte Commits auf `main` (Thomas' Wahl im Dev-Chat; Default: Feature-Branches `feat/m1-viewer`, PR, Squash-Merge, Deploy von `main`). Nach jedem Meilenstein: kurzer Testbericht (was wurde wie geprüft) und Bitte an Thomas, am S24 zu testen. Emulatoren für alles, was Firebase braucht, bis das echte Projekt da ist.
 
@@ -582,18 +558,18 @@ Jeder Meilenstein: eigener Branch + PR **oder** direkte Commits auf `main` (Thom
 | **M0** | Grundgerüst | Vite+React+TS+Tailwind, Routing, AppShell (BottomNav/Sidebar), Theme, PWA (Manifest, SW, Update-Banner, Shortcuts), Firebase-Init mit Persistenz + Emulator-Umschaltung, Login-Screen, Auth-Guard, Sync-Badge, `users/{uid}`-Anlage, Seeds, ESLint/Prettier/vitest/Playwright, `deploy.yml`, `ci.yml`, `CLAUDE.md`, README | Deploy auf GitHub Pages läuft, App installierbar am S24, Login gegen Emulator und echtes Projekt funktioniert, offline startet die Shell |
 | **M1** | 3D-Viewer | Port des Viewers (8.3), Modelle Ist/Soll aus JSON (`extract_scene_from_html.py`), Manifest, Modell-Umschalter, Räume-Overlay (`build_rooms.py`, Tabelle 9.4), RoomPanel (Zähler erst ab M6 gefüllt), `tools/model/*` + README-MODELL.md | Modell sieht am S24 aus wie `Haus_3D.html` (Screenshots vergleichen), Touch-Steuerung identisch, Wechsel Ist/Soll < 1 s, offline nutzbar |
 | **M2** | Bautagebuch | Liste/Detail/Editor (8.2), Foto-Pipeline (Resize, Thumb, EXIF), Outbox + Sync (7), Lightbox, Entwürfe, Löschen | Eintrag mit 5 Fotos offline anlegen → online gehen → alles in Firestore/Storage; Thumbnails offline sichtbar; Nachtrag für vergangenes Datum |
-| **M3** | Notion-Import | Export via MCP, `import_notion.mjs`, Seeds, Ausführung gegen das echte Projekt (Service-Account) | 16 Einträge + 18 Fotos + 33 Aufgaben + 19 Kontakte + Kosten-Belege in der App sichtbar, Report an Thomas |
+| **M3** | Datenübernahme | Einmalige Übernahme der Altdaten (Bautagebuch, Aufgaben, Kontakte, Belege) in das echte Projekt; das Werkzeug dafür wurde danach wieder entfernt | Einträge, Fotos, Aufgaben, Kontakte und Kosten-Belege in der App sichtbar |
 | **M4** | Kosten | Liste/Übersicht/Editor (8.5), Belegaufnahme, OCR-Abstraktion mit Claude-Engine + `parseReceiptText` (ML-Kit-Engine als Stub, der `isAvailable()=false` liefert bis Phase 2), CSV-Export | Beleg fotografieren → mit Claude-Key Felder vorbefüllt; ohne Key manuelle Eingabe; Summen/Charts stimmen (Unit-Test) |
 | **M5** | Pläne | SVG-Generator, Plan-Liste/Viewer, Upload (PDF/Bild), pdfjs, Offline-Schalter | Original-PDF hochladen, offline öffnen; SVG-Grundrisse zeigen Räume |
 | **M6** | Aufgaben, Kontakte, Raum-Verknüpfung | 8.6, 8.7, Raumfilter in allen Listen, RoomPanel-Zähler + Links, Raum-Auswahl in allen Editoren | Tippen auf Raum im 3D zeigt zugehörige Einträge/Fotos/Kosten/Aufgaben |
 | **M7** | Erinnerung & Feinschliff | Cloud Function + FCM (12), Einstellungen komplett (8.8), Dashboard komplett (8.1), Desktop-Layout-Politur, Performance (Lighthouse PWA ≥ 90), Accessibility-Basics | Push kommt um die eingestellte Zeit, wenn kein Eintrag; alle Screens auf 360 px und 1280 px sauber |
-| **M8** | Android-APK | Abschnitt 14 | APK installiert, Galerie-Picker zeigt Fotos des Tages, ML Kit liest Beleg offline, lokale Erinnerung, Original-Foto öffnen |
+| **M8** | Android-APK | Abschnitt 13 | APK installiert, Galerie-Picker zeigt Fotos des Tages, ML Kit liest Beleg offline, lokale Erinnerung, Original-Foto öffnen |
 
 **Empfohlene Sub-Agenten-Aufteilung im Dev-Chat:** M0 sequenziell (Basis). Danach parallel: Agent A = M1 (Viewer, reines Frontend + Python-Tools), Agent B = M2 (Tagebuch + Offline-Infrastruktur). M3 nach M2. M4/M5/M6 parallel (unabhängige Module, gemeinsame Basis aus M0/M2). M7 danach. Jeder Sub-Agent bekommt diesen Plan + den relevanten Abschnitt + die Datei-Konventionen; der Hauptagent reviewt PRs (`/code-review`), führt Tests aus und merged.
 
 ---
 
-## 16. Verifikation / Tests
+## 15. Verifikation / Tests
 
 - **Unit (vitest):** `parseReceiptText` (≥ 8 Fälle), `lib/date` (Berlin-Zeitzone, Wochen-Gruppierung), `lib/money` (de-DE-Parsing "1.234,56"), Outbox-Statusmaschine (mit fake-indexeddb), Raum-Geometrie (Punkt-in-Polygon, Fläche), Kosten-Aggregation, Szenen-Schema-Validierung (zod) gegen `public/models/ist.json`, Import-Mapping-Funktionen.
 - **E2E (Playwright, Emulatoren):** Login → Tagebuch-Eintrag mit Foto (Fixture-JPG mit EXIF) offline (`context.setOffline(true)`) anlegen → online → Upload abgeschlossen; Kosten anlegen + Summe; Aufgabe anlegen/erledigen; Kontakt anlegen; 3D-Route rendert Canvas und Layer-Buttons; Umschalten Ist/Soll; Plan-Upload; Desktop-Viewport-Smoke. Projekte: `mobile` (viewport 360×780, deviceScaleFactor 3, isMobile, hasTouch) und `desktop` (1280×800).
@@ -603,7 +579,7 @@ Jeder Meilenstein: eigener Branch + PR **oder** direkte Commits auf `main` (Thom
 
 ---
 
-## 17. Konventionen
+## 16. Konventionen
 
 - UI-Texte Deutsch (Sie-Form vermeiden, direkte Kurzlabels: "Speichern", "Neuer Eintrag"). Datumsformat `DD.MM.YYYY`, Wochentag abgekürzt (`Sa, 13.09.2026`), Beträge `1.234,56 €`.
 - TypeScript strict, keine `any`. Firestore-Zugriffe nur über `src/data/*` (typed converters). Keine Firebase-Aufrufe in Komponenten.
@@ -615,7 +591,7 @@ Jeder Meilenstein: eigener Branch + PR **oder** direkte Commits auf `main` (Thom
 
 ---
 
-## 18. Annahmen und bewusst offen gelassene Punkte
+## 17. Annahmen und bewusst offen gelassene Punkte
 
 - Erinnerungs-Uhrzeit: Thomas wollte "andere Uhrzeit", hat keine genannt → **konfigurierbar, Default 20:00**.
 - Raumnamen mit "?" (Tabelle 9.4) sind Annahmen aus der Wandtabelle; der Modell-Agent oder Thomas korrigiert sie in `rooms_ist.py`.
@@ -623,11 +599,10 @@ Jeder Meilenstein: eigener Branch + PR **oder** direkte Commits auf `main` (Thom
 - Firebase Storage/Functions setzen den Blaze-Plan voraus (Kreditkarte, Free-Tier bleibt) – Thomas wurde darauf hingewiesen; Budget-Alarm einrichten.
 - Claude-Kosten trägt Thomas über seinen eigenen API-Key; Default-Modell `claude-opus-5`, umschaltbar auf `claude-sonnet-5`.
 - Bis M8 gibt es keine Galerie-Vorschläge "Fotos von heute" (technisch in der PWA nicht möglich); Ersatz: EXIF-Datumsprüfung mit Warnung.
-- Notion bleibt nach dem Import unangetastet (kein Rückschreiben, kein Löschen).
 
 ---
 
-## 19. Übergabe an den Entwicklungs-Chat
+## 18. Übergabe an den Entwicklungs-Chat
 
 **Schritt 0 (noch in dieser Sitzung):** Dieses Dokument wird als `PLAN.md` auf dem Branch
 `claude/sweet-franklin-t348jz` im Repo `dathomas13/reno-master` committet und gepusht. Damit liegt es dauerhaft
@@ -639,10 +614,10 @@ im Repo und jeder neue Chat/Agent hat es automatisch vor sich.
 > abgestimmte Spezifikation für die App "Reno Master" – alle Entscheidungen darin sind verbindlich und nicht mehr
 > zu hinterfragen. Fordere zuerst die in Abschnitt 2 gelisteten Dinge bei mir an (ZIP mit dem 3D-Modell, das
 > Nordansicht-Foto, Firebase-Web-Config, Service-Account-JSON, die beiden E-Mail-Adressen) – gesammelt in einer
-> Nachricht. Beginne parallel mit Meilenstein M0 (Abschnitt 15) und arbeite die Meilensteine der Reihe nach ab,
-> mit Sub-Agenten gemäß der Aufteilung am Ende von Abschnitt 15. Nach jedem Meilenstein: Testbericht und Bitte
+> Nachricht. Beginne parallel mit Meilenstein M0 (Abschnitt 14) und arbeite die Meilensteine der Reihe nach ab,
+> mit Sub-Agenten gemäß der Aufteilung am Ende von Abschnitt 14. Nach jedem Meilenstein: Testbericht und Bitte
 > um meinen Test am Handy.
 
 **Was der neue Chat nicht aus dem Plan holen kann und daher von Thomas braucht:** die Dateien und Zugänge aus
-Abschnitt 2. Alles andere (Notion-Inhalte über den MCP-Connector, Repo, Modellformat, Raumliste) ist entweder
+Abschnitt 2. Alles andere (Repo, Modellformat, Raumliste) ist entweder
 im Plan dokumentiert oder über die Connectoren erreichbar.
