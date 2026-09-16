@@ -195,11 +195,16 @@ jobs:
           fi
           # ein erneut gestarteter Lauf trägt dieselbe Nummer, der Tag ist dann schon da:
           # in dem Fall nur die Datei ersetzen, statt am vorhandenen Release zu scheitern
+          #
+          # --target auf den gebauten Commit: ohne das setzt gh den Tag auf den Kopf des
+          # Default-Branch. Läuft der Workflow von einem Feature-Branch, hängt der Tag
+          # dann an Code, der die APK gar nicht enthält - v0.20.0 ist genau so entstanden.
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" reno-master.apk --clobber
           else
             gh release create "$tag" \
               reno-master.apk \
+              --target "$GITHUB_SHA" \
               --title "Reno Master $version ($(git log -1 --format=%cs))" \
               --notes "$(git log -1 --format=%s)
 

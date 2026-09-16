@@ -110,6 +110,14 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
+- Die Version in `package.json` nur anheben, wenn der Push auch veröffentlichen soll: der
+  APK-Workflow legt aus **jedem** `claude/**`-Branch ein echtes Release an, und die Nummer
+  ist danach verbraucht – der nächste Push braucht zwingend eine höhere, sonst scheitert
+  seine Wächter-Prüfung. Umgekehrt scheitert sie auch, wenn man das Anheben vergisst.
+- Der Pages-Deploy läuft nur vom Pages-Quellbranch. Auf jedem anderen Branch ist der
+  `build`-Job grün und der `deploy`-Job wird von der Umgebung `github-pages` nach einer
+  Sekunde ohne Schritte abgewiesen. Das ist erwartet und kein Fehler im Code; solange es
+  so steht, bekommt das Telefon von dort auch kein neues `version.json`.
 - Keine Geheimnisse ins Repo: Service-Account-JSON, `google-services.json`, `.env` sind gitignored.
 - Der Claude API-Key liegt nur im localStorage des Geräts, nie in Firestore.
 - Vor dem Push: `npm run lint`, `npm run test`, `npm run build`.
