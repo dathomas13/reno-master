@@ -118,8 +118,10 @@ reno-master/
 │   │   ├── costs/             Liste, Editor, ReceiptCapture, Summary (Charts), Export
 │   │   ├── tasks/             Liste (Filter/Gruppen), Editor
 │   │   ├── contacts/          Liste, Detail, Editor
+│   │   ├── search/            SearchPage (eine Suche über alle Module)
 │   │   └── settings/          Konto, Erinnerung, OCR/Claude-Key, Modelle (Versionen), Listen (Personen, Kategorien), Import, Offline-Status
 │   ├── components/            AppShell (BottomNav / Sidebar), TopBar, Sheet/Modal, Form-Controls, ChipSelect, DateInput, EmptyState, SyncBadge
+│   ├── search/                normalize.ts (Faltung + Positionskarte), engine.ts (Index, Bewertung, Ausschnitt), records.ts (Dokumente → Datensätze), useSearch.ts, recent.ts
 │   ├── lib/                   date.ts (de-DE, Europe/Berlin), image.ts (resize, thumb, exif), money.ts, ids.ts, rooms-geometry.ts
 │   ├── sw.ts                  Workbox injectManifest + FCM onBackgroundMessage
 │   └── styles/
@@ -325,10 +327,11 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 ## 8. Module / Screens
 
 ### 8.0 App-Shell & Navigation
-- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Pläne, Aufgaben, Kontakte, Einstellungen.
+- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Suche, Pläne, Aufgaben, Kontakte, Einstellungen.
 - Desktop (≥ 900 px): linke Sidebar mit allen 8 Zielen, Inhalt max. 1100 px breit, Listen zweispaltig wo sinnvoll.
 - TopBar: Titel, Sync-Badge, kontextabhängige Aktion (z. B. "+").
-- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/einstellungen`, `/login`.
+- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
+- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet). Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
@@ -340,6 +343,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - Letzte 3 Tagebucheinträge (Datum, Titel, erstes Thumbnail).
 - Offene Aufgaben (fällig ≤ 7 Tage oder Priorität Hoch), max. 5.
 - Kosten-Kachel: Summe gesamt, Summe laufender Monat.
+- Oben ein Suchfeld-Link "Alles durchsuchen…" auf `/suche`.
 - Sync-/Offline-Hinweis.
 
 ### 8.2 Bautagebuch
@@ -392,6 +396,34 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.
 - Detail: Telefon (`tel:`-Link + WhatsApp-Link `https://wa.me/<nummer>`), E-Mail (`mailto:`), Gewerke, Status, Bewertung, Notizen; Buttons Anrufen / WhatsApp / E-Mail / Teilen (vCard über Web Share).
 - Editor mit allen Feldern.
+
+### 8.9 Suche (`/suche`)
+- **Eine Suche über alles**: Tagebuch (Titel, Text, Anwesende, Wetter, Mängel), Kosten und Belege (Händler,
+  Beschreibung, Kategorie, Rechnungsnummer, Notizen und der vom Beleg **gescannte Text** aus
+  `extraction.rawText`), Aufgaben, Kontakte (inklusive Notizen, wo die Gesprächsprotokolle stehen), Gewerke,
+  Phasen, Räume des Modells, Pläne und Fotountertitel. Verknüpfungen zählen mit: ein Eintrag wird auch über
+  den Namen seines Raums, seines Gewerks oder seiner Phase gefunden.
+- Mitgesucht wird, was nicht als Text dasteht: Status ("offen", "Beauftragt"), Zuständige, Beträge
+  (`89,90` findet `89,90 €`) und Daten in jeder Schreibweise (`13.09`, `13.09.2026`, `September`).
+- **Wortteile zählen**: `putz` findet `Innenputz` – bei deutschen Komposita führt Präfixsuche sonst ins Leere.
+  Umlaute sind egal (`tuer` = `tür`, `strasse` = `straße`), Groß-/Kleinschreibung auch.
+- Mehrere Wörter sind eine UND-Suche; jedes Wort muss irgendwo im Datensatz vorkommen. Treffer im Titel
+  wiegen schwerer als in den Zusatzfeldern, die wiederum schwerer als im Fließtext; ein ganzes Wort schlägt
+  einen Wortanfang, der einen Treffer im Wortinneren.
+- Darstellung: ein Suchfeld, darunter Filter-Chips je Art mit Trefferzahl ("Alle 24 · Tagebuch 7 · Kosten 5"),
+  dann eine Trefferliste nach Relevanz. Jede Zeile: Art-Plakette, Titel mit hervorgehobener Fundstelle,
+  Kontextzeile (Datum, Status, Kategorie) und – wenn der Treffer im Fließtext liegt – ein Textausschnitt um
+  die Fundstelle. Rechts der Betrag, wo es einen gibt. 25 Treffer, dann "Weitere anzeigen".
+- Ohne Eingabe: die letzten Suchen (nur auf dem Gerät, `localStorage`), Vorschlags-Chips und ein kurzer
+  Hinweis, was durchsucht wird.
+- Technik (`src/search/`): `normalize.ts` faltet Text und Anfrage gleich und merkt sich, woher jedes Zeichen
+  kam (für die Hervorhebung im **Original**text). `engine.ts` baut daraus einen Index aus Zeichenpaaren
+  (Paar → Datensätze); eine Anfrage schneidet die Listen ihrer seltensten Paare und prüft erst dann die
+  wenigen übrigen Datensätze genau. Gefaltet wird also **einmal beim Aufbau**, nicht bei jedem Tastendruck.
+  `records.ts` macht aus den Firestore-Dokumenten die durchsuchbaren Datensätze (ohne React, ohne Firestore –
+  das ist der Teil mit Unit-Tests). Der Index entsteht erst, wenn der Suchbildschirm offen ist, und lebt
+  von denselben `onSnapshot`-Abfragen wie der Rest, also auch offline.
+- Größenordnung: 1500 Datensätze mit Text sind in ~50 ms indiziert, eine Suche liegt darunter.
 
 ### 8.8 Einstellungen
 - Konto (E-Mail, Abmelden), Anzeigename.

@@ -79,6 +79,15 @@
   }
 }
 
+/* the filter chips of the search scroll sideways; a scrollbar would only eat the row */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* the 3D canvas must swallow touch gestures, not scroll the page */
 .canvas-3d {
   touch-action: none;

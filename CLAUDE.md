@@ -50,7 +50,9 @@ zusätzlich Bilder, braucht dafür aber `three.min.js` unter `tools/model/vendor
 ## Architektur in drei Sätzen
 
 Firestore mit persistentem lokalem Cache ist die Datenbasis; Lesen läuft immer über
-`onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Dateien (Fotos,
+`onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Die modulübergreifende
+Suche (`src/search`, Bildschirm `/suche`) baut aus denselben Abfragen einen eigenen Index -
+gefaltet wird beim Aufbau, nicht beim Tippen; Details in `PLAN.md`, Abschnitt 8.9. Dateien (Fotos,
 Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files.js` und
 gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
@@ -75,7 +77,7 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, 308 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, 375 Unit-Tests.
 - **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
   die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
   Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
