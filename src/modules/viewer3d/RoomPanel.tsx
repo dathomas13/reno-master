@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Photo, type Task } from '@/data/types';
+import { photosForRoom } from '@/data/photoRooms';
 import { where } from '@/firebase/db';
 import { formatEuroShort } from '@/lib/money';
 import { formatDate } from '@/lib/date';
@@ -20,10 +22,16 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, roomFilter, [room.id]);
   const { data: costs } = useCollection<Cost>(COL.costs, roomFilter, [room.id]);
   const { data: tasks } = useCollection<Task>(COL.tasks, roomFilter, [room.id]);
-  const { data: photos } = useCollection<Photo>(COL.photos, roomFilter, [room.id]);
+  // all of them, not the ones carrying this room: a photo gets its room from the entry
+  // or the receipt it hangs on, never from itself (see photoRooms.ts)
+  const { data: photos } = useCollection<Photo>(COL.photos);
 
   const openTasks = tasks.filter((task) => task.status !== 'Erledigt');
   const total = costs.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
+  const roomPhotos = useMemo(
+    () => photosForRoom(room.id, { photos, entries, costs }),
+    [room.id, photos, entries, costs],
+  );
 
   return (
     <div className="card p-3 pointer-events-auto max-h-[45dvh] overflow-y-auto">
@@ -53,10 +61,10 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
             <div className="text-base font-medium truncate">{entries.length}</div>
             <div className="text-[10px] text-muted truncate">Einträge</div>
           </Link>
-          <div className="card py-2 px-1 min-w-0">
-            <div className="text-base font-medium truncate">{photos.length}</div>
+          <Link to={`/fotos?raum=${room.id}`} className="card py-2 px-1 min-w-0">
+            <div className="text-base font-medium truncate">{roomPhotos.length}</div>
             <div className="text-[10px] text-muted truncate">Fotos</div>
-          </div>
+          </Link>
           <Link to={`/kosten?raum=${room.id}`} className="card py-2 px-1 min-w-0">
             <div className="text-base font-medium truncate">{costs.length ? formatEuroShort(total) : '0'}</div>
             <div className="text-[10px] text-muted truncate">Kosten</div>

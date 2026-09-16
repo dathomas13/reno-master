@@ -8,6 +8,21 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.24.0 – Eine Fotogalerie, und das 3D-Modell merkt sich die Ansicht
+
+Neu ist der Bildschirm „Fotos“: alle Bilder nach Monaten, Fotos und Belege getrennt
+filterbar, Tippen öffnet sie groß mit Wischen von Bild zu Bild. Die Kachel „Fotos“ im
+Raumfenster des 3D-Modells führt direkt in die Bilder dieses Raums.
+
+Diese Kachel zeigte bisher übrigens fast immer null. Ein Foto merkt sich selbst keinen
+Raum – der steht am Tagebucheintrag oder am Beleg, an dem es hängt. Genau so wird jetzt
+gezählt, und deshalb stehen dort auf einmal Zahlen.
+
+Und das 3D-Modell fängt nicht mehr bei jedem Besuch von vorn an. Kameraposition,
+sichtbare Geschosse, Tragwände, Raum-Anzeige und der geöffnete Raum sind beim Zurückkommen
+noch so, wie sie beim Verlassen waren – auch nach einem Wechsel zwischen Bestand und
+Zielzustand und nachdem die App zwischendurch zu war.
+
 ## 0.23.0 – Zwei Anzeigen, die am Telefon nicht lesbar waren
 
 Die Upload-Liste hinter dem Punkt oben rechts öffnete sich bisher verschoben: man sah

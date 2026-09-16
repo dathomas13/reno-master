@@ -329,12 +329,12 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 ## 8. Module / Screens
 
 ### 8.0 App-Shell & Navigation
-- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Suche, Pläne, Aufgaben, Kontakte, Einstellungen.
+- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Suche, Fotos, Pläne, Aufgaben, Kontakte, Einstellungen.
 - Desktop (≥ 900 px): linke Sidebar mit allen 8 Zielen, Inhalt max. 1100 px breit, Listen zweispaltig wo sinnvoll.
 - TopBar: Titel, Sync-Badge, kontextabhängige Aktion (z. B. "+").
 - **Sheets werden per Portal an `document.body` gehängt.** `backdrop-blur` (wie `filter` und `transform`) macht ein Element zum Bezugsrahmen für `position: fixed` darin – TopBar und Bottom-Navigation haben es. Ein Sheet, das im Baum darunter steht, misst sich sonst an einer 56 px hohen Kopfzeile und erscheint am Telefon verschoben und unlesbar.
 - Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
-- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet). Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
+- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
@@ -372,6 +372,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - **Neu: Räume** (Abschnitt 9.4): pro Raum ein flaches, halbtransparentes Bodenpolygon (Extrusion 20 mm, Farbe Akzent 15 % Opazität, pickbar, eigene Layer-Zuordnung zum Geschoss). Tippen auf Raum → **RoomPanel** (Bottom-Sheet): Raumname, Geschoss, Fläche (aus Polygon), Zähler "12 Einträge · 34 Fotos · 3 Kosten · 2 Aufgaben" mit Links (führen in die jeweiligen Listen mit Raumfilter). Umschalter "Räume anzeigen" (Default an in Grundriss-Ansichten, aus in Außenansicht). Über URL `?room=<id>` wird der Raum vorselektiert und die passende Grundriss-Ansicht gesetzt.
 - Performance: `setPixelRatio(min(dpr, 2))`, Rendering nur bei Änderung (`invalidate()`-Pattern statt dauerhaftem RAF-Loop, um Akku zu schonen), Szene beim Verlassen der Route disposen.
 - Modell laden: über `loadScene(variant)` – die in IndexedDB liegende Fassung, wenn sie mindestens so neu ist wie die gebündelte, sonst `fetch(`${base}models/${variant}.json`)` (≈95 KB, 132 Bauteile, 4512 Dreiecke – unkritisch). Ladefehler offline → Meldung "Modell noch nicht heruntergeladen – einmal online öffnen". Ein Modell, das während der Ansicht ankommt, meldet sich über das Fenster-Ereignis `reno:model`; der Viewer baut die Szene dann neu.
+- **Die Ansicht bleibt stehen.** Kamera (theta, phi, Abstand, Ziel), sichtbare Geschosse, Tragwand-Modus, Raum-Overlay, gewählte Ansicht und der offene Raum werden beim Verlassen des Bildschirms gemerkt (`viewerState.ts`: im Modul für den Weg zu einem anderen Bildschirm, in `localStorage` für den Weg durch eine geschlossene App, gesichert auch bei `pagehide`/`visibilitychange`). Beim Aufbau gewinnt der gemerkte Blick über die Standardansicht – auch beim Wechsel Bestand/Zielzustand, damit das Haus nicht unter dem Finger springt. Nur `?raum=<id>` sticht ihn, das ist ja eine Ansage. Was aus dem Speicher kommt, geht durch `parseViewerState`: ein einziges NaN stellt die Kamera sonst ins Nichts und der Bildschirm bleibt schwarz.
 - **Alles Untere ist ein Stapel**: Bauteil-Info, Raumfenster und die Schalter-Chips stehen in *einem* Container über der Bottom-Navigation (`bottom-[calc(64px+env(safe-area-inset-bottom))]`), nicht als drei Einblendungen mit eigenen Abständen. Sonst liegt das Raumfenster am Telefon hinter der Navigation und unter den Chips – die Kachelleiste war dort zur Hälfte unsichtbar.
 
 ### 8.4 Pläne
@@ -400,6 +401,12 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.
 - Detail: Telefon (`tel:`-Link + WhatsApp-Link `https://wa.me/<nummer>`), E-Mail (`mailto:`), Gewerke, Status, Bewertung, Notizen; Buttons Anrufen / WhatsApp / E-Mail / Teilen (vCard über Web Share).
 - Editor mit allen Feldern.
+
+### 8.10 Fotos (`/fotos`)
+- Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
+- Chips: Alle · Fotos · Belege. `?raum=<id>` filtert auf einen Raum – dorthin führt die Kachel „Fotos“ im Raumfenster des 3D-Modells, und zurück führt der Pfeil dorthin.
+- **Der Raum eines Fotos steht nicht am Foto.** `addPhoto` setzt `roomIds` nie: beim Fotografieren wählt niemand Räume aus. Ein Bild gehört zu einem Raum, wenn sein Tagebucheintrag oder sein Beleg ihn trägt (`src/data/photoRooms.ts`, testbar); das Feld am Foto zählt zusätzlich. Ohne diese Regel zeigt die Kachel „Fotos“ eines Raums null, so voll das Tagebuch auch ist.
+- Das Datum eines Fotos ist `takenAt`, sonst der Tag seines Eintrags, sonst der seines Belegs – Bilder ohne alles stehen unter „Ohne Datum“.
 
 ### 8.9 Suche (`/suche`)
 - **Eine Suche über alles**: Tagebuch (Titel, Text, Anwesende, Wetter, Mängel), Kosten und Belege (Händler,

@@ -281,7 +281,7 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
         ? `/tagebuch/${photo.entryId}`
         : photo.costId
           ? `/kosten/${photo.costId}`
-          : `/3d?raum=${photo.roomIds?.[0] ?? ''}`,
+          : '/fotos',
     });
   }
 
