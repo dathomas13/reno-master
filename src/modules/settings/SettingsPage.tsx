@@ -8,7 +8,6 @@ import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
 import { ModelSection } from './ModelSection';
-import { NotionImportSection } from './NotionImportSection';
 import { listJobs, retryAll, type OutboxJob } from '@/offline/outbox';
 import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
@@ -98,8 +97,6 @@ export default function SettingsPage() {
           </button>
           {pushMessage && <p className="text-sm text-muted mt-2">{pushMessage}</p>}
         </section>
-
-        <NotionImportSection />
 
         <FolderExportSection />
 

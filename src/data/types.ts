@@ -30,8 +30,6 @@ export interface DiaryEntry extends BaseDoc {
   tradeIds: string[];
   roomIds: string[];
   photoIds: string[];
-  source: 'app' | 'notion';
-  notionId?: string;
 }
 
 export type PhotoKind = 'photo' | 'receipt';
@@ -121,8 +119,6 @@ export interface Task extends BaseDoc {
   phaseId?: string;
   roomIds: string[];
   doneAt?: IsoDateTime;
-  source: 'app' | 'notion';
-  notionId?: string;
 }
 
 export const CONTACT_STATUS = [
@@ -145,8 +141,6 @@ export interface Contact extends BaseDoc {
   status?: ContactStatus;
   rating?: 1 | 2 | 3 | 4 | 5;
   notes?: string;
-  source: 'app' | 'notion';
-  notionId?: string;
 }
 
 export const TRADE_STATUS = [
@@ -168,7 +162,6 @@ export interface Trade extends BaseDoc {
   budgetPlanned?: number;
   offer?: number;
   notes?: string;
-  notionId?: string;
 }
 
 export const PHASE_STATUS = ['Geplant', 'In Arbeit', 'Abgeschlossen', 'Blockiert'] as const;
@@ -180,7 +173,6 @@ export interface Phase extends BaseDoc {
   start?: Iso;
   end?: Iso;
   order: number;
-  notionId?: string;
 }
 
 export interface Lists {

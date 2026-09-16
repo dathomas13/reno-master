@@ -1,6 +1,6 @@
 import type { Trade } from '@/data/types';
 
-/** the 18 trades from Notion, with the Notion id kept so an import can match them */
+/** the 18 trades of the project, in the order they were planned */
 export const SEED_TRADES: Omit<Trade, 'id'>[] = [
   { name: 'Entkernung / Rückbau', status: 'In Arbeit', priority: 'Hoch' },
   { name: 'Kellersanierung (Boden + Feuchtigkeit)', status: 'Noch offen', priority: 'Hoch' },

@@ -28,9 +28,6 @@ tools/model/package/
 tools/model/__pycache__/
 tools/model/.venv/
 
-# notion export (contains private data)
-tools/import/notion/
-
 .tmp-node-tests/
 .tmp-typecheck/
 
