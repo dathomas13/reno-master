@@ -110,10 +110,12 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
-- Die Version in `package.json` nur anheben, wenn der Push auch veröffentlichen soll: der
-  APK-Workflow legt aus **jedem** `claude/**`-Branch ein echtes Release an, und die Nummer
-  ist danach verbraucht – der nächste Push braucht zwingend eine höhere, sonst scheitert
-  seine Wächter-Prüfung. Umgekehrt scheitert sie auch, wenn man das Anheben vergisst.
+- Die Version in `package.json` gehört mit dem Feature in denselben Branch: der
+  APK-Workflow veröffentlicht das Release nur vom Default-Branch (oder per „Run
+  workflow"), und nur dort prüft er auch, dass die Nummer über der veröffentlichten
+  liegt. Ein Feature-Branch baut die APK, lädt sie als Artefakt hoch und verbraucht keine
+  Nummer. Wer das je wieder aufweicht, holt sich das alte Laufband zurück: der erste Push
+  veröffentlichte die Nummer, jeder weitere und am Ende der Merge scheiterten daran.
 - Der Pages-Deploy läuft nur vom Pages-Quellbranch. Auf jedem anderen Branch ist der
   `build`-Job grün und der `deploy`-Job wird von der Umgebung `github-pages` nach einer
   Sekunde ohne Schritte abgewiesen. Das ist erwartet und kein Fehler im Code; solange es
