@@ -8,6 +8,18 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.23.0 – Zwei Anzeigen, die am Telefon nicht lesbar waren
+
+Die Upload-Liste hinter dem Punkt oben rechts öffnete sich bisher verschoben: man sah
+nicht, welche Datei eigentlich aussteht. Sie sitzt jetzt dort, wo sie hingehört, am
+unteren Rand und vollständig lesbar. Dasselbe galt für jedes Fenster, das aus der
+Kopfzeile heraus aufgeht.
+
+Im 3D-Modell verschwand die Kachelleiste eines Raums – Einträge, Fotos, Kosten, offene
+Aufgaben – halb hinter der Navigationsleiste. Raumfenster und Schaltflächen stehen jetzt
+übereinander statt übereinander gelegt, und die Kacheln bleiben auch bei vierstelligen
+Beträgen in der Zeile.
+
 ## 0.22.0 – Suchergebnisse nach Bereichen, und Klarheit bei den Uploads
 
 Die Suche sortiert ihre Treffer jetzt nach Bereichen: erst Tagebuch, dann Kosten, dann

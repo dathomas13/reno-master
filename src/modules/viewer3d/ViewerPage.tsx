@@ -290,68 +290,88 @@ export default function ViewerPage() {
         </div>
       )}
 
-      {/* part info */}
-      {selected?.type === 'part' && (
-        <div className="absolute left-2 right-2 bottom-[7.5rem] card p-3 border-l-4 border-l-accent">
-          <div className="font-medium">
-            {selected.prim.name} <span className="text-muted">· {LAYER_LABEL[selected.prim.layer]}</span>
+      {/*
+        Everything at the bottom is one stack, not three overlays with their own offsets.
+        On the phone the navigation bar takes the lowest 64 pixels, and the chips below
+        wrap into two rows - a panel placed at `bottom-2` ends up behind both of them.
+        Stacked, the panel is always above the controls and the whole stack keeps its
+        distance from the navigation in exactly one place.
+      */}
+      <div
+        className={`absolute left-2 right-2 ${bottomOffset} z-20 flex flex-col gap-2
+                    pointer-events-none`}
+      >
+        {selected?.type === 'part' && (
+          <div className="card p-3 border-l-4 border-l-accent pointer-events-auto">
+            <div className="font-medium">
+              {selected.prim.name} <span className="text-muted">· {LAYER_LABEL[selected.prim.layer]}</span>
+            </div>
+            <div className="text-xs text-muted">
+              {formatDimensions(selected.prim.bb)} · {CONFIDENCE_LABEL[selected.prim.tag]}
+              {selected.prim.kind === 'wall' ? (selected.prim.tragend ? ' · tragend' : ' · nicht tragend') : ''}
+            </div>
           </div>
-          <div className="text-xs text-muted">
-            {formatDimensions(selected.prim.bb)} · {CONFIDENCE_LABEL[selected.prim.tag]}
-            {selected.prim.kind === 'wall' ? (selected.prim.tragend ? ' · tragend' : ' · nicht tragend') : ''}
-          </div>
-        </div>
-      )}
+        )}
 
-      {room && <RoomPanel room={room} onClose={() => { setRoom(null); houseRef.current?.highlightRoom(null); renderRef.current?.(); }} />}
+        {room && (
+          <RoomPanel
+            room={room}
+            onClose={() => {
+              setRoom(null);
+              houseRef.current?.highlightRoom(null);
+              renderRef.current?.();
+            }}
+          />
+        )}
 
-      {/* controls */}
-      <div className={`absolute left-2 right-2 ${bottomOffset} flex flex-wrap gap-1.5`}>
-        {LAYERS.map((layer) => (
-          <button
-            key={layer}
-            type="button"
-            className={`chip ${layerState[layer] ? 'chip-on' : ''}`}
-            onClick={() => toggleLayer(layer)}
-          >
-            {LAYER_SHORT[layer]}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={`chip ${structural ? 'border-bad text-bad' : ''}`}
-          onClick={() => {
-            const next = !structural;
-            setStructural(next);
-            houseRef.current?.setStructuralMode(next);
-            renderRef.current?.();
-          }}
-        >
-          Tragwände
-        </button>
-        <button
-          type="button"
-          className={`chip ${showRooms ? 'chip-on' : ''}`}
-          onClick={() => {
-            const next = !showRooms;
-            setShowRooms(next);
-            houseRef.current?.setRoomsVisible(next);
-            renderRef.current?.();
-          }}
-        >
-          Räume
-        </button>
-        <select
-          className="chip bg-panel"
-          value={viewLabel}
-          onChange={(event) => applyPreset(event.target.value)}
-        >
-          {VIEW_PRESETS.map((preset) => (
-            <option key={preset.label} value={preset.label}>
-              Ansicht: {preset.label}
-            </option>
+        {/* controls */}
+        <div className="flex flex-wrap gap-1.5 pointer-events-auto">
+          {LAYERS.map((layer) => (
+            <button
+              key={layer}
+              type="button"
+              className={`chip ${layerState[layer] ? 'chip-on' : ''}`}
+              onClick={() => toggleLayer(layer)}
+            >
+              {LAYER_SHORT[layer]}
+            </button>
           ))}
-        </select>
+          <button
+            type="button"
+            className={`chip ${structural ? 'border-bad text-bad' : ''}`}
+            onClick={() => {
+              const next = !structural;
+              setStructural(next);
+              houseRef.current?.setStructuralMode(next);
+              renderRef.current?.();
+            }}
+          >
+            Tragwände
+          </button>
+          <button
+            type="button"
+            className={`chip ${showRooms ? 'chip-on' : ''}`}
+            onClick={() => {
+              const next = !showRooms;
+              setShowRooms(next);
+              houseRef.current?.setRoomsVisible(next);
+              renderRef.current?.();
+            }}
+          >
+            Räume
+          </button>
+          <select
+            className="chip bg-panel"
+            value={viewLabel}
+            onChange={(event) => applyPreset(event.target.value)}
+          >
+            {VIEW_PRESETS.map((preset) => (
+              <option key={preset.label} value={preset.label}>
+                Ansicht: {preset.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   );
