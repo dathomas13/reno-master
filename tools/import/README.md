@@ -4,6 +4,13 @@ Zwei Schritte: **Export** aus Notion in JSON-Dateien, dann **Import** nach Fires
 den Dateispeicher auf Cloudflare R2. Der Import ist idempotent – er erkennt schon
 importierte Datensätze an ihrer Notion-ID und aktualisiert sie, statt Dubletten anzulegen.
 
+> **Für das Bautagebuch geht es einfacher.** Einstellungen → „Tagebuch aus Notion" liest
+> `diary.json` und die Fotos direkt im Browser ein: kein Service-Account, kein
+> `npm install`, keine Kommandozeile. Die App ist ohnehin angemeldet, verkleinert die
+> Bilder selbst und schiebt die Uploads durch die Outbox. Das Skript hier bleibt für
+> Aufgaben, Kontakte und Finanzen – und für den Fall, dass jemand alles auf einmal
+> einspielen will.
+
 ## Schritt 1: Export
 
 Die Eigenschaften und Texte lassen sich über den Notion-Connector in einer Claude-Sitzung
@@ -53,6 +60,7 @@ dann steht der Pfad eben so in `diary.json` – gelesen wird alles relativ zu
    "text": "Wolfgang hat …\nAbends noch …",
    "weather": "Bewölkt", "present": ["Wolfgang"], "defects": false,
    "phaseNotionId": "33bcbf13-353a-81cf-984c-e9bcab7a48f4", "tradeNotionIds": [],
+   "phaseName": "Phase 2: Entkernung & Rückbau", "tradeNames": [],
    "photos": [{ "file": "files/20260904_181303.jpg", "takenAt": "2026-09-04T18:13:03" }] }]
 
 // tasks.json
@@ -73,6 +81,11 @@ dann steht der Pfad eben so in `diary.json` – gelesen wird alles relativ zu
    "notes": "Sammelposition aus Notion – Einzelbeträge bitte prüfen",
    "receipts": ["files/rechnung.pdf"] }]
 ```
+
+Für den Import **in der App** zählen statt `phaseNotionId`/`tradeNotionIds` die Felder
+`phaseName` und `tradeNames`: die App ordnet über den Namen zu, weil sie die Notion-IDs
+ihrer Phasen nicht kennt. Beide Fassungen dürfen nebeneinander in derselben Datei stehen,
+jede Seite nimmt sich, was sie braucht.
 
 `weather`, `present`, `status`, `priority` und `category` müssen zu den Werten passen, die
 `src/data/types.ts` und `src/data/seed/lists.ts` kennen – sonst zeigt die App den Eintrag

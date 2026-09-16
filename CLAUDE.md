@@ -73,27 +73,29 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, 308 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, 358 Unit-Tests.
+- **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
+  die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
+  Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
+  nötig. Einrichtung und Aufbau stehen in `worker/README.md`.
+- `public/img/nordansicht.jpg` liegt im Repo.
 
 Offen:
 
-1. **Cloudflare einrichten** (Anleitung in `worker/README.md`): Bucket `reno-master`,
-   Worker `reno-files`, die Variablen und das Secret, die Bindung `BUCKET`, und die
-   Adresse des Workers als GitHub-Variable `VITE_FILES_URL`. Ohne sie gibt es keine
-   Fotos, Belege und Plan-Uploads; alles andere läuft. Firebase Storage wird nicht mehr
-   benutzt, der Blaze-Tarif ist dafür nicht nötig.
-2. **Abend-Erinnerung.** Die Cloud Function (`functions/`) liegt bereit, braucht aber
+1. **Abend-Erinnerung.** Die Cloud Function (`functions/`) liegt bereit, braucht aber
    Blaze und eine Kommandozeile mit Firebase-CLI. Am Telefon geht es auch ohne, über
    eine lokale Benachrichtigung – noch nicht gebaut.
-3. **Notion-Import** (`tools/import`), braucht `firebase-admin` und einen Service-Account.
-4. `public/img/nordansicht.jpg` ergänzen.
-5. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
+2. **Notion-Import der übrigen Datenbanken** (Aufgaben, Kontakte, Finanzen) über
+   `tools/import`; das braucht `firebase-admin` und einen Service-Account. Das
+   **Bautagebuch** geht ohne beides: Einstellungen → „Tagebuch aus Notion" liest den
+   Notion-Export im Browser ein (`src/data/notionImport.ts`).
+3. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
-6. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
+4. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
    `ANDROID_*`-Secrets vor, baut und signiert er eine Release-APK, die sich über die alte
    legt (Anleitung im README unter „Signaturschlüssel“). Ohne sie bleibt es beim
    Debug-Schlüssel, und Android verweigert das Update über die alte Fassung.
-7. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
+5. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
    Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
    Tages). Offen sind ML Kit für das Beleg-Auslesen auf dem Gerät, die lokale
    Abend-Erinnerung und Push. Push braucht zusätzlich `google-services.json` und den
