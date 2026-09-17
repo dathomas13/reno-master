@@ -8,7 +8,7 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
-## 0.28.0 – Erinnerung repariert, und Belege kann jetzt auch Gemini lesen
+## 0.28.1 – Erinnerung repariert, und Belege kann jetzt auch Gemini lesen
 
 Die Diagnose aus der vorigen Fassung hat den wahren Grund gezeigt: Die App hat den
 Benachrichtigungsteil des Telefons nie erreicht – noch bevor es um Erlaubnis oder Uhrzeit

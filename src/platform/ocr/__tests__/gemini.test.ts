@@ -49,6 +49,17 @@ function answer(json: string) {
   return { candidates: [{ content: { parts: [{ text: json }] } }] };
 }
 
+/**
+ * A stand-in for the picked file.
+ *
+ * Not `new Blob([...])`: jsdom's Blob has no `arrayBuffer()`, so the test would fail on
+ * the fixture instead of on the engine. Only that one method is read here.
+ */
+function fileOf(text = 'Beleg'): Blob {
+  const bytes = new TextEncoder().encode(text);
+  return { arrayBuffer: () => Promise.resolve(bytes.buffer) } as unknown as Blob;
+}
+
 const CATEGORIES = ['Material', 'Handwerker'];
 
 describe('geminiExtractor', () => {
@@ -67,7 +78,7 @@ describe('geminiExtractor', () => {
     stubDevice({ geminiApiKey: 'AIza-geheim' });
     const { calls } = stubFetch({ ok: true, json: answer('{"vendor":"OBI","amountGross":12.5}') });
 
-    await geminiExtractor.extract({ file: new Blob(['x']), contentType: 'image/jpeg', categories: CATEGORIES });
+    await geminiExtractor.extract({ file: fileOf(), contentType: 'image/jpeg', categories: CATEGORIES });
 
     // a key in the query string lands in logs and referrers, which is the whole point
     expect(calls[0]!.url).not.toContain('AIza-geheim');
@@ -77,19 +88,19 @@ describe('geminiExtractor', () => {
   it('asks the configured model, and the default when none is set', async () => {
     stubDevice({ geminiApiKey: 'k', geminiModel: 'gemini-2.5-pro' });
     const pro = stubFetch({ ok: true, json: answer('{}') });
-    await geminiExtractor.extract({ file: new Blob(['x']), contentType: 'image/jpeg' });
+    await geminiExtractor.extract({ file: fileOf(), contentType: 'image/jpeg' });
     expect(pro.calls[0]!.url).toContain('gemini-2.5-pro');
 
     stubDevice({ geminiApiKey: 'k', geminiModel: '   ' });
     const fallback = stubFetch({ ok: true, json: answer('{}') });
-    await geminiExtractor.extract({ file: new Blob(['x']), contentType: 'image/jpeg' });
+    await geminiExtractor.extract({ file: fileOf(), contentType: 'image/jpeg' });
     expect(fallback.calls[0]!.url).toContain('gemini-2.5-flash');
   });
 
   it('asks without creativity and names the categories', async () => {
     stubDevice({ geminiApiKey: 'k' });
     const { calls } = stubFetch({ ok: true, json: answer('{}') });
-    await geminiExtractor.extract({ file: new Blob(['x']), contentType: 'image/jpeg', categories: CATEGORIES });
+    await geminiExtractor.extract({ file: fileOf(), contentType: 'image/jpeg', categories: CATEGORIES });
 
     const body = calls[0]!.body as {
       generationConfig: { temperature: number };
@@ -104,7 +115,7 @@ describe('geminiExtractor', () => {
   it('sends a PDF the same way, only the type differs', async () => {
     stubDevice({ geminiApiKey: 'k' });
     const { calls } = stubFetch({ ok: true, json: answer('{}') });
-    await geminiExtractor.extract({ file: new Blob(['x']), contentType: 'application/pdf' });
+    await geminiExtractor.extract({ file: fileOf(), contentType: 'application/pdf' });
 
     const body = calls[0]!.body as { contents: { parts: { inline_data?: { mime_type: string } }[] }[] };
     expect(body.contents[0]!.parts[0]!.inline_data!.mime_type).toBe('application/pdf');
@@ -118,7 +129,7 @@ describe('geminiExtractor', () => {
     });
 
     const fields = await geminiExtractor.extract({
-      file: new Blob(['x']),
+      file: fileOf(),
       contentType: 'image/jpeg',
       categories: CATEGORIES,
     });
@@ -134,7 +145,7 @@ describe('geminiExtractor', () => {
 
     let caught: unknown;
     try {
-      await geminiExtractor.extract({ file: new Blob(['x']), contentType: 'image/jpeg' });
+      await geminiExtractor.extract({ file: fileOf(), contentType: 'image/jpeg' });
     } catch (error) {
       caught = error;
     }
@@ -148,7 +159,7 @@ describe('geminiExtractor', () => {
 
     let caught: unknown;
     try {
-      await geminiExtractor.extract({ file: new Blob(['x']), contentType: 'image/jpeg' });
+      await geminiExtractor.extract({ file: fileOf(), contentType: 'image/jpeg' });
     } catch (error) {
       caught = error;
     }
