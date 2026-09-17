@@ -2,17 +2,17 @@
   "ist": {
     "file": "ist.json",
     "rooms": "rooms-ist.json",
-    "version": "0.24",
-    "updatedAt": "2026-09-16",
-    "note": "EG-Aufmaß 09/2026 (Fertigmaße), KG abgeleitet",
-    "bytes": 97101
+    "version": "0.25",
+    "updatedAt": "2026-09-17",
+    "note": "KG- und OG-Aufmaß 09/2026 (Fertigmaße)",
+    "bytes": 97532
   },
   "soll": {
     "file": "soll.json",
     "rooms": "rooms-soll.json",
     "version": "0.0",
-    "updatedAt": "2026-09-16",
+    "updatedAt": "2026-09-17",
     "note": "Platzhalter – identisch mit Ist, bis das Soll-Modell gebaut ist",
-    "bytes": 97114
+    "bytes": 97552
   }
 }
