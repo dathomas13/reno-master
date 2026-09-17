@@ -1,0 +1,26 @@
+<!--
+  Kleines Symbol für die Benachrichtigungen (Abend-Erinnerung).
+
+  Android zeichnet davon nur den Alphakanal, weiß auf durchsichtig; Farbe kommt aus
+  `iconColor` in capacitor.config.ts. Deshalb ist es das Haus aus tools/icon/icon.svg
+  als reine Silhouette, ohne die zwei Geschossdecken und ohne die geteilte Färbung -
+  bei 24 dp in der Statusleiste bliebe davon ohnehin nichts übrig.
+
+  Als Vektor und nicht als PNG, damit es für jede Bildschirmdichte eine Datei ist.
+  Wichtig: fehlt dieses Symbol, verwirft Android die Benachrichtigung kommentarlos -
+  kein Fehler, keine Meldung, nichts. Die Prüfung im APK-Workflow achtet darauf.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Schornstein; die Dachkante schneidet ihn optisch ab -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M15.5,7.7h1.8v4.9h-1.8z" />
+    <!-- Giebelseite: Dach über den Außenwänden -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,6.1L20.8,12.6L19.1,12.6L19.1,19.2L4.9,19.2L4.9,12.6L3.2,12.6Z" />
+</vector>

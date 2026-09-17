@@ -77,7 +77,7 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 452 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 460 Unit-Tests.
 - **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
   die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
   Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
@@ -86,7 +86,11 @@ Steht:
   ein Eintrag fehlt, und stellt die Benachrichtigung als Wecker
   (`src/platform/reminderPlan.ts` rechnet, `src/platform/reminder.ts` stellt,
   `src/data/useReminder.ts` hält sie an der Tagebuch-Abfrage). Kein Blaze, kein Token,
-  kein Netz. Details in `PLAN.md`, Abschnitt 11.
+  kein Netz. **Android braucht dafür zwingend `smallIcon`** – ohne gültiges Symbol
+  verwirft es jede Benachrichtigung wortlos; die Datei liegt in
+  `tools/icon/android/ic_stat_reno.xml`, der APK-Workflow prüft sie. Einstellungen →
+  Abend-Erinnerung → „Diagnose“ fragt das Gerät, was es wirklich tut. Details in
+  `PLAN.md`, Abschnitt 11.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dateOfReminderId,
+  describeDiagnosis,
   describeReminder,
   dueReminder,
   isReminderId,
   planReminders,
   reminderId,
   TEST_REMINDER_ID,
+  type ReminderDiagnosis,
 } from '@/platform/reminderPlan';
 
 /** a local moment, so the test says the same thing in every time zone */
@@ -146,5 +149,67 @@ describe('describeReminder', () => {
     const now = at('2026-09-17', '08:00');
     const plan = planReminders({ enabled: true, time: '21:30', datesWithEntry: [], now, days: 4 });
     expect(describeReminder(plan[2]!, now)).toBe('Sa, 19.09.2026 um 21:30');
+  });
+});
+
+describe('dateOfReminderId', () => {
+  it('names the day again that an id was made for', () => {
+    for (const date of ['2026-09-17', '2026-12-31', '2027-01-01', '2028-02-29']) {
+      expect(dateOfReminderId(reminderId(date))).toBe(date);
+    }
+  });
+
+  it('keeps its hands off ids that are not ours', () => {
+    expect(dateOfReminderId(1)).toBeNull();
+    expect(dateOfReminderId(TEST_REMINDER_ID)).toBeNull();
+  });
+});
+
+describe('describeDiagnosis', () => {
+  const base: ReminderDiagnosis = {
+    mode: 'native',
+    pluginReady: true,
+    permission: 'granted',
+    exactAlarms: 'erlaubt',
+    pending: 14,
+    nextPending: '2026-09-17',
+  };
+
+  it('says the alarms really stand, with the next date', () => {
+    const lines = describeDiagnosis(base).join(' | ');
+    expect(lines).toContain('das Telefon stellt die Erinnerung selbst');
+    expect(lines).toContain('Erlaubnis: erteilt');
+    expect(lines).toContain('Gestellte Wecker: 14, der nächste für den 17.09.2026');
+  });
+
+  it('names the case that looks like nothing happening: no alarm stands', () => {
+    expect(describeDiagnosis({ ...base, pending: 0, nextPending: null }).join(' | ')).toContain(
+      'Gestellte Wecker: keine',
+    );
+  });
+
+  it('points at the Android settings when the permission is refused', () => {
+    expect(describeDiagnosis({ ...base, permission: 'denied' }).join(' | ')).toContain(
+      'Apps → Reno Master → Benachrichtigungen',
+    );
+  });
+
+  it('warns when the phone only allows rough alarm times', () => {
+    expect(describeDiagnosis({ ...base, exactAlarms: 'ungenau' }).join(' | ')).toContain(
+      'ein paar Minuten später',
+    );
+  });
+
+  it('says so when the notification part cannot be reached at all', () => {
+    const lines = describeDiagnosis({ ...base, pluginReady: false, error: 'Das Gerät hat nicht geantwortet.' });
+    expect(lines.join(' | ')).toContain('lässt sich nicht ansprechen');
+    expect(lines.join(' | ')).toContain('Fehler: Das Gerät hat nicht geantwortet.');
+  });
+
+  it('is honest about the browser: it promises no alarms, because it sets none', () => {
+    const lines = describeDiagnosis({ ...base, mode: 'web', exactAlarms: 'unbekannt' }).join(' | ');
+    expect(lines).toContain('solange diese Seite offen ist');
+    expect(lines).not.toContain('Gestellte Wecker');
+    expect(lines).not.toContain('Weckzeit');
   });
 });

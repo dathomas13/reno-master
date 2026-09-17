@@ -8,6 +8,24 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.27.0 – Die Erinnerung geht jetzt wirklich raus
+
+In der vorigen Fassung passierte beim Antippen der beiden Knöpfe schlicht nichts. Drei
+Gründe, alle behoben.
+
+Der wichtigste: Benachrichtigungen brauchen unter Android ein eigenes kleines Symbol für
+die Statusleiste. Fehlt es, wirft das Telefon die Meldung wortlos weg – keine Fehlermeldung,
+kein Hinweis, nichts. Das Symbol gibt es jetzt, und der Build bricht ab, falls es je wieder
+fehlt. Die Testbenachrichtigung ging außerdem den Umweg über einen Wecker und blieb dabei in
+der Stromsparbremse hängen; sie wird jetzt direkt angezeigt. Und wenn das Telefon auf eine
+Anfrage gar nicht antwortet, sagt der Knopf das nach ein paar Sekunden, statt still zu
+bleiben.
+
+Neu ist unter „Abend-Erinnerung“ die aufklappbare Zeile **Diagnose**. Dort steht schwarz auf
+weiß, was das Telefon gerade tut: ob es die Erlaubnis erteilt hat, ob es die Weckzeit auf die
+Minute einhalten darf und wie viele Wecker wirklich gestellt sind. Falls doch wieder etwas
+klemmt, steht dort, woran es liegt.
+
 ## 0.26.0 – Die Abend-Erinnerung kommt jetzt auch ohne Netz
 
 Die Erinnerung, abends einen Tagebucheintrag zu schreiben, wartete bisher auf einen Server –

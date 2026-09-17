@@ -593,6 +593,31 @@ Profil, welche Tage schon einen Eintrag haben, beantwortet der Offline-Cache.
   Darf die App keine exakten Wecker stellen (Android 14), stellt das Plugin ungenaue – die
   Erinnerung kommt dann ein paar Minuten später statt gar nicht.
 
+**Drei Regeln, jede nach einem Knopf geschrieben, der am Telefon nichts tat:**
+
+1. **`smallIcon` ist Pflicht.** Android zeichnet in der Statusleiste ein eigenes kleines
+   Symbol und verwirft die Benachrichtigung **wortlos**, wenn es fehlt oder ins Leere
+   zeigt – kein Fehler, kein Log, nichts. Das Symbol ist
+   `tools/icon/android/ic_stat_reno.xml` (Vektor, nur Alphakanal), `patch-android.mjs`
+   kopiert es nach `res/drawable/`, `capacitor.config.ts` nennt es, und der APK-Workflow
+   bricht ab, wenn eines von beidem fehlt.
+2. **Die Testbenachrichtigung wird nie geplant, sondern sofort angezeigt** (kein
+   `schedule` im Aufruf). Ein Wecker eine Sekunde in der Zukunft läuft in Androids
+   Stromsparbremse: `setAndAllowWhileIdle` feuert im Doze-Zustand nur etwa alle neun
+   Minuten. Eine funktionierende Einrichtung sah dadurch kaputt aus.
+3. **In der App nie auf die Browser-API zurückfallen.** `Notification` gibt es auch im
+   Android-WebView und sieht benutzbar aus, aber `requestPermission()` kann dort schlicht
+   nie antworten – ein Versprechen, das nie eingelöst wird, ist ein Knopf, der nichts tut.
+   Deshalb bekommt außerdem jeder Geräteaufruf in `reminder.ts` eine Frist
+   (`withDeadline`, 8 s): ein stummes Gerät muss einen Satz erzeugen, keinen toten Knopf.
+
+- **Diagnose statt Raten.** Das Telefon steht woanders, und „es passiert nichts“ passt auf
+  eine fehlende Erlaubnis, ein nicht geladenes Plugin und eine weggeworfene Meldung – drei
+  Ursachen mit gegensätzlichen Lösungen. `reminderDiagnosis()` fragt das Gerät (Erlaubnis,
+  exakte Wecker, Anzahl der wirklich gestellten Wecker samt nächstem Datum),
+  `describeDiagnosis()` macht daraus deutsche Sätze, und die Einstellungen zeigen sie unter
+  „Diagnose“. Die Formatierung ist rein und getestet.
+
 ---
 
 ## 12. PWA & Deployment (GitHub Pages)

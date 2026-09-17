@@ -13,8 +13,8 @@ import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
 import { COL } from '@/data/types';
 import { parseClock } from '@/lib/date';
-import { enableReminders, reminderPermission, showReminderNow } from '@/platform/reminder';
-import { describeReminder } from '@/platform/reminderPlan';
+import { enableReminders, reminderDiagnosis, showReminderNow } from '@/platform/reminder';
+import { describeDiagnosis, describeReminder, type ReminderDiagnosis } from '@/platform/reminderPlan';
 import { useReminderStatus } from '@/data/useReminder';
 import { formatBytes } from '@/lib/image';
 
@@ -27,7 +27,7 @@ export default function SettingsPage() {
   const [reminderTime, setReminderTime] = useState(profile?.reminderTime ?? '20:00');
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const reminder = useReminderStatus();
-  const [permission, setPermission] = useState<'granted' | 'denied' | 'prompt' | null>(null);
+  const [diagnosis, setDiagnosis] = useState<ReminderDiagnosis | null>(null);
 
   useEffect(() => {
     void listJobs().then(setJobs);
@@ -42,7 +42,7 @@ export default function SettingsPage() {
   }, [profile?.reminderTime]);
 
   useEffect(() => {
-    void reminderPermission().then(setPermission);
+    void reminderDiagnosis().then(setDiagnosis);
   }, []);
 
   function update(patch: Partial<LocalSettings>) {
@@ -103,7 +103,7 @@ export default function SettingsPage() {
               ? 'Die Erinnerung stellt das Telefon selbst – sie kommt auch ohne Netz und ohne offene App.'
               : 'Im Browser erinnert die App nur, solange sie offen ist. Zuverlässig ist die Erinnerung in der App-Version.'}
           </p>
-          {reminder.enabled && permission !== null && permission !== 'granted' && (
+          {reminder.enabled && diagnosis !== null && diagnosis.permission !== 'granted' && (
             // without this the line above promises a reminder the device will never show
             <p className="text-sm text-warn mt-2">
               Dieses Gerät lässt noch keine Benachrichtigungen zu. Einmal auf
@@ -118,7 +118,7 @@ export default function SettingsPage() {
               onClick={() =>
                 void enableReminders().then((result) => {
                   setPushMessage(result.message);
-                  void reminderPermission().then(setPermission);
+                  void reminderDiagnosis().then(setDiagnosis);
                   if (result.ok && !profile?.reminderEnabled) void updateProfile({ reminderEnabled: true });
                 })
               }
@@ -128,12 +128,30 @@ export default function SettingsPage() {
             <button
               type="button"
               className="btn"
-              onClick={() => void showReminderNow().then((result) => setPushMessage(result.message))}
+              onClick={() =>
+                void showReminderNow().then((result) => {
+                  setPushMessage(result.message);
+                  void reminderDiagnosis().then(setDiagnosis);
+                })
+              }
             >
               Testbenachrichtigung
             </button>
           </div>
           {pushMessage && <p className="text-sm text-muted mt-2">{pushMessage}</p>}
+
+          {/* Das Telefon liegt woanders. Kommt nichts an, ist das hier der einzige Weg
+              herauszufinden, woran es liegt, statt zu raten. */}
+          <details className="mt-3">
+            <summary className="text-sm text-muted cursor-pointer">Diagnose</summary>
+            <ul className="text-xs text-muted mt-2 flex flex-col gap-1">
+              {diagnosis === null ? (
+                <li>wird abgefragt…</li>
+              ) : (
+                describeDiagnosis(diagnosis).map((line) => <li key={line}>{line}</li>)
+              )}
+            </ul>
+          </details>
         </section>
 
         <FolderExportSection />

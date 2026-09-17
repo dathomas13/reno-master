@@ -12,7 +12,7 @@
  * touches the network, and nothing here touches a notification API either - it is plain
  * arithmetic, which is why it can be tested.
  */
-import { addDays, formatRelativeDay, parseClock, parseIsoDate, toIsoDate } from '@/lib/date';
+import { addDays, formatDate, formatRelativeDay, parseClock, parseIsoDate, toIsoDate } from '@/lib/date';
 
 export const REMINDER_TITLE = 'Bautagebuch';
 export const REMINDER_BODY = 'Heute noch kein Eintrag – jetzt schreiben?';
@@ -32,6 +32,14 @@ const ID_BASE = 7_000_000;
 export function reminderId(date: string): number {
   const [y, m, d] = date.slice(0, 10).split('-').map(Number);
   return ID_BASE + Math.floor(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1) / 86_400_000);
+}
+
+/** the day an id was made for, or null when it is not one of ours */
+export function dateOfReminderId(id: number): string | null {
+  if (id < ID_BASE) return null;
+  const at = new Date((id - ID_BASE) * 86_400_000);
+  if (Number.isNaN(at.getTime())) return null;
+  return at.toISOString().slice(0, 10);
 }
 
 /** the id used for the test notification from the settings screen */
@@ -142,4 +150,74 @@ export function formatClock(at: Date): string {
 /** 'heute um 20:00', 'morgen um 20:00', 'Do, 24.09.2026 um 20:00' */
 export function describeReminder(reminder: PlannedReminder, now = new Date()): string {
   return `${formatRelativeDay(reminder.date, toIsoDate(now))} um ${formatClock(reminder.at)}`;
+}
+
+/**
+ * What the device says about itself.
+ *
+ * The reminder lives on a phone nobody here can look at, and "nothing happens" is the
+ * least useful bug report there is - it fits a missing permission, a plugin that never
+ * loaded and a notification Android threw away, and those need opposite fixes. So the
+ * settings screen asks the device these questions and shows the answers.
+ */
+export interface ReminderDiagnosis {
+  /** who would show the reminder */
+  mode: 'native' | 'web' | 'none';
+  /** false when the app cannot reach the notification plugin at all */
+  pluginReady: boolean;
+  permission: 'granted' | 'denied' | 'prompt' | 'unbekannt';
+  /** whether the phone lets the app set alarms to the minute */
+  exactAlarms: 'erlaubt' | 'ungenau' | 'unbekannt';
+  /** how many reminders really stand in the system right now */
+  pending: number;
+  /** the day of the earliest of them */
+  nextPending: string | null;
+  /** what went wrong, if anything did */
+  error?: string;
+}
+
+/** the diagnosis in plain German, one line per fact */
+export function describeDiagnosis(diagnosis: ReminderDiagnosis): string[] {
+  const lines: string[] = [];
+
+  if (diagnosis.mode === 'native') {
+    lines.push(
+      diagnosis.pluginReady
+        ? 'App-Version: das Telefon stellt die Erinnerung selbst.'
+        : 'App-Version, aber der Benachrichtigungsteil lässt sich nicht ansprechen.',
+    );
+  } else if (diagnosis.mode === 'web') {
+    lines.push('Browser: erinnert nur, solange diese Seite offen ist.');
+  } else {
+    lines.push('Dieses Gerät kann keine Benachrichtigungen anzeigen.');
+  }
+
+  lines.push(
+    `Erlaubnis: ${
+      {
+        granted: 'erteilt',
+        denied: 'verweigert – in den Android-Einstellungen unter Apps → Reno Master → Benachrichtigungen freigeben',
+        prompt: 'noch nicht erteilt',
+        unbekannt: 'unbekannt',
+      }[diagnosis.permission]
+    }`,
+  );
+
+  if (diagnosis.mode === 'native') {
+    if (diagnosis.exactAlarms === 'ungenau') {
+      lines.push('Weckzeit: nur ungefähr – die Erinnerung kann ein paar Minuten später kommen.');
+    } else if (diagnosis.exactAlarms === 'erlaubt') {
+      lines.push('Weckzeit: auf die Minute genau.');
+    }
+    lines.push(
+      diagnosis.pending === 0
+        ? 'Gestellte Wecker: keine.'
+        : `Gestellte Wecker: ${diagnosis.pending}${
+            diagnosis.nextPending ? `, der nächste für den ${formatDate(diagnosis.nextPending)}` : ''
+          }.`,
+    );
+  }
+
+  if (diagnosis.error) lines.push(`Fehler: ${diagnosis.error}`);
+  return lines;
 }
