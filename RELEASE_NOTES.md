@@ -8,6 +8,17 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.28.5 – Belege nicht doppelt ablegen
+
+Beim erneuten Auswählen einer bereits bekannten Belegdatei wird keine weitere Kopie
+hochgeladen. Gehört sie schon zu einer Rechnung, kannst du diese direkt öffnen, statt
+dieselben Kosten noch einmal anzulegen. Ein noch nicht zugeordneter Beleg wird wiederverwendet.
+
+Die Rechnung lässt sich erst speichern, wenn das Belegfoto angehängt und das Auslesen
+abgeschlossen ist. Dadurch geht die Verbindung zum Foto nicht mehr verloren, wenn die
+Verarbeitung länger dauert. Ohne Verbindung wartet das Speichern nicht mehr unbegrenzt
+auf den Server; die Synchronisierung läuft später weiter.
+
 ## 0.28.3 – Neue Übersicht: alle Belege an einem Ort
 
 Unter „Mehr“ gibt es jetzt „Belege“: eine Liste aller eingescannten Rechnungen und Quittungen,

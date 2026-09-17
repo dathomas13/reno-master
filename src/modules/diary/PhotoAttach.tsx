@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { PhotoImage } from '@/components/PhotoView';
-import { addPhoto, deletePhoto } from '@/data/photos';
+import { addPhoto, deletePhoto, ReceiptAlreadyLinkedError } from '@/data/photos';
 import {
   pickPhotos, pickFiles, galleryPickerAvailable, listGalleryPhotosForDay, readGalleryPhoto,
   readGalleryOriginal, galleryThumbnail, type GalleryPhoto,
@@ -8,7 +8,7 @@ import {
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
-import type { Photo } from '@/data/types';
+import type { Cost, Photo } from '@/data/types';
 
 interface PhotoAttachProps {
   photos: Photo[];
@@ -19,8 +19,13 @@ interface PhotoAttachProps {
   forDate?: string;
   onAdded(photo: Photo): void;
   onRemoved(photo: Photo): void;
+  onBusyChange?(busy: boolean): void;
+  onDuplicate?(photo: Photo): void;
+  existingPhotos?: Photo[];
+  existingCosts?: Cost[];
+  disabled?: boolean;
   /** the untouched file, handed over before it is shrunk - used to read a receipt */
-  onFileChosen?(file: Blob, contentType: string): void;
+  onFileChosen?(file: Blob, contentType: string): void | Promise<void>;
   /** open the camera as soon as the screen is shown (app shortcut "Beleg erfassen") */
   autoCapture?: boolean;
 }
@@ -41,10 +46,16 @@ export function PhotoAttach({
   forDate,
   onAdded,
   onRemoved,
+  onBusyChange,
+  onDuplicate,
+  existingPhotos = photos,
+  existingCosts,
+  disabled = false,
   onFileChosen,
   autoCapture = false,
 }: PhotoAttachProps) {
   const [busy, setBusy] = useState(false);
+  const processing = useRef(false);
   const captured = useRef(false);
   const [dayOpen, setDayOpen] = useState(false);
   const [dayPhotos, setDayPhotos] = useState<GalleryPhoto[]>([]);
@@ -62,7 +73,11 @@ export function PhotoAttach({
   async function addFromBlobs(
     items: { blob: Blob; name?: string; takenAt?: string; sourceUri?: string; original?: Blob }[],
   ) {
+    if (processing.current || disabled) return;
+    processing.current = true;
     setBusy(true);
+    onBusyChange?.(true);
+    const knownPhotos = [...existingPhotos];
     try {
       for (const item of items) {
         const photo = await addPhoto({
@@ -75,19 +90,32 @@ export function PhotoAttach({
           sourceUri: item.sourceUri,
           keepOriginal: keepOriginals && kind === 'photo',
           originalFile: item.original,
+          existingPhotos: knownPhotos,
+          existingCosts,
         });
+        const alreadyAttached = photos.some((current) => current.id === photo.id);
+        if (knownPhotos.some((current) => current.id === photo.id)) {
+          setWarning('Dieser Beleg ist bereits vorhanden und wird nicht erneut gespeichert.');
+        }
+        knownPhotos.push(photo);
         onAdded(photo);
+        if (!alreadyAttached && item === items[0]) {
+          await onFileChosen?.(item.blob, item.blob.type || 'image/jpeg');
+        }
       }
+    } catch (cause) {
+      if (cause instanceof ReceiptAlreadyLinkedError) onDuplicate?.(cause.photo);
+      setWarning(cause instanceof Error ? cause.message : 'Datei konnte nicht hinzugefügt werden.');
     } finally {
+      processing.current = false;
       setBusy(false);
+      onBusyChange?.(false);
     }
   }
 
   async function pickFromFiles(camera = false) {
     const picked = await pickPhotos({ forDate, camera });
     if (!picked.length) return;
-    const first = picked[0];
-    if (first) onFileChosen?.(first.file, first.file.type || 'image/jpeg');
     const otherDay = picked.filter((item) => item.otherDay);
     setWarning(
       otherDay.length
@@ -95,15 +123,14 @@ export function PhotoAttach({
         : null,
     );
     await addFromBlobs(
-      picked.map((item) => ({ blob: item.file, name: item.name, takenAt: item.takenAt })),
+      picked.map((item) => ({ blob: item.file, name: item.name, takenAt: item.takenAt, sourceUri: item.sourceUri })),
     );
   }
 
   async function pickPdf() {
     const files = await pickFiles('application/pdf,image/*');
     if (!files.length) return;
-    const first = files[0];
-    if (first) onFileChosen?.(first, first.type || 'application/pdf');
+    setWarning(null);
     await addFromBlobs(files.map((file) => ({ blob: file, name: file.name })));
   }
 
@@ -123,7 +150,6 @@ export function PhotoAttach({
   async function addFromGallery(item: GalleryPhoto) {
     const blob = await readGalleryPhoto(item.uri);
     if (!blob) return;
-    onFileChosen?.(blob, blob.type || 'image/jpeg');
     // the picker only ever hands over a downsized copy, so the untouched file has to be
     // read separately - and only when it is actually going to be kept
     const original =
@@ -139,28 +165,28 @@ export function PhotoAttach({
   }
 
   useEffect(() => {
-    if (!autoCapture || captured.current) return;
+    if (!autoCapture || captured.current || disabled) return;
     captured.current = true;
     void pickFromFiles(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoCapture]);
+  }, [autoCapture, disabled]);
 
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-3">
         {galleryPickerAvailable() && forDate && (
-          <button type="button" className="btn" onClick={() => void openDayGallery()} disabled={busy}>
+          <button type="button" className="btn" onClick={() => void openDayGallery()} disabled={busy || disabled}>
             Fotos vom {formatDate(forDate).slice(0, 6)}
           </button>
         )}
-        <button type="button" className="btn" onClick={() => void pickFromFiles(false)} disabled={busy}>
+        <button type="button" className="btn" onClick={() => void pickFromFiles(false)} disabled={busy || disabled}>
           Aus Galerie
         </button>
-        <button type="button" className="btn" onClick={() => void pickFromFiles(true)} disabled={busy}>
+        <button type="button" className="btn" onClick={() => void pickFromFiles(true)} disabled={busy || disabled}>
           Kamera
         </button>
         {kind === 'receipt' && (
-          <button type="button" className="btn" onClick={() => void pickPdf()} disabled={busy}>
+          <button type="button" className="btn" onClick={() => void pickPdf()} disabled={busy || disabled}>
             PDF / Datei
           </button>
         )}
@@ -170,7 +196,7 @@ export function PhotoAttach({
             className={`btn ${keepOriginals ? 'btn-primary' : ''}`}
             aria-pressed={keepOriginals}
             onClick={toggleOriginals}
-            disabled={busy}
+            disabled={busy || disabled}
             title="Zusätzlich die unveränderte Datei sichern – für Fotos, die später in voller Auflösung gebraucht werden"
           >
             Original sichern
@@ -203,6 +229,7 @@ export function PhotoAttach({
               <button
                 type="button"
                 aria-label="Foto entfernen"
+                disabled={busy || disabled}
                 className="absolute top-1 right-1 w-6 h-6 rounded-full bg-bg/80 text-ink text-sm leading-6"
                 onClick={() => void remove(photo)}
               >
@@ -224,6 +251,7 @@ export function PhotoAttach({
                 type="button"
                 className="aspect-square bg-panel2 rounded-lg overflow-hidden relative"
                 onClick={() => void addFromGallery(item).then(() => setDayOpen(false))}
+                disabled={busy || disabled}
               >
                 {thumbs[item.uri] ? (
                   <img src={thumbs[item.uri]} alt={item.name} className="w-full h-full object-cover" />
@@ -237,7 +265,7 @@ export function PhotoAttach({
             ))}
           </div>
         )}
-        <button type="button" className="btn w-full mb-3" onClick={() => void pickFromFiles(false)}>
+        <button type="button" className="btn w-full mb-3" onClick={() => void pickFromFiles(false)} disabled={busy || disabled}>
           Andere Tage…
         </button>
       </Sheet>

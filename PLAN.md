@@ -209,6 +209,15 @@ interface Cost {
 }
 ```
 
+Beim Belegimport werden Dateiname, ursprüngliche Dateigröße, Dateiart und das verfügbare
+Aufnahmedatum mit bekannten Belegen verglichen. Ein Treffer wird nicht erneut hochgeladen:
+bei einer bestehenden Rechnung wird diese verlinkt und das doppelte Speichern gesperrt;
+Belege ohne bestehende Rechnung können dem aktuellen Entwurf zugeordnet werden. Beide
+Verweisrichtungen (`costId` und `receiptPhotoIds`) zählen bei der Prüfung. Das Speichern
+wartet auf Dateiimport und Auslesen; lokale Anhänge bleiben bis zur Bestätigung durch die
+Fotoabfrage erhalten. Firestore-Schreibvorgänge für Beleg und Rechnung warten höchstens
+10 Sekunden auf die Serverbestätigung und bleiben danach in der Offline-Warteschlange.
+
 ### 5.4 `tasks` – Aufgaben
 ```ts
 interface Task {

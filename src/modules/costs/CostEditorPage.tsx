@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Field, ChipSelect, Spinner } from '@/components/Fields';
 import { RoomPicker, TradeSelect } from '@/components/Pickers';
@@ -10,7 +10,6 @@ import {
   COL, PAID_BY, PAYMENT_METHOD, PAYMENT_STATUS,
   type Cost, type PaidBy, type PaymentMethod, type PaymentStatus, type Photo,
 } from '@/data/types';
-import { where } from '@/firebase/db';
 import { emptyCost, saveCost, deleteCost } from '@/data/repos';
 import { parseAmount, formatAmount, splitGross, round2 } from '@/lib/money';
 import { toIsoDateTime, today } from '@/lib/date';
@@ -22,6 +21,11 @@ type AutoFilled = Partial<Record<keyof Cost, boolean>>;
 
 export default function CostEditorPage() {
   const { id } = useParams();
+  return <CostEditor key={id ?? 'new'} />;
+}
+
+function CostEditor() {
+  const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const isNew = !id;
@@ -29,9 +33,13 @@ export default function CostEditorPage() {
   const { data: existing, loading } = useDocument<Cost>(COL.costs, id);
   const { lists } = useLists();
   const [cost, setCost] = useState<Cost>(() => emptyCost(today()));
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
+  const [duplicateCostId, setDuplicateCostId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [ready, setReady] = useState(isNew);
   const [saving, setSaving] = useState(false);
+  const [attaching, setAttaching] = useState(false);
   const [amountText, setAmountText] = useState('');
   const [auto, setAuto] = useState<AutoFilled>({});
   const [ocrState, setOcrState] = useState<'idle' | 'running' | 'done' | 'error' | 'unavailable'>('idle');
@@ -46,8 +54,17 @@ export default function CostEditorPage() {
     }
   }, [existing, ready]);
 
-  const { data: costPhotos } = useCollection<Photo>(COL.photos, [where('costId', '==', cost.id)], [cost.id]);
-  useEffect(() => setPhotos(costPhotos), [costPhotos]);
+  const { data: allPhotos, loading: photosLoading, error: photosError } = useCollection<Photo>(COL.photos);
+  const { data: allCosts, loading: costsLoading, error: costsError } = useCollection<Cost>(COL.costs);
+  const costPhotos = allPhotos.filter((photo) => photo.costId === cost.id || cost.receiptPhotoIds.includes(photo.id));
+  const photos = [...new Map([...addedPhotos, ...costPhotos].map((photo) => [photo.id, photo])).values()]
+    .filter((photo) => !removedPhotoIds.includes(photo.id));
+  const importBlocked = saving || photosLoading || costsLoading || Boolean(photosError || costsError);
+  const saveBlocked = importBlocked || attaching || Boolean(duplicateCostId);
+
+  useEffect(() => {
+    setAddedPhotos((current) => current.filter((photo) => !allPhotos.some((item) => item.id === photo.id)));
+  }, [allPhotos]);
 
   useEffect(() => {
     void activeExtractor().then((extractor) => {
@@ -157,10 +174,14 @@ export default function CostEditorPage() {
   }
 
   async function save() {
+    if (saveBlocked) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await saveCost({ ...cost, receiptPhotoIds: photos.map((photo) => photo.id) });
       navigate('/kosten', { replace: true });
+    } catch (cause) {
+      setSaveError(cause instanceof Error ? cause.message : 'Rechnung konnte nicht gespeichert werden.');
     } finally {
       setSaving(false);
     }
@@ -183,7 +204,7 @@ export default function CostEditorPage() {
         title={isNew ? 'Neue Rechnung' : 'Rechnung'}
         back="/kosten"
         action={
-          <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => void save()} disabled={saving}>
+          <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => void save()} disabled={saveBlocked}>
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
         }
@@ -202,11 +223,32 @@ export default function CostEditorPage() {
             photos={photos}
             costId={cost.id}
             kind="receipt"
-            onAdded={(photo) => setPhotos((current) => [...current, photo])}
-            onRemoved={(photo) => setPhotos((current) => current.filter((item) => item.id !== photo.id))}
-            onFileChosen={(file, contentType) => void runExtraction(file, contentType)}
+            existingPhotos={[...new Map([...allPhotos, ...photos].map((photo) => [photo.id, photo])).values()]}
+            existingCosts={allCosts}
+            disabled={importBlocked}
+            onAdded={(photo) => {
+              setAddedPhotos((current) => [...current.filter((item) => item.id !== photo.id), photo]);
+              setRemovedPhotoIds((current) => current.filter((photoId) => photoId !== photo.id));
+              setDuplicateCostId(null);
+            }}
+            onRemoved={(photo) => {
+              setAddedPhotos((current) => current.filter((item) => item.id !== photo.id));
+              setRemovedPhotoIds((current) => [...current, photo.id]);
+            }}
+            onBusyChange={setAttaching}
+            onDuplicate={(photo) => setDuplicateCostId(photo.costId ?? null)}
+            onFileChosen={runExtraction}
             autoCapture={params.get('capture') === '1'}
           />
+          {duplicateCostId && (
+            <Link className="text-accent text-sm block mt-2" to={`/kosten/${duplicateCostId}`}>
+              Vorhandene Rechnung öffnen
+            </Link>
+          )}
+          {(photosError || costsError) && (
+            <p className="text-bad text-sm mt-2">Belege konnten nicht geladen werden: {(photosError || costsError)?.message}</p>
+          )}
+          {saveError && <p role="alert" className="text-bad text-sm mt-2">{saveError}</p>}
           {ocrState === 'running' && <p className="text-muted text-sm mt-2">Beleg wird gelesen…</p>}
           {ocrMessage && (
             <p className={`text-sm mt-2 ${ocrState === 'error' ? 'text-bad' : 'text-muted'}`}>{ocrMessage}</p>
@@ -347,7 +389,7 @@ export default function CostEditorPage() {
         </Field>
 
         <div className="flex gap-3 mt-4">
-          <button type="button" className="btn btn-primary flex-1" onClick={() => void save()} disabled={saving}>
+          <button type="button" className="btn btn-primary flex-1" onClick={() => void save()} disabled={saveBlocked}>
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
           {!isNew && (
