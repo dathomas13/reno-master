@@ -22,7 +22,7 @@ npm run build          # Produktionsbuild nach dist/
 Modell und Pläne neu erzeugen (Python, nur Standardbibliothek):
 
 ```bash
-python3 tools/model/build_scene_lite.py --variant ist --version 0.23   # 3D-Szene
+python3 tools/model/build_scene_lite.py --variant ist --version 0.25   # 3D-Szene
 python3 tools/model/build_rooms.py
 python3 tools/model/build_plans_svg.py
 python3 tools/model/make_manifest.py
@@ -78,6 +78,10 @@ Steht:
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
 - Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 248 Unit-Tests (Zahl aus dem vitest-Lauf in der CI, nicht geschätzt).
+- **Das EG ist aufgemessen** (Thomas, 09/2026, DXF „Grundriss_EG_Bestand_Fertigmasse“):
+  Ist-Modell v0.24 trägt im EG **Fertigmaße inkl. Putz**, Haus 12.995 × 11.815 statt
+  13.240 × 11.820. Das KG ist darauf gesetzt (tragende Wände stehen übereinander),
+  das OG folgt nur den Außenmaßen und wartet noch auf ein Aufmaß.
 - **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
   die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
   Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht

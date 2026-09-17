@@ -6,17 +6,30 @@ Koordinatensystem:
   y = 0 an der südlichen Außenwand-Außenkante (Straßenseite), positiv nach Norden (Garten)
   z = 0 = OK Rohdecke EG (±0.000 im Plan). KG-Rohfußboden = -2750, OG-Rohfußboden = +2750
 
-Quelle: Pläne Heinz Schaar, Jan 1967 (Blatt 2 KG, 3 EG, 4 OG, 5 Schnitte), Maßketten ausgelesen.
-Konfidenz-Tags: A = Maßkette direkt gelesen, B = aus Maßkette abgeleitet, C = Annahme/geschätzt
+Quellen:
+  EG  = eigenes Aufmaß Thomas 09/2026, DXF "Grundriss_EG_Bestand_Fertigmasse".
+        **Fertigmaße inklusive Putz.** Jede Wandkante, jede Öffnung und die Treppen
+        stammen aus dieser Zeichnung; die Raumstempel darin stimmen mit rooms_ist.py
+        überein. Das Haus ist ~30 cm kürzer gebaut als 1967 geplant (12.995 statt
+        13.240); die Gebäudetiefe passt (11.815 statt 11.820).
+  KG  = Pläne Heinz Schaar, Jan 1967 (Blatt 2), **auf das EG-Aufmaß gesetzt**: die
+        tragenden Wände stehen jetzt genau unter denen des EG, die nichttragenden 115er
+        behalten ihren gemessenen Abstand zur jeweils tragenden Nachbarwand. Das KG ist
+        damit abgeleitet, nicht aufgemessen -> Konfidenz B/C.
+  OG  = Pläne Blatt 4, unverändert bis auf die Außenmaße (die folgen HOUSE_W/HOUSE_D
+        und T_OUT). Die Innenwände stehen noch auf dem Rohbauraster von 1967.
+
+Konfidenz-Tags: A = gemessen bzw. Maßkette direkt gelesen, B = abgeleitet, C = Annahme
 """
 import math
 
 # ---------------------------------------------------------------- Grundparameter
-HOUSE_W = 13240          # A  Außenmaß Ost-West
-HOUSE_D = 11820          # A  Außenmaß Nord-Süd (Schnitt: 11.820)
-T_OUT = 365              # A  Außenwand
-T_LOAD = 240             # A  tragende Innenwand
-T_PART = 115             # A  nichttragende Wand KG/EG
+HOUSE_W = 12995          # A  Außenmaß Ost-West (Aufmaß 09/2026, Fertigmaß)
+HOUSE_D = 11815          # A  Außenmaß Nord-Süd (Aufmaß 09/2026, Fertigmaß)
+T_OUT = 400              # A  Außenwand 36,5 + Putz
+T_LOAD = 270             # A  tragende Innenwand 24 + Putz
+T_LOAD_E = 260           # A  Ostwand Diele (lt. Bauherr 26)
+T_PART = 115             # B  nichttragende Wand KG (Rohbau 1967, nicht aufgemessen)
 T_PART_DG = 120          # A  Leichtwand OG
 SLAB = 140               # A  Stahlbetondecke
 STOREY = 2750            # A  Geschosshöhe roh
@@ -30,20 +43,32 @@ Z_KG = -STOREY           # -2750
 Z_EG = 0
 Z_OG = STORY = STOREY    # 2750
 
-# Strukturachsen (Wand-Kanten, aus den Maßketten) -------------------------------
+# Loggia-Vorsprung: die beiden Wandscheiben neben der Loggia springen 125 nach Süden vor
+# (Plan 1967, im Aufmaß bestätigt). Südlichster Punkt des Gebäudes.
+Y_VOR = -125             # A
+# Bauwerkshülle für die Raumprüfung (build_rooms.py)
+ENVELOPE = (0, Y_VOR, HOUSE_W, HOUSE_D)
+
+# Strukturachsen (Wandkanten aus dem EG-Aufmaß) --------------------------------
 # Ost-West-Raster (x):
-X_W_OUT = (0, T_OUT)                       # 0-365   Westwand
-X_LOAD1 = (4875, 5115)                     # A  240er Wand (KG/EG)  Schlafzi|Diele
-X_LOAD2 = (8375, 8615)                     # A  240er Wand (KG/EG)  Wohnzi|Essküche bzw. Keller2|Öllager
-X_E_OUT = (HOUSE_W - T_OUT, HOUSE_W)       # 12875-13240 Ostwand
+X_W_OUT = (0, T_OUT)                       # 0-400     Westwand
+X_LOAD1 = (4745, 5015)                     # A  270er Wand  Treppenhaus|Diele bzw. Schlafzi
+X_LOAD2 = (8245, 8505)                     # A  260er Wand  Wohnzi/Diele|Essküche
+X_E_OUT = (HOUSE_W - T_OUT, HOUSE_W)       # 12595-12995 Ostwand
 # Nord-Süd-Raster (y):
 Y_S_OUT = (0, T_OUT)                       # Südwand
-Y_LOAD_S = (4875, 5115)                    # A  240er Wand Südräume|Diele  (365+4510)
-Y_LOAD_N = (7375, 7615)                    # A  240er Wand Diele|Nordräume (5115+2260)
-Y_N_OUT = (HOUSE_D - T_OUT, HOUSE_D)       # 11455-11820 Nordwand
+Y_LOAD_S = (4860, 5130)                    # A  270er Wand Wohnzimmer|Treppenhaus/Diele
+Y_LOAD_N = (7365, 7635)                    # A  270er Wand Treppenhaus|Schlafzimmer
+Y_N_OUT = (HOUSE_D - T_OUT, HOUSE_D)       # 11415-11815 Nordwand
+
+# KG: Linie der drei 115er Wände im Nordband (Obst | Keller 2 | Öllager).
+# Die Räume nördlich davon sind 2490 tief (Scan 1967), gemessen ab Innenkante Nordwand.
+Y_KG_BAND = HOUSE_D - T_OUT - 2490 - T_PART   # 8810
+
 
 def tan_roof():
     return math.tan(math.radians(ROOF_PITCH))
+
 
 def roof_z_under(y):
     """Unterkante Sparren bei y (Traufpunkt an Innenkante Außenwand, Kniestock 650)."""
@@ -51,62 +76,71 @@ def roof_z_under(y):
     d = min(y, HOUSE_D - y) - T_OUT
     return eave + tan_roof() * d
 
+
 # ---------------------------------------------------------------- Wände
 # Jede Wand: (floor, name, x0, y0, x1, y1, tag)   -> Grundrissrechteck, Höhe = Geschoss
 # floor: "KG" | "EG" | "OG" | "GAR"
 WALLS = []
+
+
 def W(floor, name, x0, y0, x1, y1, tag="A"):
-    WALLS.append(dict(floor=floor, name=name, x0=min(x0,x1), y0=min(y0,y1),
-                      x1=max(x0,x1), y1=max(y0,y1), tag=tag))
+    WALLS.append(dict(floor=floor, name=name, x0=min(x0, x1), y0=min(y0, y1),
+                      x1=max(x0, x1), y1=max(y0, y1), tag=tag))
 
-def outer_walls(floor):
-    W(floor, "Außenwand Süd",  0, 0, HOUSE_W, T_OUT)
-    W(floor, "Außenwand Nord", 0, HOUSE_D - T_OUT, HOUSE_W, HOUSE_D)
-    W(floor, "Außenwand West", 0, 0, T_OUT, HOUSE_D)
-    W(floor, "Außenwand Ost",  HOUSE_W - T_OUT, 0, HOUSE_W, HOUSE_D)
 
-def load_walls(floor):
-    # Querwände (Nord-Süd) 240
-    if floor == "KG":   # KG: im Kellerflur-Band (7615–9135) keine Wand (Thomas)
-        W(floor, "Tragwand x=4875 (Diele West)", X_LOAD1[0], Y_LOAD_S[0], X_LOAD1[1], Y_LOAD_N[1])
-        W(floor, "Tragwand x=4875 (Obst|Keller2)", X_LOAD1[0], 8850, X_LOAD1[1], HOUSE_D)
-    else:
-        W(floor, "Tragwand x=4875 (Diele West)", X_LOAD1[0], Y_LOAD_S[0], X_LOAD1[1], HOUSE_D)   # nur nördlich der Südräume (Wohnzimmer 8010 durchgehend)          # A – durchgehend KG/EG
-    W(floor, "Tragwand x=8375 (Diele Ost)",  X_LOAD2[0], 0, X_LOAD2[1], HOUSE_D)          # A – durchgehend KG/EG
-    # Längswände (Ost-West) 240
-    if floor == "EG":
-        W(floor, "Tragwand y=4875 (Süd)", 0, Y_LOAD_S[0], X_LOAD2[1], Y_LOAD_S[1])   # EG: Essküche durchgehend (2730–7035)
-    else:   # KG: Ostspalte eigenes Raster – Schlafzimmer 3760 tief (Scan + Doku)
-        W(floor, "Tragwand y=4875 (Süd)", 0, Y_LOAD_S[0], X_LOAD2[1], Y_LOAD_S[1])
-        W(floor, "Schlafzimmer Nord 240", X_LOAD2[1], 4125, HOUSE_W - T_OUT, 4365, "A")
-    if floor == "EG":
-        W(floor, "Tragwand y=7375 (Nord)", 0, Y_LOAD_N[0], X_LOAD1[0], Y_LOAD_N[1])   # EG: nur West (Diele offen bis Nordwand)
-    else:   # KG: Ostspalte – Bad 2635 tief, Nordwand bei 7000 (Scan)
-        W(floor, "Tragwand y=7375 (Nord)", 0, Y_LOAD_N[0], X_LOAD2[1], Y_LOAD_N[1])
-        W(floor, "Bad/Flur Nord 240", X_LOAD2[1], 7000, HOUSE_W - T_OUT, 7240, "A")
+def outer_walls(floor, tag="A"):
+    W(floor, "Außenwand Süd",  0, 0, HOUSE_W, T_OUT, tag)
+    W(floor, "Außenwand Nord", 0, HOUSE_D - T_OUT, HOUSE_W, HOUSE_D, tag)
+    W(floor, "Außenwand West", 0, 0, T_OUT, HOUSE_D, tag)
+    W(floor, "Außenwand Ost",  HOUSE_W - T_OUT, 0, HOUSE_W, HOUSE_D, tag)
 
-# -------- KG (Blatt 2) ----------------------------------------------------------
-outer_walls("KG"); load_walls("KG")
-W("KG", "Essküche|Wohnzimmer 115",   2750, T_OUT, 2865, Y_LOAD_S[0], "A")       # 365+2385
-W("KG", "Keller1|Obst 115",          3625, Y_LOAD_N[1], 3740, HOUSE_D - T_OUT, "A")     # durchgehend bis Tragwand (Thomas)
-W("KG", "Obst Süd 115",              3740, 8850, X_LOAD1[0], 8965, "B")          # eine Linie mit Keller2/Öllager (Scan ≈8850–8965)
-W("KG", "Keller2 Süd 115",           X_LOAD1[1], 8850, X_LOAD2[0], 8965, "B")   # Keller2 ≈2490 tief (Scan; Doku 2580)
-W("KG", "Öllager|Heizung 115",       X_LOAD2[1], 8850, HOUSE_W - T_OUT, 8965, "B")  # Öllager ≈2490, Heizung ≈1610 (Scan)
-W("KG", "Flur|Bad 115",              8615+1635, 4365, 8615+1635+115, 7000, "A")  # x=10250, Bad-Band 4365–7000
 
-# -------- EG (Blatt 3) ----------------------------------------------------------
-outer_walls("EG"); load_walls("EG")
-W("EG", "Loggia Ytong 115",          X_LOAD2[1], 2615, HOUSE_W - T_OUT, 2730, "B")   # Loggia 2250 tief
-W("EG", "Essküche|Speise 115",       X_LOAD2[1], 6920, HOUSE_W - T_OUT, 7035, "B")   # Speise 1670 tief (Südwand Gard/WC/Speise)
-W("EG", "Speise|Bad 115",            X_LOAD2[1], 8705, HOUSE_W - T_OUT, 8820, "A")   # Bad 2635 tief; Gard geschlossen (rosa)
-W("EG", "Kamin Speise", 12500, 7035, HOUSE_W - T_OUT, 7535, "C")
-W("EG", "WC|Speise 115",             10750, 7035, 10865, 8705, "A")               # rosa bei x≈10750; Speise 2010 breit (Kette)
-W("EG", "Gard|WC 115",               X_LOAD2[1]+315, 7035, X_LOAD2[1]+315+115, 8705, "A")   # Kette 315 (rosa bei x≈8930)
-W("EG", "Flur|Bad 115",              10250, 8820, 10365, HOUSE_D - T_OUT, "A")
+# -------- EG (Aufmaß 09/2026, Fertigmaße) ---------------------------------------
+# Außenwände: Süd und Nord sind von der Loggia bzw. der Ostwand unterbrochen, die
+# Ostwand und die Wand Wohnzimmer|Loggia springen um Y_VOR nach Süden vor.
+W("EG", "Außenwand Süd",  0, 0, X_LOAD2[1], T_OUT, "A")
+W("EG", "Außenwand Nord", 0, HOUSE_D - T_OUT, HOUSE_W - T_OUT, HOUSE_D, "A")
+W("EG", "Außenwand West", 0, 0, T_OUT, HOUSE_D, "A")
+W("EG", "Außenwand Ost",  HOUSE_W - T_OUT, Y_VOR, HOUSE_W, HOUSE_D, "A")
+# tragende Innenwände
+W("EG", "Tragwand x=4745 (Diele West)", X_LOAD1[0], Y_LOAD_S[0], X_LOAD1[1], HOUSE_D - T_OUT, "A")
+W("EG", "Tragwand x=8245 (Diele Ost)",  X_LOAD2[0], Y_VOR, X_LOAD2[1], HOUSE_D, "A")
+W("EG", "Tragwand y=4860 (Süd)",  0, Y_LOAD_S[0], X_LOAD2[1], Y_LOAD_S[1], "A")
+W("EG", "Tragwand y=7365 (Nord)", 0, Y_LOAD_N[0], X_LOAD1[0], Y_LOAD_N[1], "A")
+# Loggia-Rückwand 34 (gemessen; Plan 1967: 30, Ytong)
+W("EG", "Essküche|Loggia 34", X_LOAD2[1], 2385, HOUSE_W - T_OUT, 2725, "A")
+# Nebenraumband Garderobe | WC | Speis, Wände 13 / 12,5 / 14,5 (Putz dünner)
+W("EG", "Essküche|Speis 13",   X_LOAD2[1], 6925, HOUSE_W - T_OUT, 7055, "A")
+W("EG", "Gard|WC 13",          8870, 7055,  9000, 8695, "A")
+W("EG", "WC|Speis 12,5",      10625, 7055, 10750, 8695, "A")
+W("EG", "Nebenräume Nord 14,5", X_LOAD2[1], 8695, HOUSE_W - T_OUT, 8840, "A")
+W("EG", "Flur|Bad 14,5",       9985, 8840, 10130, HOUSE_D - T_OUT, "A")
+# Kamin 162,5 x 51 (Lage/Größe geschätzt, steht im WC)
+W("EG", "Kamin WC", 9000, 7055, 10625, 7565, "C")
+
+# -------- KG (Blatt 2, auf das EG-Aufmaß gesetzt) -------------------------------
+outer_walls("KG", "B")
+# tragende Wände: gleiche Achsen wie im EG, damit sie übereinander stehen
+W("KG", "Tragwand x=4745 (Diele West)",   X_LOAD1[0], Y_LOAD_S[0], X_LOAD1[1], Y_LOAD_N[1], "B")
+W("KG", "Tragwand x=4745 (Obst|Keller2)", X_LOAD1[0], Y_KG_BAND, X_LOAD1[1], HOUSE_D, "B")
+W("KG", "Tragwand x=8245 (Diele Ost)",    X_LOAD2[0], 0, X_LOAD2[1], HOUSE_D, "B")
+W("KG", "Tragwand y=4860 (Süd)",  0, Y_LOAD_S[0], X_LOAD2[1], Y_LOAD_S[1], "B")
+W("KG", "Tragwand y=7365 (Nord)", 0, Y_LOAD_N[0], X_LOAD2[1], Y_LOAD_N[1], "B")
+# KG-Ostspalte: eigenes Raster, kein Gegenstück im EG (trägt nur die Decke)
+W("KG", "Schlafzimmer Nord 240", X_LOAD2[1], 4125, HOUSE_W - T_OUT, 4365, "B")
+W("KG", "Bad/Flur Nord 240",     X_LOAD2[1], 7000, HOUSE_W - T_OUT, 7240, "B")
+# nichttragend: gemessener Abstand zur tragenden Nachbarwand beibehalten
+W("KG", "Essküche|Wohnzimmer 115", T_OUT + 2385, T_OUT, T_OUT + 2385 + T_PART, Y_LOAD_S[0], "C")
+W("KG", "Keller1|Obst 115",        T_OUT + 3260, Y_LOAD_N[1], T_OUT + 3260 + T_PART, HOUSE_D - T_OUT, "C")
+W("KG", "Obst Süd 115",            T_OUT + 3260 + T_PART, Y_KG_BAND, X_LOAD1[0], Y_KG_BAND + T_PART, "C")
+W("KG", "Keller2 Süd 115",         X_LOAD1[1], Y_KG_BAND, X_LOAD2[0], Y_KG_BAND + T_PART, "C")
+W("KG", "Öllager|Heizung 115",     X_LOAD2[1], Y_KG_BAND, HOUSE_W - T_OUT, Y_KG_BAND + T_PART, "C")
+W("KG", "Flur|Bad 115",            X_LOAD2[1] + 1635, 4365, X_LOAD2[1] + 1635 + T_PART, 7000, "C")
 
 # -------- OG (Blatt 4) – Leichtwände 120 ----------------------------------------
-# Räume reichen bis zu den Außenwänden; im Plan sind Wände unter der Dachschräge gestrichelt (unter Schnittebene).
-# Ketten: oben 365|4630|120|1010|120|2755|120|3755|365 (Nordreihe) ; unten 365|4630|120|4260|120|3380|365 (Südreihe)
+# Unverändert gegenüber v0.23 bis auf die Außenmaße: die Innenwände stehen noch auf dem
+# Rohbauraster 1967 und sind noch nicht aufgemessen. Räume reichen bis zu den Außenwänden;
+# im Plan sind Wände unter der Dachschräge gestrichelt (unter Schnittebene).
 outer_walls("OG")
 XO1 = (4995, 5115)   # A  Westspalte | Mitte
 XO2 = (9375, 9495)   # A  Kind3 | HWR (Südreihe) – reicht bis Kamin y 7150
@@ -153,58 +187,65 @@ W("GAR", "Garage Ost",  GAR_X[1]-240, GAR_Y[0], GAR_X[1], GAR_Y[1])
 # (floor, wall_name, kind, a0, width, sill, height, tag)
 # a0 = Abstand entlang der Wand ab x0 (bei Ost-West-Wand) bzw. ab y0 (bei Nord-Süd-Wand)
 OPENINGS = []
+
+
 def O(floor, wall, kind, a0, width, sill, height, tag="C"):
     OPENINGS.append(dict(floor=floor, wall=wall, kind=kind, a0=a0, width=width,
                          sill=sill, height=height, tag=tag))
 
-# EG Süd (Kette: 365|1370|5510/1385|1370|365 ; Loggia 1625|1010/2135|1625)
-O("EG", "Außenwand Süd", "window", 1735, 5510, 700, 1385, "A")     # Wohnzimmer 5510×1385 (Brüstung C)
-O("EG", "Außenwand Süd", "loggia", 8980, 3895, 0, 2610, "A")       # Loggia offen zw. Pfeiler 8615–8980 und Eckpfeiler 12875
-# EG Nord (Kette: 1300|2510/1260|…|3260/2135|4865)
-O("EG", "Außenwand Nord", "window", 1665, 2510, 900, 1260, "A")    # Schlafzimmer 2510×1260 (Brüstung C)
-O("EG", "Außenwand Nord", "window", 5115, 3260, 0, 2135, "A")    # Diele: Glaselement 3260×2135 (Gartentür + Seitenteile)
-# EG West
-O("EG", "Außenwand West", "window", 1900, 1700, 900, 1260, "C")    # Wohnzimmer (HK) – Lage/Breite aus Bild
-O("EG", "Außenwand West", "door",   5700, 1000, 0, 635, "A")        # Haustür oberer Teil (Sturz bei +0.635)
-O("KG", "Außenwand West", "door",   5700, 1000, 1375, 1235, "A")     # Haustür (OK Podest -1.375, Höhe 2010) – Lage y im Podest (B)
-# EG Ost
-O("EG", "Außenwand Ost", "loggia",  365, 2250, 0, 2610, "A")       # Loggia Ostseite offen (Brüstung separat)
-O("EG", "Außenwand Ost", "window", 6920-1260, 1260, 900, 1260, "B")   # Essküche: Fenster 1260 direkt südl. der Speisewand (rosa-Lücke)
-O("EG", "Außenwand Ost", "window", 8820+115, 1260, 900, 1260, "B")    # Bad: 115 | Fenster 1260 | 1260 (rosa-Lücke y≈9000–10400)
-# EG innen (Türen)
-O("EG", "Tragwand y=4875 (Süd)", "door", 5115+685, 1885, 0, 2010, "A")  # Wohnzimmer|Diele Doppeltür 685|1885|690
-O("EG", "Tragwand x=8375 (Diele Ost)", "door", 5115+125, 885, 0, 2010, "A")   # Diele|Essküche y 5240–6125 (rosa-Lücke 5200–6100)
-O("EG", "Tragwand x=4875 (Diele West)", "door", 7375-1125-1010-4875, 1010, 0, 2010, "A")  # Treppenhaus|Diele y 5240–6250 (1125|1010 ab Nord, Thomas)
-O("EG", "Tragwand x=8375 (Diele Ost)", "loggia", 9200, 1400, 0, 2135, "B")   # Diele→Flur: offener Durchgang 1400 (rosa-Lücke 9200–10600, "Flur wie Diele")
-O("EG", "Tragwand x=4875 (Diele West)", "door", HOUSE_D-T_OUT-885-4875, 885, 0, 2010, "B")  # Diele|Schlafzimmer, an der Nordwand (rosa-Lücke 11275–11455)
-O("EG", "Essküche|Speise 115", "door", 10865 - X_LOAD2[1], 760, 0, 2010, "B")  # Speisetür direkt an der WC-Wand (rosa-Lücke 10815–11615, Türschwung)
-O("EG", "Speise|Bad 115", "door", 8930+315-X_LOAD2[1], 760, 0, 2010, "A")    # Flur|WC: 315|760|560 ab Gard-Wand (rosa-Lücke 9415–10015)
-O("EG", "Tragwand x=8375 (Diele Ost)", "loggia", 7035, 1670, 0, 2610, "A")   # Garderobe offen zur Diele (Thomas)
-O("EG", "Flur|Bad 115", "door", 880, 760, 0, 2010, "B")                        # Flur|Bad y 9700–10460
-O("EG", "Loggia Ytong 115", "door", 1700, 1010, 0, 2135, "B")                    # Essküche|Loggia
-O("EG", "Tragwand x=8375 (Diele Ost)", "door", 540, 1010, 0, 2135, "B")    # Wohnzimmer|Loggia (rosa-Lücke y 400–1200; Kette 490|175|1010)
-# KG (Süd-Kette ab x=0: 1370|1375/1260|4135/1260|1370|365 ; 1125|2010/1260|1125 ; Nord: 2155|800/600|2890|800/600|6595)
-O("KG", "Außenwand Süd", "window", 1370, 1375, 900, 1260, "A")     # Essküche (Brüstung C)
-O("KG", "Außenwand Süd", "window", 2865, 4015, 900, 1260, "A")     # Wohnzimmer (Kette 4135 ab 2745, an Wand gekürzt)
-O("KG", "Außenwand Süd", "window", 9740, 2010, 900, 1260, "A")     # Schlafzimmer 1125|2010
-O("KG", "Außenwand Nord", "window", 2155, 800, 1800, 600, "A")     # Keller 1
-O("KG", "Außenwand Nord", "window", 5845, 800, 1800, 600, "A")     # Keller 2
+
+# -------- EG: Lage und Breite aus dem Aufmaß, Brüstungs-/Sturzhöhen noch offen (C)
+# Süd (Kette ab x=0: 40|96,5|551|137|26)
+O("EG", "Außenwand Süd", "window", 1365, 5510, 700, 1385, "A")     # Wohnzimmer 5510 breit
+# Nord (Kette: 40|93,5|251|90|27|323|…)
+O("EG", "Außenwand Nord", "window", 1335, 2510, 900, 1260, "A")    # Schlafzimmer 2510
+O("EG", "Außenwand Nord", "window", 5015, 3230, 0, 2135, "A")      # Diele: Glaselement 3230 (Aufbau/Teilung offen)
+# West (Kette: 40|122,5|213,5|110|27|49|126|48,5|27)
+O("EG", "Außenwand West", "window", 1625, 2135, 900, 1260, "A")    # Wohnzimmer 2135
+O("EG", "Außenwand West", "door",   5620, 1260, 0, 635, "A")       # Haustür, oberer Teil (Sturz +0.635; OK Podest -1.375)
+# Ost (a0 ab y = Y_VOR)
+O("EG", "Außenwand Ost", "window", 3115 - Y_VOR, 2510, 900, 1260, "A")   # Essküche 2510
+O("EG", "Außenwand Ost", "window", 9055 - Y_VOR, 1260, 900, 1260, "A")   # Bad 1260
+# Die Loggia ist nach Süden offen: dort steht schlicht keine Wand (die Südwand endet an
+# der Wandscheibe x=8245/8505, die Ostwand bildet die Ostseite). Keine Brüstung gezeichnet –
+# im Aufmaß steht nur "offen / Stufenkante".
+# EG innen
+O("EG", "Tragwand y=4860 (Süd)", "door", 5688, 1885, 0, 2010, "A")       # Wohnzimmer|Diele Doppeltür 1885
+O("EG", "Tragwand x=4745 (Diele West)", "door", 5255 - Y_LOAD_S[0], 1010, 0, 2010, "A")   # Treppenhaus|Diele y 5255–6265
+O("EG", "Tragwand x=4745 (Diele West)", "door", 10470 - Y_LOAD_S[0], 885, 0, 2010, "A")   # Diele|Schlafzimmer y 10470–11355
+O("EG", "Tragwand x=8245 (Diele Ost)", "door",   550 - Y_VOR, 1010, 0, 2135, "A")   # Wohnzimmer|Loggia y 550–1560
+O("EG", "Tragwand x=8245 (Diele Ost)", "door",  5915 - Y_VOR,  885, 0, 2010, "A")   # Diele|Essküche y 5915–6800
+O("EG", "Tragwand x=8245 (Diele Ost)", "loggia", 7055 - Y_VOR, 1640, 0, 2610, "A")  # Garderobe, offene Nische zur Diele
+O("EG", "Tragwand x=8245 (Diele Ost)", "door",  9575 - Y_VOR,  885, 0, 2010, "A")   # Diele|Flur y 9575–10460
+O("EG", "Essküche|Loggia 34", "door", 10108 - X_LOAD2[1], 885, 0, 2135, "A")   # Essküche|Loggia x 10108–10993
+O("EG", "Essküche|Speis 13", "door", 11320 - X_LOAD2[1], 760, 0, 2010, "A")    # Essküche|Speis x 11320–12080
+O("EG", "Nebenräume Nord 14,5", "door", 9185 - X_LOAD2[1], 760, 0, 2010, "A")  # Flur|WC x 9185–9945
+O("EG", "Flur|Bad 14,5", "door", 9855 - 8840, 760, 0, 2010, "A")               # Flur|Bad y 9855–10615
+
+# -------- KG (Rohbau 1967, auf das neue Raster geschoben)
+O("KG", "Außenwand Süd", "window", T_OUT + 1005, 1375, 900, 1260, "B")   # Essküche
+O("KG", "Außenwand Süd", "window", T_OUT + 2385 + T_PART, 4015, 900, 1260, "B")   # Wohnzimmer
+O("KG", "Außenwand Süd", "window", X_LOAD2[1] + 1125, 2010, 900, 1260, "B")       # Schlafzimmer 1125|2010
+O("KG", "Außenwand Nord", "window", T_OUT + 1790, 800, 1800, 600, "B")   # Keller 1
+O("KG", "Außenwand Nord", "window", X_LOAD1[1] + 730, 800, 1800, 600, "B")        # Keller 2
 O("KG", "Außenwand Ost", "window", 5300, 1260, 900, 1260, "B")     # Bad 1260×1260
 O("KG", "Außenwand Ost", "window", 7700, 800, 1800, 600, "B")      # Heizung 800×600
 O("KG", "Außenwand Ost", "window", 9100, 800, 1800, 600, "B")      # Öllager 800×600 (ZL)
-O("KG", "Tragwand y=4875 (Süd)", "door", 6200, 1010, 0, 2610, "B")   # Diele|Wohnzimmer raumhoch
-O("KG", "Schlafzimmer Nord 240", "door", 625, 885, 0, 2010, "A")    # Flur|Schlafzimmer (625|885)
-O("KG", "Essküche|Wohnzimmer 115", "door", 2615-T_OUT, 760, 0, 2010, "B")  # 1500|760|2250
-O("KG", "Flur|Bad 115", "door", 950, 760, 0, 2010, "B")             # Flur|Bad y 5315–6075 (Scan)
-O("KG", "Obst Süd 115", "door", 30, 760, 0, 2010, "A")                # 30|760|345
-O("KG", "Keller2 Süd 115", "door", 625, 885, 0, 2010, "A")      # 625|885 Kellerflur|Keller2
-O("KG", "Keller1|Obst 115", "door", 385, 885, 0, 2010, "B")            # Kellerflur|Keller1 y 8000–8885 (Scan)
-O("KG", "Öllager|Heizung 115", "door", 375, 885, 0, 2010, "A")  # 375|885
-O("KG", "Tragwand y=7375 (Nord)", "door", X_LOAD1[0]-60-1010, 1010, 0, 2010, "A")  # Treppenhaus|Kellerflur (1010|60), keine Tür Diele|Kellerflur (Thomas)
-O("KG", "Tragwand x=4875 (Diele West)", "door", 5275-4875, 1010, 0, 2010, "B")   # Treppenhaus|Diele y 5275–6285 am Südlauf (Scan)
-O("KG", "Tragwand x=8375 (Diele Ost)", "door", 5400, 885, 0, 2010, "B")     # Diele|Flur y 5400–6285 (Scan)
-O("KG", "Tragwand x=8375 (Diele Ost)", "door", 7900, 700, 0, 2010, "C")     # Kellerflur|Heizung (700)
-# OG Türen (a0 relativ zum Wandanfang)
+O("KG", "Außenwand West", "door", 5620, 1260, 1375, 1235, "B")     # Haustür, unterer Teil (OK Podest -1.375)
+O("KG", "Tragwand y=4860 (Süd)", "door", X_LOAD1[1] + 1085, 1010, 0, 2610, "C")   # Diele|Wohnzimmer raumhoch
+O("KG", "Schlafzimmer Nord 240", "door", 625, 885, 0, 2010, "B")    # Flur|Schlafzimmer (625|885)
+O("KG", "Essküche|Wohnzimmer 115", "door", 2250, 760, 0, 2010, "C")
+O("KG", "Flur|Bad 115", "door", 950, 760, 0, 2010, "C")             # Flur|Bad y 5315–6075
+O("KG", "Obst Süd 115", "door", 30, 760, 0, 2010, "B")              # 30|760
+O("KG", "Keller2 Süd 115", "door", 625, 885, 0, 2010, "B")          # 625|885 Kellerflur|Keller2
+O("KG", "Keller1|Obst 115", "door", 385, 885, 0, 2010, "C")         # Kellerflur|Keller1
+O("KG", "Öllager|Heizung 115", "door", 375, 885, 0, 2010, "B")      # 375|885
+O("KG", "Tragwand y=7365 (Nord)", "door", X_LOAD1[0] - 60 - 1010, 1010, 0, 2010, "B")  # Treppenhaus|Kellerflur (1010|60)
+O("KG", "Tragwand x=4745 (Diele West)", "door", 5275 - Y_LOAD_S[0], 1010, 0, 2010, "C")  # Treppenhaus|Diele am Südlauf
+O("KG", "Tragwand x=8245 (Diele Ost)", "door", 5400, 885, 0, 2010, "C")     # Diele|Flur y 5400–6285
+O("KG", "Tragwand x=8245 (Diele Ost)", "door", 7900, 700, 0, 2010, "C")     # Kellerflur|Heizung (700)
+
+# -------- OG Türen (a0 relativ zum Wandanfang)
 O("OG", "Westspalte | Mitte 120", "door", 4560-T_OUT, 885, 0, 2010, "A")   # Diele|Kind2  y 4560–5445
 O("OG", "Westspalte | Mitte 120", "door", 5685-T_OUT, 885, 0, 2010, "A")   # Diele|Kind1  y 5685–6570
 O("OG", "Kind3 | HWR 120",        "door", 4560-T_OUT, 885, 0, 2010, "A")   # Diele|HWR
@@ -224,27 +265,43 @@ O("GAR", "Garage Süd", "door", 240+365+2300+365, 2300, 0, 2100, "A")  # Tor 2
 
 # ---------------------------------------------------------------- Gaube (Blatt 4/5)
 GAUBE = dict(x0=4995, x1=9495, depth=2250, wall_h=2200, windows=[(1020,60)]*4, tag="B")
-# Balkon West (OG), Loggia-Brüstung (EG)
+# Balkon West (OG)
 BALKON = dict(x0=-1300, x1=0, y0=3035, y1=8095, tag="A")   # 400|2010|240|2010|400 = 5060 lang, 1300 tief
-LOGGIA_PARAPETS = [dict(x0=8980, x1=10605, y0=0, y1=240, h=1010, tag="A"), dict(x0=11615, x1=12875, y0=0, y1=240, h=1010, tag="A"),
-                   dict(x0=13000, x1=13240, y0=365, y1=2615, h=1010, tag="B")]   # Süd 1625|1010 Durchgang|1625, Ost
+# Loggia: im Aufmaß 09/2026 ist keine Brüstung gezeichnet, nur "offen / Stufenkante".
+# Falls doch eine Brüstung steht, hier wieder eintragen (x0, x1, y0, y1, h, tag).
+LOGGIA_PARAPETS = []
 
-# ---------------------------------------------------------------- Treppen (vereinfacht)
-# Bürkle-Fertigteiltreppe im Treppenhaus West (KG→EG, EG→OG-Bereich): 2×8 Stg 172/270, Podest
+# Zusätzliche Bodenplatten außerhalb des Rechtecks 0..HOUSE_W / 0..HOUSE_D
+SLAB_EXTRAS = [
+    dict(floor="EG", name="Loggia Boden (Vorsprung)", tag="A",
+         x0=X_LOAD2[0], y0=Y_VOR, x1=HOUSE_W, y1=0, z0=-SLAB),
+]
+
+# ---------------------------------------------------------------- Treppen
+# Beide Treppen aus dem Aufmaß 09/2026 (Lage A, Steigungen aus Plan 1967).
+# Treppenhaus West: Podest im Westen auf -1.375, von dort 8 Stg nach Osten hinauf in die
+# Diele (Nordlauf) und 8 Stg nach Osten hinab ins KG (Südlauf).
 STAIRS = [
-    # Bürkle-Fertigteiltreppe KG→EG, Treppenhaus West: 2×8 Stg 172/270, Podest West bei -1375 (A)
-    dict(name="Treppe KG→EG Lauf 1", x0=3360, y0=6275, width=1000, steps=8, rise=171.875, run=270, z0=Z_KG, direction="-x", tag="A"),
-    dict(name="Treppe KG→EG Lauf 2", x0=1200, y0=5215, width=1000, steps=8, rise=171.875, run=270, z0=Z_KG+1375, direction="+x", tag="A"),
-    # Holztreppe EG→OG in der Diele, gerader Lauf nach Norden, 16 Stg 172/270 (B)
-    dict(name="Holztreppe EG→OG", x0=5115, y0=10620, width=1010, steps=16, rise=171.875, run=270, z0=Z_EG, direction="-y", tag="A"),  # 900 nach Norden (Thomas): Antritt Nord y=10620, Austritt Süd y=6300  # Antritt Nord, Austritt Süd (Thomas)
+    dict(name="Treppe KG→EG Lauf 1", x0=3615, y0=5130, width=1117.5, steps=8,
+         rise=171.875, run=270, z0=Z_KG, direction="-x", tag="A"),
+    dict(name="Treppe KG→EG Lauf 2", x0=1455, y0=6247.5, width=1117.5, steps=8,
+         rise=171.875, run=270, z0=Z_KG+1375, direction="+x", tag="A"),
+    # Holztreppe EG→OG in der Diele, gerader Lauf nach Süden, 16 Stg 172/270
+    # (Antritt Nord y=10470, Austritt Süd y=6150; Breite 1000 an der Tragwand)
+    dict(name="Holztreppe EG→OG", x0=X_LOAD1[1], y0=10470, width=1000, steps=16,
+         rise=171.875, run=270, z0=Z_EG, direction="-y", tag="A"),
 ]
 LANDINGS = [
-    dict(name="Podest Treppe KG→EG (OK -1375)", x0=T_OUT, y0=5215, x1=1200, y1=7275, z=Z_KG+1375, tag="A"),
+    dict(name="Podest Treppe KG→EG (OK -1375)", x0=T_OUT, y0=Y_LOAD_S[1], x1=1455,
+         y1=Y_LOAD_N[0], z=Z_KG+1375, tag="A"),
 ]
 # Deckenöffnungen (Treppenaugen): (Geschoss der Decke, x0,y0,x1,y1)
 SLAB_OPENINGS = {
-    "EG": (0, Y_LOAD_S[1], 3360, Y_LOAD_N[0]),         # Decke über KG: Treppenhaus (bis Außenkante, Haustür)
-    "OG": (5115, 6300, 6125, 9660),                    # Decke über EG: Treppenauge 1010 breit
+    "EG": (0, Y_LOAD_S[1], 3615, Y_LOAD_N[0]),         # Decke über KG: Treppenhaus (bis Außenkante, Haustür)
+    # Decke über EG: Treppenauge über der Holztreppe. Breite als Vereinigung von Treppe
+    # (x 5015–6015, Aufmaß EG) und OG-Schacht (x 5115–6125, Rohbauraster) – die beiden
+    # liegen 100 auseinander, bis das OG aufgemessen ist.
+    "OG": (X_LOAD1[1], 6150, X_ST[0], 9510),
 }
 
 FLOORS = {
@@ -253,6 +310,7 @@ FLOORS = {
     "OG": dict(z0=Z_OG, h=KNIESTOCK),        # Außenwände OG; Innen-/Giebelwände werden ans Dach geschnitten
     "GAR": dict(z0=GAR_Z0, h=GAR_H_BACK),
 }
+
 
 def wall_height(w):
     """Höhe einer Wand; OG-Innen- und Giebelwände bis Dachunterkante (Profil), sonst Geschoss."""
@@ -264,6 +322,7 @@ def wall_height(w):
     if w["floor"] == "GAR":
         return None
     return f["h"]
+
 
 def og_wall_profile(w, step=200):
     """Für OG-Wände: Polygon (u,z) entlang der Wand-Längsrichtung, oben durch Dachunterkante begrenzt.
@@ -281,10 +340,12 @@ def og_wall_profile(w, step=200):
         zt = min(roof_z_under(ymid), ztop)
         return "x", [(w["x0"], z0), (w["x1"], z0), (w["x1"], zt), (w["x0"], zt)]
 
+
 def garage_roof_z(y):
     # 4 % Gefälle, vorne (Süd, Tore) 2600 hoch, hinten 2300
     t = (y - GAR_Y[0]) / (GAR_Y[1] - GAR_Y[0])
     return GAR_Z0 + GAR_H_FRONT + (GAR_H_BACK - GAR_H_FRONT) * t
+
 
 if __name__ == "__main__":
     for w in WALLS: print(w)
