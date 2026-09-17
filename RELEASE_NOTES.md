@@ -8,6 +8,14 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.28.3 – Neue Übersicht: alle Belege an einem Ort
+
+Unter „Mehr“ gibt es jetzt „Belege“: eine Liste aller eingescannten Rechnungen und Quittungen,
+neueste zuerst, mit Vorschaubild, Händler, Datum und Betrag. Ein Tipp öffnet den Beleg in
+groß – Foto oder PDF – und von dort geht es direkt zum passenden Kosten-Eintrag. Über dem
+Suchfeld steht die Summe der gerade sichtbaren Belege, gefiltert werden kann nach Händler,
+Kategorie oder Rechnungsnummer.
+
 ## 0.28.2 – Erinnerung repariert, und Belege kann jetzt auch Gemini lesen
 
 Die Diagnose aus der vorigen Fassung hat den wahren Grund gezeigt: Die App hat den

@@ -29,6 +29,7 @@ const ICONS = {
   task: 'M5 12l4 4 10-10M4 20h16',
   contact: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6',
   photo: 'M3 7h4l1.5-2h7L17 7h4v13H3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  receipt: 'M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5zM8.5 8h7M8.5 12h7M8.5 16h4',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21',
   settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM4.5 12a7.5 7.5 0 0 1 .2-1.6l-2-1.5 2-3.4 2.3 1a7.6 7.6 0 0 1 2.8-1.6L10.2 2h3.6l.4 2.9c1 .3 2 .9 2.8 1.6l2.3-1 2 3.4-2 1.5a7.6 7.6 0 0 1 0 3.2l2 1.5-2 3.4-2.3-1a7.6 7.6 0 0 1-2.8 1.6l-.4 2.9h-3.6l-.4-2.9a7.6 7.6 0 0 1-2.8-1.6l-2.3 1-2-3.4 2-1.5A7.5 7.5 0 0 1 4.5 12z',
 };
@@ -43,6 +44,7 @@ const MAIN_NAV: NavItem[] = [
 const MORE_NAV: NavItem[] = [
   { to: '/suche', label: 'Suche', icon: <Icon path={ICONS.search} /> },
   { to: '/fotos', label: 'Fotos', icon: <Icon path={ICONS.photo} /> },
+  { to: '/belege', label: 'Belege', icon: <Icon path={ICONS.receipt} /> },
   { to: '/plaene', label: 'Pläne', icon: <Icon path={ICONS.plan} /> },
   { to: '/aufgaben', label: 'Aufgaben', icon: <Icon path={ICONS.task} /> },
   { to: '/kontakte', label: 'Kontakte', icon: <Icon path={ICONS.contact} /> },
