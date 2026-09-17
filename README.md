@@ -29,8 +29,9 @@ npm run dev:emu       # Terminal 2
    liegen auf Cloudflare R2 (siehe `worker/README.md`).
 2. **Authentication**: E-Mail/Passwort aktivieren, die zwei Konten anlegen.
 3. **Firestore** in `europe-west3` anlegen.
-4. **Cloud Messaging**: Web-Push-Zertifikat erzeugen, den öffentlichen Schlüssel als
-   `VITE_VAPID_KEY` eintragen.
+4. **Cloud Messaging** (optional): Web-Push-Zertifikat erzeugen, den öffentlichen
+   Schlüssel als `VITE_VAPID_KEY` eintragen. Die Abend-Erinnerung braucht das nicht –
+   die stellt das Gerät selbst.
 5. Die beiden E-Mail-Adressen in `firestore.rules` eintragen,
    Projekt-ID in `.firebaserc`, dann:
 
@@ -59,7 +60,7 @@ Am Handy: Seite in Chrome öffnen → Menü → „Zum Startbildschirm hinzufüg
 | `public/models/` | erzeugtes 3D-Modell (Bestand und Zielzustand) samt Räumen |
 | `public/plans/` | erzeugte 2D-Grundrisse als SVG |
 | `tools/model/` | die Modell-Toolchain, siehe [README-MODELL.md](tools/model/README-MODELL.md) |
-| `functions/` | Cloud Function für die Abend-Erinnerung |
+| `functions/` | optionale Cloud Function: Erinnerung auch bei geschlossener App |
 
 Die vollständige Spezifikation liegt in [PLAN.md](PLAN.md).
 
@@ -85,8 +86,8 @@ Alles, was für den Betrieb nötig ist, geht über den Browser. Gebaut und verö
 wird von GitHub Actions, die Firebase-Einrichtung passiert in der Firebase-Konsole.
 
 1. **Firebase-Projekt** anlegen. Der Tarif **Blaze** wird nur für die Cloud Functions
-   gebraucht (Abend-Erinnerung); Fotos und Belege liegen auf Cloudflare R2, dafür genügt
-   der Gratis-Tarif. Wer Blaze aktiviert, setzt unter *Abrechnung* einen Budgetalarm auf 1 €.
+   gebraucht, und die sind seit der Erinnerung vom Gerät optional; Fotos und Belege liegen
+   auf Cloudflare R2, dafür genügt der Gratis-Tarif. Wer Blaze aktiviert, setzt unter *Abrechnung* einen Budgetalarm auf 1 €.
 2. **Authentication** → *Sign-in method* → **E-Mail/Passwort** aktivieren. Unter *Users*
    die zwei Konten anlegen. Unter *Settings* → *User actions* die Selbstregistrierung
    abschalten, sonst könnte sich jeder mit dem öffentlichen API-Key ein Konto anlegen.
@@ -95,7 +96,8 @@ wird von GitHub Actions, die Firebase-Einrichtung passiert in der Firebase-Konso
 4. **Dateispeicher**: nicht bei Firebase, sondern bei Cloudflare – die Einrichtung steht
    in `worker/README.md`.
 5. **Cloud Messaging** → *Web Push certificates* → Schlüsselpaar erzeugen, den
-   öffentlichen Schlüssel notieren (wird erst für die Abend-Erinnerung gebraucht).
+   öffentlichen Schlüssel notieren. Nur nötig, wenn die Erinnerung auch bei geschlossenem
+   Browser ankommen soll – am Telefon erinnert die App ohnehin von sich aus.
 6. **Projekteinstellungen** → *Meine Apps* → **Web-App registrieren**. Die sechs Werte aus
    dem Config-Objekt notieren.
 7. **Sicherheitsregeln** aus `firestore.rules` in den
@@ -114,7 +116,9 @@ in der Browser-Konsole einen Link „Create index“. Einmal anklicken genügt, 
 Indizes stehen zusätzlich in `firestore.indexes.json`.
 
 **Was ohne CLI nicht geht:** Cloud Functions lassen sich nur mit der Firebase-CLI
-veröffentlichen. Bis dahin gibt es keine Abend-Erinnerung; alles andere funktioniert.
+veröffentlichen. Die Abend-Erinnerung hängt nicht daran – sie wird auf dem Gerät geplant
+und kommt ohne Netz und ohne Server. Die Function schickt sie zusätzlich an einen
+geschlossenen Browser; bis sie veröffentlicht ist, fehlt genau das.
 
 ## Dateispeicher: Cloudflare R2
 
@@ -207,7 +211,9 @@ der laufende.
 
 - **Im Browser** genügt „Neu laden“, der Service Worker tauscht die Dateien aus.
 Das Banner nennt die verfügbare Version und die laufende; ein Tipp darauf klappt die
-Änderungen aus — und zwar **alle seit der installierten Fassung**. Wer von 0.9.36 auf
+Änderungen aus — und zwar **alle seit der installierten Fassung**. Der Text dafür steht in
+[RELEASE_NOTES.md](RELEASE_NOTES.md) und wird für den geschrieben, der die App benutzt;
+nur wo eine Version dort fehlt, springt die Commit-Nachricht ein. Wer von 0.9.36 auf
 0.17.1 springt, liest auch, was 0.17.0 gebracht hat; drin ist es ja. Die Liste steht als
 `versions.json` neben der `version.json` und wird beim Deploy aus den Tags erzeugt
 (`tools/release-notes.mjs`), damit sie auch dann noch funktioniert, wenn das Repo einmal

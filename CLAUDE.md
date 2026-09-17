@@ -50,7 +50,9 @@ zusätzlich Bilder, braucht dafür aber `three.min.js` unter `tools/model/vendor
 ## Architektur in drei Sätzen
 
 Firestore mit persistentem lokalem Cache ist die Datenbasis; Lesen läuft immer über
-`onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Dateien (Fotos,
+`onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Die modulübergreifende
+Suche (`src/search`, Bildschirm `/suche`) baut aus denselben Abfragen einen eigenen Index -
+gefaltet wird beim Aufbau, nicht beim Tippen; Details in `PLAN.md`, Abschnitt 8.9. Dateien (Fotos,
 Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files.js` und
 gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
@@ -75,7 +77,7 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, 308 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 248 Unit-Tests (Zahl aus dem vitest-Lauf in der CI, nicht geschätzt).
 - **Das EG ist aufgemessen** (Thomas, 09/2026, DXF „Grundriss_EG_Bestand_Fertigmasse“):
   Ist-Modell v0.24 trägt im EG **Fertigmaße inkl. Putz**, Haus 12.995 × 11.815 statt
   13.240 × 11.820. Das KG ist darauf gesetzt (tragende Wände stehen übereinander),
@@ -84,15 +86,33 @@ Steht:
   die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
   Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
   nötig. Einrichtung und Aufbau stehen in `worker/README.md`.
+- **Beleg-Auslesen mit drei Engines**: ML Kit auf dem Gerät, Gemini und Claude, hinter
+  einem Interface in `src/platform/ocr`. Beide Online-Engines fragen mit demselben Text
+  (`ocr/request.ts`) und laufen durch dieselbe Prüfung (`ocr/receiptFields.ts`) – sonst
+  hinge der gebuchte Betrag an einer Einstellung. Beide Schlüssel liegen nur im
+  localStorage des Geräts.
+- **Die Abend-Erinnerung läuft ohne Server**: das Gerät entscheidet selbst, ob heute noch
+  ein Eintrag fehlt, und stellt die Benachrichtigung als Wecker
+  (`src/platform/reminderPlan.ts` rechnet, `src/platform/reminder.ts` stellt,
+  `src/data/useReminder.ts` hält sie an der Tagebuch-Abfrage). Kein Blaze, kein Token,
+  kein Netz. **Native Plugins immer über `Capacitor.Plugins` ansprechen, nie über
+  `await import('@capacitor/…')`** – der Nachlade-Baustein kommt im WebView nie an, der
+  Aufruf hängt einfach. **Android braucht außerdem zwingend `smallIcon`** – ohne gültiges Symbol
+  verwirft es jede Benachrichtigung wortlos; die Datei liegt in
+  `tools/icon/android/ic_stat_reno.xml`, der APK-Workflow prüft sie. Einstellungen →
+  Abend-Erinnerung → „Diagnose“ fragt das Gerät, was es wirklich tut. Details in
+  `PLAN.md`, Abschnitt 11.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
 
 Offen:
 
-1. **Abend-Erinnerung.** Die Cloud Function (`functions/`) liegt bereit, braucht aber
-   Blaze und eine Kommandozeile mit Firebase-CLI. Am Telefon geht es auch ohne, über
-   eine lokale Benachrichtigung – noch nicht gebaut.
+1. **Push, wenn die App zu ist.** Die Abend-Erinnerung steht: sie wird auf dem Gerät
+   geplant und kommt ohne Netz (`src/platform/reminderPlan.ts` entscheidet,
+   `src/platform/reminder.ts` stellt den Wecker, `src/data/useReminder.ts` hält beides an
+   der Tagebuch-Abfrage). Die Cloud Function in `functions/` deckt nur noch den Rest ab –
+   den zugeklappten Browser am Laptop – und braucht dafür Blaze und die Firebase-CLI.
 2. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
 3. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
@@ -101,9 +121,10 @@ Offen:
    Debug-Schlüssel, und Android verweigert das Update über die alte Fassung.
 4. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
    Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
-   Tages). Offen sind ML Kit für das Beleg-Auslesen auf dem Gerät, die lokale
-   Abend-Erinnerung und Push. Push braucht zusätzlich `google-services.json` und den
-   google-services-Eintrag in Gradle.
+   Tages, Abend-Erinnerung über `@capacitor/local-notifications`). Offen sind ML Kit für
+   das Beleg-Auslesen auf dem Gerät und Push. Push braucht zusätzlich
+   `google-services.json` und den google-services-Eintrag in Gradle – die Erinnerung
+   braucht beides nicht.
 
 **Achtung bei den Regeln:** `firestore.rules` im Repo trägt
 Platzhalter statt der echten Adressen. Die gültige Fassung steht in der Firebase-Konsole.
@@ -116,11 +137,22 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
+- **Zu jedem Release ein Absatz in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`). Das ist
+  der Text, den das Update-Banner in der App zeigt, und er ist für Thomas geschrieben, nicht für
+  den nächsten Agenten: ganze Sätze, was sich an der Bedienung ändert. Keine Dateinamen, keine
+  Testzahlen, keine Commit-Prosa – die steht im Commit. Ohne Eintrag nimmt der Build die
+  Commit-Nachricht, und die liest sich im Banner auch so.
 - **Jeder Entwicklungsschritt ist ein Release**, auch aus einem Sitzungsbranch: das
   Telefon aktualisiert sich über `releases/latest` selbst, ein Umweg über Artefakte im
   Browser ist nicht gewollt. Also bei jedem Push die Version in `package.json` anheben –
   genau daran erinnert die Wächter-Prüfung im APK-Workflow, wenn sie scheitert. Mehrere
   Commits mit derselben Nummer gehen nicht; wer das umgeht, nimmt dem Telefon das Update.
+- **In `version.json` nie `releases/latest/download/…` ankündigen**, sondern die Adresse
+  genau der angekündigten Fassung (`releases/download/v<version>/reno-master.apk`). Seite
+  und APK bauen zwei Workflows: die Seite steht nach ~90 s, das APK-Release nach ~3 min.
+  In dieser Lücke ist „latest“ noch die vorige Fassung – das Telefon lädt, installiert und
+  startet die Fassung, die es schon hat, und es sieht aus, als hätte das Update geklappt.
+  Der Deploy wartet deshalb zusätzlich auf das Release, bevor er die Seite veröffentlicht.
 - Der Tag eines Release hängt am gebauten Commit (`--target "$GITHUB_SHA"`). Ohne das
   setzt `gh release create` ihn auf den Default-Branch, und aus einem Sitzungsbranch
   heraus zeigt er dann auf Code, der die veröffentlichte APK nicht enthält.

@@ -9,7 +9,10 @@
  */
 import { openDB, type IDBPDatabase } from 'idb';
 import { patchDoc } from '@/firebase/db';
-import { putFile } from '@/platform/fileStore';
+import { putFile, deleteFile } from '@/platform/fileStore';
+import { backoffFor, documentGone, dueJobs, MAX_ATTEMPTS, queueState } from './outboxRules';
+
+export { isFailed, MAX_ATTEMPTS } from './outboxRules';
 
 export interface OutboxJob {
   id: string;
@@ -30,7 +33,18 @@ const DB_NAME = 'reno-offline';
 const DB_VERSION = 1;
 const STORE = 'outbox';
 const BLOBS = 'blobs';
-const MAX_ATTEMPTS = 10;
+
+/**
+ * Nothing in here may wait forever. A mobile connection can leave a request hanging
+ * without ever failing, and a single hanging request used to freeze the whole queue:
+ * the badge kept saying "1 wird geladen" although the file had long since arrived, and
+ * even the manual retry did nothing because the run that was stuck never ended.
+ */
+const UPLOAD_TIMEOUT_MS = 90_000;
+/** how long a Firestore write gets to report a problem before we move on, see below */
+const ACK_TIMEOUT_MS = 10_000;
+/** a run that has not finished by then is considered lost, and the next tick may start */
+const RUN_STUCK_MS = 5 * 60_000;
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
 
@@ -67,11 +81,7 @@ export function subscribeOutbox(listener: Listener): () => void {
 
 async function publish(): Promise<void> {
   const jobs = await listJobs();
-  state = {
-    pending: jobs.length,
-    failed: jobs.filter((job) => job.attempts >= MAX_ATTEMPTS).length,
-    uploading: state.uploading,
-  };
+  state = { ...queueState(jobs), uploading: state.uploading };
   for (const listener of listeners) listener(state);
 }
 
@@ -110,35 +120,70 @@ export async function dropLocalBlob(storagePath: string): Promise<void> {
   await database_.delete(BLOBS, storagePath);
 }
 
+/**
+ * Flags the document as uploaded and reports a problem, but never waits for the server.
+ *
+ * Firestore keeps its own durable queue: the promise of a write resolves when the server
+ * has acknowledged it, and with no reception that is simply never. Waiting for it inside
+ * the upload loop was what left a file uploaded, its job undeleted and the queue frozen.
+ * So the write gets a moment to say that it *cannot* work - a deleted document, a rule
+ * that says no - and otherwise we carry on and leave it to Firestore.
+ */
+async function flagDocument(job: OutboxJob): Promise<unknown> {
+  if (!job.docCollection || !job.docId) return undefined;
+  const write = patchDoc(job.docCollection, job.docId, {
+    [job.docField ?? 'uploadState']: 'uploaded',
+  }).then(
+    () => undefined,
+    (error: unknown) => error,
+  );
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const moveOn = new Promise<undefined>((resolve) => {
+    timer = setTimeout(() => resolve(undefined), ACK_TIMEOUT_MS);
+  });
+  try {
+    return await Promise.race([write, moveOn]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 let running = false;
+let runningSince = 0;
 
 /** uploads everything that is due; safe to call as often as you like */
 export async function processOutbox(force = false): Promise<void> {
-  if (running || !navigator.onLine) return;
+  if (running && Date.now() - runningSince < RUN_STUCK_MS) return;
+  if (!navigator.onLine) return;
   running = true;
+  runningSince = Date.now();
   state = { ...state, uploading: true };
   for (const listener of listeners) listener(state);
 
   try {
     const database_ = await database();
-    const jobs = ((await database_.getAll(STORE)) as OutboxJob[]).sort((a, b) => a.createdAt - b.createdAt);
+    const jobs = dueJobs((await database_.getAll(STORE)) as OutboxJob[], Date.now(), force);
     for (const job of jobs) {
-      if (!force && job.nextAttemptAt > Date.now()) continue;
-      if (!force && job.attempts >= MAX_ATTEMPTS) continue;
       try {
-        await putFile(job.storagePath, job.blob, job.contentType);
-        if (job.docCollection && job.docId) {
-          await patchDoc(job.docCollection, job.docId, { [job.docField ?? 'uploadState']: 'uploaded' });
+        await putFile(job.storagePath, job.blob, job.contentType, UPLOAD_TIMEOUT_MS);
+        const problem = await flagDocument(job);
+        if (problem && documentGone(problem)) {
+          // the photo was deleted while its file was still in the queue: the upload we
+          // just did resurrected an orphan, so it goes again and the job with it
+          await deleteFile(job.storagePath).catch(() => undefined);
+          await database_.delete(STORE, job.id);
+          await dropLocalBlob(job.storagePath);
+          continue;
         }
+        if (problem) throw problem;
         await database_.delete(STORE, job.id);
       } catch (error) {
         const attempts = job.attempts + 1;
-        const backoff = Math.min(2 ** attempts * 1000, 10 * 60 * 1000);
         await database_.put(STORE, {
           ...job,
           attempts,
           lastError: error instanceof Error ? error.message : String(error),
-          nextAttemptAt: Date.now() + backoff,
+          nextAttemptAt: Date.now() + backoffFor(attempts),
         } satisfies OutboxJob);
         if (attempts >= MAX_ATTEMPTS && job.docCollection && job.docId) {
           await patchDoc(job.docCollection, job.docId, { uploadState: 'failed' }).catch(() => undefined);
@@ -158,6 +203,17 @@ export async function retryAll(): Promise<void> {
     await database_.put(STORE, { ...job, attempts: 0, nextAttemptAt: 0 } satisfies OutboxJob);
   }
   await processOutbox(true);
+}
+
+/** drops everything queued for these files, e.g. because the photo was deleted */
+export async function removeJobsForPaths(paths: (string | undefined)[]): Promise<void> {
+  const wanted = new Set(paths.filter((path): path is string => Boolean(path)));
+  if (!wanted.size) return;
+  const database_ = await database();
+  for (const job of (await database_.getAll(STORE)) as OutboxJob[]) {
+    if (wanted.has(job.storagePath)) await database_.delete(STORE, job.id);
+  }
+  await publish();
 }
 
 export async function removeJob(id: string): Promise<void> {

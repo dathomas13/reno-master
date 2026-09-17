@@ -1,9 +1,11 @@
 /**
- * Push for the evening reminder.
+ * The optional half of the reminder: a push token.
  *
- * The web build registers an FCM token; the Cloud Function decides at the configured
- * time whether a reminder is due. The native build additionally schedules a local
- * notification, which also fires with no network.
+ * The reminder itself no longer needs this. It is decided and scheduled on the device
+ * (`reminder.ts`), which is why it works with no network and no paid Firebase plan. What a
+ * token adds is the one case the device cannot cover on its own: a browser that is closed.
+ * So this is best effort throughout - every failure returns false, and the caller carries
+ * on with the local reminder.
  */
 import { getMessaging, getToken, isSupported } from 'firebase/messaging';
 import { arrayUnion } from 'firebase/firestore';
@@ -11,36 +13,31 @@ import { app, auth } from '@/firebase/app';
 import { patchDoc } from '@/firebase/db';
 import { COL } from '@/data/types';
 
-export interface PermissionResult {
-  ok: boolean;
-  message?: string;
-}
-
-export async function requestPushPermission(): Promise<PermissionResult> {
-  if (!('Notification' in window)) {
-    return { ok: false, message: 'Dieses Gerät unterstützt keine Benachrichtigungen.' };
-  }
-  const permission = await Notification.requestPermission();
-  if (permission !== 'granted') {
-    return { ok: false, message: 'Benachrichtigungen wurden abgelehnt.' };
-  }
-  if (!(await isSupported().catch(() => false))) {
-    return { ok: false, message: 'Push wird von diesem Browser nicht unterstützt.' };
-  }
-
-  const vapidKey = import.meta.env.VITE_VAPID_KEY;
-  if (!vapidKey) return { ok: false, message: 'Es fehlt der VAPID-Schlüssel in der Konfiguration.' };
-
+/**
+ * Registers this browser for web push, if the project has it configured.
+ *
+ * Expects the notification permission to be granted already - asking is the job of
+ * `enableReminders`, which needs an answer for the local reminder either way.
+ */
+export async function registerPushToken(): Promise<boolean> {
   try {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
+    if (!(await isSupported().catch(() => false))) return false;
+
+    const vapidKey = import.meta.env.VITE_VAPID_KEY;
+    if (!vapidKey) return false; // no push project behind it, which is the normal case
+
     const registration = await navigator.serviceWorker.ready;
-    const token = await getToken(getMessaging(app), { vapidKey, serviceWorkerRegistration: registration });
+    const token = await getToken(getMessaging(app), {
+      vapidKey,
+      serviceWorkerRegistration: registration,
+    });
     const uid = auth.currentUser?.uid;
-    if (token && uid) {
-      await patchDoc(COL.users, uid, { fcmTokens: arrayUnion(token), reminderEnabled: true });
-      return { ok: true };
-    }
-    return { ok: false, message: 'Kein Token erhalten.' };
-  } catch (error) {
-    return { ok: false, message: error instanceof Error ? error.message : 'Einrichtung fehlgeschlagen.' };
+    if (!token || !uid) return false;
+
+    await patchDoc(COL.users, uid, { fcmTokens: arrayUnion(token) });
+    return true;
+  } catch {
+    return false;
   }
 }

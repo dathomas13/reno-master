@@ -33,6 +33,14 @@ export default function HomePage() {
       <TopBar title="Reno Master" subtitle={formatDateWithWeekday(today())} />
 
       <div className="p-3 flex flex-col gap-3 max-w-3xl">
+        <Link to="/suche" className="field flex items-center gap-2 text-muted" aria-label="Suchen">
+          <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none" stroke="currentColor"
+               strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+            <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21" />
+          </svg>
+          <span>Alles durchsuchen…</span>
+        </Link>
+
         <div className="relative rounded-2xl overflow-hidden">
           <img
             src={`${import.meta.env.BASE_URL}img/nordansicht.jpg`}

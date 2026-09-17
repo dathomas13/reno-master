@@ -7,6 +7,7 @@ import { Spinner } from '@/components/Fields';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { startOutboxWorker } from '@/offline/outbox';
 import { startModelSync } from '@/data/modelSync';
+import { useDiaryReminder } from '@/data/useReminder';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import LoginPage from '@/modules/auth/LoginPage';
@@ -21,6 +22,8 @@ import CostsPage from '@/modules/costs/CostsPage';
 import CostEditorPage from '@/modules/costs/CostEditorPage';
 import TasksPage from '@/modules/tasks/TasksPage';
 import ContactsPage from '@/modules/contacts/ContactsPage';
+import SearchPage from '@/modules/search/SearchPage';
+import PhotosPage from '@/modules/photos/PhotosPage';
 import SettingsPage from '@/modules/settings/SettingsPage';
 
 function Protected() {
@@ -31,6 +34,8 @@ function Protected() {
   // should show the published model, not the one this build happens to carry. Only the
   // listener for a released model waits for the login.
   useEffect(() => startModelSync({ watchPublished: !!user }), [user]);
+  // the evening reminder: planned on the device, so it also fires with no connection
+  useDiaryReminder();
 
   if (!ready) return <Spinner label="Wird geladen…" />;
 
@@ -90,6 +95,8 @@ function Protected() {
           <Route path="/kosten/:id" element={<CostEditorPage />} />
           <Route path="/aufgaben" element={<TasksPage />} />
           <Route path="/kontakte" element={<ContactsPage />} />
+          <Route path="/suche" element={<SearchPage />} />
+          <Route path="/fotos" element={<PhotosPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

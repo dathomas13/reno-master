@@ -1,26 +1,40 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Photo, type Task } from '@/data/types';
+import { photosForRoom } from '@/data/photoRooms';
 import { where } from '@/firebase/db';
 import { formatEuroShort } from '@/lib/money';
+import { formatDate } from '@/lib/date';
 import { isAuthenticated } from '@/firebase/auth';
 import { LAYER_LABEL, type Layer, type Room } from './houseScene';
 
 /**
  * What happened in this room: the link between the model and everything the app records.
+ *
+ * The panel positions nothing itself. It used to sit at `bottom-2` of the canvas, which
+ * on the phone is *behind* the bottom navigation and underneath the layer chips - the
+ * tiles were half hidden. Now the viewer stacks it above its controls and keeps the
+ * distance to the navigation in one place.
  */
 export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
   const roomFilter = [where('roomIds', 'array-contains', room.id)];
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, roomFilter, [room.id]);
   const { data: costs } = useCollection<Cost>(COL.costs, roomFilter, [room.id]);
   const { data: tasks } = useCollection<Task>(COL.tasks, roomFilter, [room.id]);
-  const { data: photos } = useCollection<Photo>(COL.photos, roomFilter, [room.id]);
+  // all of them, not the ones carrying this room: a photo gets its room from the entry
+  // or the receipt it hangs on, never from itself (see photoRooms.ts)
+  const { data: photos } = useCollection<Photo>(COL.photos);
 
   const openTasks = tasks.filter((task) => task.status !== 'Erledigt');
   const total = costs.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
+  const roomPhotos = useMemo(
+    () => photosForRoom(room.id, { photos, entries, costs }),
+    [room.id, photos, entries, costs],
+  );
 
   return (
-    <div className="absolute left-2 right-2 bottom-2 z-20 card p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+    <div className="card p-3 pointer-events-auto max-h-[45dvh] overflow-y-auto">
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold truncate">{room.name}</h2>
@@ -40,24 +54,26 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
       )}
 
       {isAuthenticated() && (
-      <div className="grid grid-cols-4 gap-2 mt-3 text-center">
-        <Link to={`/tagebuch?raum=${room.id}`} className="card py-2">
-          <div className="text-lg">{entries.length}</div>
-          <div className="text-[11px] text-muted">Einträge</div>
-        </Link>
-        <div className="card py-2">
-          <div className="text-lg">{photos.length}</div>
-          <div className="text-[11px] text-muted">Fotos</div>
+        // four tiles on 360 pixels: the number must be allowed to shrink, or '1.234 €'
+        // pushes the row wider than the screen and the last tile leaves it
+        <div className="grid grid-cols-4 gap-1.5 mt-3 text-center">
+          <Link to={`/tagebuch?raum=${room.id}`} className="card py-2 px-1 min-w-0">
+            <div className="text-base font-medium truncate">{entries.length}</div>
+            <div className="text-[10px] text-muted truncate">Einträge</div>
+          </Link>
+          <Link to={`/fotos?raum=${room.id}`} className="card py-2 px-1 min-w-0">
+            <div className="text-base font-medium truncate">{roomPhotos.length}</div>
+            <div className="text-[10px] text-muted truncate">Fotos</div>
+          </Link>
+          <Link to={`/kosten?raum=${room.id}`} className="card py-2 px-1 min-w-0">
+            <div className="text-base font-medium truncate">{costs.length ? formatEuroShort(total) : '0'}</div>
+            <div className="text-[10px] text-muted truncate">Kosten</div>
+          </Link>
+          <Link to={`/aufgaben?raum=${room.id}`} className="card py-2 px-1 min-w-0">
+            <div className="text-base font-medium truncate">{openTasks.length}</div>
+            <div className="text-[10px] text-muted truncate">offen</div>
+          </Link>
         </div>
-        <Link to={`/kosten?raum=${room.id}`} className="card py-2">
-          <div className="text-lg">{costs.length ? formatEuroShort(total) : '0'}</div>
-          <div className="text-[11px] text-muted">Kosten</div>
-        </Link>
-        <Link to={`/aufgaben?raum=${room.id}`} className="card py-2">
-          <div className="text-lg">{openTasks.length}</div>
-          <div className="text-[11px] text-muted">offen</div>
-        </Link>
-      </div>
       )}
 
       {entries.length > 0 && (
@@ -65,7 +81,7 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
           {entries.slice(0, 3).map((entry) => (
             <li key={entry.id} className="truncate">
               <Link to={`/tagebuch/${entry.id}`} className="text-muted hover:text-ink">
-                {entry.date} · {entry.title}
+                {formatDate(entry.date)} · {entry.title}
               </Link>
             </li>
           ))}

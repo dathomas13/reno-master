@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { newerVersions, shouldOfferUpdate, type RemoteVersion } from '@/data/appVersion';
+import {
+  apkUrlFor,
+  newerVersions,
+  notesParagraphs,
+  readinessFromStatus,
+  shouldOfferUpdate,
+  type RemoteVersion,
+} from '@/data/appVersion';
 
 function remote(build: number): RemoteVersion {
   return {
@@ -75,5 +82,48 @@ describe('newerVersions', () => {
       subject: '',
     }));
     expect(newerVersions(0, many)).toHaveLength(12);
+  });
+});
+
+describe('notesParagraphs', () => {
+  it('joins the hard wrapped lines of a paragraph back together', () => {
+    const notes = 'Die Suche sortiert ihre Treffer jetzt\nnach Bereichen.\n\nZweiter Absatz.';
+    expect(notesParagraphs(notes)).toEqual([
+      'Die Suche sortiert ihre Treffer jetzt nach Bereichen.',
+      'Zweiter Absatz.',
+    ]);
+  });
+
+  it('keeps a list readable instead of running it into one line', () => {
+    expect(notesParagraphs('Neu:\n- Suche\n- Uploads')).toEqual(['Neu:\n- Suche\n- Uploads']);
+  });
+
+  it('has nothing to show for nothing', () => {
+    expect(notesParagraphs(undefined)).toEqual([]);
+    expect(notesParagraphs('   \n\n  ')).toEqual([]);
+  });
+});
+
+describe('apkUrlFor', () => {
+  it('names the exact version, never "latest"', () => {
+    expect(apkUrlFor('0.25.0')).toBe(
+      'https://github.com/dathomas13/reno-master/releases/download/v0.25.0/reno-master.apk',
+    );
+    // the trap this replaces: with "latest" the phone downloads whatever release happens
+    // to be newest at that second, which during the two minutes after a push is the old one
+    expect(apkUrlFor('0.25.0')).not.toContain('latest');
+  });
+});
+
+describe('readinessFromStatus', () => {
+  it('knows there is a release, and knows there is not', () => {
+    expect(readinessFromStatus(200)).toBe(true);
+    expect(readinessFromStatus(404)).toBe(false);
+  });
+
+  it('admits it cannot tell, so a real update is never swallowed', () => {
+    expect(readinessFromStatus(403)).toBeNull(); // rate limit
+    expect(readinessFromStatus(500)).toBeNull();
+    expect(readinessFromStatus(0)).toBeNull();
   });
 });

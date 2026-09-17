@@ -15,6 +15,7 @@ import {
   type Room,
 } from './houseScene';
 import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitControls';
+import { lastViewerState, rememberViewerState, type ViewerState } from './viewerState';
 import { RoomPanel } from './RoomPanel';
 import { activeRelease, loadRooms, loadScene, type Variant } from '@/data/models';
 import { SOURCE_LABEL, type ReleaseInfo } from '@/data/modelRelease';
@@ -32,19 +33,59 @@ export default function ViewerPage() {
 
   const initialVariant = (params.get('variant') as Variant) ?? loadSettings().defaultModelVariant;
   const [variant, setVariant] = useState<Variant>(initialVariant === 'soll' ? 'soll' : 'ist');
+  // how the screen looked when it was last left; null on the very first visit
+  const [saved] = useState(() => lastViewerState());
   const [release, setRelease] = useState<ReleaseInfo | null>(null);
   // bumped when the sync stored a newer model, which rebuilds the scene
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [layerState, setLayerState] = useState<Record<Layer, boolean>>({
-    KG: true, EG: true, OG: true, DACH: true, GAR: true,
-  });
-  const [viewLabel, setViewLabel] = useState(VIEW_PRESETS[0]!.label);
-  const [structural, setStructural] = useState(false);
-  const [showRooms, setShowRooms] = useState(false);
+  const [layerState, setLayerState] = useState<Record<Layer, boolean>>(
+    saved?.layers ?? { KG: true, EG: true, OG: true, DACH: true, GAR: true },
+  );
+  const [viewLabel, setViewLabel] = useState(saved?.viewLabel || VIEW_PRESETS[0]!.label);
+  const [structural, setStructural] = useState(saved?.structural ?? false);
+  const [showRooms, setShowRooms] = useState(saved?.showRooms ?? false);
   const [selected, setSelected] = useState<Picked | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+
+  /**
+   * What the switches say right now. The scene effect only runs again on a variant
+   * change, so its cleanup - where the view is saved - would otherwise read the values
+   * of the render it was created in.
+   */
+  const ui = useRef({ layerState, structural, showRooms, viewLabel, roomId: room?.id });
+  ui.current = { layerState, structural, showRooms, viewLabel, roomId: room?.id };
+
+  /** the current view, ready to be stored; null while no scene is up */
+  const snapshot = useCallback((): ViewerState | null => {
+    const controls = controlsRef.current;
+    if (!controls) return null;
+    const { theta, phi, distance, target } = controls.state;
+    return {
+      camera: { theta, phi, distance, target: [target.x, target.y, target.z] },
+      layers: ui.current.layerState,
+      structural: ui.current.structural,
+      showRooms: ui.current.showRooms,
+      viewLabel: ui.current.viewLabel,
+      roomId: ui.current.roomId,
+    };
+  }, []);
+
+  // Leaving the app is not the same as leaving the screen: Android may put it away
+  // without unmounting anything, and the cleanup below would never run.
+  useEffect(() => {
+    const keep = () => {
+      const state = snapshot();
+      if (state) rememberViewerState(state);
+    };
+    window.addEventListener('pagehide', keep);
+    document.addEventListener('visibilitychange', keep);
+    return () => {
+      window.removeEventListener('pagehide', keep);
+      document.removeEventListener('visibilitychange', keep);
+    };
+  }, [snapshot]);
 
   useEffect(() => {
     void activeRelease(variant).then(setRelease).catch(() => undefined);
@@ -164,17 +205,27 @@ export default function ViewerPage() {
         const house = buildHouse(THREE, scene, doc, { rooms });
         houseRef.current = house;
 
+        // the view the user left behind wins over the default one; on a variant change
+        // this is the view of a moment ago, so the house does not jump under the finger
+        const keptView = lastViewerState();
         const preset = VIEW_PRESETS[0]!;
         controlsRef.current = createOrbitControls(
           canvas,
           camera,
           THREE,
-          {
-            theta: preset.theta,
-            phi: preset.phi,
-            distance: preset.distance,
-            target: new THREE.Vector3(...preset.target),
-          },
+          keptView
+            ? {
+                theta: keptView.camera.theta,
+                phi: keptView.camera.phi,
+                distance: keptView.camera.distance,
+                target: new THREE.Vector3(...keptView.camera.target),
+              }
+            : {
+                theta: preset.theta,
+                phi: preset.phi,
+                distance: preset.distance,
+                target: new THREE.Vector3(...preset.target),
+              },
           { onChange: invalidate, onTap: pick },
         );
 
@@ -182,6 +233,8 @@ export default function ViewerPage() {
         house.setRoomsVisible(showRooms);
         for (const layer of LAYERS) house.groups[layer].visible = layerState[layer];
 
+        // a link with ?raum= means "show me this room": it sets the floor view and wins
+        // over whatever was kept. Without it the room whose panel was open comes back.
         const wanted = params.get('raum');
         if (wanted) {
           const found = rooms.rooms.find((item) => item.id === wanted);
@@ -189,6 +242,12 @@ export default function ViewerPage() {
             const label = `${found.floor}-Grundriss`;
             const preset2 = VIEW_PRESETS.find((item) => item.label === label);
             if (preset2) applyPreset(preset2.label);
+            house.highlightRoom(found.id);
+            setRoom(found);
+          }
+        } else if (keptView?.roomId) {
+          const found = rooms.rooms.find((item) => item.id === keptView.roomId);
+          if (found) {
             house.highlightRoom(found.id);
             setRoom(found);
           }
@@ -212,6 +271,9 @@ export default function ViewerPage() {
     window.addEventListener('resize', resize);
     return () => {
       disposed = true;
+      // first remember, then tear down: the camera lives in the controls
+      const state = snapshot();
+      if (state) rememberViewerState(state);
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', resize);
       controlsRef.current?.dispose();
@@ -290,68 +352,88 @@ export default function ViewerPage() {
         </div>
       )}
 
-      {/* part info */}
-      {selected?.type === 'part' && (
-        <div className="absolute left-2 right-2 bottom-[7.5rem] card p-3 border-l-4 border-l-accent">
-          <div className="font-medium">
-            {selected.prim.name} <span className="text-muted">· {LAYER_LABEL[selected.prim.layer]}</span>
+      {/*
+        Everything at the bottom is one stack, not three overlays with their own offsets.
+        On the phone the navigation bar takes the lowest 64 pixels, and the chips below
+        wrap into two rows - a panel placed at `bottom-2` ends up behind both of them.
+        Stacked, the panel is always above the controls and the whole stack keeps its
+        distance from the navigation in exactly one place.
+      */}
+      <div
+        className={`absolute left-2 right-2 ${bottomOffset} z-20 flex flex-col gap-2
+                    pointer-events-none`}
+      >
+        {selected?.type === 'part' && (
+          <div className="card p-3 border-l-4 border-l-accent pointer-events-auto">
+            <div className="font-medium">
+              {selected.prim.name} <span className="text-muted">· {LAYER_LABEL[selected.prim.layer]}</span>
+            </div>
+            <div className="text-xs text-muted">
+              {formatDimensions(selected.prim.bb)} · {CONFIDENCE_LABEL[selected.prim.tag]}
+              {selected.prim.kind === 'wall' ? (selected.prim.tragend ? ' · tragend' : ' · nicht tragend') : ''}
+            </div>
           </div>
-          <div className="text-xs text-muted">
-            {formatDimensions(selected.prim.bb)} · {CONFIDENCE_LABEL[selected.prim.tag]}
-            {selected.prim.kind === 'wall' ? (selected.prim.tragend ? ' · tragend' : ' · nicht tragend') : ''}
-          </div>
-        </div>
-      )}
+        )}
 
-      {room && <RoomPanel room={room} onClose={() => { setRoom(null); houseRef.current?.highlightRoom(null); renderRef.current?.(); }} />}
+        {room && (
+          <RoomPanel
+            room={room}
+            onClose={() => {
+              setRoom(null);
+              houseRef.current?.highlightRoom(null);
+              renderRef.current?.();
+            }}
+          />
+        )}
 
-      {/* controls */}
-      <div className={`absolute left-2 right-2 ${bottomOffset} flex flex-wrap gap-1.5`}>
-        {LAYERS.map((layer) => (
-          <button
-            key={layer}
-            type="button"
-            className={`chip ${layerState[layer] ? 'chip-on' : ''}`}
-            onClick={() => toggleLayer(layer)}
-          >
-            {LAYER_SHORT[layer]}
-          </button>
-        ))}
-        <button
-          type="button"
-          className={`chip ${structural ? 'border-bad text-bad' : ''}`}
-          onClick={() => {
-            const next = !structural;
-            setStructural(next);
-            houseRef.current?.setStructuralMode(next);
-            renderRef.current?.();
-          }}
-        >
-          Tragwände
-        </button>
-        <button
-          type="button"
-          className={`chip ${showRooms ? 'chip-on' : ''}`}
-          onClick={() => {
-            const next = !showRooms;
-            setShowRooms(next);
-            houseRef.current?.setRoomsVisible(next);
-            renderRef.current?.();
-          }}
-        >
-          Räume
-        </button>
-        <select
-          className="chip bg-panel"
-          value={viewLabel}
-          onChange={(event) => applyPreset(event.target.value)}
-        >
-          {VIEW_PRESETS.map((preset) => (
-            <option key={preset.label} value={preset.label}>
-              Ansicht: {preset.label}
-            </option>
+        {/* controls */}
+        <div className="flex flex-wrap gap-1.5 pointer-events-auto">
+          {LAYERS.map((layer) => (
+            <button
+              key={layer}
+              type="button"
+              className={`chip ${layerState[layer] ? 'chip-on' : ''}`}
+              onClick={() => toggleLayer(layer)}
+            >
+              {LAYER_SHORT[layer]}
+            </button>
           ))}
-        </select>
+          <button
+            type="button"
+            className={`chip ${structural ? 'border-bad text-bad' : ''}`}
+            onClick={() => {
+              const next = !structural;
+              setStructural(next);
+              houseRef.current?.setStructuralMode(next);
+              renderRef.current?.();
+            }}
+          >
+            Tragwände
+          </button>
+          <button
+            type="button"
+            className={`chip ${showRooms ? 'chip-on' : ''}`}
+            onClick={() => {
+              const next = !showRooms;
+              setShowRooms(next);
+              houseRef.current?.setRoomsVisible(next);
+              renderRef.current?.();
+            }}
+          >
+            Räume
+          </button>
+          <select
+            className="chip bg-panel"
+            value={viewLabel}
+            onChange={(event) => applyPreset(event.target.value)}
+          >
+            {VIEW_PRESETS.map((preset) => (
+              <option key={preset.label} value={preset.label}>
+                Ansicht: {preset.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
     </div>
   );

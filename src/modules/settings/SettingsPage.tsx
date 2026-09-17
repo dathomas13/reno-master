@@ -13,7 +13,9 @@ import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
 import { COL } from '@/data/types';
 import { parseClock } from '@/lib/date';
-import { requestPushPermission } from '@/platform/notifications';
+import { enableReminders, reminderDiagnosis, showReminderNow } from '@/platform/reminder';
+import { describeDiagnosis, describeReminder, type ReminderDiagnosis } from '@/platform/reminderPlan';
+import { useReminderStatus } from '@/data/useReminder';
 import { formatBytes } from '@/lib/image';
 
 export default function SettingsPage() {
@@ -24,6 +26,8 @@ export default function SettingsPage() {
   const [storage, setStorage] = useState<string>('');
   const [reminderTime, setReminderTime] = useState(profile?.reminderTime ?? '20:00');
   const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const reminder = useReminderStatus();
+  const [diagnosis, setDiagnosis] = useState<ReminderDiagnosis | null>(null);
 
   useEffect(() => {
     void listJobs().then(setJobs);
@@ -36,6 +40,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (profile?.reminderTime) setReminderTime(profile.reminderTime);
   }, [profile?.reminderTime]);
+
+  useEffect(() => {
+    void reminderDiagnosis().then(setDiagnosis);
+  }, []);
 
   function update(patch: Partial<LocalSettings>) {
     setSettings(saveSettings(patch));
@@ -82,20 +90,68 @@ export default function SettingsPage() {
               }}
             />
           </Field>
-          <button
-            type="button"
-            className="btn"
-            onClick={() =>
-              void requestPushPermission().then((result) =>
-                setPushMessage(
-                  result.ok ? 'Benachrichtigungen sind eingerichtet.' : result.message ?? 'Nicht eingerichtet.',
-                ),
-              )
-            }
-          >
-            Benachrichtigungen erlauben
-          </button>
+
+          <p className="text-sm text-muted">
+            {!reminder.enabled
+              ? 'Aus – es kommt keine Erinnerung.'
+              : reminder.next
+                ? `${reminder.writtenToday ? 'Für heute steht schon ein Eintrag. Nächste Erinnerung: ' : 'Nächste Erinnerung: '}${describeReminder(reminder.next)}.`
+                : 'Für die nächsten zwei Wochen ist nichts offen.'}
+          </p>
+          <p className="text-xs text-muted mt-1">
+            {reminder.mode === 'native'
+              ? 'Die Erinnerung stellt das Telefon selbst – sie kommt auch ohne Netz und ohne offene App.'
+              : 'Im Browser erinnert die App nur, solange sie offen ist. Zuverlässig ist die Erinnerung in der App-Version.'}
+          </p>
+          {reminder.enabled && diagnosis !== null && diagnosis.permission !== 'granted' && (
+            // without this the line above promises a reminder the device will never show
+            <p className="text-sm text-warn mt-2">
+              Dieses Gerät lässt noch keine Benachrichtigungen zu. Einmal auf
+              „Benachrichtigungen erlauben“ tippen.
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                void enableReminders().then((result) => {
+                  setPushMessage(result.message);
+                  void reminderDiagnosis().then(setDiagnosis);
+                  if (result.ok && !profile?.reminderEnabled) void updateProfile({ reminderEnabled: true });
+                })
+              }
+            >
+              Benachrichtigungen erlauben
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                void showReminderNow().then((result) => {
+                  setPushMessage(result.message);
+                  void reminderDiagnosis().then(setDiagnosis);
+                })
+              }
+            >
+              Testbenachrichtigung
+            </button>
+          </div>
           {pushMessage && <p className="text-sm text-muted mt-2">{pushMessage}</p>}
+
+          {/* Das Telefon liegt woanders. Kommt nichts an, ist das hier der einzige Weg
+              herauszufinden, woran es liegt, statt zu raten. */}
+          <details className="mt-3">
+            <summary className="text-sm text-muted cursor-pointer">Diagnose</summary>
+            <ul className="text-xs text-muted mt-2 flex flex-col gap-1">
+              {diagnosis === null ? (
+                <li>wird abgefragt…</li>
+              ) : (
+                describeDiagnosis(diagnosis).map((line) => <li key={line}>{line}</li>)
+              )}
+            </ul>
+          </details>
         </section>
 
         <FolderExportSection />
@@ -126,18 +182,50 @@ export default function SettingsPage() {
         <section className="card p-4">
           <h2 className="font-semibold mb-3">Beleg-Auslesen</h2>
           <p className="text-sm text-muted mb-3">Aktiv: {engine}</p>
-          <Field label="Verfahren">
+          <Field
+            label="Verfahren"
+            hint="Automatisch nimmt der Reihe nach: ML Kit auf dem Gerät, dann Gemini, dann Claude – das erste, für das ein Schlüssel hinterlegt ist."
+          >
             <select
               className="field"
               value={settings.ocrEngine}
               onChange={(event) => update({ ocrEngine: event.target.value as LocalSettings['ocrEngine'] })}
             >
-              <option value="auto">Automatisch (ML Kit, sonst Claude)</option>
+              <option value="auto">Automatisch</option>
               <option value="mlkit">Nur ML Kit (nur in der App-Version)</option>
+              <option value="gemini">Nur Gemini (online)</option>
               <option value="claude">Nur Claude (online)</option>
               <option value="off">Aus</option>
             </select>
           </Field>
+
+          <h3 className="font-medium mt-4 mb-2">Gemini</h3>
+          <Field
+            label="Gemini API-Key"
+            hint="Wird nur auf diesem Gerät gespeichert, nie in der Datenbank. Zu holen unter aistudio.google.com."
+          >
+            <input
+              className="field"
+              type="password"
+              placeholder="AIza…"
+              value={settings.geminiApiKey}
+              onChange={(event) => update({ geminiApiKey: event.target.value.trim() })}
+            />
+          </Field>
+          <Field
+            label="Modell"
+            hint="Freies Textfeld, weil sich die Modellnamen bei Google schneller ändern als diese App. gemini-2.5-flash ist schnell und günstig, gemini-2.5-pro liest schwierige Belege besser."
+          >
+            <input
+              className="field"
+              type="text"
+              placeholder="gemini-2.5-flash"
+              value={settings.geminiModel}
+              onChange={(event) => update({ geminiModel: event.target.value.trim() })}
+            />
+          </Field>
+
+          <h3 className="font-medium mt-4 mb-2">Claude</h3>
           <Field
             label="Claude API-Key"
             hint="Wird nur auf diesem Gerät gespeichert. Kosten pro Beleg etwa ein bis zwei Cent."

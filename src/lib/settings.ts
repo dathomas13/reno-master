@@ -1,11 +1,14 @@
 /**
- * Device local settings. These never leave the phone: the Claude API key in particular
- * is stored here and nowhere else, so it is not in the repo and not in Firestore.
+ * Device local settings. These never leave the phone: the API keys in particular are
+ * stored here and nowhere else, so they are not in the repo and not in Firestore.
  */
 export interface LocalSettings {
   claudeApiKey: string;
   claudeModel: string;
-  ocrEngine: 'auto' | 'mlkit' | 'claude' | 'off';
+  geminiApiKey: string;
+  /** free text, not a list: which Gemini models exist changes faster than this app */
+  geminiModel: string;
+  ocrEngine: 'auto' | 'mlkit' | 'claude' | 'gemini' | 'off';
   defaultModelVariant: 'ist' | 'soll';
   showRoomsInPlanViews: boolean;
   /**
@@ -21,6 +24,8 @@ const KEY = 'reno.settings';
 export const DEFAULT_SETTINGS: LocalSettings = {
   claudeApiKey: '',
   claudeModel: 'claude-opus-5',
+  geminiApiKey: '',
+  geminiModel: 'gemini-2.5-flash',
   ocrEngine: 'auto',
   defaultModelVariant: 'ist',
   showRoomsInPlanViews: true,
