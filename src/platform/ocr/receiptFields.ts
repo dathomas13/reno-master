@@ -1,12 +1,16 @@
 /**
- * Turning Claude's answer into form fields.
+ * Turning a model's answer into form fields.
  *
- * Kept free of the SDK import so it can be unit tested on its own: this is the layer
- * that decides what is allowed to reach the cost form, and a wrong number here would be
- * booked as a real expense.
+ * Shared by every online engine - Claude and Gemini both return the same small JSON
+ * object, and both are equally capable of inventing a number. Kept free of any SDK import
+ * so it can be unit tested on its own: this is the layer that decides what is allowed to
+ * reach the cost form, and a wrong value here would be booked as a real expense.
  */
 import { parseAmount, round2 } from '@/lib/money';
 import type { ReceiptFields } from './types';
+
+/** the engines that answer with JSON and therefore come through here */
+export type OnlineEngine = Extract<ReceiptFields['engine'], 'claude' | 'gemini'>;
 
 /** pulls the first JSON object out of the answer, tolerating stray prose or fences */
 export function extractJson(text: string): Record<string, unknown> | null {
@@ -38,9 +42,19 @@ function asText(value: unknown, maxLength = 120): string | undefined {
   return text ? text.slice(0, maxLength) : undefined;
 }
 
-/** turns the model answer into fields, dropping anything implausible */
-export function validateClaudeFields(raw: Record<string, unknown>, categories: string[] = []): ReceiptFields {
-  const fields: ReceiptFields = { confidence: 0, engine: 'claude' };
+/**
+ * Turns the model answer into fields, dropping anything implausible.
+ *
+ * `engine` is required and not defaulted on purpose: it is the note on the cost document
+ * saying who read this receipt. A default would have quietly labelled every Gemini result
+ * as Claude, and nobody would ever have looked.
+ */
+export function validateReceiptFields(
+  raw: Record<string, unknown>,
+  engine: OnlineEngine,
+  categories: string[] = [],
+): ReceiptFields {
+  const fields: ReceiptFields = { confidence: 0, engine };
 
   const date = asText(raw.date, 10);
   if (date && /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date))) fields.date = date;

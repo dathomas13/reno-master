@@ -7,6 +7,7 @@ import { Spinner } from '@/components/Fields';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { startOutboxWorker } from '@/offline/outbox';
 import { startModelSync } from '@/data/modelSync';
+import { useDiaryReminder } from '@/data/useReminder';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import LoginPage from '@/modules/auth/LoginPage';
@@ -33,6 +34,8 @@ function Protected() {
   // should show the published model, not the one this build happens to carry. Only the
   // listener for a released model waits for the login.
   useEffect(() => startModelSync({ watchPublished: !!user }), [user]);
+  // the evening reminder: planned on the device, so it also fires with no connection
+  useDiaryReminder();
 
   if (!ready) return <Spinner label="Wird geladen…" />;
 

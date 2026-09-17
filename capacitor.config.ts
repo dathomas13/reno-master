@@ -26,8 +26,11 @@ const config: CapacitorConfig = {
       androidSplashResourceName: 'splash',
     },
     LocalNotifications: {
-      // no smallIcon on purpose: naming a drawable that the template does not ship makes
-      // notifications fail silently at runtime. Add one with the icon, then set it here.
+      // Android draws only the alpha channel of this one, white on transparent. Without a
+      // valid drawable it drops the notification without a word - no error, no log. The
+      // file is tools/icon/android/ic_stat_reno.xml, copied in by tools/android/patch-android.mjs
+      // and checked by the APK workflow, so the name here can never point at nothing.
+      smallIcon: 'ic_stat_reno',
       iconColor: '#c9a86a',
     },
   },

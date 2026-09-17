@@ -33,6 +33,16 @@ function replaceFile(file, source, note) {
   return true;
 }
 
+/** writes one of our files into the project, creating the folder if the template has none */
+function writeFile(file, source, note) {
+  const full = path.join(root, file);
+  const wanted = fs.readFileSync(source);
+  if (fs.existsSync(full) && fs.readFileSync(full).equals(wanted)) return;
+  fs.mkdirSync(path.dirname(full), { recursive: true });
+  fs.writeFileSync(full, wanted);
+  changes.push(`${file}: ${note}`);
+}
+
 function edit(file, change, note) {
   const full = path.join(root, file);
   if (!fs.existsSync(full)) {
@@ -127,6 +137,16 @@ edit(
   'app/src/main/res/values/ic_launcher_background.xml',
   (xml) => xml.replace(/>#[0-9a-fA-F]{6,8}</, '>#1d2126<'),
   'Icon-Hintergrund auf das App-Dunkel gesetzt',
+);
+
+// ---------------------------------------------------------------- notification icon
+// Android zeichnet in der Statusleiste nur den Alphakanal eines eigenen kleinen Symbols.
+// Ohne eines verwirft es die Benachrichtigung wortlos - kein Fehler, kein Log, nichts.
+// Der Name muss zu `smallIcon` in capacitor.config.ts passen.
+writeFile(
+  'app/src/main/res/drawable/ic_stat_reno.xml',
+  path.join(ICON_SOURCE, 'ic_stat_reno.xml'),
+  'Symbol für Benachrichtigungen angelegt',
 );
 
 // ---------------------------------------------------------------- version

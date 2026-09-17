@@ -72,7 +72,8 @@ export const PAYMENT_METHOD = ['Karte', 'Bar', 'Überweisung', 'PayPal'] as cons
 export type PaymentMethod = (typeof PAYMENT_METHOD)[number];
 
 export interface CostExtraction {
-  engine: 'mlkit' | 'claude' | 'none';
+  /** stays in step with ReceiptFields['engine'] in platform/ocr/types.ts */
+  engine: 'mlkit' | 'claude' | 'gemini' | 'none';
   at: IsoDateTime;
   confidence?: number;
   rawText?: string;

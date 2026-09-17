@@ -8,6 +8,56 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.28.2 – Erinnerung repariert, und Belege kann jetzt auch Gemini lesen
+
+Die Diagnose aus der vorigen Fassung hat den wahren Grund gezeigt: Die App hat den
+Benachrichtigungsteil des Telefons nie erreicht – noch bevor es um Erlaubnis oder Uhrzeit
+ging. Sie holte ihn auf einem Umweg, der im App-Fenster nicht ankommt. Jetzt nimmt sie
+denselben direkten Weg, über den auch der Galerie-Zugriff und das Beleg-Auslesen laufen,
+und der funktioniert hier seit jeher.
+
+Neu beim Beleg-Auslesen: **Gemini** steht als zweite Online-Möglichkeit neben Claude. In den
+Einstellungen unter „Beleg-Auslesen“ gibt es jetzt für beide je ein Feld für den Schlüssel
+und eines für das Modell; oben wählst du, was benutzt werden soll. „Automatisch“ nimmt der
+Reihe nach ML Kit auf dem Gerät, dann Gemini, dann Claude – das erste, für das ein Schlüssel
+hinterlegt ist. Beide bekommen wortgleich dieselbe Frage gestellt und ihre Antwort wird
+gleich streng geprüft, damit derselbe Beleg nicht je nach Einstellung einen anderen Betrag
+ergibt. Die Schlüssel bleiben auf dem Telefon.
+
+## 0.27.0 – Die Erinnerung geht jetzt wirklich raus
+
+In der vorigen Fassung passierte beim Antippen der beiden Knöpfe schlicht nichts. Drei
+Gründe, alle behoben.
+
+Der wichtigste: Benachrichtigungen brauchen unter Android ein eigenes kleines Symbol für
+die Statusleiste. Fehlt es, wirft das Telefon die Meldung wortlos weg – keine Fehlermeldung,
+kein Hinweis, nichts. Das Symbol gibt es jetzt, und der Build bricht ab, falls es je wieder
+fehlt. Die Testbenachrichtigung ging außerdem den Umweg über einen Wecker und blieb dabei in
+der Stromsparbremse hängen; sie wird jetzt direkt angezeigt. Und wenn das Telefon auf eine
+Anfrage gar nicht antwortet, sagt der Knopf das nach ein paar Sekunden, statt still zu
+bleiben.
+
+Neu ist unter „Abend-Erinnerung“ die aufklappbare Zeile **Diagnose**. Dort steht schwarz auf
+weiß, was das Telefon gerade tut: ob es die Erlaubnis erteilt hat, ob es die Weckzeit auf die
+Minute einhalten darf und wie viele Wecker wirklich gestellt sind. Falls doch wieder etwas
+klemmt, steht dort, woran es liegt.
+
+## 0.26.0 – Die Abend-Erinnerung kommt jetzt auch ohne Netz
+
+Die Erinnerung, abends einen Tagebucheintrag zu schreiben, wartete bisher auf einen Server –
+und der kam nie. Jetzt stellt das Telefon sie selbst, wie einen Wecker: Es weiß, wann du
+erinnert werden willst, und es weiß aus dem eigenen Speicher, ob für heute schon ein Eintrag
+steht. Funk, WLAN oder Flugmodus spielen dabei keine Rolle mehr.
+
+Einschalten in den Einstellungen unter „Abend-Erinnerung“: Haken setzen, Uhrzeit wählen,
+einmal „Benachrichtigungen erlauben“ antippen. Darunter steht im Klartext, wann die nächste
+Erinnerung kommt, und „Testbenachrichtigung“ zeigt sofort, wie sie aussieht. Ein Tipp auf die
+Meldung öffnet direkt den neuen Eintrag. Wer den Eintrag schon geschrieben hat, wird an
+diesem Abend nicht mehr behelligt.
+
+Am Laptop im Browser geht das nur eingeschränkt: dort erinnert die App, solange sie offen
+ist. Zuverlässig ist die Erinnerung in der App auf dem Telefon.
+
 ## 0.25.0 – Das Update installiert jetzt wirklich die neue Fassung
 
 Wer in der App auf „Installieren“ getippt hat, bekam unter Umständen die Fassung

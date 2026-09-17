@@ -15,7 +15,7 @@ import { emptyCost, saveCost, deleteCost } from '@/data/repos';
 import { parseAmount, formatAmount, splitGross, round2 } from '@/lib/money';
 import { toIsoDateTime, today } from '@/lib/date';
 import { activeExtractor, type ReceiptFields } from '@/platform/ocr';
-import { friendlyClaudeError } from '@/platform/ocr/claude';
+import { friendlyOcrError } from '@/platform/ocr/errors';
 
 /** which fields were filled by the extractor, so they can be marked in the form */
 type AutoFilled = Partial<Record<keyof Cost, boolean>>;
@@ -128,7 +128,7 @@ export default function CostEditorPage() {
       );
     } catch (cause) {
       setOcrState('error');
-      setOcrMessage(friendlyClaudeError(cause));
+      setOcrMessage(friendlyOcrError(cause));
     }
   }
 

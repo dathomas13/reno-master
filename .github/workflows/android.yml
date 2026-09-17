@@ -166,7 +166,12 @@ jobs:
             || { echo "App-Name wurde nicht gesetzt"; exit 1; }
           test -f android/app/src/main/assets/public/index.html \
             || { echo "Web-Assets fehlen im Projekt"; exit 1; }
-          for plugin in reno-mediastore reno-appupdate reno-fileexport; do
+          # Ohne dieses Symbol verwirft Android jede Benachrichtigung kommentarlos.
+          test -f android/app/src/main/res/drawable/ic_stat_reno.xml \
+            || { echo "Das Symbol für Benachrichtigungen fehlt"; exit 1; }
+          grep -q "ic_stat_reno" android/app/src/main/assets/capacitor.config.json \
+            || { echo "smallIcon zeigt nicht auf ic_stat_reno"; exit 1; }
+          for plugin in reno-mediastore reno-appupdate reno-fileexport capacitor-local-notifications; do
             grep -q "$plugin" android/capacitor.settings.gradle \
               || { echo "Plugin nicht eingebunden: $plugin"; exit 1; }
           done

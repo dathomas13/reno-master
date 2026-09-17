@@ -77,20 +77,38 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 436 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 248 Unit-Tests (Zahl aus dem vitest-Lauf in der CI, nicht geschätzt).
 - **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
   die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
   Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
   nötig. Einrichtung und Aufbau stehen in `worker/README.md`.
+- **Beleg-Auslesen mit drei Engines**: ML Kit auf dem Gerät, Gemini und Claude, hinter
+  einem Interface in `src/platform/ocr`. Beide Online-Engines fragen mit demselben Text
+  (`ocr/request.ts`) und laufen durch dieselbe Prüfung (`ocr/receiptFields.ts`) – sonst
+  hinge der gebuchte Betrag an einer Einstellung. Beide Schlüssel liegen nur im
+  localStorage des Geräts.
+- **Die Abend-Erinnerung läuft ohne Server**: das Gerät entscheidet selbst, ob heute noch
+  ein Eintrag fehlt, und stellt die Benachrichtigung als Wecker
+  (`src/platform/reminderPlan.ts` rechnet, `src/platform/reminder.ts` stellt,
+  `src/data/useReminder.ts` hält sie an der Tagebuch-Abfrage). Kein Blaze, kein Token,
+  kein Netz. **Native Plugins immer über `Capacitor.Plugins` ansprechen, nie über
+  `await import('@capacitor/…')`** – der Nachlade-Baustein kommt im WebView nie an, der
+  Aufruf hängt einfach. **Android braucht außerdem zwingend `smallIcon`** – ohne gültiges Symbol
+  verwirft es jede Benachrichtigung wortlos; die Datei liegt in
+  `tools/icon/android/ic_stat_reno.xml`, der APK-Workflow prüft sie. Einstellungen →
+  Abend-Erinnerung → „Diagnose“ fragt das Gerät, was es wirklich tut. Details in
+  `PLAN.md`, Abschnitt 11.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
 
 Offen:
 
-1. **Abend-Erinnerung.** Die Cloud Function (`functions/`) liegt bereit, braucht aber
-   Blaze und eine Kommandozeile mit Firebase-CLI. Am Telefon geht es auch ohne, über
-   eine lokale Benachrichtigung – noch nicht gebaut.
+1. **Push, wenn die App zu ist.** Die Abend-Erinnerung steht: sie wird auf dem Gerät
+   geplant und kommt ohne Netz (`src/platform/reminderPlan.ts` entscheidet,
+   `src/platform/reminder.ts` stellt den Wecker, `src/data/useReminder.ts` hält beides an
+   der Tagebuch-Abfrage). Die Cloud Function in `functions/` deckt nur noch den Rest ab –
+   den zugeklappten Browser am Laptop – und braucht dafür Blaze und die Firebase-CLI.
 2. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
 3. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
@@ -99,9 +117,10 @@ Offen:
    Debug-Schlüssel, und Android verweigert das Update über die alte Fassung.
 4. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
    Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
-   Tages). Offen sind ML Kit für das Beleg-Auslesen auf dem Gerät, die lokale
-   Abend-Erinnerung und Push. Push braucht zusätzlich `google-services.json` und den
-   google-services-Eintrag in Gradle.
+   Tages, Abend-Erinnerung über `@capacitor/local-notifications`). Offen sind ML Kit für
+   das Beleg-Auslesen auf dem Gerät und Push. Push braucht zusätzlich
+   `google-services.json` und den google-services-Eintrag in Gradle – die Erinnerung
+   braucht beides nicht.
 
 **Achtung bei den Regeln:** `firestore.rules` im Repo trägt
 Platzhalter statt der echten Adressen. Die gültige Fassung steht in der Firebase-Konsole.

@@ -8,37 +8,16 @@
  */
 import Anthropic from '@anthropic-ai/sdk';
 import { loadSettings } from '@/lib/settings';
-import { extractJson, validateClaudeFields } from './claudeFields';
+import { extractJson, validateReceiptFields } from './receiptFields';
+import { RECEIPT_SYSTEM, receiptInstruction, toBase64 } from './request';
 import type { ExtractInput, ReceiptExtractor, ReceiptFields } from './types';
 
-export { extractJson, validateClaudeFields } from './claudeFields';
-
-const SYSTEM = [
-  'Du liest deutsche Rechnungen, Kassenbons und Lieferscheine einer Hausrenovierung.',
-  'Gib ausschließlich ein JSON-Objekt zurück, ohne Text davor oder danach, ohne Markdown.',
-  'Felder: date (YYYY-MM-DD), vendor (Firma/Händler), amountGross (Zahl, Bruttosumme),',
-  'amountNet (Zahl), vatRate (19, 7 oder 0), vatAmount (Zahl), invoiceNumber (Text),',
-  'description (kurz, was gekauft wurde), category (genau einer der vorgegebenen Werte),',
-  'confidence (0 bis 1).',
-  'Ein Feld, das du nicht sicher lesen kannst, lässt du weg. Rate nichts.',
-  'Beträge als Zahl mit Punkt als Dezimaltrennzeichen, ohne Währungszeichen.',
-].join(' ');
+export { extractJson, validateReceiptFields } from './receiptFields';
 
 function client(): Anthropic {
   const { claudeApiKey } = loadSettings();
   if (!claudeApiKey) throw new Error('Kein Claude API-Key hinterlegt.');
   return new Anthropic({ apiKey: claudeApiKey, dangerouslyAllowBrowser: true });
-}
-
-async function toBase64(blob: Blob): Promise<string> {
-  const buffer = await blob.arrayBuffer();
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(binary);
 }
 
 export const claudeExtractor: ReceiptExtractor = {
@@ -54,10 +33,6 @@ export const claudeExtractor: ReceiptExtractor = {
     const data = await toBase64(file);
     const isPdf = contentType === 'application/pdf';
 
-    const instruction = categories.length
-      ? `Lies diesen Beleg aus. Mögliche Kategorien: ${categories.join(', ')}.`
-      : 'Lies diesen Beleg aus.';
-
     // PDF document blocks are accepted by the API but are not in the type definitions of
     // the pinned SDK version, so the block list is assembled loosely and handed over as
     // the parameter type. Drop the cast once the SDK is bumped.
@@ -68,13 +43,13 @@ export const claudeExtractor: ReceiptExtractor = {
             type: 'image',
             source: { type: 'base64', media_type: contentType || 'image/jpeg', data },
           },
-      { type: 'text', text: instruction },
+      { type: 'text', text: receiptInstruction(categories) },
     ] as unknown as Anthropic.MessageParam['content'];
 
     const response = await client().messages.create({
       model: settings.claudeModel || 'claude-opus-5',
       max_tokens: 1024,
-      system: SYSTEM,
+      system: RECEIPT_SYSTEM,
       messages: [{ role: 'user', content }],
     });
 
@@ -84,15 +59,6 @@ export const claudeExtractor: ReceiptExtractor = {
       .trim();
     const raw = extractJson(text);
     if (!raw) throw new Error('Claude hat kein lesbares Ergebnis geliefert.');
-    return { ...validateClaudeFields(raw, categories), rawText: text };
+    return { ...validateReceiptFields(raw, 'claude', categories), rawText: text };
   },
 };
-
-export function friendlyClaudeError(error: unknown): string {
-  const status = (error as { status?: number })?.status;
-  if (status === 401) return 'API-Key ungültig. Bitte in den Einstellungen prüfen.';
-  if (status === 429) return 'Zu viele Anfragen. Bitte gleich noch einmal versuchen.';
-  if (status && status >= 500) return 'Claude ist gerade nicht erreichbar.';
-  if (!navigator.onLine) return 'Beleg-Auslesen mit Claude geht nur online.';
-  return error instanceof Error ? error.message : 'Auslesen fehlgeschlagen.';
-}

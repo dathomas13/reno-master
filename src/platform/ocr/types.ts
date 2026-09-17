@@ -11,7 +11,7 @@ export interface ReceiptFields {
   category?: string;
   /** 0..1, how much of the document could be interpreted */
   confidence: number;
-  engine: 'mlkit' | 'claude' | 'none';
+  engine: 'mlkit' | 'claude' | 'gemini' | 'none';
   rawText?: string;
 }
 
@@ -23,7 +23,7 @@ export interface ExtractInput {
 }
 
 export interface ReceiptExtractor {
-  readonly id: 'mlkit' | 'claude';
+  readonly id: 'mlkit' | 'claude' | 'gemini';
   readonly label: string;
   isAvailable(): Promise<boolean>;
   extract(input: ExtractInput): Promise<ReceiptFields>;
