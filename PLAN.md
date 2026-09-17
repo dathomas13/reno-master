@@ -441,7 +441,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 
 ### 8.8 Einstellungen
 - Konto (E-Mail, Abmelden), Anzeigename.
-- Erinnerung: an/aus, Uhrzeit (Default 20:00), Testbenachrichtigung senden; Berechtigung anfragen; Status des FCM-Tokens.
+- Erinnerung: an/aus, Uhrzeit (Default 20:00), „Benachrichtigungen erlauben“, „Testbenachrichtigung“; darunter die nächste fällige Erinnerung im Klartext („Nächste Erinnerung: morgen um 20:00.“) und der Hinweis, ob das Gerät sie selbst stellt (App) oder nur die offene Seite (Browser).
 - Beleg-Auslesen: Engine (Automatisch = ML Kit wenn nativ, sonst Claude wenn Key, sonst aus), Claude API-Key (Passwortfeld, lokal gespeichert, "Verbindung testen" ruft ein Mini-Request auf), Claude-Modell (Default `claude-opus-5`, Option `claude-sonnet-5` "günstiger").
 - Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen", und – angemeldet – "Modell veröffentlichen": erzeugte `ist.json`/`rooms-ist.json` auswählen, Version und Datum kommen aus `meta` der Datei selbst.
 - Listen: Personen (Anwesend), Kosten-Kategorien, Aufgaben-Bereiche, Kontakt-Rollen – hinzufügen/umbenennen.
@@ -558,10 +558,40 @@ export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wä
 
 ## 11. Erinnerung (Abend-Push)
 
-- `functions/src/reminder.ts`: `onSchedule({ schedule: 'every 10 minutes', timeZone: 'Europe/Berlin' })`. Für jeden `users/*` mit `reminderEnabled && fcmTokens.length`: wenn `reminderTime` in das aktuelle 10-Minuten-Fenster fällt (Berlin-Zeit) **und** kein `diary`-Dokument mit `date == heute` existiert → FCM-Nachricht (`notification: { title: 'Bautagebuch', body: 'Heute noch kein Eintrag – jetzt schreiben?' }`, `webpush.fcmOptions.link: 'https://dathomas13.github.io/reno-master/#/tagebuch/neu'`, `data: { route: '/tagebuch/neu' }`). Ungültige Tokens (Fehler `registration-token-not-registered`) aus dem Array entfernen.
-- Client: `messaging.ts` – `getToken(messaging, { vapidKey, serviceWorkerRegistration })` nach Berechtigungsanfrage in den Einstellungen; Token in `users/{uid}.fcmTokens` (arrayUnion). `sw.ts`: `onBackgroundMessage` zeigt Notification; `notificationclick` öffnet/fokussiert die App mit der Route.
-- APK (Phase 2): zusätzlich `LocalNotifications.schedule` täglich zur Uhrzeit (wird beim Speichern eines Heute-Eintrags für heute gecancelt und beim App-Start neu geplant) – funktioniert auch ohne Netz. Push via `@capacitor/push-notifications` mit derselben Function.
-- Deploy: `firebase deploy --only functions` (Node 20, Region `europe-west3`). Kosten: im Free-Kontingent (≈ 4.400 Aufrufe/Monat).
+**Die Entscheidung fällt auf dem Gerät, nicht auf einem Server.** Ein Server bräuchte den
+Blaze-Tarif und – wichtiger – ein Telefon, das genau in dieser Minute online ist. Auf einer
+Baustelle im Keller ist es das nicht. Beides weiß die App selbst: die Uhrzeit steht im
+Profil, welche Tage schon einen Eintrag haben, beantwortet der Offline-Cache.
+
+- `src/platform/reminderPlan.ts` – die ganze Entscheidung als reine Rechnung, ohne Gerät:
+  `planReminders({ enabled, time, datesWithEntry, now, days })` liefert die nächsten 14
+  Termine (ein Tag mit Eintrag fällt raus, ein verstrichener Zeitpunkt auch),
+  `dueReminder(…)` den Termin, der gerade überfällig ist. Die id eines Termins wird aus dem
+  Datum abgeleitet (`reminderId`), damit genau dieser eine Tag später wieder zurückgezogen
+  werden kann. Unit-getestet.
+- `src/platform/reminder.ts` – die Geräteseite. Nativ übergibt `applyReminderPlan` den Plan
+  an `@capacitor/local-notifications`; Android weckt sich selbst, ganz ohne Netz.
+  `showReminderNow` ist die Testbenachrichtigung, `watchReminderTaps` öffnet beim Antippen
+  `#/tagebuch/neu` (über den Hash, weil beim Kaltstart noch kein Router da ist).
+- `src/data/useReminder.ts` – hält beides synchron. Der Hook hängt an derselben
+  `onSnapshot`-Abfrage wie der Rest: wer den heutigen Eintrag speichert, nimmt damit im
+  selben Moment die heutige Erinnerung mit. Neu geplant wird außerdem, wenn die App wieder
+  sichtbar wird. Ohne geladenes Profil passiert nichts – ein Offline-Start ohne Cache darf
+  die gestellten Wecker nicht löschen.
+- Im Browser geht das nicht: eine Seite kann sich nicht selbst wecken. Dort erinnert die App,
+  solange sie offen ist (Minutentakt, `dueReminder`, einmal pro Tag über
+  `reno.reminder.lastShown`). Die Einstellungen sagen diesen Unterschied ausdrücklich.
+- **Optional obendrauf**, für den Fall „Browser zu“: `functions/src/index.ts` –
+  `onSchedule({ schedule: 'every 10 minutes', timeZone: 'Europe/Berlin' })`, schickt FCM an
+  `users/*.fcmTokens`, wenn `reminderEnabled` und noch kein `diary`-Dokument mit
+  `date == heute`. `src/platform/notifications.ts` holt den Token (`registerPushToken`,
+  stillschweigend wirkungslos ohne `VITE_VAPID_KEY`), `sw.ts` zeigt die Nachricht und
+  `notificationclick` öffnet die Route. Das braucht Blaze und `firebase deploy --only
+  functions`; ohne das bleibt es bei der Erinnerung vom Gerät, und die ist der Normalfall.
+- APK: keine zusätzliche Einrichtung, kein `google-services.json`, kein Token. Die
+  Berechtigung (`POST_NOTIFICATIONS` ab Android 13) fragt der Knopf in den Einstellungen.
+  Darf die App keine exakten Wecker stellen (Android 14), stellt das Plugin ungenaue – die
+  Erinnerung kommt dann ein paar Minuten später statt gar nicht.
 
 ---
 
@@ -590,9 +620,9 @@ Erst nach Abnahme von Phase 1 (M0–M7).
   - Berechtigung `READ_MEDIA_IMAGES` (API 33+) / `READ_EXTERNAL_STORAGE` (älter) über `@capacitor/core` Permissions-API.
 - `platform/photos.ts` schaltet per `Capacitor.isNativePlatform()` zwischen Web-Input und MediaStore-Picker um; `sourceUri` wird gespeichert; "Original in Galerie öffnen" im Foto-Info.
 - OCR: ML Kit aktiv; Claude bleibt optional.
-- Benachrichtigungen: LocalNotifications + Push (Abschnitt 11).
+- Benachrichtigungen: LocalNotifications, vom Gerät geplant (Abschnitt 11). Push ist optional und braucht zusätzlich `google-services.json`.
 - Build: `android.yml` (GitHub Actions, JDK 17, `./gradlew assembleDebug`) lädt `app-debug.apk` als Artifact hoch; Thomas installiert per Sideload. Release-Signatur später (Keystore als Secret).
-- Auth/Firestore/Storage funktionieren im WebView unverändert (JS-SDK). `google-services.json` nur für Push nötig.
+- Auth/Firestore/Storage funktionieren im WebView unverändert (JS-SDK). `google-services.json` nur für den optionalen Push nötig, nicht für die Erinnerung.
 - Danach: Repo privat stellen (Thomas), Pages-Deploy bleibt optional für die Laptop-Webapp (private Repos: Pages nur mit Pro/Student-Plan – Thomas hat den Student-Plan).
 
 ---

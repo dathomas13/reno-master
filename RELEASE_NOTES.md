@@ -8,6 +8,22 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.26.0 – Die Abend-Erinnerung kommt jetzt auch ohne Netz
+
+Die Erinnerung, abends einen Tagebucheintrag zu schreiben, wartete bisher auf einen Server –
+und der kam nie. Jetzt stellt das Telefon sie selbst, wie einen Wecker: Es weiß, wann du
+erinnert werden willst, und es weiß aus dem eigenen Speicher, ob für heute schon ein Eintrag
+steht. Funk, WLAN oder Flugmodus spielen dabei keine Rolle mehr.
+
+Einschalten in den Einstellungen unter „Abend-Erinnerung“: Haken setzen, Uhrzeit wählen,
+einmal „Benachrichtigungen erlauben“ antippen. Darunter steht im Klartext, wann die nächste
+Erinnerung kommt, und „Testbenachrichtigung“ zeigt sofort, wie sie aussieht. Ein Tipp auf die
+Meldung öffnet direkt den neuen Eintrag. Wer den Eintrag schon geschrieben hat, wird an
+diesem Abend nicht mehr behelligt.
+
+Am Laptop im Browser geht das nur eingeschränkt: dort erinnert die App, solange sie offen
+ist. Zuverlässig ist die Erinnerung in der App auf dem Telefon.
+
 ## 0.25.0 – Das Update installiert jetzt wirklich die neue Fassung
 
 Wer in der App auf „Installieren“ getippt hat, bekam unter Umständen die Fassung

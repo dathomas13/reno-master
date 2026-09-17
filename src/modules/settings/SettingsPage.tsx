@@ -13,7 +13,9 @@ import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
 import { COL } from '@/data/types';
 import { parseClock } from '@/lib/date';
-import { requestPushPermission } from '@/platform/notifications';
+import { enableReminders, reminderPermission, showReminderNow } from '@/platform/reminder';
+import { describeReminder } from '@/platform/reminderPlan';
+import { useReminderStatus } from '@/data/useReminder';
 import { formatBytes } from '@/lib/image';
 
 export default function SettingsPage() {
@@ -24,6 +26,8 @@ export default function SettingsPage() {
   const [storage, setStorage] = useState<string>('');
   const [reminderTime, setReminderTime] = useState(profile?.reminderTime ?? '20:00');
   const [pushMessage, setPushMessage] = useState<string | null>(null);
+  const reminder = useReminderStatus();
+  const [permission, setPermission] = useState<'granted' | 'denied' | 'prompt' | null>(null);
 
   useEffect(() => {
     void listJobs().then(setJobs);
@@ -36,6 +40,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (profile?.reminderTime) setReminderTime(profile.reminderTime);
   }, [profile?.reminderTime]);
+
+  useEffect(() => {
+    void reminderPermission().then(setPermission);
+  }, []);
 
   function update(patch: Partial<LocalSettings>) {
     setSettings(saveSettings(patch));
@@ -82,19 +90,49 @@ export default function SettingsPage() {
               }}
             />
           </Field>
-          <button
-            type="button"
-            className="btn"
-            onClick={() =>
-              void requestPushPermission().then((result) =>
-                setPushMessage(
-                  result.ok ? 'Benachrichtigungen sind eingerichtet.' : result.message ?? 'Nicht eingerichtet.',
-                ),
-              )
-            }
-          >
-            Benachrichtigungen erlauben
-          </button>
+
+          <p className="text-sm text-muted">
+            {!reminder.enabled
+              ? 'Aus – es kommt keine Erinnerung.'
+              : reminder.next
+                ? `${reminder.writtenToday ? 'Für heute steht schon ein Eintrag. Nächste Erinnerung: ' : 'Nächste Erinnerung: '}${describeReminder(reminder.next)}.`
+                : 'Für die nächsten zwei Wochen ist nichts offen.'}
+          </p>
+          <p className="text-xs text-muted mt-1">
+            {reminder.mode === 'native'
+              ? 'Die Erinnerung stellt das Telefon selbst – sie kommt auch ohne Netz und ohne offene App.'
+              : 'Im Browser erinnert die App nur, solange sie offen ist. Zuverlässig ist die Erinnerung in der App-Version.'}
+          </p>
+          {reminder.enabled && permission !== null && permission !== 'granted' && (
+            // without this the line above promises a reminder the device will never show
+            <p className="text-sm text-warn mt-2">
+              Dieses Gerät lässt noch keine Benachrichtigungen zu. Einmal auf
+              „Benachrichtigungen erlauben“ tippen.
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2 mt-3">
+            <button
+              type="button"
+              className="btn"
+              onClick={() =>
+                void enableReminders().then((result) => {
+                  setPushMessage(result.message);
+                  void reminderPermission().then(setPermission);
+                  if (result.ok && !profile?.reminderEnabled) void updateProfile({ reminderEnabled: true });
+                })
+              }
+            >
+              Benachrichtigungen erlauben
+            </button>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void showReminderNow().then((result) => setPushMessage(result.message))}
+            >
+              Testbenachrichtigung
+            </button>
+          </div>
           {pushMessage && <p className="text-sm text-muted mt-2">{pushMessage}</p>}
         </section>
 
