@@ -59,6 +59,6 @@ export const claudeExtractor: ReceiptExtractor = {
       .trim();
     const raw = extractJson(text);
     if (!raw) throw new Error('Claude hat kein lesbares Ergebnis geliefert.');
-    return { ...validateReceiptFields(raw, categories), rawText: text };
+    return { ...validateReceiptFields(raw, 'claude', categories), rawText: text };
   },
 };

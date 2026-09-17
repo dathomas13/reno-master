@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { geminiExtractor } from '@/platform/ocr/gemini';
 import { friendlyOcrError } from '@/platform/ocr/errors';
+import type { ReceiptFields } from '@/platform/ocr/types';
+import type { CostExtraction } from '@/data/types';
 
 /** the two globals these engines lean on, stubbed so the test says the same everywhere */
 function stubDevice(settings: Record<string, unknown>, online = true) {
@@ -164,6 +166,18 @@ describe('geminiExtractor', () => {
       caught = error;
     }
     expect((caught as Error).message).toContain('kein lesbares Ergebnis');
+  });
+});
+
+describe('die beiden Engine-Aufzählungen', () => {
+  it('nennen dieselben Engines, in beide Richtungen', () => {
+    // Sie sind auseinandergelaufen, als Gemini dazukam: der gespeicherte Typ kannte
+    // weiter nur zwei, und erst der echte Compiler hat es gemerkt. Diese beiden
+    // Signaturen lassen sich nicht übersetzen, wenn das wieder passiert.
+    const stored = (engine: ReceiptFields['engine']): CostExtraction['engine'] => engine;
+    const reported = (engine: CostExtraction['engine']): ReceiptFields['engine'] => engine;
+    expect(stored('gemini')).toBe('gemini');
+    expect(reported('mlkit')).toBe('mlkit');
   });
 });
 

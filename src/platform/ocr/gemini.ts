@@ -75,6 +75,6 @@ export const geminiExtractor: ReceiptExtractor = {
       .trim();
     const raw = extractJson(text);
     if (!raw) throw new Error('Gemini hat kein lesbares Ergebnis geliefert.');
-    return { ...validateReceiptFields(raw, categories), rawText: text };
+    return { ...validateReceiptFields(raw, 'gemini', categories), rawText: text };
   },
 };
