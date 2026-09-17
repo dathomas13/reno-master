@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
 import { Field, ChipSelect, EmptyState } from '@/components/Fields';
@@ -18,10 +19,29 @@ function whatsappHref(phone: string): string {
 }
 
 export default function ContactsPage() {
+  const [params, setParams] = useSearchParams();
   const { data: contacts } = useCollection<Contact>(COL.contacts);
   const { lists } = useLists();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Contact | null>(null);
+
+  const wanted = params.get('kontakt');
+
+  // a search result links straight to one contact: open its sheet as soon as it is loaded
+  useEffect(() => {
+    if (!wanted) return;
+    const contact = contacts.find((item) => item.id === wanted);
+    if (contact) setEditing(contact);
+  }, [wanted, contacts]);
+
+  function close() {
+    setEditing(null);
+    if (wanted) {
+      const next = new URLSearchParams(params);
+      next.delete('kontakt');
+      setParams(next, { replace: true });
+    }
+  }
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -91,17 +111,17 @@ export default function ContactsPage() {
       </ul>
 
       {editing && (
-        <Sheet open onClose={() => setEditing(null)} title="Kontakt">
+        <Sheet open onClose={close} title="Kontakt">
           <ContactForm
             contact={editing}
             roles={lists.contactRoles}
             onSave={async (contact) => {
               await saveContact(contact);
-              setEditing(null);
+              close();
             }}
             onDelete={async (contact) => {
               await deleteContact(contact.id);
-              setEditing(null);
+              close();
             }}
           />
         </Sheet>

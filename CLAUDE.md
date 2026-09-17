@@ -50,7 +50,9 @@ zusätzlich Bilder, braucht dafür aber `three.min.js` unter `tools/model/vendor
 ## Architektur in drei Sätzen
 
 Firestore mit persistentem lokalem Cache ist die Datenbasis; Lesen läuft immer über
-`onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Dateien (Fotos,
+`onSnapshot`, Schreiben geht offline in die Firestore-Warteschlange. Die modulübergreifende
+Suche (`src/search`, Bildschirm `/suche`) baut aus denselben Abfragen einen eigenen Index -
+gefaltet wird beim Aufbau, nicht beim Tippen; Details in `PLAN.md`, Abschnitt 8.9. Dateien (Fotos,
 Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files.js` und
 gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
 unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
@@ -75,7 +77,7 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, 308 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 436 Unit-Tests.
 - **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
   die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
   Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
@@ -112,11 +114,22 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
+- **Zu jedem Release ein Absatz in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`). Das ist
+  der Text, den das Update-Banner in der App zeigt, und er ist für Thomas geschrieben, nicht für
+  den nächsten Agenten: ganze Sätze, was sich an der Bedienung ändert. Keine Dateinamen, keine
+  Testzahlen, keine Commit-Prosa – die steht im Commit. Ohne Eintrag nimmt der Build die
+  Commit-Nachricht, und die liest sich im Banner auch so.
 - **Jeder Entwicklungsschritt ist ein Release**, auch aus einem Sitzungsbranch: das
   Telefon aktualisiert sich über `releases/latest` selbst, ein Umweg über Artefakte im
   Browser ist nicht gewollt. Also bei jedem Push die Version in `package.json` anheben –
   genau daran erinnert die Wächter-Prüfung im APK-Workflow, wenn sie scheitert. Mehrere
   Commits mit derselben Nummer gehen nicht; wer das umgeht, nimmt dem Telefon das Update.
+- **In `version.json` nie `releases/latest/download/…` ankündigen**, sondern die Adresse
+  genau der angekündigten Fassung (`releases/download/v<version>/reno-master.apk`). Seite
+  und APK bauen zwei Workflows: die Seite steht nach ~90 s, das APK-Release nach ~3 min.
+  In dieser Lücke ist „latest“ noch die vorige Fassung – das Telefon lädt, installiert und
+  startet die Fassung, die es schon hat, und es sieht aus, als hätte das Update geklappt.
+  Der Deploy wartet deshalb zusätzlich auf das Release, bevor er die Seite veröffentlicht.
 - Der Tag eines Release hängt am gebauten Commit (`--target "$GITHUB_SHA"`). Ohne das
   setzt `gh release create` ihn auf den Default-Branch, und aus einem Sitzungsbranch
   heraus zeigt er dann auf Code, der die veröffentlichte APK nicht enthält.

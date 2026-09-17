@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
@@ -29,6 +29,21 @@ export default function TasksPage() {
   const [editing, setEditing] = useState<Task | null>(null);
 
   const roomFilter = params.get('raum');
+  const wanted = params.get('aufgabe');
+
+  // a search result links straight to one task: open its sheet as soon as it is loaded
+  useEffect(() => {
+    if (!wanted) return;
+    const task = tasks.find((item) => item.id === wanted);
+    if (task) setEditing(task);
+  }, [wanted, tasks]);
+
+  function dropWanted() {
+    if (!wanted) return;
+    const next = new URLSearchParams(params);
+    next.delete('aufgabe');
+    setParams(next, { replace: true });
+  }
 
   const visible = useMemo(() => {
     return tasks.filter((task) => {
@@ -151,14 +166,19 @@ export default function TasksPage() {
       <TaskSheet
         task={editing}
         areas={lists.taskAreas}
-        onClose={() => setEditing(null)}
+        onClose={() => {
+          setEditing(null);
+          dropWanted();
+        }}
         onSave={async (task) => {
           await saveTask(task);
           setEditing(null);
+          dropWanted();
         }}
         onDelete={async (task) => {
           await deleteTask(task.id);
           setEditing(null);
+          dropWanted();
         }}
       />
     </>

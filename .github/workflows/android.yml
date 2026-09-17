@@ -240,13 +240,13 @@ jobs:
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" reno-master.apk --clobber
           else
+            # derselbe Text wie im Update-Banner der App, aus RELEASE_NOTES.md
+            notizen=$(node --experimental-strip-types tools/release-notes.mjs --text)
             gh release create "$tag" \
               reno-master.apk \
               --target "$GITHUB_SHA" \
               --title "Reno Master $version ($(git log -1 --format=%cs))" \
-              --notes "$(git log -1 --format=%s)
-
-          $(git log -1 --format=%b | sed '/^[A-Za-z-]*:[[:space:]]*http/d; /^Co-Authored-By:/d')
+              --notes "$notizen
 
           $hinweis" \
               --latest

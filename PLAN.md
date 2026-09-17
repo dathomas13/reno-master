@@ -118,8 +118,10 @@ reno-master/
 │   │   ├── costs/             Liste, Editor, ReceiptCapture, Summary (Charts), Export
 │   │   ├── tasks/             Liste (Filter/Gruppen), Editor
 │   │   ├── contacts/          Liste, Detail, Editor
+│   │   ├── search/            SearchPage (eine Suche über alle Module)
 │   │   └── settings/          Konto, Erinnerung, OCR/Claude-Key, Modelle (Versionen), Listen (Personen, Kategorien), Import, Offline-Status
 │   ├── components/            AppShell (BottomNav / Sidebar), TopBar, Sheet/Modal, Form-Controls, ChipSelect, DateInput, EmptyState, SyncBadge
+│   ├── search/                normalize.ts (Faltung + Positionskarte), engine.ts (Index, Bewertung, Ausschnitt), records.ts (Dokumente → Datensätze), useSearch.ts, recent.ts
 │   ├── lib/                   date.ts (de-DE, Europe/Berlin), image.ts (resize, thumb, exif), money.ts, ids.ts, rooms-geometry.ts
 │   ├── sw.ts                  Workbox injectManifest + FCM onBackgroundMessage
 │   └── styles/
@@ -313,11 +315,13 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 2. **Dateien (Fotos, Belege, Pläne-Upload)** können Firebase Storage offline **nicht** in die Warteschlange stellen → eigene **Outbox** in IndexedDB (`idb`, Store `outbox`: `{id, storagePath, blob, contentType, docRef:{collection,id,field}, attempts, createdAt}`).
    - Beim Anlegen: Foto verkleinern → Blob in Outbox → Firestore-Dokument sofort mit `uploadState:'pending'` schreiben → UI zeigt Bild aus der lokalen Blob-URL.
    - `outbox.process()` läuft bei App-Start, bei `online`-Event, beim Sichtbarwerden der App und alle 60 s wenn online: sequentiell hochladen (`uploadBytes`), dann Dokument `uploadState:'uploaded'` setzen, Blob aus Outbox löschen, Blob zusätzlich in den `fileCache` (Cache API) legen, damit er ohne erneuten Download sichtbar bleibt. Fehler → `attempts++`, exponentielles Backoff, nach 10 Versuchen sichtbarer Fehlerstatus (nicht verwerfen).
+   - **Nichts darin darf unbegrenzt warten.** Der Upload hat ein Zeitlimit (90 s, `AbortController`); auf die Bestätigung des Firestore-Schreibens wird **nicht** gewartet, sondern nur kurz (10 s) darauf, dass es *scheitert* – Firestore hat seine eigene dauerhafte Warteschlange. Ein Lauf, der länger als 5 Minuten hängt, gilt als verloren, der nächste darf starten. Sonst genügt eine hängende Verbindung, damit die Anzeige dauerhaft „1 wird geladen“ zeigt, obwohl die Datei längst oben liegt, und auch „Jetzt versuchen“ nichts mehr tut.
+   - Ein Job, dessen Dokument gelöscht wurde, wird verworfen statt ewig wiederholt (er lädt sonst die gelöschte Datei wieder hoch); `deletePhoto` räumt die Jobs eines Fotos gleich mit weg. Die testbare Entscheidungslogik steht in `src/offline/outboxRules.ts`.
    - Background Sync API (`registration.sync.register('outbox')`) zusätzlich registrieren, wenn verfügbar.
 3. **Anzeige von Storage-Dateien**: Download-URLs werden über `getDownloadURL` geholt und im Dokument-Cache (`urlCache` in IndexedDB, `{storagePath → url}`) gespeichert; URLs sind stabil (Token). Workbox-Runtime-Route `CacheFirst` für `firebasestorage.googleapis.com` (max. 3000 Einträge, 180 Tage). Thumbnails werden beim Rendern der Liste geladen → danach offline verfügbar. Detailbilder nach erstem Öffnen offline.
 4. **Pläne offline**: Für Uploads (PDF) gibt es pro Plan einen Schalter "Offline verfügbar" → Datei wird in den Cache `plans-offline` gelegt (und Status im UI). Gebündelte SVGs und Modelle sind über den Precache immer offline da.
 5. **App-Shell** vollständig precached (Workbox `injectManifest`, `globPatterns: ['**/*.{js,css,html,svg,json,png,jpg,woff2}']`, `maximumFileSizeToCacheInBytes: 6 MB`). Update-Strategie: `registerType: 'prompt'` → Banner "Neue Version verfügbar – Neu laden".
-6. **Sync-Status** in der TopBar: grüner Punkt (online, alles synchron), gelber Punkt mit Zahl (ausstehende Uploads), grau (offline). Klick → Liste der ausstehenden Uploads mit "Jetzt versuchen".
+6. **Sync-Status** in der TopBar: grüner Punkt (online, alles synchron), gelber Punkt mit Zahl (ausstehende Uploads), grau (offline). Klick → Liste der ausstehenden Uploads: was es ist (Foto, Vorschaubild, Beleg, Plan), wie groß, wie lange es schon wartet, wie viele Versuche, und der letzte Fehler im Klartext, dazu "Jetzt versuchen" und "Verwerfen" je Datei. Eine Zahl allein sagt nicht, *was* hängt, und lässt keinen Ausweg.
 7. Konflikte: Last-write-wins (Firestore-Standard) reicht bei zwei Nutzern; Felder werden mit `updateDoc` partiell geschrieben, nie ganze Dokumente überschrieben.
 
 ---
@@ -325,10 +329,12 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 ## 8. Module / Screens
 
 ### 8.0 App-Shell & Navigation
-- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Pläne, Aufgaben, Kontakte, Einstellungen.
+- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Suche, Fotos, Pläne, Aufgaben, Kontakte, Einstellungen.
 - Desktop (≥ 900 px): linke Sidebar mit allen 8 Zielen, Inhalt max. 1100 px breit, Listen zweispaltig wo sinnvoll.
 - TopBar: Titel, Sync-Badge, kontextabhängige Aktion (z. B. "+").
-- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/einstellungen`, `/login`.
+- **Sheets werden per Portal an `document.body` gehängt.** `backdrop-blur` (wie `filter` und `transform`) macht ein Element zum Bezugsrahmen für `position: fixed` darin – TopBar und Bottom-Navigation haben es. Ein Sheet, das im Baum darunter steht, misst sich sonst an einer 56 px hohen Kopfzeile und erscheint am Telefon verschoben und unlesbar.
+- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
+- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
@@ -340,6 +346,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - Letzte 3 Tagebucheinträge (Datum, Titel, erstes Thumbnail).
 - Offene Aufgaben (fällig ≤ 7 Tage oder Priorität Hoch), max. 5.
 - Kosten-Kachel: Summe gesamt, Summe laufender Monat.
+- Oben ein Suchfeld-Link "Alles durchsuchen…" auf `/suche`.
 - Sync-/Offline-Hinweis.
 
 ### 8.2 Bautagebuch
@@ -365,6 +372,8 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - **Neu: Räume** (Abschnitt 9.4): pro Raum ein flaches, halbtransparentes Bodenpolygon (Extrusion 20 mm, Farbe Akzent 15 % Opazität, pickbar, eigene Layer-Zuordnung zum Geschoss). Tippen auf Raum → **RoomPanel** (Bottom-Sheet): Raumname, Geschoss, Fläche (aus Polygon), Zähler "12 Einträge · 34 Fotos · 3 Kosten · 2 Aufgaben" mit Links (führen in die jeweiligen Listen mit Raumfilter). Umschalter "Räume anzeigen" (Default an in Grundriss-Ansichten, aus in Außenansicht). Über URL `?room=<id>` wird der Raum vorselektiert und die passende Grundriss-Ansicht gesetzt.
 - Performance: `setPixelRatio(min(dpr, 2))`, Rendering nur bei Änderung (`invalidate()`-Pattern statt dauerhaftem RAF-Loop, um Akku zu schonen), Szene beim Verlassen der Route disposen.
 - Modell laden: über `loadScene(variant)` – die in IndexedDB liegende Fassung, wenn sie mindestens so neu ist wie die gebündelte, sonst `fetch(`${base}models/${variant}.json`)` (≈95 KB, 132 Bauteile, 4512 Dreiecke – unkritisch). Ladefehler offline → Meldung "Modell noch nicht heruntergeladen – einmal online öffnen". Ein Modell, das während der Ansicht ankommt, meldet sich über das Fenster-Ereignis `reno:model`; der Viewer baut die Szene dann neu.
+- **Die Ansicht bleibt stehen.** Kamera (theta, phi, Abstand, Ziel), sichtbare Geschosse, Tragwand-Modus, Raum-Overlay, gewählte Ansicht und der offene Raum werden beim Verlassen des Bildschirms gemerkt (`viewerState.ts`: im Modul für den Weg zu einem anderen Bildschirm, in `localStorage` für den Weg durch eine geschlossene App, gesichert auch bei `pagehide`/`visibilitychange`). Beim Aufbau gewinnt der gemerkte Blick über die Standardansicht – auch beim Wechsel Bestand/Zielzustand, damit das Haus nicht unter dem Finger springt. Nur `?raum=<id>` sticht ihn, das ist ja eine Ansage. Was aus dem Speicher kommt, geht durch `parseViewerState`: ein einziges NaN stellt die Kamera sonst ins Nichts und der Bildschirm bleibt schwarz.
+- **Alles Untere ist ein Stapel**: Bauteil-Info, Raumfenster und die Schalter-Chips stehen in *einem* Container über der Bottom-Navigation (`bottom-[calc(64px+env(safe-area-inset-bottom))]`), nicht als drei Einblendungen mit eigenen Abständen. Sonst liegt das Raumfenster am Telefon hinter der Navigation und unter den Chips – die Kachelleiste war dort zur Hälfte unsichtbar.
 
 ### 8.4 Pläne
 - Liste gruppiert: **Original 1967** (Uploads von Thomas), **Bestand (Ist)** (generierte SVGs KG/EG/OG), **Zielzustand (Soll)**, **Sonstige** (Uploads). Kacheln mit Vorschau (SVG inline verkleinert, PDF-Erste-Seite via pdfjs-Thumbnail, Bild).
@@ -392,6 +401,43 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.
 - Detail: Telefon (`tel:`-Link + WhatsApp-Link `https://wa.me/<nummer>`), E-Mail (`mailto:`), Gewerke, Status, Bewertung, Notizen; Buttons Anrufen / WhatsApp / E-Mail / Teilen (vCard über Web Share).
 - Editor mit allen Feldern.
+
+### 8.10 Fotos (`/fotos`)
+- Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
+- Chips: Alle · Fotos · Belege. `?raum=<id>` filtert auf einen Raum – dorthin führt die Kachel „Fotos“ im Raumfenster des 3D-Modells, und zurück führt der Pfeil dorthin.
+- **Der Raum eines Fotos steht nicht am Foto.** `addPhoto` setzt `roomIds` nie: beim Fotografieren wählt niemand Räume aus. Ein Bild gehört zu einem Raum, wenn sein Tagebucheintrag oder sein Beleg ihn trägt (`src/data/photoRooms.ts`, testbar); das Feld am Foto zählt zusätzlich. Ohne diese Regel zeigt die Kachel „Fotos“ eines Raums null, so voll das Tagebuch auch ist.
+- Das Datum eines Fotos ist `takenAt`, sonst der Tag seines Eintrags, sonst der seines Belegs – Bilder ohne alles stehen unter „Ohne Datum“.
+
+### 8.9 Suche (`/suche`)
+- **Eine Suche über alles**: Tagebuch (Titel, Text, Anwesende, Wetter, Mängel), Kosten und Belege (Händler,
+  Beschreibung, Kategorie, Rechnungsnummer, Notizen und der vom Beleg **gescannte Text** aus
+  `extraction.rawText`), Aufgaben, Kontakte (inklusive Notizen, wo die Gesprächsprotokolle stehen), Gewerke,
+  Phasen, Räume des Modells, Pläne und Fotountertitel. Verknüpfungen zählen mit: ein Eintrag wird auch über
+  den Namen seines Raums, seines Gewerks oder seiner Phase gefunden.
+- Mitgesucht wird, was nicht als Text dasteht: Status ("offen", "Beauftragt"), Zuständige, Beträge
+  (`89,90` findet `89,90 €`) und Daten in jeder Schreibweise (`13.09`, `13.09.2026`, `September`).
+- **Wortteile zählen**: `putz` findet `Innenputz` – bei deutschen Komposita führt Präfixsuche sonst ins Leere.
+  Umlaute sind egal (`tuer` = `tür`, `strasse` = `straße`), Groß-/Kleinschreibung auch.
+- Mehrere Wörter sind eine UND-Suche; jedes Wort muss irgendwo im Datensatz vorkommen. Treffer im Titel
+  wiegen schwerer als in den Zusatzfeldern, die wiederum schwerer als im Fließtext; ein ganzes Wort schlägt
+  einen Wortanfang, der einen Treffer im Wortinneren.
+- Darstellung: ein Suchfeld, darunter Filter-Chips je Art mit Trefferzahl ("Alle 24 · Tagebuch 7 · Kosten 5"),
+  dann die Treffer **nach Abschnitten gruppiert** – ein Abschnitt je Art, in der Reihenfolge ihres besten
+  Treffers, je fünf Zeilen und darunter "Alle 12 unter Kosten anzeigen", was auf den Filter dieser Art
+  umschaltet. Mit gesetztem Filter wird daraus eine flache Liste, 25 Treffer, dann "Weitere anzeigen".
+  Jede Zeile: Art-Plakette, Titel mit hervorgehobener Fundstelle, Kontextzeile (Datum, Status, Kategorie)
+  und – wenn der Treffer im Fließtext liegt – ein Textausschnitt um die Fundstelle. Rechts der Betrag,
+  wo es einen gibt.
+- Ohne Eingabe: die letzten Suchen (nur auf dem Gerät, `localStorage`), Vorschlags-Chips und ein kurzer
+  Hinweis, was durchsucht wird.
+- Technik (`src/search/`): `normalize.ts` faltet Text und Anfrage gleich und merkt sich, woher jedes Zeichen
+  kam (für die Hervorhebung im **Original**text). `engine.ts` baut daraus einen Index aus Zeichenpaaren
+  (Paar → Datensätze); eine Anfrage schneidet die Listen ihrer seltensten Paare und prüft erst dann die
+  wenigen übrigen Datensätze genau. Gefaltet wird also **einmal beim Aufbau**, nicht bei jedem Tastendruck.
+  `records.ts` macht aus den Firestore-Dokumenten die durchsuchbaren Datensätze (ohne React, ohne Firestore –
+  das ist der Teil mit Unit-Tests). Der Index entsteht erst, wenn der Suchbildschirm offen ist, und lebt
+  von denselben `onSnapshot`-Abfragen wie der Rest, also auch offline.
+- Größenordnung: 1500 Datensätze mit Text sind in ~50 ms indiziert, eine Suche liegt darunter.
 
 ### 8.8 Einstellungen
 - Konto (E-Mail, Abmelden), Anzeigename.
@@ -524,6 +570,8 @@ export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wä
 - `vite.config.ts`: `base: '/reno-master/'`, `VitePWA({ strategies: 'injectManifest', srcDir: 'src', filename: 'sw.ts', registerType: 'prompt', manifest: {...}, injectManifest: { globPatterns: [...], maximumFileSizeToCacheInBytes: 6_000_000 } })`.
 - `.github/workflows/deploy.yml`: bei Push auf `main`: `npm ci` → `npm run lint && npm run typecheck && npm run test:unit` → `npm run build` → `actions/upload-pages-artifact` (`dist`) → `actions/deploy-pages`. `dist/404.html` = Kopie von `index.html` (Sicherheitsnetz). Build-Zeit-Variablen: `VITE_APP_VERSION` = Git-SHA, `VITE_BUILD_DATE`.
 - `.github/workflows/ci.yml`: bei PR: Lint, Typecheck, Unit, E2E gegen Emulator (`firebase emulators:exec --only auth,firestore,storage "npx playwright test"`).
+- **Update-Ankündigung und APK müssen zusammenpassen.** `version.json` trägt die Adresse der APK **genau dieser Fassung** (`releases/download/v<version>/reno-master.apk`), nie `releases/latest/download/…`: Seite (~90 s) und APK-Release (~3 min) entstehen in zwei Workflows, und in der Lücke dazwischen ist „latest“ die vorige Fassung – das Telefon installiert dann die, die es schon hat, scheinbar erfolgreich. Zusätzlich wartet der Deploy vor dem Veröffentlichen bis zu sechs Minuten auf das Release (danach trotzdem, mit Warnung), und die App prüft vor „Installieren“ über die GitHub-API, ob es das Release schon gibt: fehlt es, bleibt der Knopf grau mit Hinweis und schaltet sich von selbst frei. Eine Prüfung, die nicht antwortet (offline, Rate-Limit), gilt als „weiß nicht“ und blockiert nichts.
+- **Release Notes**: was im Update-Banner steht, kommt aus `RELEASE_NOTES.md` (`## <Version> – <Schlagzeile>`, darunter ein bis drei Absätze), nicht aus der Commit-Nachricht. Der Deploy erzeugt daraus `version.json` und `versions.json` (`tools/release-notes.mjs --current` bzw. ohne Schalter), der APK-Workflow denselben Text für das GitHub-Release (`--text`). Fehlt eine Version in der Datei, bleibt es bei der Commit-Nachricht. Geschrieben wird für den, der die App benutzt: ganze Sätze, was sich an der Bedienung ändert – keine Dateinamen, keine Testzahlen, kein Changelog.
 - URL: `https://dathomas13.github.io/reno-master/`. Am S24: Chrome → Menü → "Zum Startbildschirm hinzufügen" / "App installieren".
 - Firebase-Auth "Authorized domains": `dathomas13.github.io` eintragen (nur nötig für OAuth-Provider; bei E-Mail/Passwort nicht erforderlich, trotzdem eintragen).
 

@@ -36,19 +36,43 @@ function pathUrl(storagePath: string): string {
   return `${BASE}/files/${encoded}`;
 }
 
-/** legt eine Datei ab; wirft, wenn es nicht geklappt hat, damit die Outbox es erneut versucht */
-export async function putFile(storagePath: string, blob: Blob, contentType: string): Promise<void> {
+/**
+ * Legt eine Datei ab; wirft, wenn es nicht geklappt hat, damit die Outbox es erneut
+ * versucht.
+ *
+ * `timeoutMs` ist Pflicht für die Warteschlange: ein Mobilfunknetz kann eine Anfrage
+ * hängen lassen, ohne sie je zu beenden. Ohne Abbruch wartet die Warteschlange dann
+ * ewig auf eine Antwort, die nicht mehr kommt.
+ */
+export async function putFile(
+  storagePath: string,
+  blob: Blob,
+  contentType: string,
+  timeoutMs?: number,
+): Promise<void> {
   if (!fileStoreReady()) throw new NotConfigured();
-  const response = await fetch(pathUrl(storagePath), {
-    method: 'PUT',
-    headers: {
-      authorization: `Bearer ${await ticket()}`,
-      'content-type': contentType || 'application/octet-stream',
-    },
-    body: blob,
-  });
-  if (!response.ok) {
-    throw new Error(`Hochladen fehlgeschlagen (${response.status}): ${await response.text()}`);
+  const controller = new AbortController();
+  const timer = timeoutMs ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+  try {
+    const response = await fetch(pathUrl(storagePath), {
+      method: 'PUT',
+      headers: {
+        authorization: `Bearer ${await ticket()}`,
+        'content-type': contentType || 'application/octet-stream',
+      },
+      body: blob,
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Hochladen fehlgeschlagen (${response.status}): ${await response.text()}`);
+    }
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new Error(`Hochladen abgebrochen: keine Antwort nach ${Math.round((timeoutMs ?? 0) / 1000)} s`);
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

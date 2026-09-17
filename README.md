@@ -207,7 +207,9 @@ der laufende.
 
 - **Im Browser** genügt „Neu laden“, der Service Worker tauscht die Dateien aus.
 Das Banner nennt die verfügbare Version und die laufende; ein Tipp darauf klappt die
-Änderungen aus — und zwar **alle seit der installierten Fassung**. Wer von 0.9.36 auf
+Änderungen aus — und zwar **alle seit der installierten Fassung**. Der Text dafür steht in
+[RELEASE_NOTES.md](RELEASE_NOTES.md) und wird für den geschrieben, der die App benutzt;
+nur wo eine Version dort fehlt, springt die Commit-Nachricht ein. Wer von 0.9.36 auf
 0.17.1 springt, liest auch, was 0.17.0 gebracht hat; drin ist es ja. Die Liste steht als
 `versions.json` neben der `version.json` und wird beim Deploy aus den Tags erzeugt
 (`tools/release-notes.mjs`), damit sie auch dann noch funktioniert, wenn das Repo einmal

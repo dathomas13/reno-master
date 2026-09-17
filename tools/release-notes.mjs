@@ -1,18 +1,22 @@
 /**
- * Collects the published versions, newest first, from the tags of this repository.
+ * Collects the published versions, newest first, for the update banner in the app.
  *
- *   node --experimental-strip-types tools/release-notes.mjs > dist/versions.json
+ *   node --experimental-strip-types tools/release-notes.mjs            > dist/versions.json
+ *   node --experimental-strip-types tools/release-notes.mjs --current --repo owner/repo
+ *   node --experimental-strip-types tools/release-notes.mjs --text     (for the release page)
  *
- * The app shows everything above the version someone is running, so an update from
- * 0.9.36 to 0.17.1 tells what 0.17.0 brought as well - it is in there whether it was
- * ever installed or not.
+ * The text comes from RELEASE_NOTES.md, not from the commit message. A commit explains a
+ * change to whoever maintains the code; the banner talks to whoever uses the app, and the
+ * two are not the same text. Where a version has no entry there, the commit message is
+ * still used - better a technical note than none.
  *
- * Built from tags rather than from the releases API, so it keeps working when the
- * repository goes private. The version being built is added even though its tag does not
- * exist yet: the release is published by the other workflow, in parallel with this one.
+ * The list is built from the tags of this repository rather than from the releases API,
+ * so it keeps working when the repository goes private. The version being built is added
+ * even though its tag does not exist yet: the release is published by the other workflow,
+ * in parallel with this one.
  */
 import { execSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { versionCode } from '../src/lib/version.ts';
 
@@ -41,25 +45,103 @@ export function cleanNotes(body) {
     .trim();
 }
 
-function entryFor(version, ref) {
+/**
+ * Reads RELEASE_NOTES.md into { version: { subject, notes } }.
+ *
+ *   ## 0.21.0 - Eine Suche über alles
+ *   <one to three paragraphs>
+ *
+ * The headline after the dash is what the folded banner shows, the paragraphs are what
+ * unfolds. A heading without a dash is a version with no headline; its text still counts.
+ */
+export function parseReleaseNotes(markdown) {
+  const found = new Map();
+  let version = null;
+  let subject = '';
+  let lines = [];
+
+  const flush = () => {
+    if (version) found.set(version, { subject, notes: lines.join('\n').trim() });
+  };
+
+  for (const line of String(markdown).split('\n')) {
+    const heading = /^##\s+(\d+\.\d+\.\d+)\s*(?:[-–—:]\s*(.*))?$/.exec(line.trim());
+    if (heading) {
+      flush();
+      version = heading[1];
+      subject = (heading[2] ?? '').trim();
+      lines = [];
+      continue;
+    }
+    if (version) lines.push(line);
+  }
+  flush();
+  return found;
+}
+
+function releaseNotesFile() {
+  const path = fileURLToPath(new URL('../RELEASE_NOTES.md', import.meta.url));
+  return existsSync(path) ? readFileSync(path, 'utf8') : '';
+}
+
+function entryFor(version, ref, written) {
+  const hand = written.get(version);
   return {
     version,
     build: versionCode(version),
     date: git(`git log -1 --format=%cs ${ref}`),
-    subject: git(`git log -1 --format=%s ${ref}`),
-    notes: cleanNotes(git(`git log -1 --format=%b ${ref}`)),
+    subject: hand?.subject || git(`git log -1 --format=%s ${ref}`),
+    notes: hand ? hand.notes : cleanNotes(git(`git log -1 --format=%b ${ref}`)),
   };
 }
 
-function main() {
+function currentVersion() {
   const packageFile = fileURLToPath(new URL('../package.json', import.meta.url));
-  const current = String(JSON.parse(readFileSync(packageFile, 'utf8')).version);
+  return String(JSON.parse(readFileSync(packageFile, 'utf8')).version);
+}
+
+function main() {
+  const written = parseReleaseNotes(releaseNotesFile());
+  const current = currentVersion();
+
+  // the same words for the release on GitHub, as plain text
+  if (process.argv.includes('--text')) {
+    const entry = entryFor(current, 'HEAD', written);
+    process.stdout.write([entry.subject, entry.notes].filter(Boolean).join('\n\n'));
+    return;
+  }
+
+  // version.json: only the build that was just made, plus where its APK lives
+  if (process.argv.includes('--current')) {
+    // The address must name this very version. "releases/latest/download/..." looks
+    // convenient and is a trap: the site is published about ninety seconds after the push,
+    // the APK release some two minutes later, and in between "latest" is still the
+    // previous one - the phone then downloads, installs and restarts the version it
+    // already had, and the update looks as if it had worked.
+    const repo = process.argv[process.argv.indexOf('--repo') + 1];
+    const apk =
+      repo && !repo.startsWith('--')
+        ? `https://github.com/${repo}/releases/download/v${current}/reno-master.apk`
+        : undefined;
+    process.stdout.write(
+      JSON.stringify(
+        {
+          ...entryFor(current, 'HEAD', written),
+          sha: git('git rev-parse --short HEAD'),
+          apk,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
 
   const tags = versionTags(git('git tag'));
   const entries = [];
   // the version being built has no tag yet - the release comes from the other workflow
-  if (!tags.includes(`v${current}`)) entries.push(entryFor(current, 'HEAD'));
-  for (const tag of tags) entries.push(entryFor(tag.slice(1), tag));
+  if (!tags.includes(`v${current}`)) entries.push(entryFor(current, 'HEAD', written));
+  for (const tag of tags) entries.push(entryFor(tag.slice(1), tag, written));
 
   process.stdout.write(JSON.stringify(entries.slice(0, KEEP), null, 2));
 }

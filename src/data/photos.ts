@@ -5,7 +5,7 @@
  */
 import { COL, type Photo, type PhotoKind } from './types';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
-import { enqueue, putLocalBlob, dropLocalBlob } from '@/offline/outbox';
+import { enqueue, putLocalBlob, dropLocalBlob, removeJobsForPaths } from '@/offline/outbox';
 import { deleteFile } from '@/platform/fileStore';
 import { resizeImage, makeThumbnail, readTakenAt, PHOTO_MAX_EDGE, RECEIPT_MAX_EDGE } from '@/lib/image';
 import { newId, deviceId } from '@/lib/ids';
@@ -122,6 +122,9 @@ export async function updatePhoto(id: string, patch: Partial<Photo>): Promise<vo
 }
 
 export async function deletePhoto(photo: Photo): Promise<void> {
+  // first out of the queue: a job whose document is gone can never finish, and it would
+  // upload the deleted file again on its next attempt
+  await removeJobsForPaths([photo.storagePath, photo.thumbPath, photo.originalPath]);
   await dropLocalBlob(photo.storagePath);
   if (photo.thumbPath) await dropLocalBlob(photo.thumbPath);
   if (photo.originalPath) await dropLocalBlob(photo.originalPath);

@@ -22,19 +22,21 @@ export default function CostsPage() {
 
   const roomFilter = params.get('raum');
   const categoryFilter = params.get('kategorie');
+  const tradeFilter = params.get('gewerk');
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return costs.filter((cost) => {
       if (roomFilter && !cost.roomIds.includes(roomFilter)) return false;
       if (categoryFilter && cost.category !== categoryFilter) return false;
+      if (tradeFilter && cost.tradeId !== tradeFilter) return false;
       if (!needle) return true;
       return [cost.vendor, cost.description, cost.category, cost.invoiceNumber]
         .join(' ')
         .toLowerCase()
         .includes(needle);
     });
-  }, [costs, search, roomFilter, categoryFilter]);
+  }, [costs, search, roomFilter, categoryFilter, tradeFilter]);
 
   const total = sumGross(filtered);
   const thisMonth = totalForMonth(costs, monthKey(today()));
@@ -81,14 +83,20 @@ export default function CostsPage() {
         </button>
       </div>
 
-      {(roomFilter || categoryFilter) && (
+      {(roomFilter || categoryFilter || tradeFilter) && (
         <div className="px-3 pb-2">
           <button
             type="button"
             className="chip chip-on"
             onClick={() => setParams(new URLSearchParams(), { replace: true })}
           >
-            Filter: {roomFilter ? roomName(roomFilter) : categoryFilter} ×
+            Filter:{' '}
+            {roomFilter
+              ? roomName(roomFilter)
+              : tradeFilter
+                ? (trades.find((trade) => trade.id === tradeFilter)?.name ?? 'Gewerk')
+                : categoryFilter}{' '}
+            ×
           </button>
         </div>
       )}
