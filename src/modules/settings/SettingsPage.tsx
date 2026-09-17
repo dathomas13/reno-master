@@ -182,18 +182,50 @@ export default function SettingsPage() {
         <section className="card p-4">
           <h2 className="font-semibold mb-3">Beleg-Auslesen</h2>
           <p className="text-sm text-muted mb-3">Aktiv: {engine}</p>
-          <Field label="Verfahren">
+          <Field
+            label="Verfahren"
+            hint="Automatisch nimmt der Reihe nach: ML Kit auf dem Gerät, dann Gemini, dann Claude – das erste, für das ein Schlüssel hinterlegt ist."
+          >
             <select
               className="field"
               value={settings.ocrEngine}
               onChange={(event) => update({ ocrEngine: event.target.value as LocalSettings['ocrEngine'] })}
             >
-              <option value="auto">Automatisch (ML Kit, sonst Claude)</option>
+              <option value="auto">Automatisch</option>
               <option value="mlkit">Nur ML Kit (nur in der App-Version)</option>
+              <option value="gemini">Nur Gemini (online)</option>
               <option value="claude">Nur Claude (online)</option>
               <option value="off">Aus</option>
             </select>
           </Field>
+
+          <h3 className="font-medium mt-4 mb-2">Gemini</h3>
+          <Field
+            label="Gemini API-Key"
+            hint="Wird nur auf diesem Gerät gespeichert, nie in der Datenbank. Zu holen unter aistudio.google.com."
+          >
+            <input
+              className="field"
+              type="password"
+              placeholder="AIza…"
+              value={settings.geminiApiKey}
+              onChange={(event) => update({ geminiApiKey: event.target.value.trim() })}
+            />
+          </Field>
+          <Field
+            label="Modell"
+            hint="Freies Textfeld, weil sich die Modellnamen bei Google schneller ändern als diese App. gemini-2.5-flash ist schnell und günstig, gemini-2.5-pro liest schwierige Belege besser."
+          >
+            <input
+              className="field"
+              type="text"
+              placeholder="gemini-2.5-flash"
+              value={settings.geminiModel}
+              onChange={(event) => update({ geminiModel: event.target.value.trim() })}
+            />
+          </Field>
+
+          <h3 className="font-medium mt-4 mb-2">Claude</h3>
           <Field
             label="Claude API-Key"
             hint="Wird nur auf diesem Gerät gespeichert. Kosten pro Beleg etwa ein bis zwei Cent."

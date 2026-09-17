@@ -33,7 +33,7 @@ three.js-Viewer `Haus_3D.html`, Stand v0.22).
 | Backend | **Firebase**: Firestore (offline-persistent), Cloud Storage, Auth, Cloud Messaging, Cloud Functions (nur für Erinnerung) |
 | Nutzer | **Thomas + Sarah**, Login per **E-Mail/Passwort** (Konten werden von Thomas in der Firebase-Konsole angelegt; Registrierung in der App deaktiviert). Allowlist per E-Mail in den Security Rules. Bei Einträgen wird `createdBy` gespeichert. |
 | Fotos | **Verkleinerte Kopie (max. 1600 px lange Kante, JPEG q≈0,82) + Thumbnail (320 px)** nach Firebase Storage. Original bleibt in der Galerie. Zusätzlich werden **Originaldateiname, Aufnahmezeit (EXIF), Dateigröße** und – in der APK – die **MediaStore-URI** gespeichert, damit das Original schnell wiedergefunden werden kann. |
-| Beleg-Auslesen (OCR) | **Zwei Engines hinter einem Interface.** Default: **Google ML Kit Text Recognition on-device** (nur in der APK verfügbar) + heuristischer Parser. Optional: **Claude API** (Vision, strukturierte Ausgabe), aktiv sobald Thomas in den Einstellungen einen API-Key hinterlegt. In der PWA ohne Key: nur manuelle Eingabe (Hinweis anzeigen). |
+| Beleg-Auslesen (OCR) | **Drei Engines hinter einem Interface.** Default: **Google ML Kit Text Recognition on-device** (nur in der APK) + heuristischer Parser. Optional **Gemini** oder **Claude**, jeweils aktiv, sobald in den Einstellungen ein API-Key dafür liegt. `auto` geht die feste Reihenfolge ML Kit → Gemini → Claude durch. Ohne Key und ohne APK: manuelle Eingabe. |
 | Datenschutz | Repo public. Ins Repo: Code, 3D-Modell-JSON, generierte Grundriss-SVGs, Nordansicht-Foto. **Nicht ins Repo:** Original-Baupläne (PDF), Fotos, Belege, Kontakte, Tagebuchtexte, Service-Account-Keys → alles nur in Firebase hinter Login. |
 | 3D-Modelle Ist/Soll | Liegen als JSON im Repo (`public/models/`), werden mit dem App-Build ausgeliefert und vom Service Worker vorgecacht – das ist die Untergrenze, die offline ab dem ersten Start da ist. **Die Version ist vom App-Build gelöst:** die App nimmt die höchste Fassung, die sie erreicht (gebündelt, Website-Manifest, oder ein in `meta/model-<variante>` veröffentlichtes Modell), legt sie in IndexedDB und behält sie offline. Austausch also per `git push` **oder** ohne Deploy über "Modell veröffentlichen" in den Einstellungen. Vollständig dokumentiert für den "Modell-Agenten" (Abschnitt 9). |
 | Neue 2D-Pläne | **Aus dem Modell generierte SVG-Grundrisse** (pro Geschoss × Variante Ist/Soll) + freier **Upload** (PDF/PNG/JPG) für Original-Baupläne und sonstige Pläne. Die Original-PDFs lädt Thomas selbst in der App hoch. |
@@ -109,7 +109,7 @@ reno-master/
 │   ├── firebase/              app.ts (init + persistentLocalCache), auth.ts, db.ts (typed collection refs), storage.ts, messaging.ts, emulators.ts
 │   ├── data/                  types.ts (alle Dokument-Typen), hooks (useCollection/useDoc mit onSnapshot), repos je Modul, seed/*.json (trades, phases, categories, people, weather)
 │   ├── offline/               outbox.ts (IndexedDB-Queue für Datei-Uploads), fileCache.ts, syncStatus.ts, useOnline.ts
-│   ├── platform/              index.ts (isNative), photos.ts, ocr/ (index.ts, mlkit.ts, claude.ts, parseReceiptText.ts), notifications.ts, share.ts
+│   ├── platform/              index.ts (isNative), photos.ts, ocr/ (index.ts, mlkit.ts, claude.ts, gemini.ts, request.ts, receiptFields.ts, errors.ts, parseReceiptText.ts), reminder.ts, reminderPlan.ts, notifications.ts, share.ts
 │   ├── modules/
 │   │   ├── home/              Dashboard
 │   │   ├── diary/             Liste, Detail, Editor, PhotoPicker, PhotoGrid
@@ -119,7 +119,7 @@ reno-master/
 │   │   ├── tasks/             Liste (Filter/Gruppen), Editor
 │   │   ├── contacts/          Liste, Detail, Editor
 │   │   ├── search/            SearchPage (eine Suche über alle Module)
-│   │   └── settings/          Konto, Erinnerung, OCR/Claude-Key, Modelle (Versionen), Listen (Personen, Kategorien), Import, Offline-Status
+│   │   └── settings/          Konto, Erinnerung, OCR (Gemini- und Claude-Key), Modelle (Versionen), Listen (Personen, Kategorien), Import, Offline-Status
 │   ├── components/            AppShell (BottomNav / Sidebar), TopBar, Sheet/Modal, Form-Controls, ChipSelect, DateInput, EmptyState, SyncBadge
 │   ├── search/                normalize.ts (Faltung + Positionskarte), engine.ts (Index, Bewertung, Ausschnitt), records.ts (Dokumente → Datensätze), useSearch.ts, recent.ts
 │   ├── lib/                   date.ts (de-DE, Europe/Berlin), image.ts (resize, thumb, exif), money.ts, ids.ts, rooms-geometry.ts
@@ -204,7 +204,7 @@ interface Cost {
   paymentMethod?: 'Karte'|'Bar'|'Überweisung'|'PayPal';
   invoiceNumber?: string;
   receiptPhotoIds: string[]; // photos/* mit kind='receipt' (Bilder ODER PDFs)
-  extraction?: { engine: 'mlkit'|'claude'|'none'; rawText?: string; confidence?: number; at: string };
+  extraction?: { engine: 'mlkit'|'claude'|'gemini'|'none'; rawText?: string; confidence?: number; at: string };
   notes?: string;
 }
 ```
@@ -273,7 +273,7 @@ Die gebündelten SVGs werden beim Seed als `source:'bundled'` eingetragen (bzw. 
 ```
 
 ### 5.10 Lokale (nur Gerät) Einstellungen – `localStorage`/IndexedDB
-`claudeApiKey`, `claudeModel` (Default `claude-opus-5`, Alternative `claude-sonnet-5`), `ocrEngine` (`auto`|`mlkit`|`claude`|`off`), `defaultModelVariant` (`ist`|`soll`), `deviceId`, `theme`.
+`claudeApiKey`, `claudeModel` (Default `claude-opus-5`, Alternative `claude-sonnet-5`), `geminiApiKey`, `geminiModel` (freies Textfeld, Default `gemini-2.5-flash` – Googles Modellnamen wechseln schneller als diese App, eine Auswahlliste wäre irgendwann eine Sackgasse), `ocrEngine` (`auto`|`mlkit`|`gemini`|`claude`|`off`), `defaultModelVariant` (`ist`|`soll`), `deviceId`, `theme`.
 
 ### 5.11 Storage-Pfade
 ```
@@ -442,7 +442,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 ### 8.8 Einstellungen
 - Konto (E-Mail, Abmelden), Anzeigename.
 - Erinnerung: an/aus, Uhrzeit (Default 20:00), „Benachrichtigungen erlauben“, „Testbenachrichtigung“; darunter die nächste fällige Erinnerung im Klartext („Nächste Erinnerung: morgen um 20:00.“) und der Hinweis, ob das Gerät sie selbst stellt (App) oder nur die offene Seite (Browser).
-- Beleg-Auslesen: Engine (Automatisch = ML Kit wenn nativ, sonst Claude wenn Key, sonst aus), Claude API-Key (Passwortfeld, lokal gespeichert, "Verbindung testen" ruft ein Mini-Request auf), Claude-Modell (Default `claude-opus-5`, Option `claude-sonnet-5` "günstiger").
+- Beleg-Auslesen: Verfahren (Automatisch = ML Kit → Gemini → Claude, oder eines davon erzwingen, oder aus), darunter je ein Block für Gemini und Claude mit API-Key (Passwortfeld, nur lokal) und Modell. Beide Schlüssel liegen ausschließlich im localStorage des Geräts.
 - Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen", und – angemeldet – "Modell veröffentlichen": erzeugte `ist.json`/`rooms-ist.json` auswählen, Version und Datum kommen aus `meta` der Datei selbst.
 - Listen: Personen (Anwesend), Kosten-Kategorien, Aufgaben-Bereiche, Kontakt-Rollen – hinzufügen/umbenennen.
 - Offline: belegter Speicher (StorageManager.estimate), ausstehende Uploads, "Alle Thumbnails jetzt laden", "Cache leeren".
@@ -542,7 +542,7 @@ Trefferprüfung im 3D: Raum-Meshes sind pickbar (Raycaster); in SVG per `data-ro
 ```ts
 export interface ReceiptFields { date?: string; vendor?: string; amountGross?: number; amountNet?: number; vatRate?: number; vatAmount?: number; invoiceNumber?: string; description?: string; category?: string; confidence: number; engine: 'mlkit'|'claude'|'none'; rawText?: string }
 export interface ReceiptExtractor { readonly id: 'mlkit'|'claude'; isAvailable(): Promise<boolean>; extract(file: Blob, mime: string): Promise<ReceiptFields> }
-export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wählt Engine nach Einstellung 'auto': mlkit wenn nativ verfügbar, sonst claude wenn Key, sonst {engine:'none'}
+export async function extractReceipt(file, mime): Promise<ReceiptFields>  // 'auto' geht AUTO_ORDER durch: mlkit, gemini, claude - das erste mit Schlüssel und Verfügbarkeit
 ```
 - **ML Kit** (`@capacitor-mlkit/text-recognition`, nur `isNativePlatform()`): Bild → `TextRecognition.recognize({ image: path })` → `rawText` → `parseReceiptText(rawText)` (heuristisch, deutsch):
   - Datum: Regex `\b(\d{1,2})[./](\d{1,2})[./](\d{2,4})\b`, nimm das plausibelste (≤ heute, ≥ 2025), bevorzugt neben "Datum"/"Rechnungsdatum".
@@ -551,6 +551,7 @@ export async function extractReceipt(file, mime): Promise<ReceiptFields>  // wä
   - Händler: erste nicht-leere Zeile mit Buchstaben (ohne Straßen-/PLZ-Muster), oder bekannte Namen (Liste: Bauhaus, Hornbach, OBI, Toom, Hagebau, Raiffeisen, BayWa, Amazon, eBay, Kleinanzeigen, Würth, Hilti, Bosch) → dann auch Kategorie-Vorschlag "Material allgemein"/"Werkzeug".
   - Rechnungsnummer: `Re(chnungs)?[-.\s]?Nr\.?\s*[:#]?\s*([A-Z0-9\-\/]+)`.
   - Confidence 0–1 aus Anzahl gefundener Felder. Unit-Tests mit 8–10 Beispieltexten (Baumarkt-Kassenzettel, Handwerkerrechnung, Amazon).
+- **Gemini** (kein Client-Paket, ein `fetch` auf `generativelanguage.googleapis.com/v1beta/models/<modell>:generateContent`): Bild und PDF gleichermaßen als `inline_data` mit dem passenden `mime_type`, `systemInstruction` und Nutzertext aus `ocr/request.ts` – **dieselben wie bei Claude**, sonst läse dieselbe Quittung je nach Einstellung anders. `generationConfig.temperature: 0` und `responseMimeType: 'application/json'`. Der Schlüssel geht im Header `x-goog-api-key`, nie im Query-String, sonst steht er in Logs und Referrern. Ein Fehlerstatus wird als `status` an den Fehler gehängt, damit `ocr/errors.ts` für beide Engines eine Meldung erzeugt (404 → "Modellnamen prüfen", denn Googles Modellnamen wechseln).
 - **Claude** (`@anthropic-ai/sdk`, Browser-Client `new Anthropic({ apiKey, dangerouslyAllowBrowser: true })`, Modell aus Einstellungen, Default `claude-opus-5`): Bild als `{type:'image', source:{type:'base64', media_type, data}}` (auf ≤ 1568 px verkleinern), PDF als `{type:'document', source:{type:'base64', media_type:'application/pdf', data}}`; Prompt: "Lies diesen Beleg/diese Rechnung (deutsch) aus …"; **strukturierte Ausgabe** über `client.messages.parse({ model, max_tokens: 2000, messages, output_config: { format: zodOutputFormat(ReceiptSchema) } })` mit zod-Schema (Felder wie `ReceiptFields`, Datum ISO, Beträge als Zahl, `category` aus der übergebenen Kategorienliste wählen, `confidence` 0–1). `parsed_output` null → Fehler "Beleg nicht lesbar". Fehler (401 → "API-Key ungültig", 429/5xx → "später erneut", offline → "Nur online möglich"). Kosten ~1–2 Cent pro Beleg mit Opus 5; Hinweis in den Einstellungen.
 - Beide Engines liefern `rawText`/Roh-JSON, das im `costs.extraction` gespeichert wird (Debug/Nachvollziehbarkeit).
 
@@ -593,7 +594,17 @@ Profil, welche Tage schon einen Eintrag haben, beantwortet der Offline-Cache.
   Darf die App keine exakten Wecker stellen (Android 14), stellt das Plugin ungenaue – die
   Erinnerung kommt dann ein paar Minuten später statt gar nicht.
 
-**Drei Regeln, jede nach einem Knopf geschrieben, der am Telefon nichts tat:**
+**Vier Regeln, jede nach einem Knopf geschrieben, der am Telefon nichts tat:**
+
+0. **Native Plugins über `Capacitor.Plugins` ansprechen, nicht über `import()`.**
+   `await import('@capacitor/local-notifications')` löste im WebView nie ein: ein zur
+   Laufzeit nachgeladener Baustein geht durch den Service Worker, und diese Anfrage kommt
+   dort nicht zurück. Die Diagnose meldete die Acht-Sekunden-Frist, bevor überhaupt nach
+   einer Erlaubnis gefragt wurde. `photos.ts` und `ocr/mlkit.ts` nehmen seit jeher die
+   Brücke, die der native Teil füllt – das funktioniert. Das npm-Paket bleibt trotzdem in
+   `package.json`: daraus holt `npx cap sync` die Android-Seite. **Achtung:**
+   `platform/native.ts` lädt Status Bar, Splash Screen und den Zurück-Knopf noch per
+   `import()` und dürfte aus demselben Grund still wirkungslos sein.
 
 1. **`smallIcon` ist Pflicht.** Android zeichnet in der Statusleiste ein eigenes kleines
    Symbol und verwirft die Benachrichtigung **wortlos**, wenn es fehlt oder ins Leere
@@ -644,7 +655,7 @@ Erst nach Abnahme von Phase 1 (M0–M7).
   - `openInGallery({ uri })` → `Intent.ACTION_VIEW`.
   - Berechtigung `READ_MEDIA_IMAGES` (API 33+) / `READ_EXTERNAL_STORAGE` (älter) über `@capacitor/core` Permissions-API.
 - `platform/photos.ts` schaltet per `Capacitor.isNativePlatform()` zwischen Web-Input und MediaStore-Picker um; `sourceUri` wird gespeichert; "Original in Galerie öffnen" im Foto-Info.
-- OCR: ML Kit aktiv; Claude bleibt optional.
+- OCR: ML Kit aktiv; Gemini und Claude bleiben optional.
 - Benachrichtigungen: LocalNotifications, vom Gerät geplant (Abschnitt 11). Push ist optional und braucht zusätzlich `google-services.json`.
 - Build: `android.yml` (GitHub Actions, JDK 17, `./gradlew assembleDebug`) lädt `app-debug.apk` als Artifact hoch; Thomas installiert per Sideload. Release-Signatur später (Keystore als Secret).
 - Auth/Firestore/Storage funktionieren im WebView unverändert (JS-SDK). `google-services.json` nur für den optionalen Push nötig, nicht für die Erinnerung.

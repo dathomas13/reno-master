@@ -1,9 +1,10 @@
 /**
- * Turning Claude's answer into form fields.
+ * Turning a model's answer into form fields.
  *
- * Kept free of the SDK import so it can be unit tested on its own: this is the layer
- * that decides what is allowed to reach the cost form, and a wrong number here would be
- * booked as a real expense.
+ * Shared by every online engine - Claude and Gemini both return the same small JSON
+ * object, and both are equally capable of inventing a number. Kept free of any SDK import
+ * so it can be unit tested on its own: this is the layer that decides what is allowed to
+ * reach the cost form, and a wrong value here would be booked as a real expense.
  */
 import { parseAmount, round2 } from '@/lib/money';
 import type { ReceiptFields } from './types';
@@ -39,7 +40,7 @@ function asText(value: unknown, maxLength = 120): string | undefined {
 }
 
 /** turns the model answer into fields, dropping anything implausible */
-export function validateClaudeFields(raw: Record<string, unknown>, categories: string[] = []): ReceiptFields {
+export function validateReceiptFields(raw: Record<string, unknown>, categories: string[] = []): ReceiptFields {
   const fields: ReceiptFields = { confidence: 0, engine: 'claude' };
 
   const date = asText(raw.date, 10);

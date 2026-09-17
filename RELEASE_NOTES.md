@@ -8,6 +8,22 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.28.0 – Erinnerung repariert, und Belege kann jetzt auch Gemini lesen
+
+Die Diagnose aus der vorigen Fassung hat den wahren Grund gezeigt: Die App hat den
+Benachrichtigungsteil des Telefons nie erreicht – noch bevor es um Erlaubnis oder Uhrzeit
+ging. Sie holte ihn auf einem Umweg, der im App-Fenster nicht ankommt. Jetzt nimmt sie
+denselben direkten Weg, über den auch der Galerie-Zugriff und das Beleg-Auslesen laufen,
+und der funktioniert hier seit jeher.
+
+Neu beim Beleg-Auslesen: **Gemini** steht als zweite Online-Möglichkeit neben Claude. In den
+Einstellungen unter „Beleg-Auslesen“ gibt es jetzt für beide je ein Feld für den Schlüssel
+und eines für das Modell; oben wählst du, was benutzt werden soll. „Automatisch“ nimmt der
+Reihe nach ML Kit auf dem Gerät, dann Gemini, dann Claude – das erste, für das ein Schlüssel
+hinterlegt ist. Beide bekommen wortgleich dieselbe Frage gestellt und ihre Antwort wird
+gleich streng geprüft, damit derselbe Beleg nicht je nach Einstellung einen anderen Betrag
+ergibt. Die Schlüssel bleiben auf dem Telefon.
+
 ## 0.27.0 – Die Erinnerung geht jetzt wirklich raus
 
 In der vorigen Fassung passierte beim Antippen der beiden Knöpfe schlicht nichts. Drei

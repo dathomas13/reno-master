@@ -77,16 +77,23 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
-- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 460 Unit-Tests.
+- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 484 Unit-Tests.
 - **Dateispeicher steht**: Bucket `reno-master` und Worker `reno-files` bei Cloudflare,
   die Adresse als GitHub-Variable `VITE_FILES_URL`. Damit laufen Fotos, Belege und
   Plan-Uploads. Firebase Storage wird nicht mehr benutzt, der Blaze-Tarif ist dafür nicht
   nötig. Einrichtung und Aufbau stehen in `worker/README.md`.
+- **Beleg-Auslesen mit drei Engines**: ML Kit auf dem Gerät, Gemini und Claude, hinter
+  einem Interface in `src/platform/ocr`. Beide Online-Engines fragen mit demselben Text
+  (`ocr/request.ts`) und laufen durch dieselbe Prüfung (`ocr/receiptFields.ts`) – sonst
+  hinge der gebuchte Betrag an einer Einstellung. Beide Schlüssel liegen nur im
+  localStorage des Geräts.
 - **Die Abend-Erinnerung läuft ohne Server**: das Gerät entscheidet selbst, ob heute noch
   ein Eintrag fehlt, und stellt die Benachrichtigung als Wecker
   (`src/platform/reminderPlan.ts` rechnet, `src/platform/reminder.ts` stellt,
   `src/data/useReminder.ts` hält sie an der Tagebuch-Abfrage). Kein Blaze, kein Token,
-  kein Netz. **Android braucht dafür zwingend `smallIcon`** – ohne gültiges Symbol
+  kein Netz. **Native Plugins immer über `Capacitor.Plugins` ansprechen, nie über
+  `await import('@capacitor/…')`** – der Nachlade-Baustein kommt im WebView nie an, der
+  Aufruf hängt einfach. **Android braucht außerdem zwingend `smallIcon`** – ohne gültiges Symbol
   verwirft es jede Benachrichtigung wortlos; die Datei liegt in
   `tools/icon/android/ic_stat_reno.xml`, der APK-Workflow prüft sie. Einstellungen →
   Abend-Erinnerung → „Diagnose“ fragt das Gerät, was es wirklich tut. Details in

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractJson, validateClaudeFields } from '@/platform/ocr/claudeFields';
+import { extractJson, validateReceiptFields } from '@/platform/ocr/receiptFields';
 
 const CATEGORIES = ['Material allgemein', 'Werkzeug', 'Dach'];
 
@@ -24,9 +24,9 @@ describe('extractJson', () => {
   });
 });
 
-describe('validateClaudeFields', () => {
+describe('validateReceiptFields', () => {
   it('keeps plausible values', () => {
-    const fields = validateClaudeFields(
+    const fields = validateReceiptFields(
       {
         date: '2026-09-04',
         vendor: 'Bauhaus Tirschenreuth',
@@ -49,41 +49,41 @@ describe('validateClaudeFields', () => {
   });
 
   it('accepts German amount strings', () => {
-    const fields = validateClaudeFields({ amountGross: '1.234,56' }, CATEGORIES);
+    const fields = validateReceiptFields({ amountGross: '1.234,56' }, CATEGORIES);
     expect(fields.amountGross).toBe(1234.56);
   });
 
   it('drops an invalid date', () => {
-    expect(validateClaudeFields({ date: '04.09.2026' }, CATEGORIES).date).toBeUndefined();
-    expect(validateClaudeFields({ date: '2026-13-45' }, CATEGORIES).date).toBeUndefined();
+    expect(validateReceiptFields({ date: '04.09.2026' }, CATEGORIES).date).toBeUndefined();
+    expect(validateReceiptFields({ date: '2026-13-45' }, CATEGORIES).date).toBeUndefined();
   });
 
   it('drops a VAT rate that does not exist in Germany', () => {
-    expect(validateClaudeFields({ vatRate: 21 }, CATEGORIES).vatRate).toBeUndefined();
-    expect(validateClaudeFields({ vatRate: 7 }, CATEGORIES).vatRate).toBe(7);
+    expect(validateReceiptFields({ vatRate: 21 }, CATEGORIES).vatRate).toBeUndefined();
+    expect(validateReceiptFields({ vatRate: 7 }, CATEGORIES).vatRate).toBe(7);
   });
 
   it('drops a net amount above the gross amount', () => {
-    const fields = validateClaudeFields({ amountGross: 100, amountNet: 120 }, CATEGORIES);
+    const fields = validateReceiptFields({ amountGross: 100, amountNet: 120 }, CATEGORIES);
     expect(fields.amountNet).toBeUndefined();
   });
 
   it('drops a category the app does not know', () => {
-    expect(validateClaudeFields({ category: 'Weltraumfahrt' }, CATEGORIES).category).toBeUndefined();
+    expect(validateReceiptFields({ category: 'Weltraumfahrt' }, CATEGORIES).category).toBeUndefined();
   });
 
   it('drops absurd amounts', () => {
-    expect(validateClaudeFields({ amountGross: -5 }, CATEGORIES).amountGross).toBeUndefined();
-    expect(validateClaudeFields({ amountGross: 9_000_000 }, CATEGORIES).amountGross).toBeUndefined();
+    expect(validateReceiptFields({ amountGross: -5 }, CATEGORIES).amountGross).toBeUndefined();
+    expect(validateReceiptFields({ amountGross: 9_000_000 }, CATEGORIES).amountGross).toBeUndefined();
   });
 
   it('derives a confidence when the model gives none', () => {
-    const fields = validateClaudeFields({ vendor: 'OBI', amountGross: 10 }, CATEGORIES);
+    const fields = validateReceiptFields({ vendor: 'OBI', amountGross: 10 }, CATEGORIES);
     expect(fields.confidence).toBeCloseTo(2 / 3, 2);
   });
 
   it('survives a nonsense object', () => {
-    const fields = validateClaudeFields({ vendor: 42, amountGross: 'viel' }, CATEGORIES);
+    const fields = validateReceiptFields({ vendor: 42, amountGross: 'viel' }, CATEGORIES);
     expect(fields.vendor).toBeUndefined();
     expect(fields.amountGross).toBeUndefined();
     expect(fields.confidence).toBe(0);

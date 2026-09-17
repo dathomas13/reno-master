@@ -20,7 +20,14 @@
  *      out goes through Android's idle throttling and may arrive minutes later or not at
  *      all, which makes a working setup look broken.
  *
- * The plugin is imported lazily so nothing of Capacitor ends up in the browser bundle.
+ * The plugin is reached through `Capacitor.Plugins`, the bridge the native side fills in,
+ * and not with `import('@capacitor/local-notifications')`. The import was the first
+ * attempt and it never resolved on the phone: fetching a chunk at runtime goes through
+ * the service worker, and in the WebView that request does not come back - the app's own
+ * diagnosis reported an eight second deadline hit before any permission was ever asked
+ * for. `photos.ts` and `ocr/mlkit.ts` have always used the bridge, so this file now does
+ * what already works here. The npm package stays in package.json: it carries the Android
+ * side that `npx cap sync` puts into the APK.
  */
 import { isNative } from '@/platform/index';
 import {
@@ -114,10 +121,10 @@ function withDeadline<T>(work: Promise<T>, ms = DEVICE_TIMEOUT_MS): Promise<T> {
   });
 }
 
-async function plugin(): Promise<LocalNotificationsApi | null> {
+function plugin(): LocalNotificationsApi | null {
   if (!isNative()) return null;
-  const { LocalNotifications } = await import('@capacitor/local-notifications');
-  return LocalNotifications as unknown as LocalNotificationsApi;
+  const plugins = (globalThis as { Capacitor?: { Plugins?: Record<string, unknown> } }).Capacitor?.Plugins;
+  return (plugins?.LocalNotifications as LocalNotificationsApi | undefined) ?? null;
 }
 
 function messageOf(error: unknown): string {
@@ -144,7 +151,7 @@ function rememberShown(date: string): void {
 /** 'granted' | 'denied' | 'prompt' - what the device says right now, without asking */
 export async function reminderPermission(): Promise<'granted' | 'denied' | 'prompt'> {
   try {
-    const local = await withDeadline(plugin());
+    const local = plugin();
     if (local) {
       const { display } = await withDeadline(local.checkPermissions());
       return display === 'granted' ? 'granted' : display === 'denied' ? 'denied' : 'prompt';
@@ -165,7 +172,7 @@ export async function reminderPermission(): Promise<'granted' | 'denied' | 'prom
 export async function enableReminders(): Promise<ReminderResult> {
   if (isNative()) {
     try {
-      const local = await withDeadline(plugin());
+      const local = plugin();
       // rule 1: in the app there is no second way to ask, and pretending otherwise is
       // what made this button do nothing at all
       if (!local) return { ok: false, message: 'Der Benachrichtigungsteil der App fehlt in dieser Fassung.' };
@@ -218,7 +225,7 @@ export async function enableReminders(): Promise<ReminderResult> {
 export async function applyReminderPlan(input: ReminderInput): Promise<PlannedReminder[]> {
   const plan = planReminders(input);
   try {
-    const local = await withDeadline(plugin());
+    const local = plugin();
     if (!local) return plan;
 
     const pending = await withDeadline(local.getPending());
@@ -253,7 +260,7 @@ export async function applyReminderPlan(input: ReminderInput): Promise<PlannedRe
 export async function showReminderNow(date?: string): Promise<ReminderResult> {
   if (isNative()) {
     try {
-      const local = await withDeadline(plugin());
+      const local = plugin();
       if (!local) return { ok: false, message: 'Der Benachrichtigungsteil der App fehlt in dieser Fassung.' };
 
       const { display } = await withDeadline(local.checkPermissions());
@@ -325,13 +332,7 @@ export async function reminderDiagnosis(): Promise<ReminderDiagnosis> {
     return diagnosis;
   }
 
-  let local: LocalNotificationsApi | null = null;
-  try {
-    local = await withDeadline(plugin());
-  } catch (error) {
-    diagnosis.error = messageOf(error);
-    return diagnosis;
-  }
+  const local = plugin();
   if (!local) return diagnosis;
   diagnosis.pluginReady = true;
 
@@ -376,7 +377,7 @@ export async function reminderDiagnosis(): Promise<ReminderDiagnosis> {
  */
 export async function watchReminderTaps(): Promise<() => void> {
   try {
-    const local = await withDeadline(plugin());
+    const local = plugin();
     if (!local) return () => undefined;
     const handle = await withDeadline(
       local.addListener('localNotificationActionPerformed', (event: TapEvent) => {
