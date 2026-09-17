@@ -2,17 +2,17 @@
   "ist": {
     "file": "ist.json",
     "rooms": "rooms-ist.json",
-    "version": "0.23",
+    "version": "0.24",
     "updatedAt": "2026-09-16",
-    "note": "Rohbau nach Plan 1967",
-    "bytes": 95489
+    "note": "EG-Aufmaß 09/2026 (Fertigmaße), KG abgeleitet",
+    "bytes": 97101
   },
   "soll": {
     "file": "soll.json",
     "rooms": "rooms-soll.json",
-    "version": "0.23",
+    "version": "0.0",
     "updatedAt": "2026-09-16",
     "note": "Platzhalter – identisch mit Ist, bis das Soll-Modell gebaut ist",
-    "bytes": 95537
+    "bytes": 97114
   }
 }

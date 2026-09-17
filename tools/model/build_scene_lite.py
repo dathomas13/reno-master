@@ -493,6 +493,10 @@ def build(m, variant: str, version: str, note: str) -> dict:
     for lp in m.LOGGIA_PARAPETS:
         add("EG", "Loggia Brüstung", "wall", lp["tag"],
             box(lp["x0"], lp["y0"], 0, lp["x1"], lp["y1"], lp["h"]))
+    # Deckenstücke außerhalb des Rechtecks 0..HOUSE_W / 0..HOUSE_D (Loggia-Vorsprung)
+    for e in getattr(m, "SLAB_EXTRAS", []):
+        add(e["floor"], e["name"], "slab", e["tag"],
+            box(e["x0"], e["y0"], e["z0"], e["x1"], e["y1"], e["z0"] + m.SLAB))
     for s in m.STAIRS:
         floor = "KG" if s["z0"] < 0 else "EG"
         add(floor, s["name"], "stair", s["tag"], stair_solid(s, floor))

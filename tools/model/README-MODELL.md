@@ -13,8 +13,19 @@ mit jedem Werkzeug bauen – die bestehende Python-Datenbasis ist nur der aktuel
 | y | Außenkante Südwand (Straße) | positiv nach **Norden** (Garten) |
 | z | OK Rohdecke EG (±0,000 im Plan) | positiv nach **oben** |
 
-Haus 13240 × 11820. KG-Rohboden −2750, OG-Rohboden +2750, Decken 140, Kniestock 650,
-Dach 36°, First UK Sparren ≈ +7430. Garage westlich (x −8000 … −1510), Balkon x −1300 … 0.
+Haus 12995 × 11815 (Aufmaß 09/2026, Fertigmaß). KG-Rohboden −2750, OG-Rohboden +2750,
+Decken 140, Kniestock 650, Dach 36°, First UK Sparren ≈ +7401. Garage westlich
+(x −8000 … −1510), Balkon x −1300 … 0. Südlichster Punkt ist **y = −125**: die beiden
+Wandscheiben neben der Loggia springen 12,5 cm nach Süden vor (`Y_VOR`). `ENVELOPE` in
+`haus_model.py` nennt die Hülle, die `build_rooms.py` prüft.
+
+**Maßstand je Geschoss.** Das EG ist aufgemessen (Thomas, 09/2026, DXF
+„Grundriss_EG_Bestand_Fertigmasse“) und steht in **Fertigmaßen inklusive Putz**:
+Außenwand 400 (36,5 + Putz), tragende Innenwand 270 (24 + Putz), Ostwand Diele 260,
+Leichtwände 130 / 125 / 145. Das KG ist daraus abgeleitet – die tragenden Wände stehen
+auf denselben Achsen, die nichttragenden 115er behalten ihren Abstand zur tragenden
+Nachbarwand (Konfidenz B/C). Das OG ist unverändert 1967er Rohbauraster und folgt nur
+`HOUSE_W`, `HOUSE_D` und `T_OUT`.
 
 Die App rechnet beim Laden um: three.js-Punkt = `(x, z, −y) / 1000`. Norden ist also −Z.
 
@@ -34,7 +45,7 @@ Die App rechnet beim Laden um: three.js-Punkt = `(x, z, −y) / 1000`. Norden is
 | `make_manifest.py` | Schreibt `public/models/manifest.json` (Versionen, Datum, Notiz) – die App zeigt das an. |
 | `check_walls.py` | Konsistenzprüfung: freie Wandenden, Räume, Öffnungen innerhalb der Wand. |
 | `build_all.sh` | Alles der Reihe nach. |
-| `Wandtabelle.md`, `README_Uebergabe.md` | Ursprüngliche Übergabe-Doku mit allen Maßen und Konfidenzen. |
+| `Wandtabelle.md`, `README_Uebergabe.md` | Ursprüngliche Übergabe-Doku (Rohbau 1967). **Für das EG überholt** – dort gilt das Aufmaß in `haus_model.py`. |
 
 ## 3. Bestand (Ist) ändern
 
@@ -46,9 +57,9 @@ $EDITOR haus_model.py
 #    (braucht numpy; ohne numpy übernimmt check_scene.py in Schritt 4 die Prüfung)
 python3 check_walls.py | grep -i "AUSSERHALB\|FREIES"
 # 3. Szene bauen - ohne Abhängigkeiten, das ist der übliche Weg:
-python3 build_scene_lite.py --variant ist --version 0.23 --note "Kurznotiz"
+python3 build_scene_lite.py --variant ist --version 0.25 --note "Kurznotiz"
 #    Alternativen: build_scene.py (mit CadQuery) oder, aus einer gebauten Viewer-HTML,
-#    extract_scene_from_html.py --html Haus_3D.html --variant ist --version 0.23
+#    extract_scene_from_html.py --html Haus_3D.html --variant ist --version 0.25
 # 4. Szene gegen die vorige Fassung prüfen (Exitcode != 0 = Problem)
 python3 check_scene.py ../../public/models/ist.json --against /pfad/zur/alten/ist.json
 # 4. Räume und Pläne neu bauen, Manifest schreiben
@@ -98,7 +109,7 @@ nach Version verglichen (Details in `src/data/modelRelease.ts`):
 
 ```bash
 git add public/models public/plans tools/model
-git commit -m "model: EG Wand versetzt, v0.23"
+git commit -m "model: EG Wand versetzt, v0.25"
 git push
 ```
 
@@ -123,8 +134,8 @@ abgelehnt und das bisherige Modell bleibt in Betrieb.
 
 ```jsonc
 {
-  "meta": { "variant": "ist", "version": "0.22", "generatedAt": "2026-09-14",
-            "note": "Rohbau nach Plan 1967", "house_w": 13240, "house_d": 11820, "ridge": 7428.7 },
+  "meta": { "variant": "ist", "version": "0.24", "generatedAt": "2026-09-16",
+            "note": "EG-Aufmaß 09/2026", "house_w": 12995, "house_d": 11815, "ridge": 7401.4 },
   "prims": [
     { "layer": "KG|EG|OG|DACH|GAR",
       "name": "Außenwand Nord",
