@@ -8,6 +8,18 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.25.0 – Das Update installiert jetzt wirklich die neue Fassung
+
+Wer in der App auf „Installieren“ getippt hat, bekam unter Umständen die Fassung
+installiert, die schon drauf war – und die App startete danach unverändert neu. Grund war
+ein Wettlauf: die Webseite mit der Ankündigung steht anderthalb Minuten nach einer
+Änderung, die App-Datei zum Installieren erst nach dreien. Wer schnell war, lud die alte
+Datei.
+
+Die Ankündigung nennt jetzt die App-Datei genau dieser Fassung statt „die neueste“, und
+sie erscheint erst, wenn die Datei auch fertig ist. Fehlt sie trotzdem einmal, sagt das
+Banner das – und schaltet sich von selbst frei, sobald sie da ist.
+
 ## 0.24.0 – Eine Fotogalerie, und das 3D-Modell merkt sich die Ansicht
 
 Neu ist der Bildschirm „Fotos“: alle Bilder nach Monaten, Fotos und Belege getrennt

@@ -172,5 +172,45 @@ export function runningVersion(): string {
   return APP_VERSION;
 }
 
-/** where the newest APK lives; the release tracks the latest build */
-export const APK_URL = 'https://github.com/dathomas13/reno-master/releases/latest/download/reno-master.apk';
+const REPO = 'dathomas13/reno-master';
+
+/**
+ * The APK of exactly this version.
+ *
+ * Never `releases/latest/download/...`, and that is the whole point: the site and the APK
+ * are built by two workflows, the site is done in about ninety seconds and the APK needs
+ * three minutes. In between, `version.json` already announces the new version while
+ * "latest" is still the old release - and the phone dutifully downloaded, installed and
+ * restarted the version it already had. It even looked like it worked.
+ */
+export function apkUrlFor(version: string): string {
+  return `https://github.com/${REPO}/releases/download/v${version}/reno-master.apk`;
+}
+
+/** the fallback for a version.json that carries no address of its own */
+export const APK_URL = `https://github.com/${REPO}/releases/latest/download/reno-master.apk`;
+
+/**
+ * Whether the release of a version is published yet.
+ *
+ * `true` it is there, `false` it is not (the APK workflow is still building), `null` we
+ * could not find out - no reception, rate limit - and then the offer stands, because a
+ * failed check must not swallow a real update.
+ */
+export function readinessFromStatus(status: number): boolean | null {
+  if (status === 200) return true;
+  if (status === 404) return false;
+  return null;
+}
+
+export async function releaseReady(version: string): Promise<boolean | null> {
+  try {
+    const response = await fetch(`https://api.github.com/repos/${REPO}/releases/tags/v${version}`, {
+      cache: 'no-store',
+      headers: { accept: 'application/vnd.github+json' },
+    });
+    return readinessFromStatus(response.status);
+  } catch {
+    return null;
+  }
+}

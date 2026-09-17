@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  apkUrlFor,
   newerVersions,
   notesParagraphs,
+  readinessFromStatus,
   shouldOfferUpdate,
   type RemoteVersion,
 } from '@/data/appVersion';
@@ -99,5 +101,29 @@ describe('notesParagraphs', () => {
   it('has nothing to show for nothing', () => {
     expect(notesParagraphs(undefined)).toEqual([]);
     expect(notesParagraphs('   \n\n  ')).toEqual([]);
+  });
+});
+
+describe('apkUrlFor', () => {
+  it('names the exact version, never "latest"', () => {
+    expect(apkUrlFor('0.25.0')).toBe(
+      'https://github.com/dathomas13/reno-master/releases/download/v0.25.0/reno-master.apk',
+    );
+    // the trap this replaces: with "latest" the phone downloads whatever release happens
+    // to be newest at that second, which during the two minutes after a push is the old one
+    expect(apkUrlFor('0.25.0')).not.toContain('latest');
+  });
+});
+
+describe('readinessFromStatus', () => {
+  it('knows there is a release, and knows there is not', () => {
+    expect(readinessFromStatus(200)).toBe(true);
+    expect(readinessFromStatus(404)).toBe(false);
+  });
+
+  it('admits it cannot tell, so a real update is never swallowed', () => {
+    expect(readinessFromStatus(403)).toBeNull(); // rate limit
+    expect(readinessFromStatus(500)).toBeNull();
+    expect(readinessFromStatus(0)).toBeNull();
   });
 });

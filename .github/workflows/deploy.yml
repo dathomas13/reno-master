@@ -43,6 +43,31 @@ jobs:
       # a hash router needs no rewrite rules, this is only a safety net
       - run: cp dist/index.html dist/404.html
 
+      # Erst ankündigen, wenn es auch etwas zu installieren gibt.
+      #
+      # Beide Workflows starten mit demselben Push, aber die Seite steht nach etwa
+      # anderthalb Minuten und das APK-Release erst nach dreien. In dieser Lücke meldete
+      # version.json die neue Fassung, während releases/latest noch die alte war: das
+      # Telefon lud, installierte und startete die Fassung, die es schon hatte - und es
+      # sah aus, als hätte das Update funktioniert. Die App zeigt inzwischen selbst an,
+      # wenn die Datei noch fehlt; hier wartet zusätzlich die Ankündigung, damit auch
+      # ältere Fassungen draußen nicht in die Lücke fallen.
+      - name: Auf das APK-Release warten
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          for versuch in $(seq 1 24); do
+            if gh release view "v$version" >/dev/null 2>&1; then
+              echo "Release v$version ist da (nach $((versuch * 15)) s)."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::warning::Release v$version ist nach sechs Minuten nicht da."
+          echo "Die Seite wird trotzdem veröffentlicht - im Web ist das Update vollständig."
+          echo "Die App zeigt so lange 'Die App-Datei wird noch gebaut'."
+
       # the app asks this file whether a newer build exists; the commit is the identity,
       # because the web version and the APK are built from the same one
       - name: version.json schreiben
@@ -51,7 +76,7 @@ jobs:
         # Commit-Nachricht, die für Entwickler geschrieben ist und im Banner auch so klingt.
         run: |
           node --experimental-strip-types tools/release-notes.mjs --current \
-            --apk "https://github.com/${{ github.repository }}/releases/latest/download/reno-master.apk" \
+            --repo "${{ github.repository }}" \
             > dist/version.json
           cat dist/version.json
 

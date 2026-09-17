@@ -2,7 +2,7 @@
  * Collects the published versions, newest first, for the update banner in the app.
  *
  *   node --experimental-strip-types tools/release-notes.mjs            > dist/versions.json
- *   node --experimental-strip-types tools/release-notes.mjs --current  > dist/version.json
+ *   node --experimental-strip-types tools/release-notes.mjs --current --repo owner/repo
  *   node --experimental-strip-types tools/release-notes.mjs --text     (for the release page)
  *
  * The text comes from RELEASE_NOTES.md, not from the commit message. A commit explains a
@@ -113,13 +113,22 @@ function main() {
 
   // version.json: only the build that was just made, plus where its APK lives
   if (process.argv.includes('--current')) {
-    const apk = process.argv[process.argv.indexOf('--apk') + 1];
+    // The address must name this very version. "releases/latest/download/..." looks
+    // convenient and is a trap: the site is published about ninety seconds after the push,
+    // the APK release some two minutes later, and in between "latest" is still the
+    // previous one - the phone then downloads, installs and restarts the version it
+    // already had, and the update looks as if it had worked.
+    const repo = process.argv[process.argv.indexOf('--repo') + 1];
+    const apk =
+      repo && !repo.startsWith('--')
+        ? `https://github.com/${repo}/releases/download/v${current}/reno-master.apk`
+        : undefined;
     process.stdout.write(
       JSON.stringify(
         {
           ...entryFor(current, 'HEAD', written),
           sha: git('git rev-parse --short HEAD'),
-          apk: apk && !apk.startsWith('--') ? apk : undefined,
+          apk,
         },
         null,
         2,
