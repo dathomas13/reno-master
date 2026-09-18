@@ -15,6 +15,8 @@ export function PdfViewer({ storagePath }: { storagePath: string }) {
   const [attempt, setAttempt] = useState(0);
   const container = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const pointers = useRef(new Map<number, { x: number; y: number }>());
+  const pinch = useRef<{ distance: number; zoom: number } | null>(null);
 
   useEffect(() => {
     const element = container.current;
@@ -79,7 +81,6 @@ export function PdfViewer({ storagePath }: { storagePath: string }) {
     let task: RenderTask | undefined;
     setRendering(true);
     setError(null);
-    container.current?.scrollTo?.(0, 0);
     const timer = setTimeout(() => {
       active = false;
       task?.cancel();
@@ -120,6 +121,44 @@ export function PdfViewer({ storagePath }: { storagePath: string }) {
     };
   }, [pdf, pageNumber, zoom, width]);
 
+  function onPointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.current.size === 2) {
+      const [first, second] = [...pointers.current.values()];
+      if (first && second) {
+        pinch.current = {
+          distance: Math.hypot(first.x - second.x, first.y - second.y),
+          zoom,
+        };
+      }
+    }
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const previous = pointers.current.get(event.pointerId);
+    if (!previous) return;
+    const deltaX = event.clientX - previous.x;
+    const deltaY = event.clientY - previous.y;
+    pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.current.size < 2) {
+      container.current?.scrollBy?.({ left: -deltaX, top: -deltaY });
+      return;
+    }
+    const [first, second] = [...pointers.current.values()];
+    const gesture = pinch.current;
+    if (!first || !second || !gesture) return;
+    const distance = Math.hypot(first.x - second.x, first.y - second.y);
+    if (gesture.distance > 0) {
+      setZoom(Math.min(3, Math.max(1, gesture.zoom * (distance / gesture.distance))));
+    }
+  }
+
+  function onPointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    pointers.current.delete(event.pointerId);
+    if (pointers.current.size < 2) pinch.current = null;
+  }
+
   const controlsDisabled = !pdf || Boolean(error);
   const iconButton = 'btn btn-ghost w-11 h-11 min-h-0 p-0 shrink-0';
 
@@ -141,7 +180,8 @@ export function PdfViewer({ storagePath }: { storagePath: string }) {
             disabled={controlsDisabled || zoom >= 3} onClick={() => setZoom((current) => current + 0.5)}>+</button>
         </div>
       </div>
-      <div ref={container} className="flex-1 min-h-0 min-w-0 overflow-auto overscroll-contain [scrollbar-gutter:stable] p-3">
+      <div ref={container} className="flex-1 min-h-0 min-w-0 overflow-auto overscroll-contain [scrollbar-gutter:stable] p-3 touch-none"
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
         {error ? (
           <div className="max-w-md mx-auto text-center p-4">
             <p role="alert" className="text-sm text-ink break-words">{error}</p>

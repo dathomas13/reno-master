@@ -8,6 +8,11 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.28.7 – Dateien gemeinsam geöffnet
+
+Fotos, Belege und Pläne findest du jetzt gesammelt unter „Dateien“. Die drei Bereiche bleiben
+jeweils eigene Ansichten, sind aber vom Menü aus mit einem Tipp erreichbar.
+
 ## 0.28.6 – PDF-Belege wirklich öffnen
 
 PDF-Belege zeigen jetzt ihren Inhalt statt nur des Schriftzugs „PDF“. In der Vollbildansicht

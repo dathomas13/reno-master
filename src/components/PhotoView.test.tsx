@@ -68,6 +68,27 @@ describe('receipt lightbox', () => {
     expect(onIndexChange).not.toHaveBeenCalled();
   });
 
+  it('zooms a PDF with a two-finger pinch', async () => {
+    render(<Lightbox photos={[receipt]} index={0} onClose={vi.fn()} onIndexChange={vi.fn()} />);
+    await screen.findByLabelText('PDF-Seite 1');
+    const gestureArea = screen.getByLabelText('PDF-Ansicht').querySelector('[class*="overflow-auto"]');
+    expect(gestureArea).toBeTruthy();
+    await waitFor(() => expect(mocks.renderPage).toHaveBeenCalledTimes(1));
+    const dispatchPointer = (type: string, pointerId: number, clientX: number) => {
+      const event = new Event(type, { bubbles: true });
+      Object.defineProperties(event, { pointerId: { value: pointerId }, clientX: { value: clientX }, clientY: { value: 300 } });
+      gestureArea!.dispatchEvent(event);
+    };
+    act(() => {
+      dispatchPointer('pointerdown', 1, 100);
+      dispatchPointer('pointerdown', 2, 200);
+      dispatchPointer('pointermove', 2, 250);
+    });
+    await waitFor(() => expect(mocks.renderPage).toHaveBeenLastCalledWith(expect.objectContaining({
+      viewport: { width: 480, height: 640 },
+    })));
+  });
+
   it('shows an unavailable offline file and allows retrying', async () => {
     mocks.resolve.mockResolvedValueOnce(null);
     render(<Lightbox photos={[receipt]} index={0} onClose={vi.fn()} onIndexChange={vi.fn()} />);

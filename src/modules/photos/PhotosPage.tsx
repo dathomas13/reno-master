@@ -9,12 +9,8 @@ import { photoDate, photosForRoom, sortByDate, type PhotoSource } from '@/data/p
 import { formatDate, formatMonth, monthKey } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
 
-type Kind = 'alle' | 'photo' | 'receipt';
-
-const KIND_LABEL: Record<Kind, string> = { alle: 'Alle', photo: 'Fotos', receipt: 'Belege' };
-
 /**
- * Every picture in one place, filtered by room when asked.
+ * Every photo in one place, filtered by room when asked.
  *
  * This is where the "Fotos" tile of a room leads. The room comes from the diary entry or
  * the receipt a picture hangs on (see `photoRooms.ts`), not from the picture itself.
@@ -28,14 +24,13 @@ export default function PhotosPage() {
   const [open, setOpen] = useState<number | null>(null);
 
   const roomFilter = params.get('raum');
-  const kind = (params.get('art') as Kind) ?? 'alle';
 
   const source = useMemo<PhotoSource>(() => ({ photos, entries, costs }), [photos, entries, costs]);
 
   const visible = useMemo(() => {
     const rows = roomFilter ? photosForRoom(roomFilter, source) : sortByDate(photos, source);
-    return kind === 'alle' ? rows : rows.filter((photo) => photo.kind === kind);
-  }, [roomFilter, kind, photos, source]);
+    return rows.filter((photo) => photo.kind === 'photo');
+  }, [roomFilter, photos, source]);
 
   /** the pictures of one month under one heading, like the diary list */
   const months = useMemo(() => {
@@ -50,40 +45,23 @@ export default function PhotosPage() {
     return [...map.entries()];
   }, [visible, source]);
 
-  function setParam(name: string, value: string | null) {
-    const next = new URLSearchParams(params);
-    if (value) next.set(name, value);
-    else next.delete(name);
-    setParams(next, { replace: true });
-  }
-
   const title = roomFilter ? roomName(roomFilter) : 'Fotos';
 
   return (
     <>
       <TopBar
         title={title}
-        back={roomFilter ? `/3d?raum=${roomFilter}` : '/'}
+        back={roomFilter ? `/3d?raum=${roomFilter}` : '/dateien'}
         subtitle={`${visible.length} ${visible.length === 1 ? 'Bild' : 'Bilder'}`}
       />
 
-      <div className="flex gap-2 overflow-x-auto p-3 no-scrollbar">
-        {(['alle', 'photo', 'receipt'] as Kind[]).map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={`chip shrink-0 ${kind === item ? 'chip-on' : ''}`}
-            onClick={() => setParam('art', item === 'alle' ? null : item)}
-          >
-            {KIND_LABEL[item]}
-          </button>
-        ))}
-        {roomFilter && (
-          <button type="button" className="chip chip-on shrink-0" onClick={() => setParam('raum', null)}>
+      {roomFilter && (
+        <div className="flex gap-2 overflow-x-auto p-3 no-scrollbar">
+          <button type="button" className="chip chip-on shrink-0" onClick={() => setParams({}, { replace: true })}>
             {roomName(roomFilter)} ×
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {loading && photos.length === 0 && <Spinner label="Bilder werden geladen…" />}
 
@@ -93,7 +71,7 @@ export default function PhotosPage() {
           hint={
             roomFilter
               ? 'Fotos gehören über den Tagebuch-Eintrag oder den Beleg zu einem Raum. Setz dort den Raum, dann tauchen sie hier auf.'
-              : 'Fotos entstehen im Tagebuch, Belege bei den Kosten.'
+              : 'Fotos entstehen im Tagebuch.'
           }
         />
       )}
@@ -110,11 +88,6 @@ export default function PhotosPage() {
                 onClick={() => setOpen(visible.indexOf(photo))}
               >
                 <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />
-                {photo.kind === 'receipt' && (
-                  <span className="absolute bottom-1 right-1 text-[10px] bg-bg/80 text-muted rounded px-1">
-                    Beleg
-                  </span>
-                )}
               </button>
             ))}
           </div>

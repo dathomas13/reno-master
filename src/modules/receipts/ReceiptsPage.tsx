@@ -77,6 +77,7 @@ export default function ReceiptsPage() {
     <>
       <TopBar
         title="Belege"
+        back="/dateien"
         subtitle={`${visible.length} ${visible.length === 1 ? 'Beleg' : 'Belege'} · ${formatEuro(sum)}`}
       />
 

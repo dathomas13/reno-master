@@ -23,6 +23,7 @@ import CostEditorPage from '@/modules/costs/CostEditorPage';
 import TasksPage from '@/modules/tasks/TasksPage';
 import ContactsPage from '@/modules/contacts/ContactsPage';
 import SearchPage from '@/modules/search/SearchPage';
+import FilesPage from '@/modules/files/FilesPage';
 import PhotosPage from '@/modules/photos/PhotosPage';
 import ReceiptsPage from '@/modules/receipts/ReceiptsPage';
 import SettingsPage from '@/modules/settings/SettingsPage';
@@ -97,6 +98,7 @@ function Protected() {
           <Route path="/aufgaben" element={<TasksPage />} />
           <Route path="/kontakte" element={<ContactsPage />} />
           <Route path="/suche" element={<SearchPage />} />
+          <Route path="/dateien" element={<FilesPage />} />
           <Route path="/fotos" element={<PhotosPage />} />
           <Route path="/belege" element={<ReceiptsPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
