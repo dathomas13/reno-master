@@ -1,8 +1,11 @@
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
+import { Sheet } from '@/components/Sheet';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Phase, type Photo, type Task } from '@/data/types';
+import { patchPhase } from '@/data/repos';
 import { orderBy, limit } from '@/firebase/db';
 import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib/date';
 import { formatEuro } from '@/lib/money';
@@ -13,10 +16,13 @@ export default function HomePage() {
   const { data: costs } = useCollection<Cost>(COL.costs);
   const { data: tasks } = useCollection<Task>(COL.tasks);
   const { data: phases } = useCollection<Phase>(COL.phases);
+  const [phaseOpen, setPhaseOpen] = useState(false);
+  const [phaseBusy, setPhaseBusy] = useState(false);
 
   const todayEntry = entries.find((entry) => entry.date === today());
   const recent = entries.slice(0, 3);
-  const phase = phases.find((item) => item.status === 'In Arbeit');
+  const orderedPhases = useMemo(() => [...phases].sort((a, b) => a.order - b.order), [phases]);
+  const phase = orderedPhases.find((item) => item.status === 'In Arbeit');
   const total = costs.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const thisMonth = costs
     .filter((cost) => monthKey(cost.date) === monthKey(today()))
@@ -27,6 +33,26 @@ export default function HomePage() {
     .slice(0, 5);
 
   const photoFor = (entry: DiaryEntry) => photos.find((photo) => photo.entryId === entry.id);
+
+  async function setCurrentPhase(next: Phase) {
+    if (phaseBusy || next.id === phase?.id) {
+      setPhaseOpen(false);
+      return;
+    }
+    setPhaseBusy(true);
+    const date = today();
+    try {
+      await Promise.all([
+        ...orderedPhases
+          .filter((item) => item.status === 'In Arbeit' && item.id !== next.id)
+          .map((item) => patchPhase(item.id, { status: 'Abgeschlossen', end: item.end ?? date })),
+        patchPhase(next.id, { status: 'In Arbeit', start: next.start ?? date, end: undefined }),
+      ]);
+      setPhaseOpen(false);
+    } finally {
+      setPhaseBusy(false);
+    }
+  }
 
   return (
     <>
@@ -53,9 +79,42 @@ export default function HomePage() {
           <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-transparent" />
           <div className="absolute bottom-0 left-0 p-4">
             <div className="font-semibold">Schlesierstraße 31</div>
-            <div className="text-xs text-muted">{phase?.name ?? 'Kernsanierung'}</div>
+            {orderedPhases.length > 0 ? (
+              <button
+                type="button"
+                className="text-xs text-muted underline decoration-line underline-offset-2 text-left"
+                onClick={() => setPhaseOpen(true)}
+              >
+                {phase?.name ?? 'Phase setzen'}
+              </button>
+            ) : (
+              <div className="text-xs text-muted">Kernsanierung</div>
+            )}
           </div>
         </div>
+
+        <Sheet open={phaseOpen} onClose={() => setPhaseOpen(false)} title="Aktuelle Phase">
+          <div className="p-3">
+            <ul className="flex flex-col">
+              {orderedPhases.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="list-row w-full text-left last:border-0"
+                    onClick={() => void setCurrentPhase(item)}
+                    disabled={phaseBusy}
+                  >
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{item.name}</span>
+                      <span className="block text-xs text-muted">{item.status}</span>
+                    </span>
+                    {item.id === phase?.id && <span className="text-accent text-sm">Aktuell</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Sheet>
 
         {todayEntry ? (
           <Link to={`/tagebuch/${todayEntry.id}`} className="card p-4">

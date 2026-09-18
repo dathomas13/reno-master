@@ -8,6 +8,19 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.30.3 – Fotos nach Bauphase
+
+Die Fotos-Ansicht gruppiert Bilder jetzt nach der Bauphase ihres Tagebuch-Eintrags. Damit
+hilft die Phase beim Wiederfinden, ohne dass Fotos selbst gepflegt werden müssen. Über den
+kleinen Umschalter kannst du weiterhin zur Monatsansicht zurück.
+
+## 0.30.2 – Phase dezent wechseln
+
+Die aktuelle Bauphase bleibt im Startbild nur eine kleine Zeile im Hausbild. Du kannst sie
+jetzt dort antippen und bei Bedarf wechseln; neue Tagebuch-Einträge und Aufgaben hängen
+dann automatisch an der aktuellen Phase, ohne dass dafür eine zusätzliche Übersichtskarte
+auf dem Startscreen liegt.
+
 ## 0.30.1 – CSV nur im Browser
 
 Der CSV-Knopf in den Kosten erscheint nur noch im Browser. In der App-Version wird er

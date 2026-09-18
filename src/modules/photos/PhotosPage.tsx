@@ -4,10 +4,12 @@ import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { PhotoImage, Lightbox } from '@/components/PhotoView';
 import { useCollection } from '@/data/hooks';
-import { COL, type Cost, type DiaryEntry, type Photo } from '@/data/types';
+import { COL, type Cost, type DiaryEntry, type Phase, type Photo } from '@/data/types';
 import { photoDate, photosForRoom, sortByDate, type PhotoSource } from '@/data/photoRooms';
 import { formatDate, formatMonth, monthKey } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
+
+type Grouping = 'phase' | 'month';
 
 /**
  * Every photo in one place, filtered by room when asked.
@@ -20,8 +22,10 @@ export default function PhotosPage() {
   const { data: photos, loading } = useCollection<Photo>(COL.photos);
   const { data: entries } = useCollection<DiaryEntry>(COL.diary);
   const { data: costs } = useCollection<Cost>(COL.costs);
+  const { data: phases } = useCollection<Phase>(COL.phases);
   const { name: roomName } = useRooms();
   const [open, setOpen] = useState<number | null>(null);
+  const [grouping, setGrouping] = useState<Grouping>('phase');
 
   const roomFilter = params.get('raum');
 
@@ -32,18 +36,30 @@ export default function PhotosPage() {
     return rows.filter((photo) => photo.kind === 'photo');
   }, [roomFilter, photos, source]);
 
-  /** the pictures of one month under one heading, like the diary list */
-  const months = useMemo(() => {
+  const phaseById = useMemo(() => new Map(phases.map((phase) => [phase.id, phase])), [phases]);
+  const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries]);
+
+  const groups = useMemo(() => {
     const map = new Map<string, Photo[]>();
     for (const photo of visible) {
-      const date = photoDate(photo, source);
-      const key = date ? monthKey(date) : '';
+      const entry = photo.entryId ? entryById.get(photo.entryId) : undefined;
+      const key = grouping === 'phase' ? (entry?.phaseId ?? '') : monthKey(photoDate(photo, source));
       const rows = map.get(key);
       if (rows) rows.push(photo);
       else map.set(key, [photo]);
     }
-    return [...map.entries()];
-  }, [visible, source]);
+    const rows = [...map.entries()].map(([key, items]) => ({
+      key,
+      title: grouping === 'phase'
+        ? (phaseById.get(key)?.name ?? 'Ohne Phase')
+        : (key ? formatMonth(`${key}-01`) : 'Ohne Datum'),
+      order: grouping === 'phase' ? (phaseById.get(key)?.order ?? Number.MAX_SAFE_INTEGER) : 0,
+      photos: sortByDate(items, source),
+    }));
+    return rows.sort((a, b) => grouping === 'phase' ? a.order - b.order || a.title.localeCompare(b.title) : b.key.localeCompare(a.key));
+  }, [visible, source, grouping, entryById, phaseById]);
+
+  const lightboxPhotos = useMemo(() => groups.flatMap((group) => group.photos), [groups]);
 
   const title = roomFilter ? roomName(roomFilter) : 'Fotos';
 
@@ -63,6 +79,21 @@ export default function PhotosPage() {
         </div>
       )}
 
+      {visible.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto px-3 pt-3 no-scrollbar">
+          {(['phase', 'month'] as Grouping[]).map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`chip shrink-0 ${grouping === item ? 'chip-on' : ''}`}
+              onClick={() => setGrouping(item)}
+            >
+              {item === 'phase' ? 'Nach Phase' : 'Nach Monat'}
+            </button>
+          ))}
+        </div>
+      )}
+
       {loading && photos.length === 0 && <Spinner label="Bilder werden geladen…" />}
 
       {!loading && visible.length === 0 && (
@@ -76,16 +107,16 @@ export default function PhotosPage() {
         />
       )}
 
-      {months.map(([key, rows]) => (
-        <section key={key || 'ohne'}>
-          <div className="section-title">{key ? formatMonth(`${key}-01`) : 'Ohne Datum'}</div>
+      {groups.map((group) => (
+        <section key={group.key || 'ohne'}>
+          <div className="section-title">{group.title}</div>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5 px-3">
-            {rows.map((photo) => (
+            {group.photos.map((photo) => (
               <button
                 key={photo.id}
                 type="button"
                 className="aspect-square relative"
-                onClick={() => setOpen(visible.indexOf(photo))}
+                onClick={() => setOpen(lightboxPhotos.indexOf(photo))}
               >
                 <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />
               </button>
@@ -94,9 +125,9 @@ export default function PhotosPage() {
         </section>
       ))}
 
-      {open !== null && visible[open] && (
+      {open !== null && lightboxPhotos[open] && (
         <Lightbox
-          photos={visible}
+          photos={lightboxPhotos}
           index={open}
           onClose={() => setOpen(null)}
           onIndexChange={setOpen}

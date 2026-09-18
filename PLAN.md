@@ -350,7 +350,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
 
 ### 8.1 Start (Dashboard)
-- Hero: Nordansicht-Foto (`public/img/nordansicht.jpg`) mit Overlay-Titel "Schlesierstraße 31" und aktueller Phase (aus `phases` mit Status "In Arbeit").
+- Hero: Nordansicht-Foto (`public/img/nordansicht.jpg`) mit Overlay-Titel "Schlesierstraße 31" und aktueller Phase (aus `phases` mit Status "In Arbeit"). Die Phase bleibt nur eine dezente Zeile im Bild, ist aber antippbar: ein kleines Sheet setzt genau eine Phase auf "In Arbeit", schließt bisher laufende Phasen ab und hält damit die automatische Phase für neue Tagebuch-Einträge und Aufgaben aktuell. Keine eigene Phasen-Karte auf dem Startscreen.
 - Karte "Heute": wenn kein Eintrag für heute → großer Button "Tagebuch-Eintrag für heute anlegen"; sonst Vorschau des Eintrags + "Bearbeiten".
 - Schnellaktionen: "Beleg erfassen" (öffnet Kosten-Editor mit Kamera), "Foto zum Tagebuch", "Aufgabe".
 - Letzte 3 Tagebucheinträge (Datum, Titel, erstes Thumbnail).
@@ -427,6 +427,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
+- Die Standardgruppierung ist nach Bauphase: Fotos erben die Phase ausschließlich über ihren Tagebuch-Eintrag (`entry.phaseId`), nicht über ein eigenes Pflegefeld. Ein dezenter Umschalter bietet weiter die Monatsgruppierung. Belege werden hier nicht nach Phase gruppiert; die Fotos-Seite zeigt nur `kind:'photo'`.
 - Chips: Alle · Fotos · Belege. `?raum=<id>` filtert auf einen Raum – dorthin führt die Kachel „Fotos“ im Raumfenster des 3D-Modells, und zurück führt der Pfeil dorthin.
 - **Der Raum eines Fotos steht nicht am Foto.** `addPhoto` setzt `roomIds` nie: beim Fotografieren wählt niemand Räume aus. Ein Bild gehört zu einem Raum, wenn sein Tagebucheintrag oder sein Beleg ihn trägt (`src/data/photoRooms.ts`, testbar); das Feld am Foto zählt zusätzlich. Ohne diese Regel zeigt die Kachel „Fotos“ eines Raums null, so voll das Tagebuch auch ist.
 - Das Datum eines Fotos ist `takenAt`, sonst der Tag seines Eintrags, sonst der seines Belegs – Bilder ohne alles stehen unter „Ohne Datum“.
