@@ -3,7 +3,8 @@
  * the bytes to the upload queue. Works with no network; the picture shows up in the
  * entry immediately because the local blob is displayed until the upload went through.
  */
-import { COL, type Photo, type PhotoKind } from './types';
+import { COL, type Cost, type Photo, type PhotoKind } from './types';
+import { pendingWrite } from './pendingWrite';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
 import { enqueue, putLocalBlob, dropLocalBlob, removeJobsForPaths } from '@/offline/outbox';
 import { deleteFile } from '@/platform/fileStore';
@@ -29,6 +30,15 @@ export interface AddPhotoInput {
    * the gallery first and passes it here.
    */
   originalFile?: Blob;
+  existingPhotos?: readonly Photo[];
+  existingCosts?: readonly Cost[];
+}
+
+export class ReceiptAlreadyLinkedError extends Error {
+  constructor(public readonly photo: Photo) {
+    super('Dieser Beleg ist bereits einer anderen Rechnung zugeordnet.');
+    this.name = 'ReceiptAlreadyLinkedError';
+  }
 }
 
 /** the archive copy sits next to the working copy, under the same id */
@@ -42,8 +52,33 @@ function storagePathFor(kind: PhotoKind, id: string, costId: string | undefined,
 }
 
 export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
-  const id = newId();
   const isPdf = input.file.type === 'application/pdf';
+  const takenAt = input.takenAt ?? (await readTakenAt(input.file));
+  const duplicate = input.kind === 'receipt' && input.originalName
+    ? input.existingPhotos?.find((photo) =>
+      photo.kind === 'receipt' &&
+      photo.originalName === input.originalName &&
+      photo.originalBytes === input.file.size &&
+      (photo.contentType === 'application/pdf') === isPdf &&
+      (!takenAt || !photo.takenAt || photo.takenAt === takenAt),
+    )
+    : undefined;
+  if (duplicate) {
+    const ownerId = input.existingCosts
+      ? input.existingCosts.find((cost) => cost.receiptPhotoIds.includes(duplicate.id))?.id
+        ?? input.existingCosts.find((cost) => cost.id === duplicate.costId)?.id
+      : duplicate.costId;
+    if (ownerId && ownerId !== input.costId) {
+      throw new ReceiptAlreadyLinkedError({ ...duplicate, costId: ownerId });
+    }
+    if (input.costId && duplicate.costId !== input.costId) {
+      await pendingWrite(updatePhoto(duplicate.id, { costId: input.costId }));
+      return { ...duplicate, costId: input.costId };
+    }
+    return duplicate;
+  }
+
+  const id = newId();
   const maxEdge = input.kind === 'receipt' ? RECEIPT_MAX_EDGE : PHOTO_MAX_EDGE;
 
   const main = isPdf
@@ -62,7 +97,7 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
     width: main.width,
     height: main.height,
     bytes: main.blob.size,
-    takenAt: input.takenAt ?? (await readTakenAt(input.file)) ?? toIsoDateTime(),
+    takenAt: takenAt ?? toIsoDateTime(),
     originalName: input.originalName,
     originalBytes: input.file.size,
     sourceUri: input.sourceUri,
@@ -102,7 +137,8 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
 
   // strip undefined, Firestore rejects it
   const clean = Object.fromEntries(Object.entries(photo).filter(([, value]) => value !== undefined));
-  await saveDoc<Photo>(COL.photos, clean as unknown as Photo);
+  const write = saveDoc<Photo>(COL.photos, clean as unknown as Photo);
+  await (input.kind === 'receipt' ? pendingWrite(write) : write);
 
   await enqueue({
     id,

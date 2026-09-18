@@ -209,6 +209,15 @@ interface Cost {
 }
 ```
 
+Beim Belegimport werden Dateiname, ursprüngliche Dateigröße, Dateiart und das verfügbare
+Aufnahmedatum mit bekannten Belegen verglichen. Ein Treffer wird nicht erneut hochgeladen:
+bei einer bestehenden Rechnung wird diese verlinkt und das doppelte Speichern gesperrt;
+Belege ohne bestehende Rechnung können dem aktuellen Entwurf zugeordnet werden. Beide
+Verweisrichtungen (`costId` und `receiptPhotoIds`) zählen bei der Prüfung. Das Speichern
+wartet auf Dateiimport und Auslesen; lokale Anhänge bleiben bis zur Bestätigung durch die
+Fotoabfrage erhalten. Firestore-Schreibvorgänge für Beleg und Rechnung warten höchstens
+10 Sekunden auf die Serverbestätigung und bleiben danach in der Offline-Warteschlange.
+
 ### 5.4 `tasks` – Aufgaben
 ```ts
 interface Task {
@@ -390,6 +399,12 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   - Felder: Datum, Händler, Beschreibung, Betrag brutto (numerisches Tastatur-Feld, Komma erlaubt), MwSt-Satz (19/7/0) → Netto/MwSt automatisch, Kategorie (Chips + Select), Gewerk, Räume, Status, bezahlt von, Zahlungsart, Rechnungsnummer, Notizen.
   - Mehrere Belege pro Kosteneintrag möglich (Vorder-/Rückseite).
 - Belege werden wie Fotos verkleinert (max. 2000 px, damit Text lesbar bleibt), PDFs unverändert gespeichert.
+- Tippen auf einen angehängten Beleg öffnet dieselbe Vollbildansicht wie in der Beleg- und
+  Fotoliste. PDFs rendert `PdfViewer` mit PDF.js statt über den Browser-PDF-Viewer: Seitenwechsel,
+  Zoom (100–300 % relativ zur Seitenbreite) und Scrollen des Ausschnitts. PDF-Gesten wechseln
+  nicht zur nächsten Datei; dafür gibt es eigene Pfeile. Dateien kommen über `resolveFileUrl`
+  aus Outbox, lokalem Cache oder dem Netz. Der PDF-Worker ist gebündelt und im PWA-Precache;
+  Ladefehler und Zeitüberschreitungen zeigen einen Wiederholen-Knopf, keine Endlos-Ladeanzeige.
 
 ### 8.6 Aufgaben
 - Liste mit Segment "Offen | Alle | Erledigt"; Gruppierung nach Fälligkeit (Überfällig, Heute, Diese Woche, Später, Ohne Datum); Zeile: Checkbox, Titel, Chips (Priorität farbig, Bereich, Zuständig), Fälligkeit. Filter: Zuständig (Thomas/Sarah/Beide), Bereich, Gewerk, Phase, Raum.

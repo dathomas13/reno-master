@@ -6,6 +6,7 @@ import { COL, type Contact, type Cost, type DiaryEntry, type Plan, type Task, ty
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
 import { newId } from '@/lib/ids';
 import { today, toIsoDateTime, formatDate } from '@/lib/date';
+import { pendingWrite } from './pendingWrite';
 
 /** removes undefined values, which Firestore refuses to store */
 function clean<T extends Record<string, unknown>>(value: T): T {
@@ -55,7 +56,8 @@ export function emptyCost(date = today()): Cost {
 }
 
 export async function saveCost(cost: Cost): Promise<string> {
-  return saveDoc<Cost>(COL.costs, clean(cost as unknown as Record<string, unknown>) as unknown as Cost);
+  await pendingWrite(saveDoc<Cost>(COL.costs, clean(cost as unknown as Record<string, unknown>) as unknown as Cost));
+  return cost.id;
 }
 
 export async function patchCost(id: string, patch: Partial<Cost>): Promise<void> {

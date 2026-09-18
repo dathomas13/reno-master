@@ -101,22 +101,20 @@
 <rect class="door" x="9985" y="1200" width="145" height="760"/>
 </g>
 <g id="stairs">
-<rect class="stair" x="5015" y="1345" width="1000" height="4320"/>
-<line class="stair" x1="5015" y1="5395" x2="6015" y2="5395"/>
-<line class="stair" x1="5015" y1="5125" x2="6015" y2="5125"/>
-<line class="stair" x1="5015" y1="4855" x2="6015" y2="4855"/>
-<line class="stair" x1="5015" y1="4585" x2="6015" y2="4585"/>
-<line class="stair" x1="5015" y1="4315" x2="6015" y2="4315"/>
-<line class="stair" x1="5015" y1="4045" x2="6015" y2="4045"/>
-<line class="stair" x1="5015" y1="3775" x2="6015" y2="3775"/>
-<line class="stair" x1="5015" y1="3505" x2="6015" y2="3505"/>
-<line class="stair" x1="5015" y1="3235" x2="6015" y2="3235"/>
-<line class="stair" x1="5015" y1="2965" x2="6015" y2="2965"/>
-<line class="stair" x1="5015" y1="2695" x2="6015" y2="2695"/>
-<line class="stair" x1="5015" y1="2425" x2="6015" y2="2425"/>
-<line class="stair" x1="5015" y1="2155" x2="6015" y2="2155"/>
-<line class="stair" x1="5015" y1="1885" x2="6015" y2="1885"/>
-<line class="stair" x1="5015" y1="1615" x2="6015" y2="1615"/>
+<rect class="stair" x="5015" y="1345" width="1010" height="3780"/>
+<line class="stair" x1="5015" y1="4855" x2="6025" y2="4855"/>
+<line class="stair" x1="5015" y1="4585" x2="6025" y2="4585"/>
+<line class="stair" x1="5015" y1="4315" x2="6025" y2="4315"/>
+<line class="stair" x1="5015" y1="4045" x2="6025" y2="4045"/>
+<line class="stair" x1="5015" y1="3775" x2="6025" y2="3775"/>
+<line class="stair" x1="5015" y1="3505" x2="6025" y2="3505"/>
+<line class="stair" x1="5015" y1="3235" x2="6025" y2="3235"/>
+<line class="stair" x1="5015" y1="2965" x2="6025" y2="2965"/>
+<line class="stair" x1="5015" y1="2695" x2="6025" y2="2695"/>
+<line class="stair" x1="5015" y1="2425" x2="6025" y2="2425"/>
+<line class="stair" x1="5015" y1="2155" x2="6025" y2="2155"/>
+<line class="stair" x1="5015" y1="1885" x2="6025" y2="1885"/>
+<line class="stair" x1="5015" y1="1615" x2="6025" y2="1615"/>
 </g>
 <g id="room-labels">
 <text class="room-label" x="4322" y="9185" font-size="230px">Wohnzimmer</text>

@@ -8,6 +8,39 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.28.7 – Dateien gemeinsam geöffnet
+
+Fotos, Belege und Pläne findest du jetzt gesammelt unter „Dateien“. Die drei Bereiche bleiben
+jeweils eigene Ansichten, sind aber vom Menü aus mit einem Tipp erreichbar.
+
+## 0.28.6 – PDF-Belege wirklich öffnen
+
+PDF-Belege zeigen jetzt ihren Inhalt statt nur des Schriftzugs „PDF“. In der Vollbildansicht
+kannst du durch die Seiten blättern, sie vergrößern und den Ausschnitt verschieben. Auch
+direkt in einer Rechnung öffnet ein Tipp auf den angehängten Beleg die Ansicht.
+
+Bereits auf dem Gerät gespeicherte Belege lassen sich ohne Netz ansehen. Ist eine Datei
+nicht verfügbar oder nicht lesbar, erscheint eine Fehlermeldung mit „Erneut versuchen“.
+
+## 0.28.5 – Belege nicht doppelt ablegen
+
+Beim erneuten Auswählen einer bereits bekannten Belegdatei wird keine weitere Kopie
+hochgeladen. Gehört sie schon zu einer Rechnung, kannst du diese direkt öffnen, statt
+dieselben Kosten noch einmal anzulegen. Ein noch nicht zugeordneter Beleg wird wiederverwendet.
+
+Die Rechnung lässt sich erst speichern, wenn das Belegfoto angehängt und das Auslesen
+abgeschlossen ist. Dadurch geht die Verbindung zum Foto nicht mehr verloren, wenn die
+Verarbeitung länger dauert. Ohne Verbindung wartet das Speichern nicht mehr unbegrenzt
+auf den Server; die Synchronisierung läuft später weiter.
+
+## 0.28.3 – Neue Übersicht: alle Belege an einem Ort
+
+Unter „Mehr“ gibt es jetzt „Belege“: eine Liste aller eingescannten Rechnungen und Quittungen,
+neueste zuerst, mit Vorschaubild, Händler, Datum und Betrag. Ein Tipp öffnet den Beleg in
+groß – Foto oder PDF – und von dort geht es direkt zum passenden Kosten-Eintrag. Über dem
+Suchfeld steht die Summe der gerade sichtbaren Belege, gefiltert werden kann nach Händler,
+Kategorie oder Rechnungsnummer.
+
 ## 0.28.2 – Erinnerung repariert, und Belege kann jetzt auch Gemini lesen
 
 Die Diagnose aus der vorigen Fassung hat den wahren Grund gezeigt: Die App hat den

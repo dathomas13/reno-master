@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { resolveFileUrl } from '@/offline/fileUrls';
 import type { Photo } from '@/data/types';
+import { PdfViewer } from './PdfViewer';
 
 /** shows a photo from the upload queue, the URL cache or the network, in that order */
 export function PhotoImage({
@@ -71,6 +72,7 @@ interface LightboxProps {
 /** full screen viewer with swipe, used from the diary and the cost detail */
 export function Lightbox({ photos, index, onClose, onIndexChange, footer }: LightboxProps) {
   const photo = photos[index];
+  const isPdf = photo?.contentType === 'application/pdf';
   // the original can be several megabytes, so it is only fetched when asked for
   const [showOriginal, setShowOriginal] = useState(false);
 
@@ -81,22 +83,27 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
+      if (isPdf) return;
       if (event.key === 'ArrowRight') onIndexChange(Math.min(index + 1, photos.length - 1));
       if (event.key === 'ArrowLeft') onIndexChange(Math.max(index - 1, 0));
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [index, photos.length, onClose, onIndexChange]);
+  }, [index, photos.length, onClose, onIndexChange, isPdf]);
 
   if (!photo) return null;
 
   let startX = 0;
   return (
     <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <div className="flex items-center justify-between px-3 h-14 pt-[env(safe-area-inset-top)] text-muted">
-        <span className="text-sm">
-          {index + 1} / {photos.length}
-        </span>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 min-h-14 shrink-0 pt-[env(safe-area-inset-top)] text-muted">
+        <div className="flex items-center gap-1">
+          {photos.length > 1 && <button type="button" className="btn btn-ghost w-11 h-11 p-0" aria-label="Vorherige Datei" title="Vorherige Datei"
+            disabled={index === 0} onClick={() => onIndexChange(index - 1)}>&#8592;</button>}
+          <span className="text-sm whitespace-nowrap">{index + 1} / {photos.length}</span>
+          {photos.length > 1 && <button type="button" className="btn btn-ghost w-11 h-11 p-0" aria-label="Nächste Datei" title="Nächste Datei"
+            disabled={index === photos.length - 1} onClick={() => onIndexChange(index + 1)}>&#8594;</button>}
+        </div>
         <span className="flex items-center gap-2">
           {photo.originalPath &&
             (showOriginal ? (
@@ -116,23 +123,23 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
         </span>
       </div>
       <div
-        className="flex-1 flex items-center justify-center overflow-hidden"
+        className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden"
         onTouchStart={(event) => {
+          if (isPdf) return;
           startX = event.touches[0]?.clientX ?? 0;
         }}
         onTouchEnd={(event) => {
+          if (isPdf) return;
           const delta = (event.changedTouches[0]?.clientX ?? 0) - startX;
           if (delta < -50) onIndexChange(Math.min(index + 1, photos.length - 1));
           if (delta > 50) onIndexChange(Math.max(index - 1, 0));
         }}
       >
-        <PhotoImage
-          photo={photo}
-          full={showOriginal}
-          className="max-h-full max-w-full object-contain"
-        />
+        {isPdf ? <PdfViewer key={photo.storagePath} storagePath={photo.storagePath} /> : (
+          <PhotoImage photo={photo} full={showOriginal} className="max-h-full max-w-full object-contain" />
+        )}
       </div>
-      {footer && <div className="p-4 text-xs text-muted">{footer(photo)}</div>}
+      {footer && <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted shrink-0 max-h-[25dvh] overflow-auto break-words">{footer(photo)}</div>}
     </div>
   );
 }

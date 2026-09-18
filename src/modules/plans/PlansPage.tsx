@@ -89,6 +89,7 @@ export default function PlansPage() {
     <>
       <TopBar
         title="Pläne"
+        back="/dateien"
         subtitle={`${all.length} Pläne`}
         action={
           isAuthenticated() ? (

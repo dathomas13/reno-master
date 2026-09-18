@@ -519,20 +519,22 @@ def build(m, variant: str, version: str, note: str) -> dict:
     roof = (prism(0, m.HOUSE_W, -ov, ridge, zu(-ov), zu(ridge), zu(-ov) + dz_t, zu(ridge) + dz_t)
             + prism(0, m.HOUSE_W, ridge, m.HOUSE_D + ov,
                     zu(ridge), zu(m.HOUSE_D + ov), zu(ridge) + dz_t, zu(m.HOUSE_D + ov) + dz_t))
-    roof = solid_sub(roof, box(g["x0"] + 120, -ov - 1, m.Z_OG, g["x1"] - 120, g["depth"] - 50, gtop))
+    # Wangenstärken aus der Datenbasis, sonst wie bisher 120
+    ch_w, ch_e = g.get("cheek", (120, 120))
+    roof = solid_sub(roof, box(g["x0"] + ch_w, -ov - 1, m.Z_OG, g["x1"] - ch_e, g["depth"] - 50, gtop))
     add("DACH", "Satteldach 36° (Kunstschiefer)", "roof", "A", roof)
 
     front = box(g["x0"], 0, m.Z_OG, g["x1"], 365, gtop)
-    cx = g["x0"] + 120
+    cx = g["x0"] + ch_w
     for wd, gap in g["windows"]:
         front = solid_sub(front, box(cx, -10, m.Z_OG + 900, cx + wd, 400, m.Z_OG + 2000))
         add("DACH", f"Gaubenfenster {wd}", "glass", g["tag"],
             box(cx, 160, m.Z_OG + 900, cx + wd, 200, m.Z_OG + 2000))
         cx += wd + gap
     add("DACH", "Gaube Frontwand", "wall", g["tag"], solid_sub(front, under_roof))
-    for name, x in (("Gaube Wange West", g["x0"]), ("Gaube Wange Ost", g["x1"] - 120)):
+    for name, x, t in (("Gaube Wange West", g["x0"], ch_w), ("Gaube Wange Ost", g["x1"] - ch_e, ch_e)):
         add("DACH", name, "wall", g["tag"],
-            prism(x, x + 120, 0, g["depth"], m.Z_OG + m.KNIESTOCK, zu(g["depth"]), gtop + 50, gtop + 50))
+            prism(x, x + t, 0, g["depth"], m.Z_OG + m.KNIESTOCK, zu(g["depth"]), gtop + 50, gtop + 50))
     add("DACH", "Gaubendach", "roof", "C",
         box(g["x0"] - 200, -300, gtop + 50, g["x1"] + 200, g["depth"] + 200, gtop + 250))
     ys_ = m.T_OUT + (m.OG_CEIL - (m.Z_OG + m.KNIESTOCK)) / m.tan_roof() + 100
