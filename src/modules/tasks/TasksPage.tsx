@@ -6,7 +6,16 @@ import { Field, ChipSelect, EmptyState } from '@/components/Fields';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
-import { COL, ASSIGNEES, PRIORITY, TASK_STATUS, type Assignee, type Priority, type Task, type TaskStatus } from '@/data/types';
+import {
+  COL,
+  ASSIGNEES,
+  PRIORITY,
+  TASK_STATUS,
+  type Assignee,
+  type Priority,
+  type Task,
+  type TaskStatus,
+} from '@/data/types';
 import { emptyTask, saveTask, toggleTaskDone, deleteTask } from '@/data/repos';
 import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, type DueBucket } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
@@ -27,16 +36,31 @@ export default function TasksPage() {
   const [assignee, setAssignee] = useState<Assignee | null>(null);
   const [quick, setQuick] = useState('');
   const [editing, setEditing] = useState<Task | null>(null);
+  const [pendingTasks, setPendingTasks] = useState<Record<string, Partial<Task>>>({});
 
   const roomFilter = params.get('raum');
   const wanted = params.get('aufgabe');
+  const viewTasks = useMemo(
+    () => tasks.map((task) => ({ ...task, ...pendingTasks[task.id] })),
+    [tasks, pendingTasks],
+  );
 
   // a search result links straight to one task: open its sheet as soon as it is loaded
   useEffect(() => {
     if (!wanted) return;
-    const task = tasks.find((item) => item.id === wanted);
+    const task = viewTasks.find((item) => item.id === wanted);
     if (task) setEditing(task);
-  }, [wanted, tasks]);
+  }, [wanted, viewTasks]);
+
+  useEffect(() => {
+    setPendingTasks((current) => {
+      const next = { ...current };
+      for (const task of tasks) {
+        if (next[task.id]?.status === task.status) delete next[task.id];
+      }
+      return Object.keys(next).length === Object.keys(current).length ? current : next;
+    });
+  }, [tasks]);
 
   function dropWanted() {
     if (!wanted) return;
@@ -46,14 +70,14 @@ export default function TasksPage() {
   }
 
   const visible = useMemo(() => {
-    return tasks.filter((task) => {
+    return viewTasks.filter((task) => {
       if (roomFilter && !task.roomIds.includes(roomFilter)) return false;
       if (assignee && !task.assignees.includes(assignee) && !task.assignees.includes('Beide')) return false;
       if (filter === 'offen') return task.status !== 'Erledigt';
       if (filter === 'erledigt') return task.status === 'Erledigt';
       return true;
     });
-  }, [tasks, filter, assignee, roomFilter]);
+  }, [viewTasks, filter, assignee, roomFilter]);
 
   const grouped = useMemo(() => {
     const map = new Map<DueBucket, Task[]>();
@@ -62,7 +86,9 @@ export default function TasksPage() {
       map.set(bucket, [...(map.get(bucket) ?? []), task]);
     }
     for (const [, rows] of map) {
-      rows.sort((a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999') || a.title.localeCompare(b.title, 'de'));
+      rows.sort(
+        (a, b) => (a.due ?? '9999').localeCompare(b.due ?? '9999') || a.title.localeCompare(b.title, 'de'),
+      );
     }
     return map;
   }, [visible]);
@@ -77,6 +103,21 @@ export default function TasksPage() {
     setQuick('');
     // a task added while a room filter is active must land in that room, or it vanishes from view
     await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [roomFilter] : [] });
+  }
+
+  async function toggleDone(task: Task) {
+    const nextStatus: TaskStatus = task.status === 'Erledigt' ? 'Offen' : 'Erledigt';
+    setPendingTasks((current) => ({ ...current, [task.id]: { status: nextStatus } }));
+    setEditing((current) => (current?.id === task.id ? { ...current, status: nextStatus } : current));
+    try {
+      await toggleTaskDone(task);
+    } catch {
+      setPendingTasks((current) => {
+        const next = { ...current };
+        delete next[task.id];
+        return next;
+      });
+    }
   }
 
   return (
@@ -129,7 +170,9 @@ export default function TasksPage() {
         </div>
       </div>
 
-      {visible.length === 0 && <EmptyState title="Nichts offen" hint="Alles erledigt oder noch nichts angelegt." />}
+      {visible.length === 0 && (
+        <EmptyState title="Nichts offen" hint="Alles erledigt oder noch nichts angelegt." />
+      )}
 
       {BUCKETS.map((bucket) => {
         const rows = grouped.get(bucket);
@@ -146,12 +189,14 @@ export default function TasksPage() {
                     className={`w-6 h-6 rounded-md border shrink-0 ${
                       task.status === 'Erledigt' ? 'bg-accent border-accent text-bg' : 'border-line'
                     }`}
-                    onClick={() => void toggleTaskDone(task)}
+                    onClick={() => void toggleDone(task)}
                   >
                     {task.status === 'Erledigt' ? '✓' : ''}
                   </button>
                   <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(task)}>
-                    <span className={`block truncate ${task.status === 'Erledigt' ? 'line-through text-muted' : ''}`}>
+                    <span
+                      className={`block truncate ${task.status === 'Erledigt' ? 'line-through text-muted' : ''}`}
+                    >
                       {task.title}
                     </span>
                     <span className="block text-xs text-muted truncate">
@@ -204,16 +249,28 @@ function TaskSheet({
   onDelete(task: Task): Promise<void>;
 }) {
   const [draft, setDraft] = useState<Task | null>(task);
-  if (task && draft?.id !== task.id) setDraft(task);
+
+  useEffect(() => {
+    if (!task) {
+      setDraft(null);
+      return;
+    }
+    setDraft((current) => (!current || current.id !== task.id ? task : current));
+  }, [task]);
+
   if (!task || !draft) return null;
 
   const update = (patch: Partial<Task>) => setDraft({ ...draft, ...patch });
 
   return (
-    <Sheet open onClose={onClose} title="Aufgabe">
+    <Sheet open onClose={onClose} onDone={() => void onSave(draft)} title="Aufgabe">
       <div className="p-4">
         <Field label="Titel">
-          <input className="field" value={draft.title} onChange={(event) => update({ title: event.target.value })} />
+          <input
+            className="field"
+            value={draft.title}
+            onChange={(event) => update({ title: event.target.value })}
+          />
         </Field>
         <Field label="Notizen">
           <textarea

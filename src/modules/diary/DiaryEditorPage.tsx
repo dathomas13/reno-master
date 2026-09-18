@@ -16,6 +16,7 @@ export default function DiaryEditorPage() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const isNew = !id;
+  const dateParam = params.get('date');
 
   const { data: existing, loading } = useDocument<DiaryEntry>(COL.diary, id);
   const { data: allEntries } = useCollection<DiaryEntry>(COL.diary);
@@ -26,6 +27,15 @@ export default function DiaryEditorPage() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(isNew);
+
+  useEffect(() => {
+    if (!isNew) {
+      setReady(false);
+      return;
+    }
+    setEntry(emptyDiaryEntry(dateParam ?? today()));
+    setReady(true);
+  }, [id, isNew, dateParam]);
 
   // load an existing entry once
   useEffect(() => {
@@ -42,7 +52,11 @@ export default function DiaryEditorPage() {
     if (running) setEntry((current) => ({ ...current, phaseId: running.id }));
   }, [isNew, phases, entry.phaseId]);
 
-  const { data: entryPhotos } = useCollection<Photo>(COL.photos, [where('entryId', '==', entry.id)], [entry.id]);
+  const { data: entryPhotos } = useCollection<Photo>(
+    COL.photos,
+    [where('entryId', '==', entry.id)],
+    [entry.id],
+  );
   useEffect(() => setPhotos(entryPhotos), [entryPhotos]);
 
   // a second entry for the same day is usually a mistake - point at the existing one
@@ -74,7 +88,12 @@ export default function DiaryEditorPage() {
         title={isNew ? 'Neuer Eintrag' : 'Eintrag bearbeiten'}
         back
         action={
-          <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => void save()} disabled={saving}>
+          <button
+            type="button"
+            className="btn btn-primary px-3 min-h-0 py-2"
+            onClick={() => void save()}
+            disabled={saving}
+          >
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
         }
@@ -181,7 +200,12 @@ export default function DiaryEditorPage() {
           <span>Mängel festgestellt</span>
         </label>
 
-        <button type="button" className="btn btn-primary w-full mt-4" onClick={() => void save()} disabled={saving}>
+        <button
+          type="button"
+          className="btn btn-primary w-full mt-4"
+          onClick={() => void save()}
+          disabled={saving}
+        >
           {saving ? 'Speichert…' : 'Speichern'}
         </button>
       </div>

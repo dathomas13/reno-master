@@ -8,6 +8,18 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.6 – Editoren laden sauber neu
+
+Beim Prüfen der anderen Formulare wurden zwei verwandte Stellen aufgeräumt: Kontakte speichern
+jetzt ebenfalls über „Fertig“ im Formular-Kopf, und der Tagebuch-Editor lädt beim Wechsel auf
+einen anderen Eintrag sicher den richtigen Datensatz.
+
+## 0.29.5 – Aufgaben bleiben erledigt
+
+Wenn du eine Aufgabe abhakst und direkt danach öffnest, bleibt sie im Formular jetzt auch
+wirklich auf „Erledigt“. Der „Fertig“-Knopf oben im Aufgabenformular speichert nun ebenfalls,
+statt die Änderungen nur zu schließen.
+
 ## 0.29.4 – Einstellungen übersichtlicher
 
 Erklärungen zu Fotos, Beleg-Auslesen, Export und 3D-Modellen öffnest du jetzt über das
