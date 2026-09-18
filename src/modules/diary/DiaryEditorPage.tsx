@@ -27,7 +27,9 @@ export default function DiaryEditorPage() {
   const { lists, addTo } = useLists();
 
   const [entry, setEntry] = useState<DiaryEntry>(() => loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
+  const [attaching, setAttaching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(isNew);
   const closingWithoutDraft = useRef(false);
@@ -61,7 +63,14 @@ export default function DiaryEditorPage() {
     [where('entryId', '==', entry.id)],
     [entry.id],
   );
-  useEffect(() => setPhotos(entryPhotos), [entryPhotos]);
+  const photos = [...new Map([
+    ...addedPhotos.filter((photo) => photo.entryId === entry.id),
+    ...entryPhotos.filter((photo) => photo.entryId === entry.id),
+  ].map((photo) => [photo.id, photo])).values()]
+    .filter((photo) => !removedPhotoIds.includes(photo.id));
+  useEffect(() => {
+    setAddedPhotos((current) => current.filter((photo) => !entryPhotos.some((item) => item.id === photo.id)));
+  }, [entryPhotos]);
 
   // a second entry for the same day is usually a mistake - point at the existing one
   const sameDay = useMemo(
@@ -79,12 +88,14 @@ export default function DiaryEditorPage() {
   }, [isNew, ready, entry, photos, initialDate]);
 
   function discardAndClose() {
+    if (attaching || saving) return;
     closingWithoutDraft.current = true;
     clearDiaryDraft();
     navigate('/tagebuch', { replace: true });
   }
 
   async function save() {
+    if (attaching || saving) return;
     setSaving(true);
     try {
       const title = entry.title.trim() || `Tagebuch ${formatDate(entry.date).slice(0, 6)}`;
@@ -107,7 +118,7 @@ export default function DiaryEditorPage() {
         action={
           <div className="flex gap-2">
             {isNew && (
-              <button type="button" className="btn btn-danger px-3 min-h-0 py-2" onClick={discardAndClose}>
+              <button type="button" className="btn btn-danger px-3 min-h-0 py-2" onClick={discardAndClose} disabled={saving || attaching}>
                 Verwerfen
               </button>
             )}
@@ -115,7 +126,7 @@ export default function DiaryEditorPage() {
               type="button"
               className="btn btn-primary px-3 min-h-0 py-2"
               onClick={() => void save()}
-              disabled={saving}
+              disabled={saving || attaching}
             >
               {saving ? 'Speichert…' : 'Speichern'}
             </button>
@@ -171,11 +182,14 @@ export default function DiaryEditorPage() {
 
         <Field label="Fotos">
           <PhotoAttach
+            key={entry.id}
             photos={photos}
             entryId={entry.id}
             forDate={entry.date}
-            onAdded={(photo) => setPhotos((current) => [...current, photo])}
-            onRemoved={(photo) => setPhotos((current) => current.filter((item) => item.id !== photo.id))}
+            disabled={saving}
+            onBusyChange={setAttaching}
+            onAdded={(photo) => setAddedPhotos((current) => [...current.filter((item) => item.id !== photo.id), photo])}
+            onRemoved={(photo) => setRemovedPhotoIds((current) => [...current, photo.id])}
           />
         </Field>
 
@@ -228,12 +242,12 @@ export default function DiaryEditorPage() {
           type="button"
           className="btn btn-primary w-full mt-4"
           onClick={() => void save()}
-          disabled={saving}
+          disabled={saving || attaching}
         >
           {saving ? 'Speichert…' : 'Speichern'}
         </button>
         {isNew && (
-          <button type="button" className="btn btn-danger w-full mt-2" onClick={discardAndClose}>
+          <button type="button" className="btn btn-danger w-full mt-2" onClick={discardAndClose} disabled={saving || attaching}>
             Verwerfen und schließen
           </button>
         )}

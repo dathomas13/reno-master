@@ -29,6 +29,7 @@ export interface PickOptions {
   forDate?: string;
   camera?: boolean;
   multiple?: boolean;
+  deferMetadata?: boolean;
 }
 
 export interface GalleryPhoto {
@@ -149,7 +150,7 @@ export async function pickPhotos(options: PickOptions = {}): Promise<PickedPhoto
   const files = await pickWithInput(options);
   const picked: PickedPhoto[] = [];
   for (const file of files) {
-    const takenAt = await readTakenAt(file);
+    const takenAt = options.deferMetadata ? undefined : await readTakenAt(file);
     picked.push({
       file,
       name: file.name,

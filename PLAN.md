@@ -367,6 +367,13 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
   - **Fotos**: Button "Fotos hinzufügen" → `platform/photos.pickPhotos({ suggestDate: entry.date })`.
     - PWA: `<input type="file" accept="image/*" multiple>`; nach Auswahl EXIF-Datum lesen; Fotos, deren Aufnahmedatum ≠ Eintragsdatum, bekommen ein gelbes Badge "anderes Datum (DD.MM.)" mit Möglichkeit, sie zu entfernen. Hinweistext im Picker: "Die Galerie ist nach Datum sortiert – wähle die Fotos von heute."
     - APK: eigener Picker-Screen: Raster der Galerie-Fotos **des Eintragsdatums** (MediaStore-Abfrage), Button "Andere Tage" öffnet Datumsnavigation bzw. den System-Picker. Mehrfachauswahl, dann Übernahme.
+      Auswahl startet noch keinen Import. „Hochladen (Anzahl)“ schließt den Dialog sofort;
+      im Editor werden zunächst alle Vorschauen erzeugt, danach die Fotos lokal übernommen
+      und über die Outbox hochgeladen. Pro Bild zeigen Ladekreise Vorbereitung bzw. ausstehenden
+      Upload; fehlgeschlagene Importe lassen sich einzeln wiederholen. Formularfelder bleiben
+      bedienbar. Speichern und Verwerfen warten nur auf die lokale Übernahme, nicht auf Uploads.
+      Fotoimporte warten nicht auf Firestore-Serverbestätigungen; der Beleg-/OCR-Pfad behält
+      seine bisherige begrenzte Wartezeit. Lokale Anhänge bleiben bis zum bestätigenden Snapshot sichtbar.
     - Kamera-Button (PWA: `capture="environment"`; APK: Capacitor Camera).
     - Verarbeitung: `lib/image.resize(file, 1600)` + `thumb(320)` → Outbox (Abschnitt 7) → sofortige Vorschau. Reihenfolge per Drag/Pfeile änderbar, Bildunterschrift optional.
   - Autosave als Entwurf alle 5 s in IndexedDB (`drafts`), damit nichts verloren geht; beim Öffnen von `/tagebuch/neu` Entwurf anbieten.

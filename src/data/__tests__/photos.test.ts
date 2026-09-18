@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   patchDoc: vi.fn().mockResolvedValue(undefined),
   enqueue: vi.fn().mockResolvedValue(undefined),
   resizeImage: vi.fn(),
+  makeThumbnail: vi.fn(),
   readTakenAt: vi.fn().mockResolvedValue('2026-09-17T12:00:00'),
 }));
 vi.mock('@/firebase/db', () => ({ ...mocks, removeDoc: vi.fn() }));
@@ -16,7 +17,7 @@ vi.mock('@/offline/outbox', () => ({
 }));
 vi.mock('@/platform/fileStore', () => ({ deleteFile: vi.fn() }));
 vi.mock('@/lib/image', () => ({
-  resizeImage: mocks.resizeImage, makeThumbnail: vi.fn(), readTakenAt: mocks.readTakenAt,
+  resizeImage: mocks.resizeImage, makeThumbnail: mocks.makeThumbnail, readTakenAt: mocks.readTakenAt,
   PHOTO_MAX_EDGE: 1600, RECEIPT_MAX_EDGE: 2000,
 }));
 
@@ -35,6 +36,24 @@ beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.useRealTimers());
 
 describe('receipt deduplication', () => {
+  it('queues a diary photo locally without waiting for server acknowledgement', async () => {
+    const image = new Blob(['image'], { type: 'image/jpeg' });
+    const thumbnail = new Blob(['thumb'], { type: 'image/jpeg' });
+    mocks.resizeImage.mockResolvedValue({ blob: image, width: 1600, height: 900, contentType: image.type });
+    mocks.saveDoc.mockImplementationOnce(() => new Promise(() => {}));
+    const photo = await addPhoto({ file: image, kind: 'photo', entryId: 'entry-1', thumbnail });
+    expect(photo.uploadState).toBe('pending');
+    expect(mocks.makeThumbnail).not.toHaveBeenCalled();
+    expect(mocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({ docId: photo.id, blob: image }));
+    expect(mocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({ blob: thumbnail }));
+  });
+
+  it('reports an immediately rejected diary photo write', async () => {
+    const image = new Blob(['image'], { type: 'image/jpeg' });
+    mocks.resizeImage.mockResolvedValue({ blob: image, width: 10, height: 10, contentType: image.type });
+    mocks.saveDoc.mockRejectedValueOnce(new Error('Keine Berechtigung'));
+    await expect(addPhoto({ file: image, kind: 'photo', thumbnail: image })).rejects.toThrow('Keine Berechtigung');
+  });
   it('reuses an attached receipt without writing or uploading again', async () => {
     expect(await addPhoto(input)).toEqual(receipt);
     expect(mocks.saveDoc).not.toHaveBeenCalled();

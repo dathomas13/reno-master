@@ -8,6 +8,14 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.30.0 – Fotos auswählen und weiterschreiben
+
+In der Tagesgalerie kannst du mehrere Fotos markieren und mit „Hochladen“ gemeinsam
+übernehmen. Der Dialog schließt sofort. Im Editor erscheinen zuerst die Vorschaubilder;
+kleine Ladekreise zeigen, welche Fotos noch vorbereitet werden oder auf den Upload warten.
+Du kannst dabei weiterschreiben. Sobald die Fotos lokal übernommen sind, lässt sich der
+Eintrag speichern, während der Upload im Hintergrund weiterläuft, auch nach einer Offline-Pause.
+
 ## 0.29.11 – Tagebuch merkt Entwürfe
 
 Ein angefangener neuer Tagebuch-Eintrag bleibt jetzt als Entwurf auf dem Gerät erhalten,

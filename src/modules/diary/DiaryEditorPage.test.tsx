@@ -1,7 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import type { DiaryEntry } from '@/data/types';
+import type { DiaryEntry, Photo } from '@/data/types';
 import DiaryEditorPage from './DiaryEditorPage';
 
 const entries: DiaryEntry[] = [
@@ -29,6 +29,10 @@ const entries: DiaryEntry[] = [
   },
 ];
 const emptyRows: unknown[] = [];
+const photoState = vi.hoisted(() => ({ rows: [] as Photo[] }));
+const attachedPhoto = {
+  id: 'photo-1', entryId: 'new-entry', originalName: 'test.jpg', uploadState: 'pending',
+} as Photo;
 
 vi.mock('@/components/TopBar', () => ({ TopBar: () => null }));
 vi.mock('@/components/Pickers', () => ({
@@ -36,14 +40,20 @@ vi.mock('@/components/Pickers', () => ({
   TradePicker: () => null,
   PhaseSelect: () => null,
 }));
-vi.mock('./PhotoAttach', () => ({ PhotoAttach: () => null }));
+vi.mock('./PhotoAttach', () => ({ PhotoAttach: ({ photos, onAdded, onBusyChange }: {
+  photos: Photo[]; onAdded(photo: Photo): void; onBusyChange(busy: boolean): void;
+}) => <div>
+  <button onClick={() => onBusyChange(true)}>Import starten</button>
+  <button onClick={() => { onAdded(attachedPhoto); onBusyChange(false); }}>Import beenden</button>
+  {photos.map((photo) => <span key={photo.id}>{photo.id}: {photo.uploadState}</span>)}
+</div> }));
 vi.mock('@/data/hooks', () => ({
   useDocument: (_collection: string, id?: string) => ({
     data: entries.find((entry) => entry.id === id) ?? null,
     loading: false,
   }),
   useCollection: (collection: string) => ({
-    data: collection === 'diary' ? entries : emptyRows,
+    data: collection === 'diary' ? entries : collection === 'photos' ? photoState.rows : emptyRows,
     loading: false,
   }),
 }));
@@ -69,6 +79,7 @@ vi.mock('@/data/repos', () => ({
 afterEach(() => {
   cleanup();
   localStorage.clear();
+  photoState.rows = [];
 });
 
 function renderNewEditor() {
@@ -83,6 +94,24 @@ function renderNewEditor() {
 }
 
 describe('diary editor', () => {
+  it('keeps editing during import and reconciles local photos with delayed snapshots', () => {
+    renderNewEditor();
+    fireEvent.click(screen.getByRole('button', { name: 'Import starten' }));
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeDisabled();
+    const text = document.querySelector('textarea')!;
+    fireEvent.change(text, { target: { value: 'Weitergeschrieben beim Import' } });
+    expect(text).toHaveValue('Weitergeschrieben beim Import');
+    fireEvent.click(screen.getByRole('button', { name: 'Import beenden' }));
+    expect(screen.getByText('photo-1: pending')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeEnabled();
+    photoState.rows = [];
+    fireEvent.change(text, { target: { value: 'Späterer leerer Snapshot' } });
+    expect(screen.getByText('photo-1: pending')).toBeInTheDocument();
+    photoState.rows = [{ ...attachedPhoto, uploadState: 'uploaded' }];
+    fireEvent.change(text, { target: { value: 'Foto synchronisiert' } });
+    expect(screen.getAllByText('photo-1: uploaded')).toHaveLength(1);
+    expect(screen.queryByText('photo-1: pending')).not.toBeInTheDocument();
+  });
   it('loads the new entry when navigating between entry ids in the editor', async () => {
     render(
       <MemoryRouter

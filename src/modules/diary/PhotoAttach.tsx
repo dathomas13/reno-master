@@ -9,6 +9,43 @@ import { loadSettings, saveSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
 import type { Cost, Photo } from '@/data/types';
+import { makeThumbnail } from '@/lib/image';
+import { newId } from '@/lib/ids';
+
+interface PhotoBlob {
+  blob: Blob;
+  name?: string;
+  takenAt?: string;
+  sourceUri?: string;
+  original?: Blob;
+}
+
+interface PhotoSource {
+  key: string;
+  name: string;
+  preview(): Promise<{ url: string; thumbnail?: Blob } | null>;
+  read(): Promise<PhotoBlob>;
+}
+
+interface ImportTile {
+  source: PhotoSource;
+  preview?: string;
+  error?: string;
+}
+
+async function importDeadline<Result>(work: Promise<Result>): Promise<Result> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Das Foto konnte nicht rechtzeitig gelesen werden.')), 30_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 interface PhotoAttachProps {
   photos: Photo[];
@@ -60,11 +97,78 @@ export function PhotoAttach({
   const processing = useRef(false);
   const captured = useRef(false);
   const [dayOpen, setDayOpen] = useState(false);
+  const [selectedUris, setSelectedUris] = useState<string[]>([]);
+  const [dayLoading, setDayLoading] = useState(false);
+  const [imports, setImports] = useState<ImportTile[]>([]);
+  const previewUrls = useRef(new Set<string>());
   const [dayPhotos, setDayPhotos] = useState<GalleryPhoto[]>([]);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [warning, setWarning] = useState<string | null>(null);
   // remembered per device: whoever photographs cable runs wants it on for a whole day
   const [keepOriginals, setKeepOriginals] = useState(() => loadSettings().keepOriginals);
+
+  useEffect(() => {
+    const urls = previewUrls.current;
+    return () => {
+      for (const url of urls) URL.revokeObjectURL(url);
+      urls.clear();
+    };
+  }, []);
+
+  async function importPhotos(sources: PhotoSource[]) {
+    if (processing.current || disabled || sources.length === 0) return;
+    processing.current = true;
+    setBusy(true);
+    onBusyChange?.(true);
+    setImports((current) => [
+      ...current.filter((tile) => !sources.some((source) => source.key === tile.source.key)),
+      ...sources.map((source) => ({ source })),
+    ]);
+    const previews = new Map<string, { url: string; thumbnail?: Blob }>();
+    const failed = new Set<string>();
+    const reportError = (source: PhotoSource, cause: unknown) => {
+      failed.add(source.key);
+      const error = cause instanceof Error ? cause.message : 'Foto konnte nicht hinzugefügt werden.';
+      setImports((current) => current.map((tile) => tile.source.key === source.key ? { ...tile, error } : tile));
+    };
+    try {
+      for (const source of sources) {
+        try {
+          const preview = await importDeadline(source.preview());
+          if (preview) {
+            previews.set(source.key, preview);
+            setImports((current) => current.map((tile) => tile.source.key === source.key
+              ? { ...tile, preview: preview.url } : tile));
+          }
+        } catch (cause) {
+          reportError(source, cause);
+        }
+      }
+      for (const source of sources) {
+        if (failed.has(source.key)) continue;
+        try {
+          const item = await importDeadline(source.read());
+          const photo = await addPhoto({
+            file: item.blob, kind, entryId, costId, originalName: item.name,
+            takenAt: item.takenAt, sourceUri: item.sourceUri,
+            keepOriginal: keepOriginals, originalFile: item.original,
+            thumbnail: previews.get(source.key)?.thumbnail,
+          });
+          onAdded(photo);
+          if (forDate && photo.takenAt && photo.takenAt.slice(0, 10) !== forDate) {
+            setWarning('Die Auswahl enthält Fotos von einem anderen Tag.');
+          }
+          setImports((current) => current.filter((tile) => tile.source.key !== source.key));
+        } catch (cause) {
+          reportError(source, cause);
+        }
+      }
+    } finally {
+      processing.current = false;
+      setBusy(false);
+      onBusyChange?.(false);
+    }
+  }
 
   function toggleOriginals() {
     const next = !keepOriginals;
@@ -73,8 +177,22 @@ export function PhotoAttach({
   }
 
   async function addFromBlobs(
-    items: { blob: Blob; name?: string; takenAt?: string; sourceUri?: string; original?: Blob }[],
+    items: PhotoBlob[],
   ) {
+    if (kind === 'photo') {
+      await importPhotos(items.map((item) => ({
+        key: newId(),
+        name: item.name ?? 'Foto',
+        preview: async () => {
+          const thumbnail = (await makeThumbnail(item.blob)).blob;
+          const url = URL.createObjectURL(thumbnail);
+          previewUrls.current.add(url);
+          return { url, thumbnail };
+        },
+        read: async () => item,
+      })));
+      return;
+    }
     if (processing.current || disabled) return;
     processing.current = true;
     setBusy(true);
@@ -90,7 +208,7 @@ export function PhotoAttach({
           originalName: item.name,
           takenAt: item.takenAt,
           sourceUri: item.sourceUri,
-          keepOriginal: keepOriginals && kind === 'photo',
+          keepOriginal: false,
           originalFile: item.original,
           existingPhotos: knownPhotos,
           existingCosts,
@@ -116,17 +234,21 @@ export function PhotoAttach({
   }
 
   async function pickFromFiles(camera = false) {
-    const picked = await pickPhotos({ forDate, camera });
-    if (!picked.length) return;
-    const otherDay = picked.filter((item) => item.otherDay);
-    setWarning(
-      otherDay.length
-        ? `${otherDay.length} Foto(s) stammen von einem anderen Tag – falls das nicht passt, wieder entfernen.`
-        : null,
-    );
-    await addFromBlobs(
-      picked.map((item) => ({ blob: item.file, name: item.name, takenAt: item.takenAt, sourceUri: item.sourceUri })),
-    );
+    try {
+      const picked = await pickPhotos({ forDate, camera, deferMetadata: kind === 'photo' });
+      if (!picked.length) return;
+      const otherDay = picked.filter((item) => item.otherDay);
+      setWarning(
+        otherDay.length
+          ? `${otherDay.length} Foto(s) stammen von einem anderen Tag – falls das nicht passt, wieder entfernen.`
+          : null,
+      );
+      await addFromBlobs(
+        picked.map((item) => ({ blob: item.file, name: item.name, takenAt: item.takenAt, sourceUri: item.sourceUri })),
+      );
+    } catch (cause) {
+      setWarning(cause instanceof Error ? cause.message : 'Fotos konnten nicht geöffnet werden.');
+    }
   }
 
   async function pickPdf() {
@@ -136,29 +258,60 @@ export function PhotoAttach({
     await addFromBlobs(files.map((file) => ({ blob: file, name: file.name })));
   }
 
-  async function openDayGallery() {
-    if (!forDate) return;
-    const photos = await listGalleryPhotosForDay(forDate);
-    setDayPhotos(photos);
+  function openDayGallery() {
+    setDayPhotos([]);
+    setSelectedUris([]);
     setThumbs({});
+    setDayLoading(true);
     setDayOpen(true);
-    // load the previews one by one so the sheet appears immediately
-    for (const photo of photos.slice(0, 60)) {
-      const url = await galleryThumbnail(photo.uri);
-      if (url) setThumbs((current) => ({ ...current, [photo.uri]: url }));
-    }
   }
 
-  async function addFromGallery(item: GalleryPhoto) {
-    const blob = await readGalleryPhoto(item.uri);
-    if (!blob) return;
-    // the picker only ever hands over a downsized copy, so the untouched file has to be
-    // read separately - and only when it is actually going to be kept
-    const original =
-      keepOriginals && kind === 'photo' ? ((await readGalleryOriginal(item.uri)) ?? undefined) : undefined;
-    await addFromBlobs([
-      { blob, name: item.name, takenAt: item.takenAt, sourceUri: item.uri, original },
-    ]);
+  useEffect(() => {
+    if (!dayOpen || !forDate) return;
+    let active = true;
+    void (async () => {
+      try {
+        const items = await importDeadline(listGalleryPhotosForDay(forDate));
+        if (!active) return;
+        setDayPhotos(items);
+        setDayLoading(false);
+        let next = 0;
+        await Promise.all(Array.from({ length: 3 }, async () => {
+          while (active && next < items.length) {
+            const item = items[next++];
+            const url = await importDeadline(galleryThumbnail(item.uri)).catch(() => null);
+            if (active && url) setThumbs((current) => ({ ...current, [item.uri]: url }));
+          }
+        }));
+      } catch (cause) {
+        if (active) {
+          setDayLoading(false);
+          setDayOpen(false);
+          setWarning(cause instanceof Error ? cause.message : 'Galerie konnte nicht geladen werden.');
+        }
+      }
+    })();
+    return () => { active = false; };
+  }, [dayOpen, forDate]);
+
+  function uploadSelection() {
+    if (processing.current || disabled) return;
+    const selected = dayPhotos.filter((item) => selectedUris.includes(item.uri));
+    setDayOpen(false);
+    void importPhotos(selected.map((item) => ({
+      key: item.uri,
+      name: item.name,
+      preview: async () => {
+        const url = thumbs[item.uri] ?? await galleryThumbnail(item.uri);
+        return url ? { url } : null;
+      },
+      read: async () => {
+        const blob = await readGalleryPhoto(item.uri);
+        if (!blob) throw new Error('Foto ist nicht mehr in der Galerie verfügbar.');
+        const original = keepOriginals ? (await readGalleryOriginal(item.uri)) ?? undefined : undefined;
+        return { blob, name: item.name, takenAt: item.takenAt, sourceUri: item.uri, original };
+      },
+    })));
   }
 
   async function remove(photo: Photo) {
@@ -176,7 +329,7 @@ export function PhotoAttach({
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-3">
-        {galleryPickerAvailable() && forDate && (
+        {kind === 'photo' && galleryPickerAvailable() && forDate && (
           <button type="button" className="btn" onClick={() => void openDayGallery()} disabled={busy || disabled}>
             Fotos vom {formatDate(forDate).slice(0, 6)}
           </button>
@@ -204,12 +357,14 @@ export function PhotoAttach({
             Original sichern
           </button>
         )}
-        {busy && <span className="text-muted text-sm self-center">wird verarbeitet…</span>}
+        {busy && <span role="status" className="text-muted text-sm self-center">
+          {kind === 'photo' ? 'Fotos werden vorbereitet…' : 'wird verarbeitet…'}
+        </span>}
       </div>
 
       {warning && <p className="text-warn text-sm mb-2">{warning}</p>}
 
-      {photos.length > 0 && (
+      {(photos.length > 0 || imports.length > 0) && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
           {photos.map((photo) => (
             <div key={photo.id} className="relative aspect-square">
@@ -220,7 +375,11 @@ export function PhotoAttach({
                 </button>
               ) : <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />}
               {photo.uploadState === 'pending' && (
-                <span className="absolute bottom-1 left-1 text-[10px] bg-bg/80 px-1 rounded">wartet</span>
+                <span role="status" aria-label={`Upload ausstehend: ${photo.originalName ?? 'Foto'}`}
+                  className="absolute bottom-1 left-1 flex items-center gap-1 text-[10px] bg-bg/80 px-1.5 py-1 rounded">
+                  <span className="w-3 h-3 rounded-full border-2 border-muted border-t-accent animate-spin" />
+                  Upload ausstehend
+                </span>
               )}
               {photo.uploadState === 'failed' && (
                 <span className="absolute bottom-1 left-1 text-[10px] bg-bad/90 text-bg px-1 rounded">Fehler</span>
@@ -244,6 +403,26 @@ export function PhotoAttach({
               </button>
             </div>
           ))}
+          {imports.map((tile) => (
+            <div key={tile.source.key} className="relative aspect-square rounded-lg overflow-hidden bg-panel2">
+              {tile.preview && <img src={tile.preview} alt={tile.source.name} className="w-full h-full object-cover" />}
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-bg/40 p-2">
+                {tile.error ? (
+                  <>
+                    <span role="alert" className="text-xs text-center text-warn line-clamp-3" title={tile.error}>{tile.error}</span>
+                    <button type="button" className="btn px-2 text-xs" disabled={busy || disabled}
+                      onClick={() => void importPhotos([tile.source])}>Erneut</button>
+                    <button type="button" className="absolute top-1 right-1 w-6 h-6 rounded-full bg-bg/80"
+                      aria-label={`Import entfernen: ${tile.source.name}`}
+                      onClick={() => setImports((current) => current.filter((item) => item.source.key !== tile.source.key))}>×</button>
+                  </>
+                ) : (
+                  <span role="status" aria-label={`Foto wird vorbereitet: ${tile.source.name}`}
+                    className="w-5 h-5 rounded-full border-2 border-muted border-t-accent animate-spin" />
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -253,7 +432,9 @@ export function PhotoAttach({
       )}
 
       <Sheet open={dayOpen} onClose={() => setDayOpen(false)} title={`Galerie ${forDate ? formatDate(forDate) : ''}`}>
-        {dayPhotos.length === 0 ? (
+        {dayLoading ? (
+          <p role="status" className="p-6 text-muted text-sm">Galerie wird geladen…</p>
+        ) : dayPhotos.length === 0 ? (
           <p className="p-6 text-muted text-sm">Für diesen Tag sind keine Fotos in der Galerie.</p>
         ) : (
           <div className="grid grid-cols-3 gap-1.5 p-3">
@@ -262,7 +443,10 @@ export function PhotoAttach({
                 key={item.uri}
                 type="button"
                 className="aspect-square bg-panel2 rounded-lg overflow-hidden relative"
-                onClick={() => void addFromGallery(item).then(() => setDayOpen(false))}
+                aria-label={item.name}
+                aria-pressed={selectedUris.includes(item.uri)}
+                onClick={() => setSelectedUris((current) => current.includes(item.uri)
+                  ? current.filter((uri) => uri !== item.uri) : [...current, item.uri])}
                 disabled={busy || disabled}
               >
                 {thumbs[item.uri] ? (
@@ -273,13 +457,26 @@ export function PhotoAttach({
                 <span className="absolute bottom-0 inset-x-0 text-[10px] bg-bg/70 truncate px-1">
                   {item.takenAt.slice(11, 16)}
                 </span>
+                <span className="absolute top-1 right-1 w-6 h-6 rounded-full bg-bg/90 border border-accent text-accent">
+                  {selectedUris.includes(item.uri) ? '✓' : ''}
+                </span>
               </button>
             ))}
           </div>
         )}
-        <button type="button" className="btn w-full mb-3" onClick={() => void pickFromFiles(false)} disabled={busy || disabled}>
-          Andere Tage…
-        </button>
+        <div className="sticky bottom-0 p-3 bg-panel border-t border-line">
+          <button type="button" className="btn btn-primary w-full mb-3"
+            disabled={selectedUris.length === 0 || busy || disabled}
+            onClick={uploadSelection}>
+            Hochladen ({selectedUris.length})
+          </button>
+          <button type="button" className="btn w-full" onClick={() => {
+            setDayOpen(false);
+            void pickFromFiles(false);
+          }} disabled={busy || disabled}>
+            Andere Tage…
+          </button>
+        </div>
       </Sheet>
     </div>
   );
