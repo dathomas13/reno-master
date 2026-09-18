@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TopBar } from '@/components/TopBar';
-import { Field } from '@/components/Fields';
+import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
 import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/firebase/auth';
 import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
@@ -17,6 +17,7 @@ import { enableReminders, reminderDiagnosis, showReminderNow } from '@/platform/
 import { describeDiagnosis, describeReminder, type ReminderDiagnosis } from '@/platform/reminderPlan';
 import { useReminderStatus } from '@/data/useReminder';
 import { formatBytes } from '@/lib/image';
+import { isNative } from '@/platform';
 
 export default function SettingsPage() {
   const { user, profile } = useAuth();
@@ -31,11 +32,24 @@ export default function SettingsPage() {
 
   useEffect(() => {
     void listJobs().then(setJobs);
-    void activeExtractor().then((extractor) => setEngine(extractor?.label ?? 'nicht eingerichtet'));
     void navigator.storage?.estimate?.().then((estimate) => {
       if (estimate.usage) setStorage(formatBytes(estimate.usage));
     });
   }, []);
+
+  useEffect(() => {
+    let current = true;
+    void activeExtractor()
+      .then((extractor) => {
+        if (current) setEngine(extractor?.label ?? 'nicht eingerichtet');
+      })
+      .catch(() => {
+        if (current) setEngine('nicht verfügbar');
+      });
+    return () => {
+      current = false;
+    };
+  }, [settings]);
 
   useEffect(() => {
     if (profile?.reminderTime) setReminderTime(profile.reminderTime);
@@ -106,8 +120,8 @@ export default function SettingsPage() {
           {reminder.enabled && diagnosis !== null && diagnosis.permission !== 'granted' && (
             // without this the line above promises a reminder the device will never show
             <p className="text-sm text-warn mt-2">
-              Dieses Gerät lässt noch keine Benachrichtigungen zu. Einmal auf
-              „Benachrichtigungen erlauben“ tippen.
+              Dieses Gerät lässt noch keine Benachrichtigungen zu. Einmal auf „Benachrichtigungen erlauben“
+              tippen.
             </p>
           )}
 
@@ -154,12 +168,12 @@ export default function SettingsPage() {
           </details>
         </section>
 
-        <FolderExportSection />
-
-        <ExportSection />
-
         <section className="card p-4">
-          <h2 className="font-semibold mb-3">Fotos</h2>
+          <SettingsHeading title="Fotos">
+            Neben der verkleinerten Fassung wird die unveränderte Datei gespeichert. Das braucht deutlich mehr
+            Speicher, erhält aber Details zum späteren Vergrößern. Der Schalter steht auch direkt über der
+            Fotoleiste im Eintrag.
+          </SettingsHeading>
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
@@ -167,15 +181,7 @@ export default function SettingsPage() {
               checked={settings.keepOriginals}
               onChange={(event) => update({ keepOriginals: event.target.checked })}
             />
-            <span>
-              Originale mitsichern
-              <span className="block text-sm text-muted">
-                Neben der verkleinerten Fassung wird die unveränderte Datei gespeichert – nötig,
-                wenn du Jahre später noch in einen Kabelverlauf hineinzoomen willst. Braucht etwa
-                das Zehnfache an Speicher, deshalb am besten nur für solche Aufnahmen einschalten.
-                Der Schalter steht auch direkt über der Fotoleiste im Eintrag.
-              </span>
-            </span>
+            <span>Originale mitsichern</span>
           </label>
         </section>
 
@@ -184,7 +190,11 @@ export default function SettingsPage() {
           <p className="text-sm text-muted mb-3">Aktiv: {engine}</p>
           <Field
             label="Verfahren"
-            hint="Automatisch nimmt der Reihe nach: ML Kit auf dem Gerät, dann Gemini, dann Claude – das erste, für das ein Schlüssel hinterlegt ist."
+            hint={
+              isNative()
+                ? 'Automatisch prüft ML Kit, dann Gemini, dann Claude und nutzt das erste verfügbare Verfahren. Schlüssel bleiben nur auf diesem Gerät.'
+                : 'Automatisch prüft Gemini, dann Claude und nutzt das erste eingerichtete Verfahren. Schlüssel bleiben nur in diesem Browser.'
+            }
           >
             <select
               className="field"
@@ -192,66 +202,98 @@ export default function SettingsPage() {
               onChange={(event) => update({ ocrEngine: event.target.value as LocalSettings['ocrEngine'] })}
             >
               <option value="auto">Automatisch</option>
-              <option value="mlkit">Nur ML Kit (nur in der App-Version)</option>
+              {isNative() && <option value="mlkit">Nur ML Kit</option>}
               <option value="gemini">Nur Gemini (online)</option>
               <option value="claude">Nur Claude (online)</option>
               <option value="off">Aus</option>
             </select>
           </Field>
 
-          <h3 className="font-medium mt-4 mb-2">Gemini</h3>
-          <Field
-            label="Gemini API-Key"
-            hint="Wird nur auf diesem Gerät gespeichert, nie in der Datenbank. Zu holen unter aistudio.google.com."
-          >
-            <input
-              className="field"
-              type="password"
-              placeholder="AIza…"
-              value={settings.geminiApiKey}
-              onChange={(event) => update({ geminiApiKey: event.target.value.trim() })}
-            />
-          </Field>
-          <Field
-            label="Modell"
-            hint="Freies Textfeld, weil sich die Modellnamen bei Google schneller ändern als diese App. gemini-2.5-flash ist schnell und günstig, gemini-2.5-pro liest schwierige Belege besser."
-          >
-            <input
-              className="field"
-              type="text"
-              placeholder="gemini-2.5-flash"
-              value={settings.geminiModel}
-              onChange={(event) => update({ geminiModel: event.target.value.trim() })}
-            />
-          </Field>
-
-          <h3 className="font-medium mt-4 mb-2">Claude</h3>
-          <Field
-            label="Claude API-Key"
-            hint="Wird nur auf diesem Gerät gespeichert. Kosten pro Beleg etwa ein bis zwei Cent."
-          >
-            <input
-              className="field"
-              type="password"
-              placeholder="sk-ant-…"
-              value={settings.claudeApiKey}
-              onChange={(event) => update({ claudeApiKey: event.target.value.trim() })}
-            />
-          </Field>
-          <Field label="Modell">
-            <select
-              className="field"
-              value={settings.claudeModel}
-              onChange={(event) => update({ claudeModel: event.target.value })}
+          {(settings.ocrEngine === 'auto' || settings.ocrEngine === 'gemini') && (
+            <details
+              key={`gemini-${settings.ocrEngine}`}
+              open={settings.ocrEngine === 'gemini'}
+              className="mt-3"
             >
-              {CLAUDE_MODELS.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.label}
-                </option>
-              ))}
-            </select>
-          </Field>
+              <summary className="font-medium cursor-pointer py-2">
+                Gemini
+                {settings.ocrEngine === 'auto'
+                  ? settings.geminiApiKey
+                    ? ' · eingerichtet'
+                    : ' · nicht eingerichtet'
+                  : ''}
+              </summary>
+              <Field
+                label="Gemini API-Key"
+                hint="Wird nur auf diesem Gerät gespeichert, nie in der Datenbank. Zu holen unter aistudio.google.com."
+              >
+                <input
+                  className="field"
+                  type="password"
+                  placeholder="AIza…"
+                  value={settings.geminiApiKey}
+                  onChange={(event) => update({ geminiApiKey: event.target.value.trim() })}
+                />
+              </Field>
+              <Field
+                label="Modell"
+                hint="Freies Textfeld, weil sich die Modellnamen bei Google schneller ändern als diese App. gemini-2.5-flash ist schnell und günstig, gemini-2.5-pro liest schwierige Belege besser."
+              >
+                <input
+                  className="field"
+                  type="text"
+                  placeholder="gemini-2.5-flash"
+                  value={settings.geminiModel}
+                  onChange={(event) => update({ geminiModel: event.target.value.trim() })}
+                />
+              </Field>
+            </details>
+          )}
+
+          {(settings.ocrEngine === 'auto' || settings.ocrEngine === 'claude') && (
+            <details
+              key={`claude-${settings.ocrEngine}`}
+              open={settings.ocrEngine === 'claude'}
+              className="mt-3"
+            >
+              <summary className="font-medium cursor-pointer py-2">
+                Claude
+                {settings.ocrEngine === 'auto'
+                  ? settings.claudeApiKey
+                    ? ' · eingerichtet'
+                    : ' · nicht eingerichtet'
+                  : ''}
+              </summary>
+              <Field
+                label="Claude API-Key"
+                hint="Wird nur auf diesem Gerät gespeichert. Kosten pro Beleg etwa ein bis zwei Cent."
+              >
+                <input
+                  className="field"
+                  type="password"
+                  placeholder="sk-ant-…"
+                  value={settings.claudeApiKey}
+                  onChange={(event) => update({ claudeApiKey: event.target.value.trim() })}
+                />
+              </Field>
+              <Field label="Modell">
+                <select
+                  className="field"
+                  value={settings.claudeModel}
+                  onChange={(event) => update({ claudeModel: event.target.value })}
+                >
+                  {CLAUDE_MODELS.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </details>
+          )}
         </section>
+
+        {isNative() ? <FolderExportSection /> : <ExportSection />}
 
         <ModelSection signedIn={!!user} />
 
@@ -272,9 +314,7 @@ export default function SettingsPage() {
 
         <section className="card p-4">
           <h2 className="font-semibold mb-2">App</h2>
-          <p className="text-sm text-muted">
-            Version {APP_VERSION}
-          </p>
+          <p className="text-sm text-muted">Version {APP_VERSION}</p>
           <p className="text-xs text-muted mt-1">
             gebaut am {BUILD_DATE} · Stand {APP_SHA}
           </p>

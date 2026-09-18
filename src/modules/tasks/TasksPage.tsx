@@ -69,7 +69,11 @@ export default function TasksPage() {
 
   async function addQuick() {
     const title = quick.trim();
-    if (!title) return;
+    if (!title) {
+      // no text typed: open the editor for a new task instead of doing nothing
+      setEditing({ ...emptyTask(), roomIds: roomFilter ? [roomFilter] : [] });
+      return;
+    }
     setQuick('');
     // a task added while a room filter is active must land in that room, or it vanishes from view
     await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [roomFilter] : [] });

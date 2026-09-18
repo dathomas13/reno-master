@@ -2,14 +2,9 @@ import { useMemo, useState } from 'react';
 import { useCollection } from '@/data/hooks';
 import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type Task, type Trade } from '@/data/types';
 import { archiveName, formatSize, planExport } from '@/data/exportArchive';
-import {
-  canStreamToDisk,
-  memoryTarget,
-  pickFileTarget,
-  writeArchive,
-  type ExportProgress,
-} from '@/data/runExport';
+import { canStreamToDisk, pickFileTarget, writeArchive, type ExportProgress } from '@/data/runExport';
 import { readFromStorage } from '@/data/exportFiles';
+import { SettingsHeading } from './SettingsHelp';
 
 /**
  * The archive for the day this app is gone.
@@ -49,24 +44,26 @@ export function ExportSection() {
 
   const streams = canStreamToDisk();
 
+  if (!streams) {
+    return (
+      <section className="card p-4">
+        <h2 className="font-semibold mb-3">Archiv exportieren</h2>
+        <p className="text-sm text-muted">
+          Dieser Browser unterstützt das direkte Schreiben in eine Datei nicht.
+          Bitte den Archiv-Export am Laptop in Chrome oder Edge öffnen.
+        </p>
+      </section>
+    );
+  }
+
   async function run() {
     setError(null);
     setDone(null);
     setRunning(true);
     try {
       const name = archiveName();
-      const target = streams ? await pickFileTarget(name) : memoryTarget();
+      const target = await pickFileTarget(name);
       const result = await writeArchive(plan, target, setProgress, readFromStorage);
-      const blob = target.result();
-      if (blob) {
-        // no file picker: hand it over the old way
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = name;
-        link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      }
       setDone(result);
     } catch (problem) {
       // the user closing the file dialog is not an error worth shouting about
@@ -83,12 +80,11 @@ export function ExportSection() {
 
   return (
     <section className="card p-4">
-      <h2 className="font-semibold mb-3">Archiv exportieren</h2>
-      <p className="text-sm text-muted mb-3">
+      <SettingsHeading title="Archiv exportieren">
         Packt das ganze Tagebuch in eine ZIP-Datei: die Fotos nach Tagen sortiert, das Tagebuch als
         lesbaren Text und alle Daten als JSON. Gedacht für die Festplatte oder eine zweite Cloud, wenn
         die Baustelle fertig ist.
-      </p>
+      </SettingsHeading>
 
       {loading ? (
         <p className="text-sm text-muted">Daten werden geladen…</p>
@@ -107,14 +103,6 @@ export function ExportSection() {
             </>
           )}
         </dl>
-      )}
-
-      {!streams && (
-        <p className="text-sm text-warn mb-3">
-          Dieser Browser kann nicht direkt auf die Festplatte schreiben – das Archiv müsste erst
-          komplett in den Speicher, wofür ein Handy bei dieser Größe nicht reicht. Am Laptop im
-          Browser anmelden und den Export dort starten.
-        </p>
       )}
 
       <button

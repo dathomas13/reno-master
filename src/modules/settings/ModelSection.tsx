@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Field } from '@/components/Fields';
+import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
 import { formatBytes } from '@/lib/image';
 import { activeRelease } from '@/data/models';
 import { SOURCE_LABEL, VARIANTS, type ReleaseInfo, type Variant } from '@/data/modelRelease';
@@ -98,7 +98,10 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
 
   return (
     <section className="card p-4">
-      <h2 className="font-semibold mb-3">3D-Modelle</h2>
+      <SettingsHeading title="3D-Modelle">
+        Die App nimmt immer die höchste erreichbare Version. Das geladene Modell bleibt
+        auf diesem Gerät gespeichert und ist auch offline verfügbar.
+      </SettingsHeading>
       <table className="w-full text-sm">
         <tbody>
           {rows.map(({ variant: item, release, cachedAt }) => (
@@ -137,12 +140,6 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
       <button type="button" className="btn" onClick={() => void check()} disabled={checking}>
         {checking ? 'Wird geprüft…' : 'Nach neuem Modell suchen'}
       </button>
-
-      <p className="text-xs text-muted mt-3">
-        Die App nimmt immer die höchste Version, die sie erreicht: das mit der App gelieferte Modell,
-        das auf der Website, und ein hier veröffentlichtes. Was sie geladen hat, bleibt auf dem Gerät
-        und ist offline da.
-      </p>
 
       {signedIn && (
         <details className="mt-3">

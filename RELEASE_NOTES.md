@@ -8,6 +8,34 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.4 – Einstellungen übersichtlicher
+
+Erklärungen zu Fotos, Beleg-Auslesen, Export und 3D-Modellen öffnest du jetzt über das
+Fragezeichen. Beim Beleg-Auslesen siehst du nur die Einstellungen des gewählten Verfahrens;
+bei „Automatisch“ kannst du Gemini und Claude einzeln aufklappen. Deine hinterlegten Werte bleiben erhalten.
+
+Der Ordnerexport erscheint nur noch in der App, der Archiv-Export nur im Browser.
+Warnungen, der Erinnerungsstatus und wartende Uploads bleiben direkt sichtbar.
+
+## 0.29.3 – ML Kit nur, wo es das gibt
+
+Beim Beleg-Auslesen stand „Nur ML Kit“ auch im Browser zur Wahl, obwohl das nur auf dem Gerät
+läuft – im Browser hätte die Auswahl nie einen Beleg gelesen. Die Option erscheint jetzt nur
+noch in der App-Version.
+
+## 0.29.2 – Archiv-Export nur, wo er auch geht
+
+Den Knopf für „Archiv erstellen“ gab es bisher auch dort, wo er nie funktionieren konnte –
+am Handy hätte das ganze Archiv in den Arbeitsspeicher gepasst haben müssen. Jetzt zeigt die
+Einstellungsseite dort von vornherein nur den Hinweis, das Archiv am Laptop zu erstellen –
+genauso, wie es der Export in einen Ordner schon für die App-Version macht.
+
+## 0.29.1 – Plus bei Aufgaben öffnet das Formular
+
+Steht kein Text im Eingabefeld, öffnet das Plus jetzt das Formular für eine neue Aufgabe,
+statt scheinbar nichts zu tun. Steht schon ein Titel da, legt das Plus die Aufgabe wie
+bisher direkt an.
+
 ## 0.29.0 – Neue Aufgabe im gefilterten Raum
 
 Wenn du bei Aufgaben nach einem Raum gefiltert hast und über das Plus eine neue Aufgabe
