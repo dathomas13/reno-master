@@ -8,6 +8,12 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.0 – Neue Aufgabe im gefilterten Raum
+
+Wenn du bei Aufgaben nach einem Raum gefiltert hast und über das Plus eine neue Aufgabe
+angelegt hast, verschwand sie sofort wieder aus der Liste – sie war zwar gespeichert, aber
+keinem Raum zugeordnet. Jetzt landet sie im gerade gefilterten Raum.
+
 ## 0.28.7 – Dateien gemeinsam geöffnet
 
 Fotos, Belege und Pläne findest du jetzt gesammelt unter „Dateien“. Die drei Bereiche bleiben

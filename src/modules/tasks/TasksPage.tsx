@@ -71,7 +71,8 @@ export default function TasksPage() {
     const title = quick.trim();
     if (!title) return;
     setQuick('');
-    await saveTask({ ...emptyTask(), title });
+    // a task added while a room filter is active must land in that room, or it vanishes from view
+    await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [roomFilter] : [] });
   }
 
   return (
