@@ -61,14 +61,14 @@ export const diaryReminder = onSchedule(
 
       const response = await getMessaging().sendEachForMulticast({
         tokens,
-        notification: {
+        data: {
           title: 'Bautagebuch',
-          body: 'Heute noch kein Eintrag – kurz festhalten, was passiert ist?',
+          body: 'Heute noch kein Eintrag - kurz festhalten, was passiert ist?',
+          route: '/tagebuch/neu',
+          date,
         },
-        data: { route: '/tagebuch/neu' },
         webpush: {
           fcmOptions: { link: `${APP_URL}#/tagebuch/neu` },
-          notification: { icon: `${APP_URL}img/icon-192.png`, tag: 'diary-reminder' },
         },
       });
 

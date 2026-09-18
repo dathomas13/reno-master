@@ -8,6 +8,7 @@ import { registerRoute } from 'workbox-routing';
 import { CacheFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
+import { hasDiaryReminderDate } from './platform/diaryReminderMarker';
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: { url: string; revision: string | null }[];
@@ -53,6 +54,45 @@ registerRoute(
 
 self.addEventListener('message', (event) => {
   if ((event.data as { type?: string })?.type === 'SKIP_WAITING') void self.skipWaiting();
+});
+
+interface ReminderPushPayload {
+  title?: string;
+  body?: string;
+  route?: string;
+  date?: string;
+  notification?: { title?: string; body?: string };
+  data?: { title?: string; body?: string; route?: string; date?: string };
+}
+
+function readPushPayload(event: PushEvent): ReminderPushPayload {
+  if (!event.data) return {};
+  try {
+    return event.data.json() as ReminderPushPayload;
+  } catch {
+    return { body: event.data.text() };
+  }
+}
+
+self.addEventListener('push', (event) => {
+  event.waitUntil(
+    (async () => {
+      const payload = readPushPayload(event);
+      const data = payload.data ?? payload;
+      const date = data.date ?? payload.date;
+      if (date && (await hasDiaryReminderDate(date))) return;
+
+      const title = data.title ?? payload.notification?.title ?? payload.title ?? 'Bautagebuch';
+      const body = data.body ?? payload.notification?.body ?? payload.body ?? 'Heute noch kein Eintrag - jetzt schreiben?';
+      const route = data.route ?? payload.route ?? '/tagebuch/neu';
+      await self.registration.showNotification(title, {
+        body,
+        icon: new URL('img/icon-192.png', self.registration.scope).toString(),
+        tag: 'diary-reminder',
+        data: { route },
+      });
+    })(),
+  );
 });
 
 self.addEventListener('notificationclick', (event) => {

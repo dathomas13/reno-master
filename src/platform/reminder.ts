@@ -38,6 +38,7 @@ import {
   dateOfReminderId,
   isReminderId,
   planReminders,
+  reminderId,
   type PlannedReminder,
   type ReminderDiagnosis,
   type ReminderInput,
@@ -254,6 +255,16 @@ export async function applyReminderPlan(input: ReminderInput): Promise<PlannedRe
     // settings screen reports what really stands, instead of this guessing
   }
   return plan;
+}
+
+export async function cancelDiaryReminderForDate(date: string): Promise<void> {
+  try {
+    const local = plugin();
+    if (!local) return;
+    await withDeadline(local.cancel({ notifications: [{ id: reminderId(date) }] }));
+  } catch {
+    // Saving the diary entry must not fail because Android refused to touch alarms.
+  }
 }
 
 /** shows the reminder right now; used by the browser and by the test button */

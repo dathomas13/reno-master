@@ -17,6 +17,8 @@ import { deleteField } from 'firebase/firestore';
 import { newId } from '@/lib/ids';
 import { today, toIsoDateTime, formatDate } from '@/lib/date';
 import { pendingWrite } from './pendingWrite';
+import { rememberDiaryReminderDate } from '@/platform/diaryReminderMarker';
+import { cancelDiaryReminderForDate } from '@/platform/reminder';
 
 /** removes undefined values, which Firestore refuses to store */
 function clean<T extends Record<string, unknown>>(value: T): T {
@@ -39,10 +41,13 @@ export function emptyDiaryEntry(date = today()): DiaryEntry {
 }
 
 export async function saveDiaryEntry(entry: DiaryEntry): Promise<string> {
-  return saveDoc<DiaryEntry>(
+  const saved = saveDoc<DiaryEntry>(
     COL.diary,
     clean(entry as unknown as Record<string, unknown>) as unknown as DiaryEntry,
   );
+  void rememberDiaryReminderDate(entry.date);
+  void cancelDiaryReminderForDate(entry.date);
+  return saved;
 }
 
 export async function patchDiaryEntry(id: string, patch: Partial<DiaryEntry>): Promise<void> {

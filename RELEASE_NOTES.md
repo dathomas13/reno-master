@@ -8,6 +8,13 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.9 – Tagebuch erinnert genauer
+
+Wenn du einen Tagebuch-Eintrag speicherst, löscht die App den Wecker für diesen Tag jetzt
+sofort direkt auf dem Gerät, ohne auf die Serverbestätigung zu warten. Zusätzlich wartet
+die Abend-Erinnerung beim Start, bis die Tagebuchdaten wirklich geladen sind, bevor sie
+neue Wecker stellt.
+
 ## 0.29.8 – Jeder Branch baut
 
 Pushes von Entwicklungsbranches starten jetzt ebenfalls die Prüfungen, den Seiten-Deploy und den

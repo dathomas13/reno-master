@@ -592,9 +592,13 @@ Profil, welche Tage schon einen Eintrag haben, beantwortet der Offline-Cache.
   `#/tagebuch/neu` (über den Hash, weil beim Kaltstart noch kein Router da ist).
 - `src/data/useReminder.ts` – hält beides synchron. Der Hook hängt an derselben
   `onSnapshot`-Abfrage wie der Rest: wer den heutigen Eintrag speichert, nimmt damit im
-  selben Moment die heutige Erinnerung mit. Neu geplant wird außerdem, wenn die App wieder
-  sichtbar wird. Ohne geladenes Profil passiert nichts – ein Offline-Start ohne Cache darf
-  die gestellten Wecker nicht löschen.
+  selben Moment die heutige Erinnerung mit. Zusätzlich löscht das Speichern eines Eintrags
+  den Termin für dieses Datum direkt über seine abgeleitete Android-id, ohne auf die nächste
+  Listenabfrage oder die Serverbestätigung des Firestore-Writes zu warten. Neu geplant wird
+  außerdem, wenn die App wieder sichtbar wird. Ohne geladenes Profil und ohne erste
+  Tagebuchantwort passiert nichts – ein Offline-Start ohne Cache darf die gestellten Wecker
+  nicht löschen und ein Start vor dem Tagebuch-Snapshot darf nicht kurz einen falschen Wecker
+  stellen.
 - Im Browser geht das nicht: eine Seite kann sich nicht selbst wecken. Dort erinnert die App,
   solange sie offen ist (Minutentakt, `dueReminder`, einmal pro Tag über
   `reno.reminder.lastShown`). Die Einstellungen sagen diesen Unterschied ausdrücklich.
@@ -602,9 +606,11 @@ Profil, welche Tage schon einen Eintrag haben, beantwortet der Offline-Cache.
   `onSchedule({ schedule: 'every 10 minutes', timeZone: 'Europe/Berlin' })`, schickt FCM an
   `users/*.fcmTokens`, wenn `reminderEnabled` und noch kein `diary`-Dokument mit
   `date == heute`. `src/platform/notifications.ts` holt den Token (`registerPushToken`,
-  stillschweigend wirkungslos ohne `VITE_VAPID_KEY`), `sw.ts` zeigt die Nachricht und
-  `notificationclick` öffnet die Route. Das braucht Blaze und `firebase deploy --only
-  functions`; ohne das bleibt es bei der Erinnerung vom Gerät, und die ist der Normalfall.
+  stillschweigend wirkungslos ohne `VITE_VAPID_KEY`), `sw.ts` zeigt die Nachricht erst nach
+  einem lokalen Gerätecheck: bekannte Tage mit Eintrag liegen zusätzlich in IndexedDB, damit
+  ein Offline-Eintrag auf diesem Gerät einen Server-Push noch unterdrücken kann.
+  `notificationclick` öffnet die Route. Das braucht Blaze und `firebase deploy --only functions`;
+  ohne das bleibt es bei der Erinnerung vom Gerät, und die ist der Normalfall.
 - APK: keine zusätzliche Einrichtung, kein `google-services.json`, kein Token. Die
   Berechtigung (`POST_NOTIFICATIONS` ab Android 13) fragt der Knopf in den Einstellungen.
   Darf die App keine exakten Wecker stellen (Android 14), stellt das Plugin ungenaue – die
