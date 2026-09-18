@@ -68,8 +68,8 @@ per `git push` oder ohne Deploy über Einstellungen → 3D-Modelle → „Modell
 ## Stand (16.09.2026)
 
 Live unter <https://dathomas13.github.io/reno-master/>, gebaut und veröffentlicht von
-GitHub Actions. Der Workflow läuft auf `main` und auf jedem `claude/**`-Branch, und der
-`deploy`-Job wird von keinem davon mehr abgewiesen: **der letzte Push gewinnt**, gleich
+GitHub Actions. Die CI-, Pages- und APK-Workflows laufen auf jedem Branch-Push; der
+`deploy`-Job wird von keinem Branch mehr abgewiesen: **der letzte Push gewinnt**, gleich
 aus welchem Branch.
 
 Steht:
@@ -156,10 +156,10 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Der Tag eines Release hängt am gebauten Commit (`--target "$GITHUB_SHA"`). Ohne das
   setzt `gh release create` ihn auf den Default-Branch, und aus einem Sitzungsbranch
   heraus zeigt er dann auf Code, der die veröffentlichte APK nicht enthält.
-- Der Pages-Deploy veröffentlicht aus **jedem** Branch, auf den der Workflow hört
-  (`main` und `claude/**`) – die Umgebung `github-pages` weist keinen mehr ab. Ein Push
-  aus einem Sitzungsbranch stellt die Seite also live und schickt dem Telefon ein neues
-  `version.json`. Wer das nicht will, veröffentlicht von dort nicht.
+- Der Pages-Deploy veröffentlicht aus **jedem** Branch – die Umgebung `github-pages`
+  weist keinen mehr ab. Ein Push aus einem Sitzungsbranch stellt die Seite also live und
+  schickt dem Telefon ein neues `version.json`. Wer das nicht will, veröffentlicht von
+  dort nicht.
 - Keine Geheimnisse ins Repo: Service-Account-JSON, `google-services.json`, `.env` sind gitignored.
 - Der Claude API-Key liegt nur im localStorage des Geräts, nie in Firestore.
 - Vor dem Push: `npm run lint`, `npm run test`, `npm run build`.

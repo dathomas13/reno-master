@@ -8,6 +8,11 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.8 – Jeder Branch baut
+
+Pushes von Entwicklungsbranches starten jetzt ebenfalls die Prüfungen, den Seiten-Deploy und den
+APK-Build. Damit kommt eine neue Fassung nicht erst nach dem Merge an.
+
 ## 0.29.7 – Aufgaben erinnern dich
 
 Aufgaben haben jetzt ein Feld „Erinnerung“. In der App stellt das Telefon dafür eine
