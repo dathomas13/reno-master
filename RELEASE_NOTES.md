@@ -8,6 +8,12 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.11 – Tagebuch merkt Entwürfe
+
+Ein angefangener neuer Tagebuch-Eintrag bleibt jetzt als Entwurf auf dem Gerät erhalten,
+wenn du zurückgehst oder die App verlässt. Im Editor gibt es dafür einen eigenen Knopf
+„Verwerfen und schließen“, wenn der angefangene Text wirklich weg soll.
+
 ## 0.29.10 – Tagebuch ohne Wolfgang-Schablone
 
 Der Text im neuen Tagebuch-Eintrag schlägt nicht mehr jeden Tag dieselbe konkrete Arbeit vor.

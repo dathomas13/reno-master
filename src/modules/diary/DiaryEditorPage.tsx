@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Field, ChipSelect, Spinner } from '@/components/Fields';
@@ -11,6 +11,7 @@ import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
 import { diaryTextPlaceholder } from './diaryPlaceholder';
+import { clearDiaryDraft, loadDiaryDraft, saveDiaryDraft } from './diaryDraft';
 
 export default function DiaryEditorPage() {
   const { id } = useParams();
@@ -18,25 +19,27 @@ export default function DiaryEditorPage() {
   const navigate = useNavigate();
   const isNew = !id;
   const dateParam = params.get('date');
+  const initialDate = dateParam ?? today();
 
   const { data: existing, loading } = useDocument<DiaryEntry>(COL.diary, id);
   const { data: allEntries } = useCollection<DiaryEntry>(COL.diary);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { lists, addTo } = useLists();
 
-  const [entry, setEntry] = useState<DiaryEntry>(() => emptyDiaryEntry(params.get('date') ?? today()));
+  const [entry, setEntry] = useState<DiaryEntry>(() => loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(isNew);
+  const closingWithoutDraft = useRef(false);
 
   useEffect(() => {
     if (!isNew) {
       setReady(false);
       return;
     }
-    setEntry(emptyDiaryEntry(dateParam ?? today()));
+    setEntry(loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
     setReady(true);
-  }, [id, isNew, dateParam]);
+  }, [id, isNew, dateParam, initialDate]);
 
   // load an existing entry once
   useEffect(() => {
@@ -70,11 +73,24 @@ export default function DiaryEditorPage() {
     setEntry((current) => ({ ...current, ...patch }));
   }
 
+  useEffect(() => {
+    if (!isNew || !ready || closingWithoutDraft.current) return;
+    saveDiaryDraft({ ...entry, photoIds: photos.map((photo) => photo.id) }, initialDate);
+  }, [isNew, ready, entry, photos, initialDate]);
+
+  function discardAndClose() {
+    closingWithoutDraft.current = true;
+    clearDiaryDraft();
+    navigate('/tagebuch', { replace: true });
+  }
+
   async function save() {
     setSaving(true);
     try {
       const title = entry.title.trim() || `Tagebuch ${formatDate(entry.date).slice(0, 6)}`;
       await saveDiaryEntry({ ...entry, title, photoIds: photos.map((photo) => photo.id) });
+      closingWithoutDraft.current = true;
+      clearDiaryDraft();
       navigate(`/tagebuch/${entry.id}`, { replace: true });
     } finally {
       setSaving(false);
@@ -89,14 +105,21 @@ export default function DiaryEditorPage() {
         title={isNew ? 'Neuer Eintrag' : 'Eintrag bearbeiten'}
         back
         action={
-          <button
-            type="button"
-            className="btn btn-primary px-3 min-h-0 py-2"
-            onClick={() => void save()}
-            disabled={saving}
-          >
-            {saving ? 'Speichert…' : 'Speichern'}
-          </button>
+          <div className="flex gap-2">
+            {isNew && (
+              <button type="button" className="btn btn-danger px-3 min-h-0 py-2" onClick={discardAndClose}>
+                Verwerfen
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-primary px-3 min-h-0 py-2"
+              onClick={() => void save()}
+              disabled={saving}
+            >
+              {saving ? 'Speichert…' : 'Speichern'}
+            </button>
+          </div>
         }
       />
 
@@ -209,6 +232,11 @@ export default function DiaryEditorPage() {
         >
           {saving ? 'Speichert…' : 'Speichern'}
         </button>
+        {isNew && (
+          <button type="button" className="btn btn-danger w-full mt-2" onClick={discardAndClose}>
+            Verwerfen und schließen
+          </button>
+        )}
       </div>
     </>
   );
