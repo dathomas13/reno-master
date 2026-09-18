@@ -10,6 +10,7 @@ import { COL, type DiaryEntry, type Phase, type Photo, type Weather } from '@/da
 import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
+import { diaryTextPlaceholder } from './diaryPlaceholder';
 
 export default function DiaryEditorPage() {
   const { id } = useParams();
@@ -140,7 +141,7 @@ export default function DiaryEditorPage() {
           <textarea
             className="field min-h-[9rem]"
             value={entry.text}
-            placeholder="Wolfgang hat die Perimeterdämmung auf der Nordseite angebracht…"
+            placeholder={diaryTextPlaceholder(entry.date)}
             onChange={(event) => update({ text: event.target.value })}
           />
         </Field>

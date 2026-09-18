@@ -8,6 +8,12 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.10 – Tagebuch ohne Wolfgang-Schablone
+
+Der Text im neuen Tagebuch-Eintrag schlägt nicht mehr jeden Tag dieselbe konkrete Arbeit vor.
+Stattdessen wechseln neutrale Schreibanstöße, die nichts behaupten und nur helfen sollen,
+den Tag schnell festzuhalten.
+
 ## 0.29.9 – Tagebuch erinnert genauer
 
 Wenn du einen Tagebuch-Eintrag speicherst, löscht die App den Wecker für diesen Tag jetzt
