@@ -18,7 +18,14 @@ vi.mock('@/lib/image', () => ({
   resizeImage: vi.fn(), makeThumbnail: vi.fn(), readTakenAt: vi.fn().mockResolvedValue('2026-09-17T12:00:00'),
   PHOTO_MAX_EDGE: 1600, RECEIPT_MAX_EDGE: 2000,
 }));
-vi.mock('@/components/PhotoView', () => ({ PhotoImage: () => null }));
+vi.mock('@/components/PhotoView', () => ({
+  PhotoImage: () => null,
+  Lightbox: ({ photos, index, onClose }: { photos: Photo[]; index: number; onClose(): void }) => (
+    <div role="dialog" aria-label={photos[index].originalName}>
+      <button type="button" onClick={onClose}>Schließen</button>
+    </div>
+  ),
+}));
 vi.mock('@/components/Sheet', () => ({ Sheet: () => null }));
 
 const file = new File(['receipt'], 'rechnung.pdf', { type: 'application/pdf' });
@@ -36,6 +43,17 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('receipt file picker', () => {
+  it('opens an attached PDF in the shared viewer without changing the attachment', async () => {
+    const onRemoved = vi.fn();
+    render(<PhotoAttach photos={[receipt]} costId="other-cost" kind="receipt" onAdded={vi.fn()} onRemoved={onRemoved} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Beleg öffnen: rechnung.pdf' }));
+    expect(screen.getByRole('dialog', { name: 'rechnung.pdf' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onRemoved).not.toHaveBeenCalled();
+    expect(mocks.saveDoc).not.toHaveBeenCalled();
+  });
+
   it('reports duplicates before OCR or another upload', async () => {
     const onAdded = vi.fn();
     const onFileChosen = vi.fn();

@@ -62,7 +62,7 @@ export default defineConfig({
       filename: 'sw.ts',
       registerType: 'prompt',
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,svg,json,png,jpg,woff2}'],
+        globPatterns: ['**/*.{js,mjs,css,html,svg,json,png,jpg,woff2}'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
       devOptions: { enabled: false, type: 'module' },

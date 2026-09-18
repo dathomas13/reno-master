@@ -8,6 +8,15 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.28.6 – PDF-Belege wirklich öffnen
+
+PDF-Belege zeigen jetzt ihren Inhalt statt nur des Schriftzugs „PDF“. In der Vollbildansicht
+kannst du durch die Seiten blättern, sie vergrößern und den Ausschnitt verschieben. Auch
+direkt in einer Rechnung öffnet ein Tipp auf den angehängten Beleg die Ansicht.
+
+Bereits auf dem Gerät gespeicherte Belege lassen sich ohne Netz ansehen. Ist eine Datei
+nicht verfügbar oder nicht lesbar, erscheint eine Fehlermeldung mit „Erneut versuchen“.
+
 ## 0.28.5 – Belege nicht doppelt ablegen
 
 Beim erneuten Auswählen einer bereits bekannten Belegdatei wird keine weitere Kopie

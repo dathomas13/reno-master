@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { PhotoImage } from '@/components/PhotoView';
+import { Lightbox, PhotoImage } from '@/components/PhotoView';
 import { addPhoto, deletePhoto, ReceiptAlreadyLinkedError } from '@/data/photos';
 import {
   pickPhotos, pickFiles, galleryPickerAvailable, listGalleryPhotosForDay, readGalleryPhoto,
@@ -55,6 +55,8 @@ export function PhotoAttach({
   autoCapture = false,
 }: PhotoAttachProps) {
   const [busy, setBusy] = useState(false);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const previewIndex = photos.findIndex((photo) => photo.id === previewId);
   const processing = useRef(false);
   const captured = useRef(false);
   const [dayOpen, setDayOpen] = useState(false);
@@ -211,7 +213,12 @@ export function PhotoAttach({
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
           {photos.map((photo) => (
             <div key={photo.id} className="relative aspect-square">
-              <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />
+              {kind === 'receipt' ? (
+                <button type="button" className="w-full h-full" aria-label={`Beleg öffnen: ${photo.originalName || 'Beleg'}`}
+                  onClick={() => setPreviewId(photo.id)}>
+                  <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />
+                </button>
+              ) : <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />}
               {photo.uploadState === 'pending' && (
                 <span className="absolute bottom-1 left-1 text-[10px] bg-bg/80 px-1 rounded">wartet</span>
               )}
@@ -238,6 +245,11 @@ export function PhotoAttach({
             </div>
           ))}
         </div>
+      )}
+
+      {previewIndex >= 0 && (
+        <Lightbox photos={photos} index={previewIndex} onClose={() => setPreviewId(null)}
+          onIndexChange={(index) => setPreviewId(photos[index]?.id ?? null)} />
       )}
 
       <Sheet open={dayOpen} onClose={() => setDayOpen(false)} title={`Galerie ${forDate ? formatDate(forDate) : ''}`}>
