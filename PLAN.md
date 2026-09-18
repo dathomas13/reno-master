@@ -225,6 +225,7 @@ interface Task {
   status: 'Offen'|'In Arbeit'|'Wartet auf'|'Erledigt';
   priority: 'Hoch'|'Mittel'|'Niedrig';
   due?: string;              // YYYY-MM-DD
+  reminderAt?: string;       // YYYY-MM-DDTHH:mm:ss, lokale Aufgaben-Erinnerung auf dem Gerät
   assignees: ('Thomas'|'Sarah'|'Handwerker'|'Beide')[];
   area?: string;             // "Bereich" (Seed: Kauf, Finanzen, Versicherung, Energieberatung, Förderung, Dach, Fenster, Heizung, Fassade, Elektrik, Sanitär, PV, Behörden, Planung, Innenausbau, Rückbau, Organisation, Keller, Gebäudehülle)
   tradeId?: string; phaseId?: string; roomIds: string[];
@@ -409,8 +410,8 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 ### 8.6 Aufgaben
 - Liste mit Segment "Offen | Alle | Erledigt"; Gruppierung nach Fälligkeit (Überfällig, Heute, Diese Woche, Später, Ohne Datum); Zeile: Checkbox, Titel, Chips (Priorität farbig, Bereich, Zuständig), Fälligkeit. Filter: Zuständig (Thomas/Sarah/Beide), Bereich, Gewerk, Phase, Raum.
 - Schnellanlage: Eingabefeld oben ("Aufgabe… ⏎"), Details später.
-- Editor: Titel, Notizen, Status, Priorität, Fällig am, Zuständig (Multi), Bereich, Gewerk, Phase, Räume.
-- Erledigt-Haken setzt `status:'Erledigt'`, `doneAt`.
+- Editor: Titel, Notizen, Status, Priorität, Fällig am, Erinnerung, Zuständig (Multi), Bereich, Gewerk, Phase, Räume.
+- Erledigt-Haken setzt `status:'Erledigt'`, `doneAt` und löscht eine geplante Erinnerung. In der Android-App wird `reminderAt` als lokale Benachrichtigung gestellt; deren Aktion „Erledigt“ markiert die Aufgabe als abgeschlossen.
 
 ### 8.7 Kontakte
 - Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.

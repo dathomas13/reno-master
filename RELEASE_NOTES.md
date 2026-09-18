@@ -8,6 +8,13 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.29.7 – Aufgaben erinnern dich
+
+Aufgaben haben jetzt ein Feld „Erinnerung“. In der App stellt das Telefon dafür eine
+Benachrichtigung; direkt in der Benachrichtigung gibt es die Aktion „Erledigt“, mit der
+die Aufgabe abgeschlossen wird. Am Laptop lässt sich der Zeitpunkt ebenfalls eintragen,
+die zuverlässige Erinnerung kommt aber über die Android-App.
+
 ## 0.29.6 – Editoren laden sauber neu
 
 Beim Prüfen der anderen Formulare wurden zwei verwandte Stellen aufgeräumt: Kontakte speichern

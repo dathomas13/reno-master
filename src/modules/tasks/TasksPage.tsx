@@ -27,6 +27,23 @@ const PRIORITY_COLOR: Record<Priority, string> = {
   Niedrig: 'text-muted',
 };
 
+function toDateTimeInput(value: string | undefined): string {
+  return value?.slice(0, 16) ?? '';
+}
+
+function fromDateTimeInput(value: string): string | undefined {
+  return value ? `${value}:00` : undefined;
+}
+
+function formatReminder(value: string | undefined): string {
+  if (!value) return '';
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) return '';
+  return `${formatRelativeDay(value.slice(0, 10))} ${String(at.getHours()).padStart(2, '0')}:${String(
+    at.getMinutes(),
+  ).padStart(2, '0')}`;
+}
+
 export default function TasksPage() {
   const [params, setParams] = useSearchParams();
   const { data: tasks } = useCollection<Task>(COL.tasks);
@@ -204,6 +221,7 @@ export default function TasksPage() {
                       {task.area ? ` · ${task.area}` : ''}
                       {task.assignees.length ? ` · ${task.assignees.join(', ')}` : ''}
                       {task.due ? ` · ${formatRelativeDay(task.due)}` : ''}
+                      {task.reminderAt ? ` · Erinnerung ${formatReminder(task.reminderAt)}` : ''}
                     </span>
                   </button>
                 </li>
@@ -261,9 +279,11 @@ function TaskSheet({
   if (!task || !draft) return null;
 
   const update = (patch: Partial<Task>) => setDraft({ ...draft, ...patch });
+  const canSave = draft.title.trim().length > 0;
+  const saveDraft = () => void onSave({ ...draft, title: draft.title.trim() });
 
   return (
-    <Sheet open onClose={onClose} onDone={() => void onSave(draft)} title="Aufgabe">
+    <Sheet open onClose={onClose} onDone={canSave ? saveDraft : onClose} title="Aufgabe">
       <div className="p-4">
         <Field label="Titel">
           <input
@@ -312,6 +332,18 @@ function TaskSheet({
             onChange={(event) => update({ due: event.target.value || undefined })}
           />
         </Field>
+        <Field label="Erinnerung">
+          <input
+            className="field"
+            type="datetime-local"
+            value={toDateTimeInput(draft.reminderAt)}
+            onChange={(event) => update({ reminderAt: fromDateTimeInput(event.target.value) })}
+          />
+          <p className="text-xs text-muted mt-1">
+            Kommt zuverlässig in der Android-App. In der Benachrichtigung kannst du die Aufgabe direkt als
+            erledigt markieren.
+          </p>
+        </Field>
         <Field label="Bereich">
           <ChipSelect
             options={areas}
@@ -330,7 +362,7 @@ function TaskSheet({
           <RoomPicker value={draft.roomIds} onChange={(value) => update({ roomIds: value })} />
         </Field>
         <div className="flex gap-3">
-          <button type="button" className="btn btn-primary flex-1" onClick={() => void onSave(draft)}>
+          <button type="button" className="btn btn-primary flex-1" onClick={saveDraft} disabled={!canSave}>
             Speichern
           </button>
           <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>

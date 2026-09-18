@@ -2,8 +2,18 @@
  * One place for every write. Components call these, never Firestore directly, so the
  * shape of a document is defined in exactly one file per entity.
  */
-import { COL, type Contact, type Cost, type DiaryEntry, type Plan, type Task, type Trade, type Phase } from './types';
+import {
+  COL,
+  type Contact,
+  type Cost,
+  type DiaryEntry,
+  type Plan,
+  type Task,
+  type Trade,
+  type Phase,
+} from './types';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
+import { deleteField } from 'firebase/firestore';
 import { newId } from '@/lib/ids';
 import { today, toIsoDateTime, formatDate } from '@/lib/date';
 import { pendingWrite } from './pendingWrite';
@@ -29,7 +39,10 @@ export function emptyDiaryEntry(date = today()): DiaryEntry {
 }
 
 export async function saveDiaryEntry(entry: DiaryEntry): Promise<string> {
-  return saveDoc<DiaryEntry>(COL.diary, clean(entry as unknown as Record<string, unknown>) as unknown as DiaryEntry);
+  return saveDoc<DiaryEntry>(
+    COL.diary,
+    clean(entry as unknown as Record<string, unknown>) as unknown as DiaryEntry,
+  );
 }
 
 export async function patchDiaryEntry(id: string, patch: Partial<DiaryEntry>): Promise<void> {
@@ -56,7 +69,9 @@ export function emptyCost(date = today()): Cost {
 }
 
 export async function saveCost(cost: Cost): Promise<string> {
-  await pendingWrite(saveDoc<Cost>(COL.costs, clean(cost as unknown as Record<string, unknown>) as unknown as Cost));
+  await pendingWrite(
+    saveDoc<Cost>(COL.costs, clean(cost as unknown as Record<string, unknown>) as unknown as Cost),
+  );
   return cost.id;
 }
 
@@ -81,7 +96,12 @@ export function emptyTask(): Task {
 }
 
 export async function saveTask(task: Task): Promise<string> {
-  return saveDoc<Task>(COL.tasks, clean(task as unknown as Record<string, unknown>) as unknown as Task);
+  const optional: (keyof Task)[] = ['notes', 'due', 'area', 'tradeId', 'phaseId', 'doneAt', 'reminderAt'];
+  const value = clean(task as unknown as Record<string, unknown>);
+  for (const key of optional) {
+    if (task[key] === undefined) value[key] = deleteField();
+  }
+  return saveDoc<Task>(COL.tasks, value as unknown as Task);
 }
 
 export async function patchTask(id: string, patch: Partial<Task>): Promise<void> {
@@ -92,7 +112,16 @@ export async function toggleTaskDone(task: Task): Promise<void> {
   const done = task.status !== 'Erledigt';
   await patchTask(task.id, {
     status: done ? 'Erledigt' : 'Offen',
-    doneAt: done ? toIsoDateTime() : undefined,
+    doneAt: done ? toIsoDateTime() : deleteField(),
+    ...(done ? { reminderAt: deleteField() } : {}),
+  } as unknown as Partial<Task>);
+}
+
+export async function markTaskDone(id: string): Promise<void> {
+  await patchDoc(COL.tasks, id, {
+    status: 'Erledigt',
+    doneAt: toIsoDateTime(),
+    reminderAt: deleteField(),
   });
 }
 
@@ -106,7 +135,10 @@ export function emptyContact(): Contact {
 }
 
 export async function saveContact(contact: Contact): Promise<string> {
-  return saveDoc<Contact>(COL.contacts, clean(contact as unknown as Record<string, unknown>) as unknown as Contact);
+  return saveDoc<Contact>(
+    COL.contacts,
+    clean(contact as unknown as Record<string, unknown>) as unknown as Contact,
+  );
 }
 
 export async function deleteContact(id: string): Promise<void> {

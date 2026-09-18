@@ -120,6 +120,7 @@ export interface Task extends BaseDoc {
   phaseId?: string;
   roomIds: string[];
   doneAt?: IsoDateTime;
+  reminderAt?: IsoDateTime;
 }
 
 export const CONTACT_STATUS = [

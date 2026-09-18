@@ -8,6 +8,7 @@ import { UpdateBanner } from '@/components/UpdateBanner';
 import { startOutboxWorker } from '@/offline/outbox';
 import { startModelSync } from '@/data/modelSync';
 import { useDiaryReminder } from '@/data/useReminder';
+import { useTaskReminders } from '@/data/useTaskReminders';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PreviewBanner } from '@/components/PreviewBanner';
 import LoginPage from '@/modules/auth/LoginPage';
@@ -38,6 +39,7 @@ function Protected() {
   useEffect(() => startModelSync({ watchPublished: !!user }), [user]);
   // the evening reminder: planned on the device, so it also fires with no connection
   useDiaryReminder();
+  useTaskReminders(!!user);
 
   if (!ready) return <Spinner label="Wird geladen…" />;
 

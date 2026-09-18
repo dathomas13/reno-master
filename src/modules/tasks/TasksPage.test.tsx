@@ -44,6 +44,7 @@ beforeEach(() => {
       priority: 'Mittel',
       assignees: [],
       roomIds: [],
+      reminderAt: '2026-09-24T19:30:00',
     },
   ];
   mocks.saveTask.mockClear();
@@ -89,5 +90,49 @@ describe('tasks page', () => {
     expect(mocks.saveTask).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'task-1', status: 'Erledigt' }),
     );
+  });
+
+  it('saves a task reminder from the editor', async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /Fenster pruefen/ }));
+    });
+
+    const dialog = screen.getByRole('dialog', { name: 'Aufgabe' });
+    const reminder = within(dialog).getByDisplayValue('2026-09-24T19:30');
+    fireEvent.change(reminder, { target: { value: '2026-09-25T08:15' } });
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Speichern' }));
+    });
+
+    expect(mocks.saveTask).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'task-1', reminderAt: '2026-09-25T08:15:00' }),
+    );
+  });
+
+  it('does not save an empty task from the sheet header', async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '+' }));
+    });
+
+    const dialog = screen.getByRole('dialog', { name: 'Aufgabe' });
+    expect(within(dialog).getByRole('button', { name: 'Speichern' })).toBeDisabled();
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Fertig' }));
+    });
+
+    expect(mocks.saveTask).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: 'Aufgabe' })).not.toBeInTheDocument();
   });
 });
