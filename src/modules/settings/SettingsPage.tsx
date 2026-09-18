@@ -68,6 +68,11 @@ export default function SettingsPage() {
     await patchDoc(COL.users, user.uid, patch);
   }
 
+  function updateReminderTime(value: string) {
+    setReminderTime(value);
+    if (parseClock(value) !== null) void updateProfile({ reminderTime: value });
+  }
+
   return (
     <>
       <TopBar title="Einstellungen" />
@@ -98,10 +103,7 @@ export default function SettingsPage() {
               className="field w-32"
               type="time"
               value={reminderTime}
-              onChange={(event) => setReminderTime(event.target.value)}
-              onBlur={() => {
-                if (parseClock(reminderTime) !== null) void updateProfile({ reminderTime });
-              }}
+              onChange={(event) => updateReminderTime(event.target.value)}
             />
           </Field>
 

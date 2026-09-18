@@ -3,11 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsPage from './SettingsPage';
 
 const mocks = vi.hoisted(() => ({ native: false, activeExtractor: vi.fn().mockResolvedValue(null) }));
+const patchDoc = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 vi.mock('@/components/TopBar', () => ({ TopBar: () => null }));
-vi.mock('@/auth/AuthContext', () => ({ useAuth: () => ({ user: null, profile: null }) }));
+vi.mock('@/auth/AuthContext', () => ({
+  useAuth: () => ({
+    user: { uid: 'user-1', email: 'thomas@example.test' },
+    profile: {
+      email: 'thomas@example.test',
+      displayName: 'Thomas',
+      reminderEnabled: true,
+      reminderTime: '20:00',
+      fcmTokens: [],
+      tz: 'Europe/Berlin',
+    },
+  }),
+}));
 vi.mock('@/firebase/auth', () => ({ signOut: vi.fn() }));
 vi.mock('@/firebase/app', () => ({ APP_VERSION: 'test', APP_SHA: 'test', BUILD_DATE: 'test' }));
-vi.mock('@/firebase/db', () => ({ patchDoc: vi.fn() }));
+vi.mock('@/firebase/db', () => ({ patchDoc }));
 vi.mock('@/offline/outbox', () => ({ listJobs: vi.fn().mockResolvedValue([]), retryAll: vi.fn() }));
 vi.mock('@/platform', () => ({ isNative: () => mocks.native }));
 vi.mock('@/platform/ocr', () => ({ activeExtractor: mocks.activeExtractor }));
@@ -25,6 +38,7 @@ beforeEach(() => {
   localStorage.clear();
   mocks.native = false;
   mocks.activeExtractor.mockReset().mockResolvedValue(null);
+  patchDoc.mockClear();
 });
 afterEach(cleanup);
 
@@ -79,5 +93,13 @@ describe('settings disclosure', () => {
     fireEvent.change(engine, { target: { value: 'gemini' } });
     expect(screen.getByDisplayValue('test-model')).toBeInTheDocument();
     await act(async () => {});
+  });
+
+  it('saves the reminder time immediately when it changes', async () => {
+    await openSettings();
+
+    fireEvent.change(screen.getByLabelText('Uhrzeit'), { target: { value: '18:30' } });
+
+    expect(patchDoc).toHaveBeenCalledWith('users', 'user-1', { reminderTime: '18:30' });
   });
 });

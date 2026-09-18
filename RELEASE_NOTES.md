@@ -15,6 +15,10 @@ sofort direkt auf dem Gerät, ohne auf die Serverbestätigung zu warten. Zusätz
 die Abend-Erinnerung beim Start, bis die Tagebuchdaten wirklich geladen sind, bevor sie
 neue Wecker stellt.
 
+Änderungen an der Uhrzeit werden jetzt sofort übernommen. Die Einstellungen hören live auf
+das Nutzerprofil, sodass Statuszeile und gestellte Erinnerung nicht mehr auf der alten Zeit
+stehen bleiben.
+
 ## 0.29.8 – Jeder Branch baut
 
 Pushes von Entwicklungsbranches starten jetzt ebenfalls die Prüfungen, den Seiten-Deploy und den

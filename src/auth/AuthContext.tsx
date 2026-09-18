@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { watchUser, ensureProfile } from '@/firebase/auth';
 import { seedIfEmpty } from '@/data/seed';
-import type { UserProfile } from '@/data/types';
+import { COL, type UserProfile } from '@/data/types';
+import { watchDoc } from '@/firebase/db';
 
 interface AuthValue {
   user: User | null;
@@ -16,22 +17,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [ready, setReady] = useState(false);
+  const profileStop = useRef<(() => void) | null>(null);
+  const profileRun = useRef(0);
 
   useEffect(
-    () =>
-      watchUser((nextUser) => {
+    () => {
+      const stopAuth = watchUser((nextUser) => {
+        profileRun.current += 1;
+        const run = profileRun.current;
+        profileStop.current?.();
+        profileStop.current = null;
         setUser(nextUser);
         setReady(true);
         if (!nextUser) {
           setProfile(null);
           return;
         }
+        profileStop.current = watchDoc<UserProfile>(
+          COL.users,
+          nextUser.uid,
+          (row) => {
+            if (profileRun.current === run) setProfile(row);
+          },
+          () => undefined,
+        );
         // both may fail offline; the app stays usable from the cache either way
         void ensureProfile(nextUser)
-          .then(setProfile)
+          .then((nextProfile) => {
+            if (profileRun.current === run) setProfile(nextProfile);
+          })
           .catch(() => undefined);
         void seedIfEmpty().catch(() => undefined);
-      }),
+      });
+      return () => {
+        profileRun.current += 1;
+        profileStop.current?.();
+        profileStop.current = null;
+        stopAuth();
+      };
+    },
     [],
   );
 
