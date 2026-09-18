@@ -9,6 +9,7 @@ import { formatEuro, formatAmount } from '@/lib/money';
 import { formatDate, monthKey, today } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
 import { sumGross, byCategory, byMonth, totalForMonth, budgetPerTrade, toCsv } from '@/data/costAggregation';
+import { isNative } from '@/platform';
 
 type Tab = 'liste' | 'uebersicht';
 
@@ -43,6 +44,7 @@ export default function CostsPage() {
   const categories = useMemo(() => byCategory(filtered), [filtered]);
   const months = useMemo(() => byMonth(filtered), [filtered]);
   const tradeBudgets = useMemo(() => budgetPerTrade(filtered, trades), [filtered, trades]);
+  const canDownloadCsv = !isNative();
 
   function exportCsv() {
     const blob = new Blob([toCsv(filtered, formatAmount)], { type: 'text/csv;charset=utf-8' });
@@ -78,9 +80,11 @@ export default function CostsPage() {
           </button>
         ))}
         <div className="flex-1" />
-        <button type="button" className="chip" onClick={exportCsv}>
-          CSV
-        </button>
+        {canDownloadCsv && (
+          <button type="button" className="chip" onClick={exportCsv}>
+            CSV
+          </button>
+        )}
       </div>
 
       {(roomFilter || categoryFilter || tradeFilter) && (

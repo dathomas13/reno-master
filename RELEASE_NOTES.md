@@ -8,6 +8,11 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.30.1 – CSV nur im Browser
+
+Der CSV-Knopf in den Kosten erscheint nur noch im Browser. In der App-Version wird er
+ausgeblendet, weil der direkte Browser-Download dort nicht zuverlässig funktioniert.
+
 ## 0.30.0 – Fotos auswählen und weiterschreiben
 
 In der Tagesgalerie kannst du mehrere Fotos markieren und mit „Hochladen“ gemeinsam
