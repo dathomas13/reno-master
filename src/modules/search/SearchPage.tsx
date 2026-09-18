@@ -23,6 +23,7 @@ const PAGE = 25;
 const KIND_COLOR: Record<SearchKind, string> = {
   diary: 'text-accent border-accent/40 bg-accent/10',
   task: 'text-good border-good/40 bg-good/10',
+  note: 'text-good border-good/40 bg-good/10',
   cost: 'text-warn border-warn/40 bg-warn/10',
   contact: 'text-ink border-line bg-panel2',
   room: 'text-ink border-line bg-panel2',

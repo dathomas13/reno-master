@@ -8,6 +8,13 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.31.0 – Notizen
+
+Neuer Bereich „Notizen“ für kurze Gedanken zwischendurch, ohne Fotos oder Termin. Eine
+Notiz kann einem oder mehreren Räumen zugeordnet und angeheftet werden; angeheftete
+Notizen stehen oben in der Liste. Der Raum-Bildschirm im 3D-Modell zeigt jetzt auch die
+Zahl der Notizen zu diesem Raum, und die Suche findet Notizen mit.
+
 ## 0.30.8 – Dringende Aufgaben öffnen
 
 Dringende Aufgaben auf dem Startbildschirm sind jetzt antippbar und öffnen direkt die

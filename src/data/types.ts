@@ -123,6 +123,14 @@ export interface Task extends BaseDoc {
   reminderAt?: IsoDateTime;
 }
 
+export interface Note extends BaseDoc {
+  text: string;
+  /** when it was written; set once on creation, so offline sorting never waits for the server */
+  at: IsoDateTime;
+  roomIds: string[];
+  pinned: boolean;
+}
+
 export const CONTACT_STATUS = [
   'Angefragt',
   'Angebot erhalten',
@@ -216,6 +224,7 @@ export const COL = {
   photos: 'photos',
   costs: 'costs',
   tasks: 'tasks',
+  notes: 'notes',
   contacts: 'contacts',
   trades: 'trades',
   phases: 'phases',

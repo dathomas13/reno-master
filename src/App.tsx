@@ -22,6 +22,7 @@ import PlanViewPage from '@/modules/plans/PlanViewPage';
 import CostsPage from '@/modules/costs/CostsPage';
 import CostEditorPage from '@/modules/costs/CostEditorPage';
 import TasksPage from '@/modules/tasks/TasksPage';
+import NotesPage from '@/modules/notes/NotesPage';
 import ContactsPage from '@/modules/contacts/ContactsPage';
 import SearchPage from '@/modules/search/SearchPage';
 import FilesPage from '@/modules/files/FilesPage';
@@ -98,6 +99,7 @@ function Protected() {
           <Route path="/kosten/neu" element={<CostEditorPage />} />
           <Route path="/kosten/:id" element={<CostEditorPage />} />
           <Route path="/aufgaben" element={<TasksPage />} />
+          <Route path="/notizen" element={<NotesPage />} />
           <Route path="/kontakte" element={<ContactsPage />} />
           <Route path="/suche" element={<SearchPage />} />
           <Route path="/dateien" element={<FilesPage />} />

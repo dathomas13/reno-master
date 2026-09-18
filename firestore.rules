@@ -13,8 +13,8 @@ service cloud.firestore {
     function allowed() {
       return request.auth != null
         && request.auth.token.email.lower() in [
-             'thomas_email_hier_eintragen',
-             'sarah_email_hier_eintragen'
+             'tom.friedl@web.de',
+             'sarah-schmid.1@web.de'
            ];
     }
 
@@ -27,6 +27,7 @@ service cloud.firestore {
     match /photos/{doc}   { allow read, write: if allowed(); }
     match /costs/{doc}    { allow read, write: if allowed(); }
     match /tasks/{doc}    { allow read, write: if allowed(); }
+    match /notes/{doc}    { allow read, write: if allowed(); }
     match /contacts/{doc} { allow read, write: if allowed(); }
     match /trades/{doc}   { allow read, write: if allowed(); }
     match /phases/{doc}   { allow read, write: if allowed(); }

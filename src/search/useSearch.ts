@@ -15,6 +15,7 @@ import {
   type Contact,
   type Cost,
   type DiaryEntry,
+  type Note,
   type Phase,
   type Photo,
   type Plan,
@@ -29,6 +30,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   const diary = useCollection<DiaryEntry>(COL.diary);
   const costs = useCollection<Cost>(COL.costs);
   const tasks = useCollection<Task>(COL.tasks);
+  const notes = useCollection<Note>(COL.notes);
   const contacts = useCollection<Contact>(COL.contacts);
   const trades = useCollection<Trade>(COL.trades);
   const phases = useCollection<Phase>(COL.phases);
@@ -54,6 +56,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
         diary: diary.data,
         costs: costs.data,
         tasks: tasks.data,
+        notes: notes.data,
         contacts: contacts.data,
         trades: trades.data,
         phases: phases.data,
@@ -65,6 +68,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
       diary.data,
       costs.data,
       tasks.data,
+      notes.data,
       contacts.data,
       trades.data,
       phases.data,
@@ -77,7 +81,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   const index = useMemo(() => buildIndex(records), [records]);
 
   const loading =
-    diary.loading || costs.loading || tasks.loading || contacts.loading || trades.loading;
+    diary.loading || costs.loading || tasks.loading || notes.loading || contacts.loading || trades.loading;
 
   return { index, count: records.length, loading };
 }

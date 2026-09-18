@@ -7,6 +7,7 @@ import {
   type Contact,
   type Cost,
   type DiaryEntry,
+  type Note,
   type Plan,
   type Task,
   type Trade,
@@ -139,6 +140,19 @@ export async function markTaskDone(id: string): Promise<void> {
 export async function deleteTask(id: string): Promise<void> {
   void cancelTaskReminderForTask(id);
   await removeDoc(COL.tasks, id);
+}
+
+// ------------------------------------------------------------------ notes
+export function emptyNote(roomIds: string[] = []): Note {
+  return { id: newId(), text: '', at: toIsoDateTime(), roomIds, pinned: false };
+}
+
+export async function saveNote(note: Note): Promise<string> {
+  return saveDoc<Note>(COL.notes, clean(note as unknown as Record<string, unknown>) as unknown as Note);
+}
+
+export async function deleteNote(id: string): Promise<void> {
+  await removeDoc(COL.notes, id);
 }
 
 // ------------------------------------------------------------------ contacts
