@@ -176,6 +176,14 @@ export function PhotoAttach({
     saveSettings({ keepOriginals: next });
   }
 
+  function pickForDate() {
+    if (galleryPickerAvailable() && forDate) {
+      openDayGallery();
+      return;
+    }
+    void pickFromFiles(false);
+  }
+
   async function addFromBlobs(
     items: PhotoBlob[],
   ) {
@@ -329,8 +337,8 @@ export function PhotoAttach({
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-3">
-        {kind === 'photo' && galleryPickerAvailable() && forDate && (
-          <button type="button" className="btn" onClick={() => void openDayGallery()} disabled={busy || disabled}>
+        {kind === 'photo' && forDate && (
+          <button type="button" className="btn" onClick={pickForDate} disabled={busy || disabled}>
             Fotos vom {formatDate(forDate).slice(0, 6)}
           </button>
         )}
@@ -346,16 +354,25 @@ export function PhotoAttach({
           </button>
         )}
         {kind === 'photo' && (
-          <button
-            type="button"
-            className={`btn ${keepOriginals ? 'btn-primary' : ''}`}
-            aria-pressed={keepOriginals}
-            onClick={toggleOriginals}
-            disabled={busy || disabled}
+          <label
+            className={`inline-flex min-h-10 items-center gap-2 px-1 text-xs text-muted ${busy || disabled ? 'opacity-50' : ''}`}
             title="Zusätzlich die unveränderte Datei sichern – für Fotos, die später in voller Auflösung gebraucht werden"
           >
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={keepOriginals}
+              onChange={toggleOriginals}
+              disabled={busy || disabled}
+            />
+            <span
+              className="relative inline-flex h-5 w-9 items-center rounded-full bg-line transition peer-checked:bg-accent"
+              aria-hidden="true"
+            >
+              <span className="inline-block h-4 w-4 translate-x-1 rounded-full bg-bg transition peer-checked:translate-x-4" />
+            </span>
             Original sichern
-          </button>
+          </label>
         )}
         {busy && <span role="status" className="text-muted text-sm self-center">
           {kind === 'photo' ? 'Fotos werden vorbereitet…' : 'wird verarbeitet…'}

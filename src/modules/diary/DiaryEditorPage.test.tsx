@@ -38,7 +38,7 @@ vi.mock('@/components/TopBar', () => ({ TopBar: () => null }));
 vi.mock('@/components/Pickers', () => ({
   RoomPicker: () => null,
   TradePicker: () => null,
-  PhaseSelect: () => null,
+  PeoplePicker: () => <button type="button">Anwesend auswählen</button>,
 }));
 vi.mock('./PhotoAttach', () => ({ PhotoAttach: ({ photos, onAdded, onBusyChange }: {
   photos: Photo[]; onAdded(photo: Photo): void; onBusyChange(busy: boolean): void;
@@ -53,7 +53,7 @@ vi.mock('@/data/hooks', () => ({
     loading: false,
   }),
   useCollection: (collection: string) => ({
-    data: collection === 'diary' ? entries : collection === 'photos' ? photoState.rows : emptyRows,
+    data: collection === 'diary' ? entries : collection === 'photos' ? photoState.rows : collection === 'phases' ? [{ id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'In Arbeit', order: 2 }] : emptyRows,
     loading: false,
   }),
 }));
@@ -155,5 +155,20 @@ describe('diary editor', () => {
 
     expect(localStorage.getItem('reno.diary.draft.v1')).toBeNull();
     expect(screen.getByText('Bautagebuch Liste')).toBeInTheDocument();
+  });
+
+  it('uses compact controls for weather and people instead of always-visible chips', () => {
+    renderNewEditor();
+
+    expect(screen.getByLabelText('Wetter')).toHaveRole('combobox');
+    expect(screen.getByRole('button', { name: 'Anwesend auswählen' })).toBeInTheDocument();
+  });
+
+  it('shows the active phase as automatic context instead of another picker', async () => {
+    renderNewEditor();
+
+    await waitFor(() => expect(screen.getByText('Phase 2: Entkernung & Rückbau')).toBeInTheDocument());
+    expect(screen.queryByRole('combobox', { name: 'Phase' })).not.toBeInTheDocument();
+    expect(screen.getByText('Phase 2: Entkernung & Rückbau').closest('.field')).toBeNull();
   });
 });

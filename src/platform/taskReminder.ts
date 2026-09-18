@@ -1,5 +1,6 @@
 import { isNative } from '@/platform/index';
-import { isTaskReminderId, planTaskReminders, type PlannedTaskReminder } from './taskReminderPlan';
+import type { Task } from '@/data/types';
+import { isTaskReminderId, planTaskReminders, taskReminderId, type PlannedTaskReminder } from './taskReminderPlan';
 
 const TASK_ACTION_TYPE = 'task-reminder';
 const TASK_DONE_ACTION = 'task-done';
@@ -20,6 +21,8 @@ interface ScheduledTaskNotification {
 }
 
 interface LocalNotificationsApi {
+  checkPermissions?(): Promise<{ display: string }>;
+  requestPermissions?(): Promise<{ display: string }>;
   schedule(options: { notifications: ScheduledTaskNotification[] }): Promise<unknown>;
   cancel(options: { notifications: { id: number }[] }): Promise<unknown>;
   getPending(): Promise<{ notifications: { id: number }[] }>;
@@ -75,11 +78,36 @@ async function registerActions(local: LocalNotificationsApi): Promise<void> {
   );
 }
 
+function notificationFor(task: PlannedTaskReminder): ScheduledTaskNotification {
+  return {
+    id: task.id,
+    title: 'Aufgabe',
+    body: task.title || 'Aufgabe erledigen',
+    schedule: { at: task.at, allowWhileIdle: true },
+    actionTypeId: TASK_ACTION_TYPE,
+    extra: { taskId: task.taskId, route: `/aufgaben?aufgabe=${task.taskId}` },
+  };
+}
+
+async function registerActionsBestEffort(local: LocalNotificationsApi): Promise<void> {
+  await registerActions(local).catch(() => undefined);
+}
+
+async function hasPermission(local: LocalNotificationsApi, ask: boolean): Promise<boolean> {
+  if (!local.checkPermissions) return true;
+  const checked = await withDeadline(local.checkPermissions());
+  if (checked.display === 'granted') return true;
+  if (!ask || checked.display === 'denied' || !local.requestPermissions) return false;
+  const requested = await withDeadline(local.requestPermissions());
+  return requested.display === 'granted';
+}
+
 export async function applyTaskReminderPlan(tasks: readonly PlannedTaskReminder[]): Promise<void> {
   try {
     const local = plugin();
     if (!local) return;
-    await registerActions(local);
+    if (!(await hasPermission(local, false))) return;
+    await registerActionsBestEffort(local);
 
     const pending = await withDeadline(local.getPending());
     const ours = pending.notifications
@@ -90,18 +118,36 @@ export async function applyTaskReminderPlan(tasks: readonly PlannedTaskReminder[
     if (tasks.length === 0) return;
     await withDeadline(
       local.schedule({
-        notifications: tasks.map((task) => ({
-          id: task.id,
-          title: 'Aufgabe',
-          body: task.title || 'Aufgabe erledigen',
-          schedule: { at: task.at, allowWhileIdle: true },
-          actionTypeId: TASK_ACTION_TYPE,
-          extra: { taskId: task.taskId, route: `/aufgaben?aufgabe=${task.taskId}` },
-        })),
+        notifications: tasks.map(notificationFor),
       }),
     );
   } catch {
     // Settings can diagnose the base notification setup; task edits must not fail because of alarms.
+  }
+}
+
+export async function applyTaskReminderForTask(task: Task): Promise<void> {
+  try {
+    const local = plugin();
+    if (!local) return;
+    if (!(await hasPermission(local, true))) return;
+    await registerActionsBestEffort(local);
+    await withDeadline(local.cancel({ notifications: [{ id: taskReminderId(task.id) }] }));
+    const [planned] = planTaskReminders([task]);
+    if (!planned) return;
+    await withDeadline(local.schedule({ notifications: [notificationFor(planned)] }));
+  } catch {
+    // Task saving stays local/offline even when Android refuses notification scheduling.
+  }
+}
+
+export async function cancelTaskReminderForTask(taskId: string): Promise<void> {
+  try {
+    const local = plugin();
+    if (!local) return;
+    await withDeadline(local.cancel({ notifications: [{ id: taskReminderId(taskId) }] }));
+  } catch {
+    // A task edit/delete must not fail because the notification bridge is unavailable.
   }
 }
 

@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { Field, ChipSelect, Spinner } from '@/components/Fields';
-import { RoomPicker, TradePicker, PhaseSelect } from '@/components/Pickers';
+import { Field, Spinner } from '@/components/Fields';
+import { RoomPicker, TradePicker, PeoplePicker } from '@/components/Pickers';
 import { PhotoAttach } from './PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
-import { COL, type DiaryEntry, type Phase, type Photo, type Weather } from '@/data/types';
+import { COL, WEATHER, type DiaryEntry, type Phase, type Photo, type Weather } from '@/data/types';
 import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
@@ -25,8 +25,10 @@ export default function DiaryEditorPage() {
   const { data: allEntries } = useCollection<DiaryEntry>(COL.diary);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { lists, addTo } = useLists();
+  const activePhase = phases.find((phase) => phase.status === 'In Arbeit');
 
   const [entry, setEntry] = useState<DiaryEntry>(() => loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
+  const entryPhase = phases.find((phase) => phase.id === entry.phaseId);
   const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
   const [attaching, setAttaching] = useState(false);
@@ -54,9 +56,8 @@ export default function DiaryEditorPage() {
   // default phase: the one that is currently running
   useEffect(() => {
     if (!isNew || entry.phaseId) return;
-    const running = phases.find((phase) => phase.status === 'In Arbeit');
-    if (running) setEntry((current) => ({ ...current, phaseId: running.id }));
-  }, [isNew, phases, entry.phaseId]);
+    if (activePhase) setEntry((current) => ({ ...current, phaseId: activePhase.id }));
+  }, [isNew, activePhase, entry.phaseId]);
 
   const { data: entryPhotos } = useCollection<Photo>(
     COL.photos,
@@ -194,16 +195,21 @@ export default function DiaryEditorPage() {
         </Field>
 
         <Field label="Wetter">
-          <ChipSelect
-            options={lists.weather as Weather[]}
-            value={entry.weather ? [entry.weather] : []}
-            multiple={false}
-            onChange={(value) => update({ weather: value[0] })}
-          />
+          <select
+            className="field"
+            aria-label="Wetter"
+            value={entry.weather ?? ''}
+            onChange={(event) => update({ weather: (event.target.value || undefined) as Weather | undefined })}
+          >
+            <option value="">kein Wetter</option>
+            {(lists.weather.length ? lists.weather : WEATHER).map((weather) => (
+              <option key={weather} value={weather}>{weather}</option>
+            ))}
+          </select>
         </Field>
 
         <Field label="Anwesend">
-          <ChipSelect
+          <PeoplePicker
             options={lists.people}
             value={entry.present}
             onChange={(value) => update({ present: value })}
@@ -224,9 +230,13 @@ export default function DiaryEditorPage() {
           <TradePicker value={entry.tradeIds} onChange={(value) => update({ tradeIds: value })} />
         </Field>
 
-        <Field label="Phase">
-          <PhaseSelect value={entry.phaseId} onChange={(value) => update({ phaseId: value })} />
-        </Field>
+        <div className="mb-4">
+          <span className="label">Phase</span>
+          <p className="mt-1 flex items-center gap-2 text-xs text-muted">
+            <span className="w-2 h-2 rounded-full bg-accent" aria-hidden="true" />
+            <span className="truncate">{entryPhase?.name ?? activePhase?.name ?? 'keine aktive Phase'}</span>
+          </p>
+        </div>
 
         <label className="flex items-center gap-3 py-2">
           <input

@@ -76,10 +76,18 @@ describe('receipt file picker', () => {
     });
     const onAdded = vi.fn();
     render(<PhotoAttach photos={[]} entryId="entry-1" forDate="2026-09-19" onAdded={onAdded} onRemoved={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Aus Galerie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Fotos vom 19.09.' }));
     await waitFor(() => expect(onAdded).toHaveBeenCalledTimes(2));
     expect(mocks.pickPhotos).toHaveBeenCalledWith({ forDate: '2026-09-19', camera: false, deferMetadata: true });
     expect(screen.getByText('Die Auswahl enthält Fotos von einem anderen Tag.')).toBeInTheDocument();
+  });
+
+  it('keeps the dated photo action visible and uses a small original toggle', () => {
+    render(<PhotoAttach photos={[]} entryId="entry-1" forDate="2026-09-19" onAdded={vi.fn()} onRemoved={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Fotos vom 19.09.' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Aus Galerie' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Original sichern')).not.toBeChecked();
   });
   it('selects multiple gallery photos without importing until confirmation', async () => {
     mocks.galleryAvailable = true;

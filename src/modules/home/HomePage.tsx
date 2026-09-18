@@ -164,9 +164,11 @@ export default function HomePage() {
             <div className="section-title">Dringend</div>
             <ul>
               {openTasks.map((task) => (
-                <li key={task.id} className="list-row last:border-0">
-                  <span className="flex-1 min-w-0 truncate">{task.title}</span>
-                  {task.due && <span className="text-xs text-muted shrink-0">{formatRelativeDay(task.due)}</span>}
+                <li key={task.id}>
+                  <Link to={`/aufgaben?aufgabe=${task.id}`} className="list-row last:border-0">
+                    <span className="flex-1 min-w-0 truncate">{task.title}</span>
+                    {task.due && <span className="text-xs text-muted shrink-0">{formatRelativeDay(task.due)}</span>}
+                  </Link>
                 </li>
               ))}
             </ul>

@@ -11,10 +11,12 @@ interface MultiPickerProps {
   onChange(value: string[]): void;
   options: { id: string; name: string; group?: string }[];
   emptyLabel?: string;
+  onAdd?(): void;
+  addLabel?: string;
 }
 
 /** compact multi select: shows the picked names, opens a sheet with the full list */
-export function MultiPicker({ label, value, onChange, options, emptyLabel = 'keine' }: MultiPickerProps) {
+export function MultiPicker({ label, value, onChange, options, emptyLabel = 'keine', onAdd, addLabel }: MultiPickerProps) {
   const [open, setOpen] = useState(false);
   const byId = useMemo(() => new Map(options.map((option) => [option.id, option])), [options]);
   const groups = useMemo(() => {
@@ -64,9 +66,38 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
               Auswahl leeren
             </button>
           )}
+          {onAdd && (
+            <button type="button" className="btn w-full mt-2" onClick={onAdd}>
+              {addLabel ?? 'Hinzufügen'}
+            </button>
+          )}
         </div>
       </Sheet>
     </>
+  );
+}
+
+export function PeoplePicker({
+  value,
+  options,
+  onChange,
+  onAdd,
+}: {
+  value: string[];
+  options: string[];
+  onChange(value: string[]): void;
+  onAdd(): void;
+}) {
+  return (
+    <MultiPicker
+      label="Anwesend"
+      value={value}
+      onChange={onChange}
+      options={options.map((name) => ({ id: name, name }))}
+      emptyLabel="niemand ausgewählt"
+      onAdd={onAdd}
+      addLabel="Person hinzufügen"
+    />
   );
 }
 

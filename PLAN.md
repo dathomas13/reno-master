@@ -363,7 +363,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - **Liste**: chronologisch absteigend, gruppiert nach Monat; Karte je Eintrag: Datum (Wochentag), Titel, Wetter-Icon, Anwesend-Chips, erste 3 Thumbnails, Mängel-Marker. Suchfeld (Volltext clientseitig über `title`+`text`+`present`). Filter-Chips: Phase, Gewerk, Raum, "mit Fotos", "Mängel".
 - **Detail**: Text, Fotogrid (Tippen → Vollbild-Lightbox mit Wischen; Info-Button zeigt Originalname/Aufnahmezeit/Größe und – APK – "Original in Galerie öffnen"), Metadaten-Chips, Bearbeiten/Löschen.
 - **Editor** (auch für Nachträge an anderen Tagen):
-  - Datum (Default heute; `?date=` aus Shortcut/Erinnerung), Titel (auto "Tagebuch DD.MM.", editierbar), Text (Textarea, autogrow, Markdown-light), Wetter (Chip-Reihe), Anwesend (Multi-Chips aus `meta/lists.people` + "＋ Person" inline), Mängel (Toggle), Phase (Select, Default = aktuelle Phase), Gewerke (Multi), Räume (Multi, gruppiert nach Geschoss).
+  - Datum (Default heute; `?date=` aus Shortcut/Erinnerung), Titel (auto "Tagebuch DD.MM.", editierbar), Text (Textarea, autogrow, Markdown-light), Wetter (Select), Anwesend (kompakter Mehrfach-Picker aus `meta/lists.people` + Person hinzufügen), Mängel (Toggle), Phase (automatisch gesetztes Info-Tag aus der aktuellen Phase), Gewerke (bewusst wählbarer Mehrfach-Picker), Räume (Mehrfach-Picker, gruppiert nach Geschoss).
   - **Fotos**: Button "Fotos hinzufügen" → `platform/photos.pickPhotos({ suggestDate: entry.date })`.
     - PWA: `<input type="file" accept="image/*" multiple>`; nach Auswahl EXIF-Datum lesen; Fotos, deren Aufnahmedatum ≠ Eintragsdatum, bekommen ein gelbes Badge "anderes Datum (DD.MM.)" mit Möglichkeit, sie zu entfernen. Hinweistext im Picker: "Die Galerie ist nach Datum sortiert – wähle die Fotos von heute."
     - APK: eigener Picker-Screen: Raster der Galerie-Fotos **des Eintragsdatums** (MediaStore-Abfrage), Button "Andere Tage" öffnet Datumsnavigation bzw. den System-Picker. Mehrfachauswahl, dann Übernahme.
@@ -374,7 +374,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
       bedienbar. Speichern und Verwerfen warten nur auf die lokale Übernahme, nicht auf Uploads.
       Fotoimporte warten nicht auf Firestore-Serverbestätigungen; der Beleg-/OCR-Pfad behält
       seine bisherige begrenzte Wartezeit. Lokale Anhänge bleiben bis zum bestätigenden Snapshot sichtbar.
-    - Kamera-Button (PWA: `capture="environment"`; APK: Capacitor Camera).
+    - Kamera-Button (PWA: `capture="environment"`; APK: Capacitor Camera). "Original sichern" ist ein dezenter Inline-Toggle, kein Hauptaktionsknopf und keine gerahmte Schaltfläche.
     - Verarbeitung: `lib/image.resize(file, 1600)` + `thumb(320)` → Outbox (Abschnitt 7) → sofortige Vorschau. Reihenfolge per Drag/Pfeile änderbar, Bildunterschrift optional.
   - Autosave als Entwurf alle 5 s in IndexedDB (`drafts`), damit nichts verloren geht; beim Öffnen von `/tagebuch/neu` Entwurf anbieten.
   - Speichern schreibt Dokument (offline-fähig) und navigiert zum Detail.
@@ -418,7 +418,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Liste mit Segment "Offen | Alle | Erledigt"; Gruppierung nach Fälligkeit (Überfällig, Heute, Diese Woche, Später, Ohne Datum); Zeile: Checkbox, Titel, Chips (Priorität farbig, Bereich, Zuständig), Fälligkeit. Filter: Zuständig (Thomas/Sarah/Beide), Bereich, Gewerk, Phase, Raum.
 - Schnellanlage: Eingabefeld oben ("Aufgabe… ⏎"), Details später.
 - Editor: Titel, Notizen, Status, Priorität, Fällig am, Erinnerung, Zuständig (Multi), Bereich, Gewerk, Phase, Räume.
-- Erledigt-Haken setzt `status:'Erledigt'`, `doneAt` und löscht eine geplante Erinnerung. In der Android-App wird `reminderAt` als lokale Benachrichtigung gestellt; deren Aktion „Erledigt“ markiert die Aufgabe als abgeschlossen.
+- Erledigt-Haken setzt `status:'Erledigt'`, `doneAt` und löscht eine geplante Erinnerung. In der Android-App wird `reminderAt` beim Speichern der Aufgabe direkt als lokale Benachrichtigung gestellt oder gelöscht; dieser direkte Weg wartet nicht auf den nächsten Aufgaben-Snapshot. Falls die Benachrichtigungserlaubnis noch fehlt, fragt der Speichervorgang mit Erinnerung danach. Der laufende Aufgaben-Listener gleicht die Liste danach nur noch als Sicherheitsnetz ab. Kann Android die Aktion „Erledigt“ nicht registrieren, wird die Erinnerung trotzdem geplant; deren Aktion „Erledigt“ markiert die Aufgabe als abgeschlossen, wenn sie verfügbar ist.
 
 ### 8.7 Kontakte
 - Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.

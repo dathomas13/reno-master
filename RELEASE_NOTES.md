@@ -8,6 +8,41 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.30.8 – Dringende Aufgaben öffnen
+
+Dringende Aufgaben auf dem Startbildschirm sind jetzt antippbar und öffnen direkt die
+passende Aufgabe.
+
+## 0.30.7 – Aufgaben erinnern direkter
+
+Aufgaben-Erinnerungen werden beim Speichern jetzt sofort auf dem Gerät gestellt oder
+gelöscht, statt nur auf den nächsten Listenabgleich zu warten. Wenn Android die Aktion
+„Erledigt“ nicht registrieren kann, kommt die Erinnerung trotzdem.
+
+Wenn für Aufgaben noch keine Benachrichtigungs-Erlaubnis da ist, fragt die App beim
+Speichern einer Aufgabe mit Erinnerung direkt danach.
+
+## 0.30.6 – Tagebuch noch leiser
+
+Der Fotobutton für das aktuelle Datum ist wieder sichtbar. „Original sichern“ ist jetzt
+ein kleiner Inline-Schalter, und die automatisch gesetzte Phase erscheint nur noch als
+dezente Infozeile statt wie ein nicht bedienbares Auswahlfeld.
+
+Der normale Galerie-Knopf bleibt daneben erhalten, wenn du Fotos außerhalb des aktuellen
+Tages auswählen willst.
+
+## 0.30.5 – Phase automatisch, Original als Schalter
+
+Im Tagebuch ist die Bauphase jetzt nur noch ein automatisch gesetztes Info-Tag. Gewerke
+wählst du weiterhin bewusst aus. „Original sichern“ ist kein großer Aktionsknopf mehr,
+sondern ein kleiner Schalter neben den Fotoaktionen.
+
+## 0.30.4 – Tagebuchformular ruhiger
+
+Der Tagebuch-Editor zeigt weniger dauerhafte Chip-Reihen. Wetter ist jetzt ein kompaktes
+Auswahlfeld, und „Anwesend“ öffnet erst bei Bedarf eine Liste; Räume und Gewerke bleiben
+weiter gezielt auswählbar.
+
 ## 0.30.3 – Fotos nach Bauphase
 
 Die Fotos-Ansicht gruppiert Bilder jetzt nach der Bauphase ihres Tagebuch-Eintrags. Damit

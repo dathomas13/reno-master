@@ -19,6 +19,7 @@ import { today, toIsoDateTime, formatDate } from '@/lib/date';
 import { pendingWrite } from './pendingWrite';
 import { rememberDiaryReminderDate } from '@/platform/diaryReminderMarker';
 import { cancelDiaryReminderForDate } from '@/platform/reminder';
+import { applyTaskReminderForTask, cancelTaskReminderForTask } from '@/platform/taskReminder';
 
 /** removes undefined values, which Firestore refuses to store */
 function clean<T extends Record<string, unknown>>(value: T): T {
@@ -106,7 +107,10 @@ export async function saveTask(task: Task): Promise<string> {
   for (const key of optional) {
     if (task[key] === undefined) value[key] = deleteField();
   }
-  return saveDoc<Task>(COL.tasks, value as unknown as Task);
+  const saved = saveDoc<Task>(COL.tasks, value as unknown as Task);
+  void applyTaskReminderForTask(task);
+  void saved.catch(() => cancelTaskReminderForTask(task.id));
+  return saved;
 }
 
 export async function patchTask(id: string, patch: Partial<Task>): Promise<void> {
@@ -115,6 +119,7 @@ export async function patchTask(id: string, patch: Partial<Task>): Promise<void>
 
 export async function toggleTaskDone(task: Task): Promise<void> {
   const done = task.status !== 'Erledigt';
+  if (done) void cancelTaskReminderForTask(task.id);
   await patchTask(task.id, {
     status: done ? 'Erledigt' : 'Offen',
     doneAt: done ? toIsoDateTime() : deleteField(),
@@ -123,6 +128,7 @@ export async function toggleTaskDone(task: Task): Promise<void> {
 }
 
 export async function markTaskDone(id: string): Promise<void> {
+  void cancelTaskReminderForTask(id);
   await patchDoc(COL.tasks, id, {
     status: 'Erledigt',
     doneAt: toIsoDateTime(),
@@ -131,6 +137,7 @@ export async function markTaskDone(id: string): Promise<void> {
 }
 
 export async function deleteTask(id: string): Promise<void> {
+  void cancelTaskReminderForTask(id);
   await removeDoc(COL.tasks, id);
 }
 
