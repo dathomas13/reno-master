@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/firebase/auth';
 import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
+import { listCameraDevices, type CameraDeviceOption } from '@/platform/camera';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
 import { ModelSection } from './ModelSection';
@@ -29,6 +30,9 @@ export default function SettingsPage() {
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const reminder = useReminderStatus();
   const [diagnosis, setDiagnosis] = useState<ReminderDiagnosis | null>(null);
+  const [cameraDevices, setCameraDevices] = useState<CameraDeviceOption[]>([]);
+  const [cameraLoading, setCameraLoading] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
     void listJobs().then(setJobs);
@@ -71,6 +75,20 @@ export default function SettingsPage() {
   function updateReminderTime(value: string) {
     setReminderTime(value);
     if (parseClock(value) !== null) void updateProfile({ reminderTime: value });
+  }
+
+  async function loadCameraDevices() {
+    setCameraLoading(true);
+    setCameraError(null);
+    try {
+      const devices = await listCameraDevices();
+      setCameraDevices(devices);
+      if (!devices.length) setCameraError('Keine Kamera gefunden, oder der Zugriff wurde verweigert.');
+    } catch (cause) {
+      setCameraError(cause instanceof Error ? cause.message : 'Kameras konnten nicht gelesen werden.');
+    } finally {
+      setCameraLoading(false);
+    }
   }
 
   return (
@@ -185,6 +203,59 @@ export default function SettingsPage() {
             />
             <span>Originale mitsichern</span>
           </label>
+        </section>
+
+        <section className="card p-4">
+          <SettingsHeading title="Kamera">
+            Hilfreich, wenn die Systemkamera beim Start abstürzt, weil sie eine defekte Linse prüft: hier
+            lässt sich eine bestimmte Linse fest auswählen, statt die Systemkamera zu öffnen.
+          </SettingsHeading>
+          <label className="flex items-start gap-3 mb-3">
+            <input
+              type="checkbox"
+              className="w-5 h-5 accent-[#c9a86a] mt-0.5"
+              checked={settings.useCustomCamera}
+              onChange={(event) => update({ useCustomCamera: event.target.checked })}
+            />
+            <span>Eigene Kamera-Ansicht statt der Systemkamera verwenden</span>
+          </label>
+          {settings.useCustomCamera && (
+            <>
+              <button
+                type="button"
+                className="btn mb-3"
+                onClick={() => void loadCameraDevices()}
+                disabled={cameraLoading}
+              >
+                {cameraLoading ? 'Suche…' : 'Kameras suchen'}
+              </button>
+              {cameraError && <p className="text-sm text-warn mb-2">{cameraError}</p>}
+              {cameraDevices.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="camera-device"
+                      checked={!settings.cameraDeviceId}
+                      onChange={() => update({ cameraDeviceId: '' })}
+                    />
+                    <span>Automatisch (Rückseite)</span>
+                  </label>
+                  {cameraDevices.map((device) => (
+                    <label key={device.deviceId} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="camera-device"
+                        checked={settings.cameraDeviceId === device.deviceId}
+                        onChange={() => update({ cameraDeviceId: device.deviceId })}
+                      />
+                      <span className="truncate">{device.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </section>
 
         <section className="card p-4">

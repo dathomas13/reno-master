@@ -8,6 +8,12 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.31.1 – Eigene Kamera-Ansicht
+
+Unter Einstellungen → Kamera lässt sich jetzt eine App-eigene Kamera-Ansicht einschalten, die
+eine fest gewählte Linse direkt anspricht, statt die Systemkamera zu öffnen. Hilfreich, wenn
+die Systemkamera beim Start abstürzt, weil sie eine defekte Linse prüft.
+
 ## 0.31.0 – Notizen
 
 Neuer Bereich „Notizen“ für kurze Gedanken zwischendurch, ohne Fotos oder Termin. Eine

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Lightbox, PhotoImage } from '@/components/PhotoView';
+import { CameraCapture } from '@/components/CameraCapture';
 import { addPhoto, deletePhoto, ReceiptAlreadyLinkedError } from '@/data/photos';
 import {
   pickPhotos, pickFiles, galleryPickerAvailable, listGalleryPhotosForDay, readGalleryPhoto,
   readGalleryOriginal, galleryThumbnail, type GalleryPhoto,
 } from '@/platform/photos';
+import { customCameraSupported } from '@/platform/camera';
 import { loadSettings, saveSettings } from '@/lib/settings';
-import { formatDate } from '@/lib/date';
+import { formatDate, toIsoDateTime } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
 import type { Cost, Photo } from '@/data/types';
 import { makeThumbnail } from '@/lib/image';
@@ -106,6 +108,12 @@ export function PhotoAttach({
   const [warning, setWarning] = useState<string | null>(null);
   // remembered per device: whoever photographs cable runs wants it on for a whole day
   const [keepOriginals, setKeepOriginals] = useState(() => loadSettings().keepOriginals);
+  // read once per mount, like keepOriginals above - Einstellungen is a separate screen
+  const [cameraSettings] = useState(() => {
+    const settings = loadSettings();
+    return { useCustomCamera: settings.useCustomCamera, cameraDeviceId: settings.cameraDeviceId };
+  });
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -174,6 +182,20 @@ export function PhotoAttach({
     const next = !keepOriginals;
     setKeepOriginals(next);
     saveSettings({ keepOriginals: next });
+  }
+
+  function openCamera() {
+    if (cameraSettings.useCustomCamera && customCameraSupported()) {
+      setCameraOpen(true);
+      return;
+    }
+    void pickFromFiles(true);
+  }
+
+  async function handleCameraCapture(blob: Blob) {
+    setCameraOpen(false);
+    setWarning(null);
+    await addFromBlobs([{ blob, name: `Kamera-${Date.now()}.jpg`, takenAt: toIsoDateTime() }]);
   }
 
   function pickForDate() {
@@ -330,7 +352,7 @@ export function PhotoAttach({
   useEffect(() => {
     if (!autoCapture || captured.current || disabled) return;
     captured.current = true;
-    void pickFromFiles(true);
+    openCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCapture, disabled]);
 
@@ -345,7 +367,7 @@ export function PhotoAttach({
         <button type="button" className="btn" onClick={() => void pickFromFiles(false)} disabled={busy || disabled}>
           Aus Galerie
         </button>
-        <button type="button" className="btn" onClick={() => void pickFromFiles(true)} disabled={busy || disabled}>
+        <button type="button" className="btn" onClick={openCamera} disabled={busy || disabled}>
           Kamera
         </button>
         {kind === 'receipt' && (
@@ -495,6 +517,14 @@ export function PhotoAttach({
           </button>
         </div>
       </Sheet>
+
+      {cameraOpen && (
+        <CameraCapture
+          deviceId={cameraSettings.cameraDeviceId || undefined}
+          onCapture={(blob) => void handleCameraCapture(blob)}
+          onClose={() => setCameraOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -17,6 +17,10 @@ export interface LocalSettings {
    * readable years later - cable runs, pipes, anything that disappears behind a wall.
    */
   keepOriginals: boolean;
+  /** open this app's own camera view instead of the system camera app */
+  useCustomCamera: boolean;
+  /** a specific lens, remembered so the device is not asked to enumerate every time; '' = automatic */
+  cameraDeviceId: string;
 }
 
 const KEY = 'reno.settings';
@@ -30,6 +34,8 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   defaultModelVariant: 'ist',
   showRoomsInPlanViews: true,
   keepOriginals: false,
+  useCustomCamera: false,
+  cameraDeviceId: '',
 };
 
 export const CLAUDE_MODELS = [
