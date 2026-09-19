@@ -21,6 +21,12 @@ export interface LocalSettings {
   useCustomCamera: boolean;
   /** a specific lens, remembered so the device is not asked to enumerate every time; '' = automatic */
   cameraDeviceId: string;
+  /** the lenses found last time, kept so the settings screen does not have to search again */
+  cameraDevices: { deviceId: string; label: string }[];
+  /** experiments against a logical camera that switches to a broken physical lens */
+  cameraLockZoom: boolean;
+  cameraFixedFocus: boolean;
+  cameraResolution: 'auto' | 'hd' | 'max';
 }
 
 const KEY = 'reno.settings';
@@ -36,6 +42,10 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   keepOriginals: false,
   useCustomCamera: false,
   cameraDeviceId: '',
+  cameraDevices: [],
+  cameraLockZoom: false,
+  cameraFixedFocus: false,
+  cameraResolution: 'auto',
 };
 
 export const CLAUDE_MODELS = [

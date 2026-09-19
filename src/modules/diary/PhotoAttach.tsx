@@ -6,7 +6,7 @@ import {
   pickPhotos, pickFiles, galleryPickerAvailable, listGalleryPhotosForDay, readGalleryPhoto,
   readGalleryOriginal, galleryThumbnail, type GalleryPhoto,
 } from '@/platform/photos';
-import { customCameraSupported } from '@/platform/camera';
+import { cameraOptionsFromSettings, customCameraSupported } from '@/platform/camera';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { formatDate, toIsoDateTime } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
@@ -111,7 +111,7 @@ export function PhotoAttach({
   // read once per mount, like keepOriginals above - Einstellungen is a separate screen
   const [cameraSettings] = useState(() => {
     const settings = loadSettings();
-    return { useCustomCamera: settings.useCustomCamera, cameraDeviceId: settings.cameraDeviceId };
+    return { useCustomCamera: settings.useCustomCamera, options: cameraOptionsFromSettings(settings) };
   });
   const [cameraOpen, setCameraOpen] = useState(false);
 
@@ -520,7 +520,7 @@ export function PhotoAttach({
 
       {cameraOpen && (
         <CameraCapture
-          deviceId={cameraSettings.cameraDeviceId || undefined}
+          options={cameraSettings.options}
           onCapture={(blob) => void handleCameraCapture(blob)}
           onClose={() => setCameraOpen(false)}
         />

@@ -8,6 +8,18 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.31.2 – Kamera-Diagnose
+
+Die gefundenen Linsen bleiben jetzt gespeichert; „Kameras suchen“ ist nur noch nötig, wenn
+sich etwas geändert hat. Unter Einstellungen → Kamera gibt es „Kamera testen“, das die
+Kamera-Ansicht direkt öffnet und das Testbild anzeigt, sowie eine Diagnose, die jeden Schritt
+beim Öffnen der Kamera protokolliert – auch dann, wenn die App dabei abstürzt. Der Text lässt
+sich mit einem Tippen kopieren.
+
+Dazu zwei Versuche gegen den Absturz der Rückkamera: Zoom und Fokus lassen sich festhalten,
+damit die logische Kamera nicht auf die defekte Linse umschaltet. Die Kamera-Ansicht zeigt
+unten eine Statuszeile, ob die Linse gerade Bilder liefert.
+
 ## 0.31.1 – Eigene Kamera-Ansicht
 
 Unter Einstellungen → Kamera lässt sich jetzt eine App-eigene Kamera-Ansicht einschalten, die

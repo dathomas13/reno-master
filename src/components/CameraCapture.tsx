@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
+import { describeTrack, openCamera, type CameraOptions } from '@/platform/camera';
+import { beginCameraSession, cameraLog, endCameraSession } from '@/platform/cameraLog';
 
 interface CameraCaptureProps {
-  /** a specific lens, picked in the settings; omitted falls back to the back camera */
-  deviceId?: string;
+  options: CameraOptions;
   onCapture(blob: Blob): void;
   onClose(): void;
 }
@@ -11,42 +12,100 @@ interface CameraCaptureProps {
  * Full-screen live preview of one exact camera, with a shutter button that grabs the
  * current frame. Stays out of the system camera app entirely - see platform/camera.ts
  * for why that matters.
+ *
+ * Everything that happens to the stream is written to the camera protocol, because when
+ * a lens takes the camera service down, this component dies with it and the protocol is
+ * all that is left to read.
  */
-export function CameraCapture({ deviceId, onCapture, onClose }: CameraCaptureProps) {
+export function CameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState('Kamera wird geöffnet…');
 
   useEffect(() => {
     let active = true;
+    const opened = Date.now();
+    const cleanups: (() => void)[] = [];
     setReady(false);
     setError(null);
-    const constraints: MediaStreamConstraints = {
-      audio: false,
-      video: deviceId ? { deviceId: { exact: deviceId } } : { facingMode: 'environment' },
-    };
-    navigator.mediaDevices
-      .getUserMedia(constraints)
-      .then((stream) => {
+    beginCameraSession(options.deviceId ? `Linse ${options.deviceId.slice(0, 8)}` : 'automatisch');
+
+    const video = videoRef.current;
+    const elapsed = () => `${((Date.now() - opened) / 1000).toFixed(1)}s`;
+
+    function refreshStatus(track: MediaStreamTrack | undefined) {
+      if (!active) return;
+      const size = video?.videoWidth ? `${video.videoWidth}×${video.videoHeight}` : 'kein Bild';
+      const trackState = track ? `${track.label} · ${track.muted ? 'STUMM' : 'liefert'} · ${track.readyState}` : 'keine Spur';
+      setStatus(`${elapsed()} · ${size} · ${trackState}`);
+    }
+
+    openCamera(options)
+      .then(async (stream) => {
         if (!active) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-        setReady(true);
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          const onTrack = (name: string) => () => {
+            cameraLog(`Spur ${name} bei ${elapsed()}: ${describeTrack(track)}`);
+            refreshStatus(track);
+          };
+          for (const name of ['mute', 'unmute', 'ended'] as const) {
+            const handler = onTrack(name);
+            track.addEventListener(name, handler);
+            cleanups.push(() => track.removeEventListener(name, handler));
+          }
+        }
+        if (video) {
+          const onVideo = (name: string) => () => {
+            cameraLog(`Video ${name} bei ${elapsed()}: ${video.videoWidth}×${video.videoHeight}`);
+            refreshStatus(track);
+            if (name === 'playing' && active) setReady(true);
+          };
+          for (const name of ['loadedmetadata', 'playing', 'stalled', 'suspend', 'error', 'pause'] as const) {
+            const handler = onVideo(name);
+            video.addEventListener(name, handler);
+            cleanups.push(() => video.removeEventListener(name, handler));
+          }
+          video.srcObject = stream;
+          try {
+            await video.play();
+            cameraLog(`play() ok bei ${elapsed()}`);
+          } catch (cause) {
+            cameraLog(`✖ play() scheitert: ${cause instanceof Error ? `${cause.name} ${cause.message}` : String(cause)}`);
+          }
+        }
+        refreshStatus(track);
+        // a heartbeat, so a crash leaves behind how far the camera got before it died
+        let ticks = 0;
+        const timer = window.setInterval(() => {
+          ticks += 1;
+          refreshStatus(track);
+          if (ticks <= 10 || ticks % 5 === 0) {
+            cameraLog(`lebt ${elapsed()}: ${video?.videoWidth ?? 0}×${video?.videoHeight ?? 0} ${track ? describeTrack(track) : ''}`);
+          }
+        }, 1000);
+        cleanups.push(() => window.clearInterval(timer));
       })
       .catch((cause: unknown) => {
         if (!active) return;
-        setError(cause instanceof Error ? cause.message : 'Kamera konnte nicht geöffnet werden.');
+        const message = cause instanceof Error ? `${cause.name}: ${cause.message}` : 'Kamera konnte nicht geöffnet werden.';
+        setError(message);
+        setStatus(`${elapsed()} · Fehler`);
       });
     return () => {
       active = false;
+      cleanups.forEach((fn) => fn());
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+      endCameraSession(`nach ${elapsed()}`);
     };
-  }, [deviceId]);
+  }, [options]);
 
   function capture() {
     const video = videoRef.current;
@@ -57,6 +116,7 @@ export function CameraCapture({ deviceId, onCapture, onClose }: CameraCapturePro
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.drawImage(video, 0, 0);
+    cameraLog(`Auslöser: ${canvas.width}×${canvas.height}`);
     canvas.toBlob(
       (blob) => {
         if (blob) onCapture(blob);
@@ -81,6 +141,9 @@ export function CameraCapture({ deviceId, onCapture, onClose }: CameraCapturePro
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
         )}
       </div>
+      <p className="px-3 py-1 text-[11px] leading-tight text-white/70 bg-black/60 font-mono break-all" aria-live="polite">
+        {status}
+      </p>
       <div className="flex items-center justify-center gap-6 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-black/60">
         <button type="button" className="btn" onClick={onClose}>
           Abbrechen

@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { TopBar } from '@/components/TopBar';
 import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
 import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/firebase/auth';
 import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
-import { listCameraDevices, type CameraDeviceOption } from '@/platform/camera';
+import { cameraOptionsFromSettings, listCameraDevices } from '@/platform/camera';
+import { clearCameraLog, noteUnfinishedCameraSession, readCameraLog } from '@/platform/cameraLog';
+import { CameraCapture } from '@/components/CameraCapture';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
 import { ModelSection } from './ModelSection';
@@ -30,9 +32,19 @@ export default function SettingsPage() {
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const reminder = useReminderStatus();
   const [diagnosis, setDiagnosis] = useState<ReminderDiagnosis | null>(null);
-  const [cameraDevices, setCameraDevices] = useState<CameraDeviceOption[]>([]);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [cameraTestOpen, setCameraTestOpen] = useState(false);
+  const [cameraTestShot, setCameraTestShot] = useState<{ url: string; width: number; height: number; bytes: number } | null>(null);
+  const [cameraLogLines, setCameraLogLines] = useState<string[]>([]);
+  const [cameraLogCopied, setCameraLogCopied] = useState(false);
+  const cameraOptions = useMemo(() => cameraOptionsFromSettings(settings), [settings]);
+
+  useEffect(() => {
+    // a camera session that never closed means the app died with the camera open
+    noteUnfinishedCameraSession();
+    setCameraLogLines(readCameraLog());
+  }, []);
 
   useEffect(() => {
     void listJobs().then(setJobs);
@@ -82,12 +94,40 @@ export default function SettingsPage() {
     setCameraError(null);
     try {
       const devices = await listCameraDevices();
-      setCameraDevices(devices);
-      if (!devices.length) setCameraError('Keine Kamera gefunden, oder der Zugriff wurde verweigert.');
+      // kept in the settings, so coming back to this screen does not mean searching again
+      if (devices.length) update({ cameraDevices: devices });
+      else setCameraError('Keine Kamera gefunden, oder der Zugriff wurde verweigert.');
     } catch (cause) {
       setCameraError(cause instanceof Error ? cause.message : 'Kameras konnten nicht gelesen werden.');
     } finally {
       setCameraLoading(false);
+      setCameraLogLines(readCameraLog());
+    }
+  }
+
+  function closeCameraTest() {
+    setCameraTestOpen(false);
+    // the closing effect writes its last line after this render; read it on the next tick
+    window.setTimeout(() => setCameraLogLines(readCameraLog()), 50);
+  }
+
+  function handleCameraTestShot(blob: Blob) {
+    closeCameraTest();
+    if (cameraTestShot) URL.revokeObjectURL(cameraTestShot.url);
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.onload = () => setCameraTestShot({ url, width: image.naturalWidth, height: image.naturalHeight, bytes: blob.size });
+    image.onerror = () => setCameraTestShot({ url, width: 0, height: 0, bytes: blob.size });
+    image.src = url;
+  }
+
+  async function copyCameraLog() {
+    try {
+      await navigator.clipboard.writeText(cameraLogLines.join('\n'));
+      setCameraLogCopied(true);
+      window.setTimeout(() => setCameraLogCopied(false), 2000);
+    } catch {
+      setCameraError('Kopieren nicht möglich – bitte den Text markieren.');
     }
   }
 
@@ -230,8 +270,8 @@ export default function SettingsPage() {
                 {cameraLoading ? 'Suche…' : 'Kameras suchen'}
               </button>
               {cameraError && <p className="text-sm text-warn mb-2">{cameraError}</p>}
-              {cameraDevices.length > 0 && (
-                <div className="flex flex-col gap-2">
+              {settings.cameraDevices.length > 0 && (
+                <div className="flex flex-col gap-2 mb-4">
                   <label className="flex items-center gap-2">
                     <input
                       type="radio"
@@ -241,7 +281,7 @@ export default function SettingsPage() {
                     />
                     <span>Automatisch (Rückseite)</span>
                   </label>
-                  {cameraDevices.map((device) => (
+                  {settings.cameraDevices.map((device) => (
                     <label key={device.deviceId} className="flex items-center gap-2">
                       <input
                         type="radio"
@@ -254,9 +294,92 @@ export default function SettingsPage() {
                   ))}
                 </div>
               )}
+
+              <SettingsHeading title="Experimente gegen den Absturz">
+                Samsungs „camera2 0“ ist eine logische Kamera, die beim Fokussieren im Nahbereich oder bei
+                Zoom unter 1× still auf das Ultraweitwinkel umschaltet. Ist das die defekte Linse, reißt der
+                Wechsel die Kamera nach ein paar Sekunden mit. Diese Schalter versuchen, Zoom und Fokus
+                festzuhalten, damit der Wechsel nie stattfindet. Was das Gerät davon annimmt, steht in der
+                Diagnose.
+              </SettingsHeading>
+              <label className="flex items-start gap-3 mb-2">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 accent-[#c9a86a] mt-0.5"
+                  checked={settings.cameraLockZoom}
+                  onChange={(event) => update({ cameraLockZoom: event.target.checked })}
+                />
+                <span>Zoom auf 1× festhalten</span>
+              </label>
+              <label className="flex items-start gap-3 mb-3">
+                <input
+                  type="checkbox"
+                  className="w-5 h-5 accent-[#c9a86a] mt-0.5"
+                  checked={settings.cameraFixedFocus}
+                  onChange={(event) => update({ cameraFixedFocus: event.target.checked })}
+                />
+                <span>Fokus festhalten (kein Autofokus)</span>
+              </label>
+              <Field label="Auflösung" hint="„Automatisch“ lässt das Gerät wählen – meist nur 640×480. Eine andere Wahl kann einen anderen Kamerapfad im Gerät treffen.">
+                <select
+                  className="input"
+                  value={settings.cameraResolution}
+                  onChange={(event) => update({ cameraResolution: event.target.value as LocalSettings['cameraResolution'] })}
+                >
+                  <option value="auto">Automatisch</option>
+                  <option value="hd">Full HD (1920×1080)</option>
+                  <option value="max">Höchste (bis 4096×3072)</option>
+                </select>
+              </Field>
+
+              <div className="flex flex-wrap items-center gap-3 mb-3">
+                <button type="button" className="btn" onClick={() => setCameraTestOpen(true)}>
+                  Kamera testen
+                </button>
+                {cameraTestShot && (
+                  <span className="flex items-center gap-2 text-sm text-muted">
+                    <img src={cameraTestShot.url} alt="Testbild" className="h-12 w-12 object-cover rounded border border-line" />
+                    Testbild {cameraTestShot.width}×{cameraTestShot.height}, {formatBytes(cameraTestShot.bytes)}
+                  </span>
+                )}
+              </div>
+
+              <details className="mt-1" open>
+                <summary className="text-sm text-muted cursor-pointer">Diagnose</summary>
+                <div className="mt-2 flex flex-wrap gap-2 mb-2">
+                  <button type="button" className="btn text-sm" onClick={() => setCameraLogLines(readCameraLog())}>
+                    Aktualisieren
+                  </button>
+                  <button type="button" className="btn text-sm" onClick={() => void copyCameraLog()} disabled={!cameraLogLines.length}>
+                    {cameraLogCopied ? 'Kopiert' : 'Kopieren'}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn text-sm"
+                    onClick={() => {
+                      clearCameraLog();
+                      setCameraLogLines([]);
+                    }}
+                    disabled={!cameraLogLines.length}
+                  >
+                    Protokoll löschen
+                  </button>
+                </div>
+                {cameraLogLines.length === 0 ? (
+                  <p className="text-sm text-muted">Noch kein Protokoll. Es entsteht, sobald die Kamera geöffnet wird.</p>
+                ) : (
+                  <pre className="text-[11px] leading-snug font-mono whitespace-pre-wrap break-all max-h-80 overflow-y-auto bg-black/20 rounded p-2">
+                    {cameraLogLines.join('\n')}
+                  </pre>
+                )}
+              </details>
             </>
           )}
         </section>
+
+        {cameraTestOpen && (
+          <CameraCapture options={cameraOptions} onCapture={handleCameraTestShot} onClose={closeCameraTest} />
+        )}
 
         <section className="card p-4">
           <h2 className="font-semibold mb-3">Beleg-Auslesen</h2>
