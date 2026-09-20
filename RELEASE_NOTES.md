@@ -8,6 +8,22 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.32.0 – Eigene Kamera für die APK
+
+Die Rückkamera-Abstürze aus den letzten Fassungen hatten eine Ursache, die sich im Browser
+nicht beheben ließ: Samsungs Rückkamera besteht intern aus zwei Linsen, und das Gerät schaltet
+selbst zwischen ihnen um, sobald es meint, näher heranzoomen oder fokussieren zu müssen –
+genau dieser Wechsel bringt die Kamera zum Absturz. Aus dem Browser heraus lässt sich das
+nicht verhindern, weil dort nur das Gerät als Ganzes sichtbar ist, nicht die einzelne Linse
+dahinter.
+
+**Nur in der APK** (nicht auf der Webseite) spricht die Kamera-Ansicht deshalb ab jetzt direkt
+die Hauptlinse an, ohne den Umweg über das umschaltende Gerät – der Absturz-Auslöser fällt
+damit weg. Die Vorschau ist dabei etwas ruckeliger als eine echte Live-Ansicht (ein neues Bild
+alle paar Zehntelsekunden statt fließend), reicht aber zum Einrahmen eines Fotos. Klappt das
+auf einem Gerät nicht, wechselt die App von selbst zurück auf den bisherigen Weg. Auf der
+Webseite ändert sich nichts.
+
 ## 0.31.4 – Fehlermeldung ohne Nebengeräusch
 
 Eine Linse, die schon tot ankommt, meldete den Fehler zwar richtig, hat dabei aber die

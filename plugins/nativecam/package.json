@@ -1,0 +1,17 @@
+{
+  "name": "@reno/nativecam",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Kamera-Vorschau und Aufnahme direkt über Camera2, an einen physischen Sensor gebunden",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["android/", "index.js", "index.d.ts"],
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.2.0"
+  }
+}

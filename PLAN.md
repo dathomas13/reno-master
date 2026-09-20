@@ -85,7 +85,7 @@ gegen die Firebase-Emulatoren).
 | Zoom/Pan für Pläne | **panzoom** (oder eigene Pointer-Implementierung wie im 3D-Viewer) | |
 | Charts (Kosten) | **recharts**, sparsam (Balken nach Kategorie/Monat) | |
 | Claude | **@anthropic-ai/sdk** (`dangerouslyAllowBrowser: true`, Key aus Einstellungen), **zod** + `zodOutputFormat` für strukturierte Ausgabe | |
-| Native (Phase 2) | **Capacitor 6**: `@capacitor/android`, `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/local-notifications`, `@capacitor/push-notifications`, `@capacitor-mlkit/text-recognition`, eigenes Plugin `MediaStore` (Kotlin) | |
+| Native (Phase 2) | **Capacitor 6**: `@capacitor/android`, `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/local-notifications`, `@capacitor/push-notifications`, `@capacitor-mlkit/text-recognition`, eigene Plugins `MediaStore`, `NativeCam` (Java) | |
 | Tests | **vitest** (Unit), **Playwright** (E2E, Chromium mobil-emuliert 360×780 @3x + Desktop), **Firebase Emulator Suite** (auth, firestore, storage, functions) | |
 | CI/CD | GitHub Actions: `deploy.yml` (Build + Pages-Deploy bei Push auf `main`), `ci.yml` (Lint, Typecheck, Unit, E2E gegen Emulator bei PR), später `android.yml` (APK-Build) | |
 | Lint/Format | ESLint (typescript-eslint, react-hooks), Prettier | |

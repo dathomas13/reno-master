@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { describeTrack, openCamera, type CameraOptions } from '@/platform/camera';
 import { beginCameraSession, cameraLog, endCameraSession } from '@/platform/cameraLog';
+import { isNative } from '@/platform/index';
+import { nativeCameraSupported, openNativeCamera, type NativeCameraSession } from '@/platform/nativeCamera';
 
 interface CameraCaptureProps {
   options: CameraOptions;
@@ -9,15 +11,89 @@ interface CameraCaptureProps {
 }
 
 /**
- * Full-screen live preview of one exact camera, with a shutter button that grabs the
- * current frame. Stays out of the system camera app entirely - see platform/camera.ts
- * for why that matters.
+ * Full-screen live preview with a shutter button that grabs the current frame. Stays out of
+ * the system camera app entirely - see platform/camera.ts for why that matters.
  *
- * Everything that happens to the stream is written to the camera protocol, because when
- * a lens takes the camera service down, this component dies with it and the protocol is
- * all that is left to read.
+ * Two implementations share this shell: WebCameraCapture (getUserMedia, used on the web and
+ * as the native fallback) and NativeCameraCapture (Camera2 through plugins/nativecam, used
+ * on the APK when it can bind to a physical sensor - see that plugin's README for why that
+ * matters there). Which one runs is decided once per mount and does not change mid-session.
  */
-export function CameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
+export function CameraCapture(props: CameraCaptureProps) {
+  const [mode, setMode] = useState<'pending' | 'native' | 'web'>(() => (isNative() ? 'pending' : 'web'));
+
+  useEffect(() => {
+    if (mode !== 'pending') return;
+    let active = true;
+    nativeCameraSupported().then((supported) => {
+      if (active) setMode(supported ? 'native' : 'web');
+    });
+    return () => {
+      active = false;
+    };
+  }, [mode]);
+
+  if (mode === 'web') return <WebCameraCapture {...props} />;
+  if (mode === 'native') return <NativeCameraCapture {...props} onFallback={() => setMode('web')} />;
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex items-center justify-center text-white/60 text-sm" role="dialog" aria-label="Kamera">
+      Kamera wird geöffnet…
+    </div>
+  );
+}
+
+function CameraShell({
+  error,
+  status,
+  ready,
+  onClose,
+  onCapture,
+  children,
+}: {
+  error: string | null;
+  status: string;
+  ready: boolean;
+  onClose(): void;
+  onCapture?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-black flex flex-col" role="dialog" aria-label="Kamera">
+      <div className="flex-1 relative">
+        {error ? (
+          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-white text-sm">
+            <p>
+              {error}
+              <br />
+              Unter Einstellungen → Kamera lässt sich eine andere Linse auswählen.
+            </p>
+          </div>
+        ) : (
+          children
+        )}
+      </div>
+      <p className="px-3 py-1 text-[11px] leading-tight text-white/70 bg-black/60 font-mono break-all" aria-live="polite">
+        {status}
+      </p>
+      <div className="flex items-center justify-center gap-6 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-black/60">
+        <button type="button" className="btn" onClick={onClose}>
+          Abbrechen
+        </button>
+        {!error && onCapture && (
+          <button
+            type="button"
+            aria-label="Foto aufnehmen"
+            className="w-16 h-16 rounded-full bg-white border-4 border-line disabled:opacity-50"
+            onClick={onCapture}
+            disabled={!ready}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -143,37 +219,99 @@ export function CameraCapture({ options, onCapture, onClose }: CameraCaptureProp
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col" role="dialog" aria-label="Kamera">
-      <div className="flex-1 relative">
-        {error ? (
-          <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-white text-sm">
-            <p>
-              {error}
-              <br />
-              Unter Einstellungen → Kamera lässt sich eine andere Linse auswählen.
-            </p>
-          </div>
-        ) : (
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
-        )}
-      </div>
-      <p className="px-3 py-1 text-[11px] leading-tight text-white/70 bg-black/60 font-mono break-all" aria-live="polite">
-        {status}
-      </p>
-      <div className="flex items-center justify-center gap-6 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] bg-black/60">
-        <button type="button" className="btn" onClick={onClose}>
-          Abbrechen
-        </button>
-        {!error && (
-          <button
-            type="button"
-            aria-label="Foto aufnehmen"
-            className="w-16 h-16 rounded-full bg-white border-4 border-line disabled:opacity-50"
-            onClick={capture}
-            disabled={!ready}
-          />
-        )}
-      </div>
-    </div>
+    <CameraShell error={error} status={status} ready={ready} onClose={onClose} onCapture={capture}>
+      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+    </CameraShell>
+  );
+}
+
+/**
+ * Native path over plugins/nativecam. There is no live <video> here: the plugin re-encodes
+ * each preview frame as a small JPEG (see that plugin's README for why it is not a real
+ * native view), so the picture is a still <img> that gets a new src a few times a second.
+ */
+function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCaptureProps & { onFallback(): void }) {
+  const sessionRef = useRef<NativeCameraSession | null>(null);
+  const capturingRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState('Kamera wird geöffnet…');
+  const [frame, setFrame] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const opened = Date.now();
+    const elapsed = () => `${((Date.now() - opened) / 1000).toFixed(1)}s`;
+    beginCameraSession('nativ');
+    let offFrame: (() => void) | null = null;
+    let offError: (() => void) | null = null;
+    let framesSeen = 0;
+
+    openNativeCamera()
+      .then((session) => {
+        if (!active) {
+          void session.close();
+          return;
+        }
+        sessionRef.current = session;
+        cameraLog(`Native Kamera bereit${session.physicalCameraId ? ` (Sensor ${session.physicalCameraId})` : ''}`);
+        offFrame = session.onFrame((nextFrame) => {
+          if (!active) return;
+          framesSeen += 1;
+          setFrame(`data:image/jpeg;base64,${nextFrame.base64}`);
+          setStatus(`${elapsed()} · ${nextFrame.width}×${nextFrame.height} · nativ`);
+          if (framesSeen === 1) {
+            cameraLog(`erstes Bild bei ${elapsed()}: ${nextFrame.width}×${nextFrame.height}`);
+            setReady(true);
+          }
+        });
+        offError = session.onError((message) => {
+          if (!active) return;
+          cameraLog(`✖ native Kamera: ${message}`);
+          setReady(false);
+          setError(`Die Kamera hat die Verbindung beendet (${message}).`);
+        });
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        const message = cause instanceof Error ? cause.message : String(cause);
+        cameraLog(`✖ native Kamera scheitert, wechsle auf getUserMedia: ${message}`);
+        onFallback();
+      });
+
+    return () => {
+      active = false;
+      offFrame?.();
+      offError?.();
+      void sessionRef.current?.close();
+      sessionRef.current = null;
+      endCameraSession(`nach ${elapsed()}`);
+    };
+  }, [onFallback]);
+
+  async function capture() {
+    if (capturingRef.current) return;
+    const session = sessionRef.current;
+    if (!session) return;
+    capturingRef.current = true;
+    try {
+      const blob = await session.capture();
+      cameraLog(`Auslöser (nativ): ${blob.size} Bytes`);
+      onCapture(blob);
+    } catch (cause) {
+      cameraLog(`✖ native Aufnahme scheitert: ${cause instanceof Error ? cause.message : String(cause)}`);
+    } finally {
+      capturingRef.current = false;
+    }
+  }
+
+  return (
+    <CameraShell error={error} status={status} ready={ready} onClose={onClose} onCapture={capture}>
+      {frame ? (
+        <img src={frame} alt="" className="w-full h-full object-contain" />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-white/60 text-sm">Kamera wird geöffnet…</div>
+      )}
+    </CameraShell>
   );
 }

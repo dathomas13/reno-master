@@ -54,7 +54,7 @@ function mediaStore(): MediaStorePlugin | null {
   return (plugins?.MediaStore as MediaStorePlugin | undefined) ?? null;
 }
 
-function base64ToBlob(base64: string, mime: string): Blob {
+export function base64ToBlob(base64: string, mime: string): Blob {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
