@@ -8,6 +8,13 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.31.4 – Fehlermeldung ohne Nebengeräusch
+
+Eine Linse, die schon tot ankommt, meldete den Fehler zwar richtig, hat dabei aber die
+Bildvorschau mitten in einem laufenden Abspielversuch unter dem Fuß weggezogen. Das stand
+als zusätzlicher, verwirrender Fehler im Diagnose-Protokoll. Die Reihenfolge ist jetzt so,
+dass der Fehler erst gemeldet wird, nachdem dieser Versuch fertig ist.
+
 ## 0.31.3 – Kamera meldet sich ab statt einzufrieren
 
 Wenn die Rückkamera-Linse trotz der Absturz-Versuche mittendrin abschaltet, zeigt die

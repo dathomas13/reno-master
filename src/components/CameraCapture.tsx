@@ -50,8 +50,10 @@ export function CameraCapture({ options, onCapture, onClose }: CameraCaptureProp
         }
         streamRef.current = stream;
         const track = stream.getVideoTracks()[0];
+        let onEnded = () => {};
+        let endedOnArrival = false;
         if (track) {
-          const onEnded = () => {
+          onEnded = () => {
             if (!active) return;
             setReady(false);
             setError('Die Kamera hat die Verbindung beendet (Linse abgestürzt?).');
@@ -67,11 +69,12 @@ export function CameraCapture({ options, onCapture, onClose }: CameraCaptureProp
             cleanups.push(() => track.removeEventListener(name, handler));
           }
           // some broken lenses hand back a track that is already 'ended' on arrival, before
-          // any listener could catch the transition - the state itself is the only signal then
-          if (track.readyState === 'ended') {
-            cameraLog(`Spur bereits beendet bei ${elapsed()}: ${describeTrack(track)}`);
-            onEnded();
-          }
+          // any listener could catch the transition - the state itself is the only signal then.
+          // Reporting it has to wait until after video.play() below has settled: setError()
+          // unmounts the <video>, and doing that while play() is still in flight aborts it
+          // with a misleading "removed from the document" error.
+          endedOnArrival = track.readyState === 'ended';
+          if (endedOnArrival) cameraLog(`Spur bereits beendet bei ${elapsed()}: ${describeTrack(track)}`);
         }
         if (video) {
           const onVideo = (name: string) => () => {
@@ -93,6 +96,7 @@ export function CameraCapture({ options, onCapture, onClose }: CameraCaptureProp
           }
         }
         refreshStatus(track);
+        if (endedOnArrival) onEnded();
         // a heartbeat, so a crash leaves behind how far the camera got before it died
         let ticks = 0;
         const timer = window.setInterval(() => {
