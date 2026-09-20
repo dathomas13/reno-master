@@ -58,10 +58,17 @@ export function withTimeout<T>(work: Promise<T>, ms: number, what: string): Prom
 }
 
 let supportCache: Promise<boolean> | null = null;
+let givenUp = false;
 
-/** cached: the check itself opens no camera, but there is no reason to ask twice a session */
+/**
+ * Cached: the check itself opens no camera, but there is no reason to ask twice a session.
+ *
+ * Once opening has failed outright it stays failed for the rest of the app's run. On the
+ * device this matters more than it sounds: every failed open leaves the camera service worse
+ * off, and a second run of the same doomed attempt would wreck getUserMedia's chances too.
+ */
 export function nativeCameraSupported(): Promise<boolean> {
-  if (!isNative() || !plugin()) return Promise.resolve(false);
+  if (givenUp || !isNative() || !plugin()) return Promise.resolve(false);
   if (!supportCache) {
     supportCache = plugin()!
       .isSupported()
@@ -92,6 +99,7 @@ export async function openNativeCamera(): Promise<NativeCameraSession> {
   try {
     opened = await withTimeout(native.start(), START_TIMEOUT_MS, 'Die Kamera');
   } catch (cause) {
+    givenUp = true; // see nativeCameraSupported: a second attempt only damages the camera further
     await logging.remove();
     await native.stop().catch(() => undefined);
     throw cause;

@@ -8,6 +8,25 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.32.3 – Nichts im Objektiv darf sich mehr bewegen
+
+Die Diagnose vom letzten Mal hat die bisherige Annahme umgeworfen: Es ist nicht die eine
+defekte Linse, an der die Kamera stirbt – die Hauptlinse gibt genauso auf wie die
+Ultraweitwinkel-Linse, und zwar immer ein bis zwei Sekunden nach dem Start. Das ist genau der
+Moment, in dem der Autofokus seinen ersten Zug macht und der Bildstabilisator anspringt. Diese
+Fassung schaltet deshalb beides ab, bevor das erste Bild überhaupt angefordert wird, und
+stellt den Fokus fest auf etwa einen Meter. Ob das der Punkt war, sagt die nächste Diagnose.
+
+Zwei Dinge sind dabei unabhängig davon besser geworden. Die App probiert jetzt höchstens zwei
+Wege statt drei und hört sofort auf, sobald die Kamera des Geräts gar nicht mehr antwortet –
+denn jeder weitere Versuch hat sie bisher tiefer mitgerissen, bis auch der gewohnte Weg nichts
+mehr fand. Und wenn der neue Weg einmal gescheitert ist, benutzt die App für den Rest der
+Sitzung direkt den alten, statt es jedes Mal aufs Neue zu versuchen.
+
+Außerdem erholt sich die Kamera-Ansicht jetzt von einer Linse, die es nicht mehr gibt: Nach
+einem Neustart der Gerätekamera stimmen die gespeicherten Linsen-Kennungen nicht mehr, und
+statt mit „Gerät nicht gefunden“ abzubrechen, nimmt die App einfach wieder die Rückkamera.
+
 ## 0.32.2 – Die Kamera sucht sich die heile Linse selbst
 
 Die erste Fassung der eigenen Kamera hat die falsche Linse erwischt und nach einer Sekunde

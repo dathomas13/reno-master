@@ -85,6 +85,8 @@ public class NativeCamPlugin extends Plugin {
     private static final int MAX_LONG_EDGE = 1920;
     private static final int MAX_SHORT_EDGE = 1080;
     private static final long FIRST_FRAME_TIMEOUT_MS = 2500;
+    /** every failed open leaves the camera service worse off, so it gets a moment to settle */
+    private static final long RETRY_PAUSE_MS = 600;
     private static final long PREVIEW_INTERVAL_MS = 120; // ~8 fps - enough to frame a shot
     private static final int PREVIEW_JPEG_QUALITY = 55;
     private static final int STILL_JPEG_QUALITY = 92;
@@ -109,6 +111,7 @@ public class NativeCamPlugin extends Plugin {
     private List<String> candidates;
     private int candidateIndex;
     private volatile String activeSensorId;
+    private volatile CameraCharacteristics activeCharacteristics;
     private volatile int frameRotation;
 
     private PluginCall startCall;
@@ -216,11 +219,19 @@ public class NativeCamPlugin extends Plugin {
 
     // ---------------------------------------------------------------- opening, one sensor at a time
 
-    /** the sensors to try, best first, with a final null meaning "no pinning at all" */
+    /**
+     * What to try, and in which order. Deliberately short: the device log showed every failed
+     * open dragging the camera service further down, until the whole camera was gone and even
+     * getUserMedia found nothing. Two attempts is all this hardware gets.
+     *
+     * The browser path, for all its faults, does deliver pictures for about two seconds before
+     * the camera dies - pinning a physical sensor died faster and delivered none at all. So the
+     * first attempt is the same whole-camera open the browser does, and what is new about it is
+     * in the request: focus motor and stabiliser switched off (see configureSession). Only if
+     * that still dies is the main lens pinned as a second try.
+     */
     private List<String> sensorCandidates(CameraManager manager, CameraCharacteristics logicalChars) {
         List<String> physical = new ArrayList<>(logicalChars.getPhysicalCameraIds());
-        // biggest sensor first: that is the main lens, never the ultra-wide the logical
-        // camera likes to switch to and never the telephoto
         Collections.sort(physical, new Comparator<String>() {
             @Override
             public int compare(String a, String b) {
@@ -231,8 +242,10 @@ public class NativeCamPlugin extends Plugin {
             emitLog("Linse " + id + ": " + describeSensor(manager, id));
         }
         if (physical.isEmpty()) emitLog("Kamera " + logicalCameraId + " nennt keine einzelnen Linsen");
-        List<String> ordered = new ArrayList<>(physical);
+
+        List<String> ordered = new ArrayList<>();
         ordered.add(null);
+        if (!physical.isEmpty()) ordered.add(physical.get(0));
         return ordered;
     }
 
@@ -240,8 +253,7 @@ public class NativeCamPlugin extends Plugin {
     private void tryNextCandidate(CameraManager manager) {
         if (candidates == null || candidateIndex >= candidates.size()) {
             emitLog("keine Linse dieser Kamera liefert ein Bild");
-            closeCamera();
-            finishStart(false, "Keine Linse dieser Kamera liefert ein Bild");
+            giveUp("Keine Linse dieser Kamera liefert ein Bild");
             return;
         }
         String sensorId = candidates.get(candidateIndex++);
@@ -251,6 +263,7 @@ public class NativeCamPlugin extends Plugin {
         try {
             CameraCharacteristics chars = manager.getCameraCharacteristics(
                 sensorId != null ? sensorId : logicalCameraId);
+            activeCharacteristics = chars;
             StreamConfigurationMap map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             Size[] sizes = map == null ? null : map.getOutputSizes(ImageFormat.YUV_420_888);
             if (sizes == null || sizes.length == 0) {
@@ -312,7 +325,7 @@ public class NativeCamPlugin extends Plugin {
                         if (device == null || reader == null) return;
                         CaptureRequest.Builder builder = device.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                         builder.addTarget(reader.getSurface());
-                        builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                        holdEverythingStill(builder);
                         session.setRepeatingRequest(builder.build(), null, backgroundHandler);
                         armWatchdog(manager);
                     } catch (Exception error) {
@@ -327,6 +340,76 @@ public class NativeCamPlugin extends Plugin {
             }
         );
         cameraDevice.createCaptureSession(config);
+    }
+
+    /**
+     * Switches off everything in the camera module that physically moves.
+     *
+     * This is the experiment the browser could never really run. On this phone the camera dies
+     * one to two seconds after the stream starts, whichever lens is used and whether or not a
+     * physical sensor is pinned - and one to two seconds in is exactly when the autofocus makes
+     * its first sweep and the optical stabiliser takes over. On a camera module with mechanical
+     * damage those are the parts that fault. getUserMedia can ask for a focus mode after the
+     * fact and hope; a capture request can say "do not move" before the first frame is taken.
+     *
+     * Each setting is only applied when the sensor says it supports it, and what was applied
+     * goes to the protocol - if this run survives, the log says which of them did it.
+     */
+    private void holdEverythingStill(CaptureRequest.Builder builder) {
+        CameraCharacteristics chars = activeCharacteristics;
+        if (chars == null) return;
+        List<String> applied = new ArrayList<>();
+
+        if (supportsAfMode(chars, CameraMetadata.CONTROL_AF_MODE_OFF)) {
+            builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
+            applied.add("Autofokus aus");
+            Float closest = chars.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
+            if (closest != null && closest > 0f) {
+                // dioptres: 1.0 is a metre away, and the depth of field of a phone sensor
+                // covers roughly half a metre to a few metres from there
+                float distance = Math.min(1.0f, closest);
+                builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, distance);
+                applied.add("Fokus fest auf " + distance);
+            }
+        }
+
+        if (supportsStabilisation(chars)) {
+            builder.set(CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE,
+                CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF);
+            applied.add("Bildstabilisator aus");
+        }
+        builder.set(CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE,
+            CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
+        applied.add("Videostabilisierung aus");
+
+        emitLog(describeActive() + ": " + (applied.isEmpty() ? "nichts festzuhalten" : join(applied)));
+    }
+
+    private boolean supportsAfMode(CameraCharacteristics chars, int mode) {
+        int[] modes = chars.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES);
+        if (modes == null) return false;
+        for (int available : modes) {
+            if (available == mode) return true;
+        }
+        return false;
+    }
+
+    private boolean supportsStabilisation(CameraCharacteristics chars) {
+        int[] modes = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION);
+        if (modes == null) return false;
+        for (int mode : modes) {
+            if (mode == CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON) return true;
+        }
+        return false;
+    }
+
+    private String join(List<String> parts) {
+        StringBuilder text = new StringBuilder();
+        for (String part : parts) {
+            if (text.length() > 0) text.append(", ");
+            text.append(part);
+        }
+        return text.toString();
     }
 
     /**
@@ -367,7 +450,34 @@ public class NativeCamPlugin extends Plugin {
             notifyListeners("error", payload);
             return;
         }
-        tryNextCandidate(manager);
+        // the device log showed the camera service itself disappearing after two failed opens
+        // ("unknown device 0"), taking getUserMedia down with it - so once it is gone, stop
+        if (!cameraServiceAlive(manager)) {
+            emitLog("der Kameradienst des Geräts antwortet nicht mehr – keine weiteren Versuche");
+            giveUp("Der Kameradienst des Geräts ist ausgefallen");
+            return;
+        }
+        Handler handler = backgroundHandler;
+        if (handler == null) {
+            tryNextCandidate(manager);
+            return;
+        }
+        handler.postDelayed(() -> tryNextCandidate(manager), RETRY_PAUSE_MS);
+    }
+
+    private boolean cameraServiceAlive(CameraManager manager) {
+        try {
+            manager.getCameraCharacteristics(logicalCameraId);
+            return true;
+        } catch (Exception error) {
+            return false;
+        }
+    }
+
+    /** settles the start() call with the real reason before the teardown overwrites it */
+    private void giveUp(String reason) {
+        finishStart(false, reason);
+        closeCamera();
     }
 
     private void finishStart(boolean ok, String reason) {
@@ -660,6 +770,7 @@ public class NativeCamPlugin extends Plugin {
         finishStart(false, "Kamera wurde geschlossen");
         candidates = null;
         activeSensorId = null;
+        activeCharacteristics = null;
         stopBackgroundThread();
     }
 }

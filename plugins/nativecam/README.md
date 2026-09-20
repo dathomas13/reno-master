@@ -59,6 +59,26 @@ daran und meldete „bereit“, sobald die Sitzung stand. Auf dem S24 hieß das:
   löst erst mit dem ersten wirklich gelieferten Bild auf; bleibt ein Sensor 2,5 s stumm,
   gilt er als gescheitert und der nächste ist dran.
 
+## Was der zweite Gerätelauf gelehrt hat
+
+Das Protokoll listete drei Linsen (5: 4080×3060, f 5.4 – die Hauptlinse; 2: 4000×3000, f 2.2 –
+Ultraweitwinkel; 6: 3648×2736, f 7.0 – Tele) und zeigte dann zweierlei:
+
+- **Die Hauptlinse stirbt genauso wie die Ultraweitwinkel-Linse**, beide mit
+  `ERROR_CAMERA_DEVICE`. Damit ist die ursprüngliche These – die logische Kamera schaltet auf
+  die defekte Linse um – widerlegt. Es liegt nicht am Wechsel.
+- **Jeder Fehlversuch beschädigt den Kameradienst weiter.** Nach zwei Versuchen war nicht nur
+  Linse 6 unlesbar, sondern die Kamera 0 selbst (`unknown device 0`), und anschließend fand
+  auch `getUserMedia` nichts mehr. Die Leiter probiert deshalb nur noch zwei Dinge, mit einer
+  Pause dazwischen, und bricht sofort ab, sobald der Kameradienst nicht mehr antwortet.
+
+Der neue Versuch steckt dafür in der Aufnahme-Anfrage selbst: **Autofokus und Bildstabilisator
+werden abgeschaltet**, bevor das erste Bild angefordert wird (`holdEverythingStill`). Die
+Kamera stirbt ein bis zwei Sekunden nach dem Start – und genau dann macht der Autofokus seinen
+ersten Zug und der Stabilisator übernimmt. Bei einem mechanisch beschädigten Kameramodul sind
+das die Teile, die ausfallen. Genau das kann der Browser nicht: er darf nur hinterher einen
+Fokusmodus erbitten, nicht von vornherein „bewege dich nicht“ sagen.
+
 In Java geschrieben, nicht in Kotlin - aus demselben Grund wie beim `mediastore`-Plugin: das
 Android-Projekt von Capacitor bringt den Kotlin-Gradle-Plugin nicht mit.
 

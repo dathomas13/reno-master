@@ -61,13 +61,27 @@ describe('openCamera', () => {
     expect(readCameraLog().some((line) => line.includes('automatische Auswahl'))).toBe(true);
   });
 
-  it('still rejects an OverconstrainedError that is not about the device id', async () => {
+  it('drops the lens on a NotFoundError too - a restarted camera service answers that way', async () => {
     const getUserMedia = vi
       .fn()
-      .mockRejectedValue(Object.assign(new Error('width'), { name: 'OverconstrainedError', constraint: 'width' }));
+      .mockRejectedValueOnce(Object.assign(new Error('Requested device not found'), { name: 'NotFoundError' }))
+      .mockResolvedValueOnce(fakeStream(fakeTrack()));
     vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
 
-    await expect(openCamera({ deviceId: 'abc', lockZoom: false, fixedFocus: false, resolution: 'hd' })).rejects.toThrow('width');
+    await openCamera({ deviceId: 'gone', lockZoom: false, fixedFocus: false, resolution: 'auto' });
+    expect(getUserMedia).toHaveBeenCalledTimes(2);
+    expect(getUserMedia).toHaveBeenNthCalledWith(2, { audio: false, video: { facingMode: 'environment' } });
+  });
+
+  it('does not retry a refused permission - asking again would only fail again', async () => {
+    const getUserMedia = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('Permission denied'), { name: 'NotAllowedError' }));
+    vi.stubGlobal('navigator', { mediaDevices: { getUserMedia } });
+
+    await expect(
+      openCamera({ deviceId: 'abc', lockZoom: false, fixedFocus: false, resolution: 'hd' }),
+    ).rejects.toThrow('Permission denied');
     expect(getUserMedia).toHaveBeenCalledTimes(1);
   });
 

@@ -124,11 +124,13 @@ export async function openCamera(options: CameraOptions): Promise<MediaStream> {
   } catch (cause) {
     const error = cause as { name?: string; message?: string; constraint?: string };
     cameraLog(`✖ getUserMedia scheitert nach ${Date.now() - started} ms: ${error.name ?? ''} ${error.message ?? ''} ${error.constraint ?? ''}`);
-    // the device ids from enumerateDevices() are only valid for the permission session that
-    // produced them; a standing choice in settings goes stale as soon as that session ends,
-    // and every retry then fails on the same deviceId - so drop it and let the browser pick.
-    if (options.deviceId && error.name === 'OverconstrainedError' && error.constraint === 'deviceId') {
-      cameraLog('Linse nicht mehr vorhanden, wechsle auf automatische Auswahl');
+    // The device ids from enumerateDevices() are only valid for the permission session that
+    // produced them; a standing choice in settings goes stale as soon as that session ends -
+    // and a device whose camera service restarted answers NotFoundError rather than the
+    // OverconstrainedError this only used to catch. Whatever the name, a named lens that will
+    // not open is worth one retry without it. Only a refused permission is not.
+    if (options.deviceId && error.name !== 'NotAllowedError' && error.name !== 'SecurityError') {
+      cameraLog('Linse nicht verfügbar, wechsle auf automatische Auswahl');
       return openCamera({ ...options, deviceId: undefined });
     }
     throw cause;
