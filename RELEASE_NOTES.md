@@ -8,6 +8,20 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.33.1 – „Alles durchtesten“ ist wieder raus
+
+Der Knopf aus der letzten Fassung hat beim Durchlaufen das ganze Telefon neu gestartet. Das
+ist entfernt und kommt nicht wieder – es tut mir leid, dass du das abbekommen hast.
+
+Damit ist die Frage aber auch beantwortet, ohne dass noch etwas geprüft werden müsste: Eine
+App kann ein Telefon nicht neu starten. Wenn das Ansprechen der Kamera das Gerät mitreißt,
+sitzt der Fehler unterhalb des Betriebssystems, in der Hardware – genau da, wo du ihn vermutet
+hast. Dagegen kann keine App etwas ausrichten, und ich höre damit auf, es zu versuchen.
+
+Die Kamera-Ansicht der App fasst die Kamera jetzt nur noch ein einziges Mal an, statt es bei
+einem Fehlschlag nochmal zu probieren. Für Fotos bleibt der Weg, der funktioniert: mit Expert
+RAW oder der Systemkamera aufnehmen und das Bild im Eintrag aus der Galerie übernehmen.
+
 ## 0.33.0 – Alles durchtesten, auf einmal
 
 Auch klein und langsam hat nichts geändert: die Rückkamera bricht nach knapp zwei Sekunden ab,

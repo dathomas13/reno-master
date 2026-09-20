@@ -7,7 +7,7 @@ import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
 import { cameraOptionsFromSettings, listCameraDevices } from '@/platform/camera';
 import { clearCameraLog, noteUnfinishedCameraSession, readCameraLog } from '@/platform/cameraLog';
-import { nativeCameraSupported, runNativeCameraDiagnosis } from '@/platform/nativeCamera';
+import { nativeCameraSupported } from '@/platform/nativeCamera';
 import { CameraCapture } from '@/components/CameraCapture';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
@@ -40,7 +40,6 @@ export default function SettingsPage() {
   const [cameraLogLines, setCameraLogLines] = useState<string[]>([]);
   const [cameraLogCopied, setCameraLogCopied] = useState(false);
   const [nativeCamera, setNativeCamera] = useState(false);
-  const [cameraCheckRunning, setCameraCheckRunning] = useState(false);
   const cameraOptions = useMemo(() => cameraOptionsFromSettings(settings), [settings]);
 
   useEffect(() => {
@@ -123,20 +122,6 @@ export default function SettingsPage() {
     image.onload = () => setCameraTestShot({ url, width: image.naturalWidth, height: image.naturalHeight, bytes: blob.size });
     image.onerror = () => setCameraTestShot({ url, width: 0, height: 0, bytes: blob.size });
     image.src = url;
-  }
-
-  async function runFullCameraCheck() {
-    setCameraCheckRunning(true);
-    setCameraError(null);
-    try {
-      await runNativeCameraDiagnosis();
-    } catch (cause) {
-      setCameraError(cause instanceof Error ? cause.message : 'Die Vollprüfung ist gescheitert.');
-    } finally {
-      // the protocol is the point of the exercise, so show it whatever happened
-      setCameraLogLines(readCameraLog());
-      setCameraCheckRunning(false);
-    }
   }
 
   async function copyCameraLog() {
@@ -391,23 +376,6 @@ export default function SettingsPage() {
                     Protokoll löschen
                   </button>
                 </div>
-                {nativeCamera && (
-                  <div className="mb-3">
-                    <button
-                      type="button"
-                      className="btn text-sm"
-                      onClick={() => void runFullCameraCheck()}
-                      disabled={cameraCheckRunning}
-                    >
-                      {cameraCheckRunning ? 'Prüfe alle Einstellungen…' : 'Alles durchtesten'}
-                    </button>
-                    <p className="text-sm text-muted mt-1">
-                      Probiert nacheinander jede Kamera des Geräts in jeder Betriebsart durch und schreibt
-                      jedes Ergebnis ins Protokoll. Dauert gut eine Minute, belastet die Kamera absichtlich
-                      und ist nur zum Einschicken gedacht.
-                    </p>
-                  </div>
-                )}
                 {cameraLogLines.length === 0 ? (
                   <p className="text-sm text-muted">Noch kein Protokoll. Es entsteht, sobald die Kamera geöffnet wird.</p>
                 ) : (
