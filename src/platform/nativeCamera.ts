@@ -21,8 +21,17 @@ export interface NativeCamFrame {
 const START_TIMEOUT_MS = 15000;
 const CAPTURE_TIMEOUT_MS = 5000;
 
+/**
+ * On the device Capacitor hands the listener handle back directly, not as a promise, and
+ * remove() returns nothing - so everything from the bridge goes through Promise.resolve
+ * before it is treated as one. Getting this wrong cost a working camera once already: the
+ * .then() on a plain handle threw, and the failing close() never reached stop(), which left
+ * the camera open and made getUserMedia fail too.
+ */
+type FromBridge<T> = T | Promise<T>;
+
 interface Listener {
-  remove: () => Promise<void>;
+  remove: () => FromBridge<void>;
 }
 
 interface NativeCamPlugin {
@@ -30,9 +39,13 @@ interface NativeCamPlugin {
   start(): Promise<{ physicalCameraId?: string }>;
   capture(): Promise<{ base64: string; mime: string; width: number; height: number }>;
   stop(): Promise<void>;
-  addListener(event: 'frame', handler: (frame: NativeCamFrame) => void): Promise<Listener>;
-  addListener(event: 'error', handler: (error: { message: string }) => void): Promise<Listener>;
-  addListener(event: 'log', handler: (entry: { message: string }) => void): Promise<Listener>;
+  addListener(event: 'frame', handler: (frame: NativeCamFrame) => void): FromBridge<Listener>;
+  addListener(event: 'error', handler: (error: { message: string }) => void): FromBridge<Listener>;
+  addListener(event: 'log', handler: (entry: { message: string }) => void): FromBridge<Listener>;
+}
+
+function removeQuietly(handle: Listener): Promise<void> {
+  return Promise.resolve(handle.remove()).catch(() => undefined);
 }
 
 function plugin(): NativeCamPlugin | null {
@@ -41,10 +54,10 @@ function plugin(): NativeCamPlugin | null {
 }
 
 /** exported for its own test: a hang is the failure mode this whole file guards against */
-export function withTimeout<T>(work: Promise<T>, ms: number, what: string): Promise<T> {
+export function withTimeout<T>(work: FromBridge<T>, ms: number, what: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`${what} meldet sich seit ${ms / 1000}s nicht`)), ms);
-    work.then(
+    Promise.resolve(work).then(
       (value) => {
         clearTimeout(timer);
         resolve(value);
@@ -67,6 +80,10 @@ let givenUp = false;
  * device this matters more than it sounds: every failed open leaves the camera service worse
  * off, and a second run of the same doomed attempt would wreck getUserMedia's chances too.
  */
+export function giveUpOnNativeCamera(): void {
+  givenUp = true;
+}
+
 export function nativeCameraSupported(): Promise<boolean> {
   if (givenUp || !isNative() || !plugin()) return Promise.resolve(false);
   if (!supportCache) {
@@ -93,14 +110,16 @@ export async function openNativeCamera(): Promise<NativeCameraSession> {
 
   // attached before start(), so which lenses exist and what each one did lands in the
   // protocol - that is the only thing left to read when the camera takes the app with it
-  const logging = await native.addListener('log', ({ message }) => cameraLog(`nativ: ${message}`));
+  const logging = await Promise.resolve(
+    native.addListener('log', ({ message }) => cameraLog(`nativ: ${message}`)),
+  );
 
   let opened: { physicalCameraId?: string };
   try {
     opened = await withTimeout(native.start(), START_TIMEOUT_MS, 'Die Kamera');
   } catch (cause) {
     givenUp = true; // see nativeCameraSupported: a second attempt only damages the camera further
-    await logging.remove();
+    await removeQuietly(logging);
     await native.stop().catch(() => undefined);
     throw cause;
   }
@@ -108,12 +127,13 @@ export async function openNativeCamera(): Promise<NativeCameraSession> {
   const handles: Listener[] = [logging];
   let closed = false;
 
-  function listen(pending: Promise<Listener>): () => void {
+  function listen(source: FromBridge<Listener>): () => void {
+    const pending = Promise.resolve(source);
     void pending.then((handle) => {
-      if (closed) void handle.remove();
+      if (closed) void removeQuietly(handle);
       else handles.push(handle);
     });
-    return () => void pending.then((handle) => handle.remove());
+    return () => void pending.then(removeQuietly);
   }
 
   return {
@@ -131,8 +151,13 @@ export async function openNativeCamera(): Promise<NativeCameraSession> {
     async close() {
       if (closed) return;
       closed = true;
-      await Promise.all(handles.map((handle) => handle.remove().catch(() => undefined)));
-      await native.stop();
+      try {
+        await Promise.all(handles.map(removeQuietly));
+      } finally {
+        // the camera has to be let go whatever else went wrong: while the plugin holds it,
+        // getUserMedia cannot have it either and answers NotReadableError
+        await native.stop();
+      }
     },
   };
 }

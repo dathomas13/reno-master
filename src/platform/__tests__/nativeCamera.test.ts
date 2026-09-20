@@ -96,6 +96,29 @@ describe('openNativeCamera', () => {
     expect(lines.some((line) => line.includes('nativ: Linse 2: 4080×3060'))).toBe(true);
   });
 
+  it('copes with a plugin that hands the handle back directly instead of as a promise', async () => {
+    // what Capacitor actually does on the device: addListener returns the handle itself and
+    // remove() returns nothing. Treating either as a promise threw, and the throw inside
+    // close() meant stop() never ran - the camera stayed open and getUserMedia got nothing.
+    const remove = vi.fn();
+    const stop = vi.fn().mockResolvedValue(undefined);
+    stubCapacitor({
+      start: vi.fn().mockResolvedValue({}),
+      stop,
+      addListener: vi.fn(() => ({ remove })),
+    });
+
+    const session = await openNativeCamera();
+    const offFrame = session.onFrame(() => {});
+    offFrame();
+    await session.close();
+
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalled();
+  });
+
+  // last in the file on purpose: a failed open disables the native path for the whole run,
+  // which is module state the tests above would then see
   it('lets go of the plugin when the camera never opens', async () => {
     const stop = vi.fn().mockResolvedValue(undefined);
     const remove = vi.fn().mockResolvedValue(undefined);

@@ -8,6 +8,22 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.32.4 – Das Bild bleibt jetzt stehen
+
+Die Rückkamera hat beim letzten Mal zum ersten Mal ein Bild geliefert – Autofokus und
+Bildstabilisator abzuschalten war offenbar der Punkt. Weggerissen hat es dann ein Fehler in
+der App selbst, eine Zehntelsekunde später: die Kamera-Ansicht stolperte über die Art, wie das
+Gerät ihre Anmeldungen zurückgibt, und schaltete sofort auf den alten Weg zurück. Weil die
+Kamera dabei nicht richtig losgelassen wurde, fand auch der alte Weg nichts mehr – daher
+„Gerät nicht gefunden“ direkt danach.
+
+Beides ist behoben. Die Kamera wird jetzt in jedem Fall wieder freigegeben, auch wenn etwas
+anderes schiefgeht, und ein gescheiterter Versuch bleibt für den Rest der Sitzung gescheitert,
+statt die Gerätekamera noch einmal anzufassen.
+
+Damit sollte die Vorschau zum ersten Mal wirklich stehen bleiben. Ob sie das über die
+kritischen zwei Sekunden hinaus tut, zeigt erst der Gebrauch.
+
 ## 0.32.3 – Nichts im Objektiv darf sich mehr bewegen
 
 Die Diagnose vom letzten Mal hat die bisherige Annahme umgeworfen: Es ist nicht die eine

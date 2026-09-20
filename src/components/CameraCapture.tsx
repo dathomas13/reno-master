@@ -2,7 +2,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { describeTrack, openCamera, type CameraOptions } from '@/platform/camera';
 import { beginCameraSession, cameraLog, endCameraSession } from '@/platform/cameraLog';
 import { isNative } from '@/platform/index';
-import { nativeCameraSupported, openNativeCamera, type NativeCameraSession } from '@/platform/nativeCamera';
+import {
+  giveUpOnNativeCamera,
+  nativeCameraSupported,
+  openNativeCamera,
+  type NativeCameraSession,
+} from '@/platform/nativeCamera';
 
 interface CameraCaptureProps {
   options: CameraOptions;
@@ -276,6 +281,11 @@ function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCapturePr
         if (!active) return;
         const message = cause instanceof Error ? cause.message : String(cause);
         cameraLog(`✖ native Kamera scheitert, wechsle auf getUserMedia: ${message}`);
+        // whatever went wrong, it will go wrong again this run - and each attempt leaves the
+        // camera service worse off for the browser path that has to carry us instead
+        giveUpOnNativeCamera();
+        void sessionRef.current?.close();
+        sessionRef.current = null;
         onFallback();
       });
 

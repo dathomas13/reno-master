@@ -25,7 +25,8 @@ vi.mock('@/platform/camera', async (importOriginal) => {
 
 const nativeCameraSupported = vi.hoisted(() => vi.fn());
 const openNativeCamera = vi.hoisted(() => vi.fn());
-vi.mock('@/platform/nativeCamera', () => ({ nativeCameraSupported, openNativeCamera }));
+const giveUpOnNativeCamera = vi.hoisted(() => vi.fn());
+vi.mock('@/platform/nativeCamera', () => ({ nativeCameraSupported, openNativeCamera, giveUpOnNativeCamera }));
 
 const options: CameraOptions = { lockZoom: false, fixedFocus: false, resolution: 'auto' };
 
@@ -34,6 +35,7 @@ beforeEach(() => {
   openCamera.mockReset();
   nativeCameraSupported.mockReset().mockResolvedValue(false);
   openNativeCamera.mockReset();
+  giveUpOnNativeCamera.mockReset();
 });
 
 afterEach(() => {
@@ -124,5 +126,7 @@ describe('CameraCapture', () => {
     render(<CameraCapture options={options} onCapture={vi.fn()} onClose={vi.fn()} />);
 
     await waitFor(() => expect(openCamera).toHaveBeenCalledWith(options));
+    // and it stays on the browser path for the rest of the run
+    expect(giveUpOnNativeCamera).toHaveBeenCalled();
   });
 });
