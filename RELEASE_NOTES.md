@@ -8,6 +8,14 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.31.3 – Kamera meldet sich ab statt einzufrieren
+
+Wenn die Rückkamera-Linse trotz der Absturz-Versuche mittendrin abschaltet, zeigt die
+Kamera-Ansicht das jetzt sofort als Fehler an, statt weiter ein eingefrorenes Bild mit
+aktivem Auslöser zu zeigen. Außerdem merkt sich die App eine ausgewählte Linse nicht mehr
+stur: ist sie beim nächsten Öffnen nicht mehr auffindbar, wechselt die App von selbst auf
+die automatische Auswahl, statt jedes Mal mit einer Fehlermeldung abzubrechen.
+
 ## 0.31.2 – Kamera-Diagnose
 
 Die gefundenen Linsen bleiben jetzt gespeichert; „Kameras suchen“ ist nur noch nötig, wenn

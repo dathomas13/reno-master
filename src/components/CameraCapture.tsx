@@ -51,14 +51,26 @@ export function CameraCapture({ options, onCapture, onClose }: CameraCaptureProp
         streamRef.current = stream;
         const track = stream.getVideoTracks()[0];
         if (track) {
+          const onEnded = () => {
+            if (!active) return;
+            setReady(false);
+            setError('Die Kamera hat die Verbindung beendet (Linse abgestürzt?).');
+          };
           const onTrack = (name: string) => () => {
             cameraLog(`Spur ${name} bei ${elapsed()}: ${describeTrack(track)}`);
             refreshStatus(track);
+            if (name === 'ended') onEnded();
           };
           for (const name of ['mute', 'unmute', 'ended'] as const) {
             const handler = onTrack(name);
             track.addEventListener(name, handler);
             cleanups.push(() => track.removeEventListener(name, handler));
+          }
+          // some broken lenses hand back a track that is already 'ended' on arrival, before
+          // any listener could catch the transition - the state itself is the only signal then
+          if (track.readyState === 'ended') {
+            cameraLog(`Spur bereits beendet bei ${elapsed()}: ${describeTrack(track)}`);
+            onEnded();
           }
         }
         if (video) {
