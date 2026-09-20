@@ -20,6 +20,8 @@ export interface NativeCamFrame {
 /** the plugin tries one lens after another, so opening is allowed to take a few seconds */
 const START_TIMEOUT_MS = 15000;
 const CAPTURE_TIMEOUT_MS = 5000;
+/** the full table is a dozen configurations at several seconds each */
+const DIAGNOSIS_TIMEOUT_MS = 240000;
 
 /**
  * On the device Capacitor hands the listener handle back directly, not as a promise, and
@@ -39,6 +41,7 @@ interface NativeCamPlugin {
   start(): Promise<{ physicalCameraId?: string }>;
   capture(): Promise<{ base64: string; mime: string; width: number; height: number }>;
   stop(): Promise<void>;
+  diagnose(): Promise<void>;
   addListener(event: 'frame', handler: (frame: NativeCamFrame) => void): FromBridge<Listener>;
   addListener(event: 'error', handler: (error: { message: string }) => void): FromBridge<Listener>;
   addListener(event: 'log', handler: (entry: { message: string }) => void): FromBridge<Listener>;
@@ -93,6 +96,24 @@ export function nativeCameraSupported(): Promise<boolean> {
       .catch(() => false);
   }
   return supportCache;
+}
+
+/**
+ * Runs the plugin's whole table of camera configurations once and lets every line of it land
+ * in the camera protocol. Minutes long, and it deliberately hammers the camera, so it only
+ * runs when the user presses the button in the settings.
+ */
+export async function runNativeCameraDiagnosis(): Promise<void> {
+  const native = plugin();
+  if (!native) throw new Error('Kein Zugriff auf die native Kamera');
+  const logging = await Promise.resolve(
+    native.addListener('log', ({ message }) => cameraLog(`nativ: ${message}`)),
+  );
+  try {
+    await withTimeout(native.diagnose(), DIAGNOSIS_TIMEOUT_MS, 'Die Vollprüfung');
+  } finally {
+    await removeQuietly(logging);
+  }
 }
 
 export interface NativeCameraSession {

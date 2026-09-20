@@ -8,6 +8,26 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.33.0 – Alles durchtesten, auf einmal
+
+Auch klein und langsam hat nichts geändert: die Rückkamera bricht nach knapp zwei Sekunden ab,
+egal wie wenig man von ihr verlangt. Dass die Zeit dabei immer gleich bleibt, spricht gegen
+Überlastung und eher für etwas, das nach zwei Sekunden einmalig passiert.
+
+Statt weiter eine Vermutung pro Fassung zu prüfen, steht unter Einstellungen → Kamera →
+Diagnose jetzt der Knopf **„Alles durchtesten"**. Er probiert in einem Durchgang jede Kamera
+des Geräts in jeder Betriebsart durch – auch die Frontkamera als Gegenprobe und, erstmals, die
+Betriebsart, in der die Bilder direkt an den Bildschirm gehen statt durch den Arbeitsspeicher
+der App. Genau das ist der Unterschied zu Samsungs eigener Kamera-App und bisher nie getestet
+worden. Vorher schreibt er auf, was jede Kamera über sich selbst meldet.
+
+Das dauert gut eine Minute, belastet die Kamera absichtlich und ist zum Einschicken gedacht:
+danach Protokoll kopieren. Eine Runde statt sechs.
+
+Solange das offen ist: Fotos gehen zuverlässig über die Systemkamera oder Expert RAW und
+danach die Galerie-Auswahl im Eintrag. Wer die Kamera-Ansicht der App nicht braucht, schaltet
+sie unter Einstellungen → Kamera einfach ab.
+
 ## 0.32.5 – Die Kamera so langsam wie möglich
 
 Fokus und Bildstabilisator waren es nicht – abgeschaltet hat die Kamera trotzdem nach zwei
