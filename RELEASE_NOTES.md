@@ -8,6 +8,20 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.32.5 – Die Kamera so langsam wie möglich
+
+Fokus und Bildstabilisator waren es nicht – abgeschaltet hat die Kamera trotzdem nach zwei
+Sekunden aufgegeben. Bleibt als Erklärung die Stromversorgung der Kamera-Platine, und darauf
+kann eine App nur auf eine Art antworten: weniger verlangen. In allen bisherigen Protokollen
+lief die Kamera mit 60 Bildern pro Sekunde, doppelt so schnell wie eine normale Kamera-App
+anfordert. Diese Fassung stellt die langsamste Bildrate ein, die der Sensor anbietet, und
+beginnt mit einem kleinen Bild; größer wird es erst, wenn das kleine durchhält.
+
+Ob das reicht, ist offen. Falls nicht, ist der verlässliche Weg für Fotos weiterhin: mit der
+Systemkamera oder Expert RAW aufnehmen und das Bild danach aus der Galerie in den Eintrag
+übernehmen – das funktioniert unabhängig von diesem ganzen Kapitel. Die Fehlermeldung der
+Kamera-Ansicht sagt das jetzt auch so.
+
 ## 0.32.4 – Das Bild bleibt jetzt stehen
 
 Die Rückkamera hat beim letzten Mal zum ersten Mal ein Bild geliefert – Autofokus und

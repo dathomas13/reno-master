@@ -25,6 +25,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Base64;
+import android.util.Range;
 import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
@@ -47,28 +48,29 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Camera preview and capture over Camera2, pinned to one physical sensor.
+ * Camera preview and capture over Camera2, run as gently as the sensor allows.
  *
- * Why this exists: see platform/camera.ts. Samsung's logical rear camera switches between
- * its physical sensors on its own and takes the camera service down doing so, and no web
- * API can reach past the logical camera to stop it. Camera2 can: since Android 9,
- * OutputConfiguration#setPhysicalCameraId ties an output to one named sensor, so the
- * logical camera never arbitrates.
+ * Why this exists, after four rounds of device logs corrected the premise twice:
  *
- * What the first device run taught us, and what this code now does about it:
+ * The rear camera of this S24 always dies the same way - about two seconds of streaming,
+ * then ERROR_CAMERA_DEVICE - and the device logs ruled out one explanation after another.
+ * Not the logical camera switching to a broken lens: the main lens dies exactly like the
+ * ultra-wide. Not the focus motor or the stabiliser: switching both off changed nothing,
+ * and the owner focuses happily in Samsung's own Expert RAW. Not the lens module: it has
+ * been replaced, and the fault came straight back.
  *
- * - Picking the sensor with the longest focal length picked the telephoto, which died with
- *   ERROR_CAMERA_DEVICE. The sensors are now tried largest-pixel-array first (the main
- *   lens on any phone) and, if that one fails, the next one, down to running with no
- *   pinning at all. On a phone with a physically broken lens - which this one has - that
- *   ladder is the whole point.
- * - A full-resolution JPEG stream pinned to a physical sensor is outside the stream
- *   combinations Android guarantees for physical streams (1080p). There is now a single
- *   YUV stream at 1080p or below, used for both the preview and the photo.
- * - "Session configured" is not "camera works": the first run configured fine and died
- *   without ever delivering a frame. start() therefore only resolves once a frame has
- *   actually arrived, and a sensor that goes quiet for FIRST_FRAME_TIMEOUT_MS counts as
- *   failed and hands over to the next one.
+ * What is left is the camera board's power, which is also the owner's own reading of it -
+ * and that is something software can only respond to in one way: ask the sensor to do less.
+ * Every log so far shows the stream negotiated at 60 frames a second, twice what an
+ * ordinary camera app requests. So this plugin now pins the slowest fixed frame rate the
+ * sensor offers and starts at a small stream size, moving up one step only if the small one
+ * survives (see sensorCandidates). Whether that helps is an open question the next device
+ * log answers; if it does not, no app is going to drive this camera.
+ *
+ * What Camera2 buys over getUserMedia is exactly this: a browser negotiates frame rate and
+ * sensor settings for you, a capture request states them. Physical-sensor pinning, which is
+ * what this plugin was originally built for, is gone - it died faster and never delivered a
+ * frame, while opening the whole camera at least streams.
  *
  * Everything it tries goes to JS as a "log" event and lands in the camera protocol, because
  * that protocol is all there is to read after the camera takes the app down with it.
@@ -81,9 +83,6 @@ public class NativeCamPlugin extends Plugin {
 
     public static final String CAMERA = "camera";
 
-    /** physical streams are only guaranteed up to 1080p, and this hardware is fragile enough */
-    private static final int MAX_LONG_EDGE = 1920;
-    private static final int MAX_SHORT_EDGE = 1080;
     private static final long FIRST_FRAME_TIMEOUT_MS = 2500;
     /** every failed open leaves the camera service worse off, so it gets a moment to settle */
     private static final long RETRY_PAUSE_MS = 600;
@@ -108,9 +107,9 @@ public class NativeCamPlugin extends Plugin {
     private volatile Runnable watchdog;
 
     private String logicalCameraId;
-    private List<String> candidates;
+    private List<Attempt> candidates;
     private int candidateIndex;
-    private volatile String activeSensorId;
+    private volatile Attempt activeAttempt;
     private volatile CameraCharacteristics activeCharacteristics;
     private volatile int frameRotation;
 
@@ -125,7 +124,7 @@ public class NativeCamPlugin extends Plugin {
         JSObject result = new JSObject();
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
             result.put("supported", false);
-            result.put("reason", "braucht Android 9 oder neuer für die physische Linsen-Bindung");
+            result.put("reason", "braucht Android 9 oder neuer");
             call.resolve(result);
             return;
         }
@@ -165,7 +164,7 @@ public class NativeCamPlugin extends Plugin {
             return;
         }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
-            call.reject("Kamera2 mit physischer Linsen-Bindung braucht Android 9 oder neuer");
+            call.reject("Die eigene Kamera braucht Android 9 oder neuer");
             return;
         }
         CameraManager manager = manager();
@@ -225,12 +224,12 @@ public class NativeCamPlugin extends Plugin {
      * getUserMedia found nothing. Two attempts is all this hardware gets.
      *
      * The browser path, for all its faults, does deliver pictures for about two seconds before
-     * the camera dies - pinning a physical sensor died faster and delivered none at all. So the
-     * first attempt is the same whole-camera open the browser does, and what is new about it is
-     * in the request: focus motor and stabiliser switched off (see configureSession). Only if
-     * that still dies is the main lens pinned as a second try.
+     * the camera dies, and the load it is under is the last thing software can still turn down
+     * (see the note at the top of the class). So the attempts differ only in stream size, the
+     * smallest first, and both run at the slowest frame rate the sensor offers. The lens
+     * inventory is still logged - it costs nothing and says what the hardware reports.
      */
-    private List<String> sensorCandidates(CameraManager manager, CameraCharacteristics logicalChars) {
+    private List<Attempt> sensorCandidates(CameraManager manager, CameraCharacteristics logicalChars) {
         List<String> physical = new ArrayList<>(logicalChars.getPhysicalCameraIds());
         Collections.sort(physical, new Comparator<String>() {
             @Override
@@ -241,28 +240,43 @@ public class NativeCamPlugin extends Plugin {
         for (String id : physical) {
             emitLog("Linse " + id + ": " + describeSensor(manager, id));
         }
-        if (physical.isEmpty()) emitLog("Kamera " + logicalCameraId + " nennt keine einzelnen Linsen");
+        emitLog("Bildraten: " + describeFpsRanges(logicalChars));
 
-        List<String> ordered = new ArrayList<>();
-        ordered.add(null);
-        if (!physical.isEmpty()) ordered.add(physical.get(0));
+        List<Attempt> ordered = new ArrayList<>();
+        ordered.add(new Attempt(640, 480));
+        ordered.add(new Attempt(1280, 720));
         return ordered;
+    }
+
+    /** one go at the camera, at a given load - see sensorCandidates for why load is the axis */
+    private static final class Attempt {
+        final int longEdge;
+        final int shortEdge;
+
+        Attempt(int longEdge, int shortEdge) {
+            this.longEdge = longEdge;
+            this.shortEdge = shortEdge;
+        }
+
+        @Override
+        public String toString() {
+            return longEdge + "×" + shortEdge;
+        }
     }
 
     @SuppressLint("MissingPermission") // start() only gets here with the permission granted
     private void tryNextCandidate(CameraManager manager) {
         if (candidates == null || candidateIndex >= candidates.size()) {
-            emitLog("keine Linse dieser Kamera liefert ein Bild");
-            giveUp("Keine Linse dieser Kamera liefert ein Bild");
+            emitLog("auch die sparsamste Einstellung hält die Kamera nicht am Leben");
+            giveUp("Die Kamera dieses Geräts bricht auch bei kleinster Last ab");
             return;
         }
-        String sensorId = candidates.get(candidateIndex++);
-        activeSensorId = sensorId;
+        Attempt attempt = candidates.get(candidateIndex++);
+        activeAttempt = attempt;
         streaming.set(false);
         emitLog("versuche " + describeActive());
         try {
-            CameraCharacteristics chars = manager.getCameraCharacteristics(
-                sensorId != null ? sensorId : logicalCameraId);
+            CameraCharacteristics chars = manager.getCameraCharacteristics(logicalCameraId);
             activeCharacteristics = chars;
             StreamConfigurationMap map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             Size[] sizes = map == null ? null : map.getOutputSizes(ImageFormat.YUV_420_888);
@@ -270,7 +284,7 @@ public class NativeCamPlugin extends Plugin {
                 failCandidate(manager, "nennt keine Auflösung");
                 return;
             }
-            Size size = pickStreamSize(sizes);
+            Size size = pickStreamSize(sizes, attempt);
             frameRotation = computeRotation(chars);
             emitLog(describeActive() + ": Strom " + size.getWidth() + "×" + size.getHeight()
                 + ", Drehung " + frameRotation + "°");
@@ -309,7 +323,6 @@ public class NativeCamPlugin extends Plugin {
 
     private void configureSession(CameraManager manager) throws CameraAccessException {
         OutputConfiguration output = new OutputConfiguration(previewReader.getSurface());
-        if (activeSensorId != null) output.setPhysicalCameraId(activeSensorId);
 
         SessionConfiguration config = new SessionConfiguration(
             SessionConfiguration.SESSION_REGULAR,
@@ -359,6 +372,17 @@ public class NativeCamPlugin extends Plugin {
         CameraCharacteristics chars = activeCharacteristics;
         if (chars == null) return;
         List<String> applied = new ArrayList<>();
+
+        // The frame rate is the biggest single draw on the sensor, and the browser path was
+        // negotiating 60/s - twice what a normal camera app asks for. On a phone whose camera
+        // board has a marginal supply (this one: lens already replaced, fault came straight
+        // back, Samsung's own app runs fine at 30) that is the most plausible thing left that
+        // software can turn down. Slowest range the sensor offers, fixed so it cannot ramp.
+        Range<Integer> fps = slowestFpsRange(chars);
+        if (fps != null) {
+            builder.set(CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, fps);
+            applied.add("Bildrate " + fps.getLower() + "–" + fps.getUpper() + "/s");
+        }
 
         if (supportsAfMode(chars, CameraMetadata.CONTROL_AF_MODE_OFF)) {
             builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
@@ -486,9 +510,7 @@ public class NativeCamPlugin extends Plugin {
         startCall = null;
         if (call == null) return;
         if (ok) {
-            JSObject result = new JSObject();
-            if (activeSensorId != null) result.put("physicalCameraId", activeSensorId);
-            call.resolve(result);
+            call.resolve(new JSObject());
         } else {
             call.reject(reason == null ? "Kamera konnte nicht geöffnet werden" : reason);
         }
@@ -651,17 +673,43 @@ public class NativeCamPlugin extends Plugin {
         }
     }
 
-    private Size pickStreamSize(Size[] sizes) {
+    private Size pickStreamSize(Size[] sizes, Attempt attempt) {
         Size best = null;
         Size smallest = sizes[0];
         for (Size size : sizes) {
             if (area(size) < area(smallest)) smallest = size;
             int longEdge = Math.max(size.getWidth(), size.getHeight());
             int shortEdge = Math.min(size.getWidth(), size.getHeight());
-            if (longEdge > MAX_LONG_EDGE || shortEdge > MAX_SHORT_EDGE) continue;
+            if (longEdge > attempt.longEdge || shortEdge > attempt.shortEdge) continue;
             if (best == null || area(size) > area(best)) best = size;
         }
         return best != null ? best : smallest;
+    }
+
+    /** the slowest fixed rate the sensor offers - see holdEverythingStill for why */
+    private Range<Integer> slowestFpsRange(CameraCharacteristics chars) {
+        Range<Integer>[] ranges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+        if (ranges == null || ranges.length == 0) return null;
+        Range<Integer> best = null;
+        for (Range<Integer> range : ranges) {
+            if (best == null
+                || range.getUpper() < best.getUpper()
+                // same ceiling: take the one that cannot speed up
+                || (range.getUpper().equals(best.getUpper()) && range.getLower() > best.getLower())) {
+                best = range;
+            }
+        }
+        return best;
+    }
+
+    private String describeFpsRanges(CameraCharacteristics chars) {
+        Range<Integer>[] ranges = chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+        if (ranges == null || ranges.length == 0) return "nennt keine";
+        List<String> parts = new ArrayList<>();
+        for (Range<Integer> range : ranges) {
+            parts.add(range.getLower() + "–" + range.getUpper());
+        }
+        return join(parts);
     }
 
     private long area(Size size) {
@@ -693,7 +741,8 @@ public class NativeCamPlugin extends Plugin {
     }
 
     private String describeActive() {
-        return activeSensorId == null ? "ohne feste Linse" : "Linse " + activeSensorId;
+        Attempt attempt = activeAttempt;
+        return attempt == null ? "Kamera" : "bis " + attempt;
     }
 
     private CameraManager manager() {
@@ -769,7 +818,7 @@ public class NativeCamPlugin extends Plugin {
         if (capture != null) capture.reject("Kamera wurde geschlossen");
         finishStart(false, "Kamera wurde geschlossen");
         candidates = null;
-        activeSensorId = null;
+        activeAttempt = null;
         activeCharacteristics = null;
         stopBackgroundThread();
     }

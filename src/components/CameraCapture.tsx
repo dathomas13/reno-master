@@ -70,7 +70,8 @@ function CameraShell({
             <p>
               {error}
               <br />
-              Unter Einstellungen → Kamera lässt sich eine andere Linse auswählen.
+              Fotos lassen sich auch mit der Systemkamera aufnehmen und danach aus der Galerie übernehmen.
+              Unter Einstellungen → Kamera steht, was das Gerät beim Öffnen gemeldet hat.
             </p>
           </div>
         ) : (
