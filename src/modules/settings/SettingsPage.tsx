@@ -7,6 +7,7 @@ import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
 import { cameraOptionsFromSettings, listCameraDevices } from '@/platform/camera';
 import { clearCameraLog, noteUnfinishedCameraSession, readCameraLog } from '@/platform/cameraLog';
+import { nativeCameraSupported } from '@/platform/nativeCamera';
 import { CameraCapture } from '@/components/CameraCapture';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
@@ -38,12 +39,14 @@ export default function SettingsPage() {
   const [cameraTestShot, setCameraTestShot] = useState<{ url: string; width: number; height: number; bytes: number } | null>(null);
   const [cameraLogLines, setCameraLogLines] = useState<string[]>([]);
   const [cameraLogCopied, setCameraLogCopied] = useState(false);
+  const [nativeCamera, setNativeCamera] = useState(false);
   const cameraOptions = useMemo(() => cameraOptionsFromSettings(settings), [settings]);
 
   useEffect(() => {
     // a camera session that never closed means the app died with the camera open
     noteUnfinishedCameraSession();
     setCameraLogLines(readCameraLog());
+    void nativeCameraSupported().then(setNativeCamera);
   }, []);
 
   useEffect(() => {
@@ -261,6 +264,14 @@ export default function SettingsPage() {
           </label>
           {settings.useCustomCamera && (
             <>
+              {nativeCamera && (
+                <p className="text-sm text-muted mb-3">
+                  Diese App-Fassung spricht die Kamera direkt an und sucht sich die Linse selbst – von der
+                  Hauptlinse abwärts, bis eine ein Bild liefert. Die Liste hier und die beiden Schalter
+                  darunter gelten nur für die Browser-Fassung. Welche Linse gewählt wurde, steht in der
+                  Diagnose.
+                </p>
+              )}
               <button
                 type="button"
                 className="btn mb-3"

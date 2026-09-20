@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { nativeCameraSupported, openNativeCamera } from '../nativeCamera';
+import { nativeCameraSupported, openNativeCamera, withTimeout } from '../nativeCamera';
 
 function stubCapacitor(plugin: Record<string, unknown> | undefined) {
   vi.stubGlobal('Capacitor', {
@@ -10,6 +10,22 @@ function stubCapacitor(plugin: Record<string, unknown> | undefined) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe('withTimeout', () => {
+  it('hands the value through when the work answers', async () => {
+    await expect(withTimeout(Promise.resolve(42), 1000, 'Die Kamera')).resolves.toBe(42);
+  });
+
+  it('gives up instead of waiting forever when nothing answers', async () => {
+    await expect(withTimeout(new Promise(() => {}), 5, 'Die Kamera')).rejects.toThrow(/meldet sich/);
+  });
+
+  it('passes the original failure on', async () => {
+    await expect(withTimeout(Promise.reject(new Error('Keine Linse')), 1000, 'Die Kamera')).rejects.toThrow(
+      'Keine Linse',
+    );
+  });
 });
 
 describe('nativeCameraSupported', () => {
@@ -61,5 +77,36 @@ describe('openNativeCamera', () => {
     await session.close();
     await session.close(); // idempotent - a second close is not an error
     expect(stop).toHaveBeenCalledTimes(1);
+  });
+
+  it('writes what the plugin reports into the protocol, from before the camera opens', async () => {
+    const lines: string[] = [];
+    const start = vi.fn().mockResolvedValue({});
+    const addListener = vi.fn((event: string, handler: (payload: { message: string }) => void) => {
+      // the plugin reports its lens inventory while start() is still running
+      if (event === 'log') handler({ message: 'Linse 2: 4080×3060' });
+      return Promise.resolve({ remove: vi.fn().mockResolvedValue(undefined) });
+    });
+    stubCapacitor({ start, stop: vi.fn().mockResolvedValue(undefined), addListener });
+    localStorage.clear();
+
+    await openNativeCamera();
+
+    lines.push(...JSON.parse(localStorage.getItem('reno.cameraLog') ?? '[]'));
+    expect(lines.some((line) => line.includes('nativ: Linse 2: 4080×3060'))).toBe(true);
+  });
+
+  it('lets go of the plugin when the camera never opens', async () => {
+    const stop = vi.fn().mockResolvedValue(undefined);
+    const remove = vi.fn().mockResolvedValue(undefined);
+    stubCapacitor({
+      start: vi.fn().mockRejectedValue(new Error('Keine Linse dieser Kamera liefert ein Bild')),
+      stop,
+      addListener: vi.fn(() => Promise.resolve({ remove })),
+    });
+
+    await expect(openNativeCamera()).rejects.toThrow('Keine Linse');
+    expect(remove).toHaveBeenCalled();
+    expect(stop).toHaveBeenCalled();
   });
 });

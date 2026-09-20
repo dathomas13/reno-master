@@ -33,17 +33,31 @@ sichtbaren Kompositions-Fehlfunktion.
 | Methode | Zweck |
 |---|---|
 | `isSupported()` | `{ supported, reason? }` - Android 9+ und eine Rückkamera vorausgesetzt |
-| `start()` | öffnet die Rückkamera, bindet Vorschau und Aufnahme an denselben physischen Sensor (wenn vorhanden), startet die Vorschau. `{ physicalCameraId? }` |
-| `capture()` | eine Aufnahme vom selben Sensor wie die Vorschau, als JPEG. `{ base64, mime, width, height }` |
-| `stop()` | schließt Sitzung, Gerät und beide `ImageReader` |
+| `start()` | probiert die Linsen der Rückkamera der Reihe nach durch und löst erst auf, wenn eine davon wirklich ein Bild geliefert hat. `{ physicalCameraId? }` |
+| `capture()` | das nächste Bild des laufenden Stroms, in voller Qualität. `{ base64, mime, width, height }` |
+| `stop()` | schließt Sitzung, Gerät und `ImageReader` |
 | Ereignis `frame` | `{ base64, width, height }`, etwa alle 120 ms |
-| Ereignis `error` | `{ message }`, wenn die Kamera von sich aus die Verbindung beendet |
+| Ereignis `error` | `{ message }`, wenn eine laufende Kamera von sich aus aufgibt |
+| Ereignis `log` | `{ message }` - jeder Schritt der Linsen-Suche, landet im Kamera-Protokoll |
 
-Welcher physische Sensor gewählt wird: unter den Sensoren, die `getPhysicalCameraIds()` der
-logischen Kamera nennt, der mit der größten Brennweite - das ist auf einem Telefon ohne
-Teleobjektiv zuverlässig die Hauptlinse, nie die Ultraweitwinkel-Linse, die den Absturz
-auslöst. Gibt es keine logische Kamera (nur ein Sensor hinten), läuft die Aufnahme normal
-weiter, nur ohne `physicalCameraId` im Ergebnis.
+## Was der erste Gerätelauf gelehrt hat
+
+Die erste Fassung wählte die Linse mit der größten Brennweite, band ein Vollauflösungs-JPEG
+daran und meldete „bereit“, sobald die Sitzung stand. Auf dem S24 hieß das: Teleobjektiv,
+`ERROR_CAMERA_DEVICE` nach 0,8 s, und kein einziges Bild. Daraus drei Änderungen:
+
+- **Reihenfolge statt Rateschluss.** Die Sensoren werden nach Sensorfläche sortiert - die
+  Hauptlinse zuerst - und einer nach dem anderen probiert, zuletzt ganz ohne Bindung. Auf
+  einem Gerät mit einer physisch defekten Linse, wie es hier der Fall ist, ist diese Leiter
+  der eigentliche Sinn der Sache.
+- **Ein Strom, höchstens 1080p.** Für physische Ströme garantiert Android nur Größen bis
+  1080p; ein Vollauflösungs-JPEG daran ist außerhalb dieser Zusage. Es gibt deshalb genau
+  einen YUV-Strom, der Vorschau *und* Foto trägt. Das kostet Auflösung (rund 2 Megapixel
+  statt 50) und ist der Preis dafür, dass die Kamera überhaupt läuft - lässt sich später
+  wieder anheben, wenn das Gerät sich als stabil erweist.
+- **„Bereit“ heißt: es kommen Bilder.** Eine konfigurierte Sitzung sagt nichts. `start()`
+  löst erst mit dem ersten wirklich gelieferten Bild auf; bleibt ein Sensor 2,5 s stumm,
+  gilt er als gescheitert und der nächste ist dran.
 
 In Java geschrieben, nicht in Kotlin - aus demselben Grund wie beim `mediastore`-Plugin: das
 Android-Projekt von Capacitor bringt den Kotlin-Gradle-Plugin nicht mit.

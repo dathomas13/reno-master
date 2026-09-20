@@ -8,6 +8,24 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.32.2 – Die Kamera sucht sich die heile Linse selbst
+
+Die erste Fassung der eigenen Kamera hat die falsche Linse erwischt und nach einer Sekunde
+aufgegeben – und danach blieb die Ansicht beim Öffnen einfach hängen. Beides ist behoben: die
+App probiert jetzt die Linsen der Rückkamera der Reihe nach durch, von der Hauptlinse abwärts,
+und zeigt erst dann „bereit“, wenn wirklich ein Bild ankommt. Liefert eine Linse nichts,
+übernimmt nach zweieinhalb Sekunden die nächste; hilft keine, geht es automatisch auf den
+alten Weg zurück statt in eine ewig wartende Ansicht.
+
+Die Fotos dieser Kamera sind vorerst kleiner (Full-HD statt voller Auflösung). Das ist der
+Preis dafür, dass sich eine einzelne Linse überhaupt ansteuern lässt – sobald sie sich als
+stabil erweist, lässt sich das wieder anheben.
+
+Was die Kamera dabei auf deinem Gerät vorfindet und welche Linse sie nimmt, steht jetzt
+Schritt für Schritt in der Diagnose unter Einstellungen → Kamera. Die Linsen-Liste dort gilt
+nur noch für die Browser-Fassung; in der App entscheidet die Kamera selbst, und das steht
+jetzt auch so daneben.
+
 ## 0.32.1 – Eigene Kamera für die APK
 
 Die Rückkamera-Abstürze aus den letzten Fassungen hatten eine Ursache, die sich im Browser
