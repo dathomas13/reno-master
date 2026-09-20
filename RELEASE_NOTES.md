@@ -8,7 +8,7 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
-## 0.32.0 – Eigene Kamera für die APK
+## 0.32.1 – Eigene Kamera für die APK
 
 Die Rückkamera-Abstürze aus den letzten Fassungen hatten eine Ursache, die sich im Browser
 nicht beheben ließ: Samsungs Rückkamera besteht intern aus zwei Linsen, und das Gerät schaltet

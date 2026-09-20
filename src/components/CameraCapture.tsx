@@ -308,7 +308,7 @@ function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCapturePr
   return (
     <CameraShell error={error} status={status} ready={ready} onClose={onClose} onCapture={capture}>
       {frame ? (
-        <img src={frame} alt="" className="w-full h-full object-contain" />
+        <img src={frame} alt="Kamera-Vorschau" className="w-full h-full object-contain" />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-white/60 text-sm">Kamera wird geöffnet…</div>
       )}

@@ -13,6 +13,7 @@ function fakeTrack(readyState: MediaStreamTrack['readyState'] = 'ended') {
     getCapabilities: () => ({}),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
+    stop: vi.fn(),
   } as unknown as MediaStreamTrack;
 }
 
