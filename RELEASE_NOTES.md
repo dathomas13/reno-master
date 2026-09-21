@@ -8,6 +8,17 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.33.2 – Aufräumen hinter der Vollprüfung
+
+An der App ändert sich nichts – der Knopf bleibt weg. Ich habe mir nur angesehen, was an der
+Prüfung eigentlich so gefährlich war, und zwei handfeste Fehler gefunden: Sie hat nach jedem
+Durchlauf die Kamera zwar geschlossen, aber nicht abgewartet, bis das Gerät das bestätigt –
+und dann schon die nächste geöffnet, oft mitten im Abbau einer gerade abgestürzten Kamera.
+Und sie lief nach einem harten Fehler einfach weiter, statt aufzuhören.
+
+Beides ist im Code behoben und aufgeschrieben, damit die Erkenntnis nicht verloren geht. Der
+Code selbst hängt an keiner Schaltfläche mehr und kann von nichts ausgelöst werden.
+
 ## 0.33.1 – „Alles durchtesten“ ist wieder raus
 
 Der Knopf aus der letzten Fassung hat beim Durchlaufen das ganze Telefon neu gestartet. Das
