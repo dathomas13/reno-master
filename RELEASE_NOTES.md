@@ -8,16 +8,13 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
-## 0.39.0 – Adressbuch-Import behoben
+## 0.39.0 – Kontakte überarbeitet
 
-- „Aus dem Adressbuch wählen“ tat manchmal nichts. Fehler werden jetzt angezeigt statt
-  stillschweigend zu verschwinden, mit Diagnose zum Aufklappen direkt im Dialog.
-
-## 0.38.0 – Kontakte überarbeitet
-
-- Rollen eines Kontakts: jetzt mehrere möglich, Auswahl wie beim Tagebuch mit „Rolle
-  hinzufügen“ für neue Rollen.
-- Kontakte lassen sich aus dem Adressbuch bzw. per vCard-Datei importieren.
+- Rollen eines Kontakts: jetzt mehrere möglich, mit „Rolle hinzufügen“ für neue Rollen wie
+  beim Tagebuch.
+- Kontakte lassen sich aus dem Adressbuch oder per vCard-Datei importieren; die
+  Adressbuch-Auswahl zeigt jetzt eine Meldung statt scheinbar nichts zu tun, wenn sie
+  fehlschlägt.
 - Neu: Gesprächsprotokoll je Kontakt – datierte Einträge statt Fließtext in den Notizen.
 
 ## 0.37.2 – Gedrehte Fotos aus der Tagesgalerie behoben
