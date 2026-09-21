@@ -27,31 +27,25 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Tries a matrix of camera configurations one after another and writes down what each did.
  *
- * This restarted the phone once - the whole phone, not the app - and the report that survived
- * it changed the picture completely. The run died on the very first probe: the FRONT camera,
- * the healthy one, at 640x480, with default settings. Not the broken rear camera, not after a
- * cascade of failed opens, but on the first clean touch. The next run, identical except for
- * the buffer format, sailed through that same probe with 130 frames in six seconds.
+ * It answered the question it was built for - see the plugin README for the full table. The
+ * short version: this phone's rear camera 0 is the group of lenses 2, 5 and 6; lens 2 is
+ * broken and never yields a frame; opening the group powers it up too, so the group dies at
+ * about 1.6s whatever is asked of it; and lenses 5 and 6 cannot be opened on their own
+ * ("No camera device with ID 5 available"). There is no configuration left to find.
  *
- * The only thing about that configuration that had never run on this device before was the
- * buffer format: ImageFormat.PRIVATE, which is what an ordinary camera app hands to the
- * display, as opposed to the CPU-readable YUV that this app and the browser have always used.
- * So the suspect is no longer the camera at all - it is the format, on any camera.
+ * It stays because it is the instrument that found that out, and because the same table would
+ * answer the same question on a different device in one run instead of seven releases. Two
+ * things in here are load-bearing and easy to break:
  *
- * Which is why the order here is what it is:
+ * - Everything goes through say(), which puts the line on disk with an fsync BEFORE the thing
+ *   it describes happens. The one run that restarted the phone is readable only because of
+ *   that; localStorage lost every line of the run before it.
+ * - TEST_PRIVATE is off, and it should stay off on this device. PRIVATE buffers on a live
+ *   camera restart the phone - proven by A/B against the same camera in YUV.
  *
- * - checkBuffers() allocates each format with no camera involved whatsoever. If PRIVATE alone
- *   is fatal, four lines prove it and nothing needs to be opened.
- * - The probe list is YUV only, which is what the app does daily and what every surviving log
- *   used. The PRIVATE probes sit behind TEST_PRIVATE, off: the A/B is in (same camera, same
- *   size, same settings - YUV ran 6s and 130 frames, PRIVATE restarted the phone), and every
- *   further run of it costs another reboot for an answer already known.
- * - Every step inside a probe writes what it is about to do before doing it, and a heartbeat
- *   runs while it streams, so a death can be placed to the individual call rather than to a
- *   six-second window.
- *
- * Everything goes through say(), which puts the line on the disk with an fsync before it
- * reaches the live view. A run that takes the device down can still tell us what it was doing.
+ * Teardown is awaited (onClosed), probes are paced, and only ERROR_CAMERA_SERVICE ends a run:
+ * ERROR_CAMERA_DEVICE is the normal outcome here and stopping on it meant never getting past
+ * probe two.
  */
 final class CameraDiagnosis {
 

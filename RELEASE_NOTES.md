@@ -8,6 +8,34 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.35.0 – Die Kamera-Frage ist beantwortet
+
+Der letzte Test hat die Antwort gebracht, und es ist die unerfreuliche: Die gute Linse lässt
+sich nicht einzeln ansprechen. Android liest ihr Datenblatt bereitwillig vor – 4080×3060,
+f/1.8, alles dran – aber beim Öffnen sagt es „Kamera mit der Nummer 5 ist nicht verfügbar“.
+Sie existiert nur als Teil ihrer Gruppe, und in dieser Gruppe steckt die defekte Linse.
+
+Damit ist die Sache vollständig geklärt, und ich höre auf, daran zu bauen:
+
+Die hintere Kamera ist ein Verbund aus drei Linsen. Eine davon ist hinüber – sie liefert
+einzeln geöffnet nie ein Bild und fällt nach einer dreiviertel Sekunde aus, jedes Mal. Wer den
+Verbund öffnet, fährt sie mit hoch, und nach anderthalb Sekunden reißt sie alles mit. Das ist
+unabhängig von Auflösung, Bildrate, Fokus und Stabilisator gemessen worden – auch bei 320×240
+und langsamster Bildrate, also einem Vierzigstel der Datenmenge, stirbt sie genauso schnell.
+Die Frontkamera läuft im selben Test tadellos, sechs Sekunden, 159 Bilder.
+
+Dass Expert RAW funktioniert, passt dazu: Samsungs eigene Apps sprechen die Sensoren über eine
+Schnittstelle an, die anderen Apps nicht offensteht. Der Weg daran vorbei existiert also – nur
+nicht für uns.
+
+**Für dich heißt das praktisch:** Fotos mit Expert RAW oder der Systemkamera aufnehmen und im
+Eintrag über die Galerie-Auswahl übernehmen. Die App schlägt dir dort die Bilder des jeweiligen
+Tages vor, das ist genau dafür gebaut. Wenn dich die Kamera-Ansicht der App nur aufhält,
+schalte sie unter Einstellungen → Kamera ab.
+
+Die Vollprüfung bleibt drin, falls die Kamera je repariert wird – dann sagt ein Durchlauf in
+drei Minuten, ob sie wieder taugt.
+
 ## 0.34.3 – Die Linse einzeln ansprechen, ohne den Verbund
 
 Die vollständige Tabelle ist da, und sie schließt zwei Dinge endgültig aus. Last ist es nicht:

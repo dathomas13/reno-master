@@ -102,6 +102,15 @@ Steht:
   `tools/icon/android/ic_stat_reno.xml`, der APK-Workflow prüft sie. Einstellungen →
   Abend-Erinnerung → „Diagnose“ fragt das Gerät, was es wirklich tut. Details in
   `PLAN.md`, Abschnitt 11.
+- **Die Rückkamera des S24 ist defekt, und zwar unrettbar für jede App.** Kamera 0 ist der
+  Verbund der Linsen 2, 5 und 6; Linse 2 ist hinüber (liefert nie ein Bild, fällt nach ~0,7 s
+  aus), und weil der Verbund sie mit hochfährt, bricht er nach ~1,6 s ab – unabhängig von
+  Auflösung, Bildrate, Fokus und Stabilisator. Die gute Linse einzeln zu öffnen verweigert
+  Android (`No camera device with ID "5" available`). Die vollständige Messreihe steht in
+  `plugins/nativecam/README.md`; **wer die Kamera-Ansicht anfassen will, liest die zuerst und
+  fängt nicht von vorn an.** Fotos laufen über Systemkamera/Expert RAW und die Galerie-Auswahl.
+  Zweiter, unabhängiger Befund: ein `ImageReader` mit `ImageFormat.PRIVATE` an einer laufenden
+  Kamera startet dieses Gerät neu – nicht benutzen.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
