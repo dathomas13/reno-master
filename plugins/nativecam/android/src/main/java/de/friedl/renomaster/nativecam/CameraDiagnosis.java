@@ -27,33 +27,29 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Tries a matrix of camera configurations one after another and writes down what each did.
  *
- * NOTHING CALLS THIS. It is kept deliberately unwired, and here is why.
+ * This restarted the phone once - the whole phone, not the app - and what the report said
+ * afterwards changed the picture completely. The run died on the very first probe: the FRONT
+ * camera, the healthy one, at 640x480, with default settings. Not the broken rear camera, not
+ * after a cascade of failed opens, but on the first clean touch.
  *
- * It was built because guessing one variable per release, on a phone whose rear camera dies
- * about two seconds in whatever you do, had cost six build cycles without converging. Run once
- * on the device, it restarted the phone - not the app, the phone. Only a fault below the
- * operating system does that, so the camera board takes the SoC with it when driven hard, and
- * the button that started this is gone from the app.
+ * The only thing about that configuration that had never run on this device before was the
+ * buffer format: ImageFormat.PRIVATE, which is what an ordinary camera app hands to the
+ * display, as opposed to the CPU-readable YUV that this app and the browser have always used.
+ * So the suspect is no longer the camera at all - it is the format, on any camera.
  *
- * Two mistakes of this class's own made that far more likely than it had to be, and both are
- * fixed here, so that what is left is an honest record rather than a trap:
+ * Which is why the order here is what it is:
  *
- * - Teardown was never awaited. CameraDevice#close only asks; the camera is free when
- *   onClosed says so. The first version implemented no onClosed at all, quit the very thread
- *   it would have arrived on, closed the ImageReader while the camera could still hold buffers
- *   from it, and opened the next camera 1.2 seconds later - regularly while the previous one,
- *   mid-fault, was still coming down. It now waits for onClosed and stops if that never comes.
- * - It marched on after a hard fault. ERROR_CAMERA_DEVICE now ends the whole run, sensor
- *   changes get a long rest, and the service check asks about the camera actually about to be
- *   used rather than about camera 0.
+ * - checkBuffers() allocates each format with no camera involved whatsoever. If PRIVATE alone
+ *   is fatal, four lines prove it and nothing needs to be opened.
+ * - The probe list runs YUV on every camera first - that is what the app does daily and what
+ *   every surviving log used - and only then PRIVATE, ending with the exact configuration that
+ *   took the device down, which the skip logic will drop anyway on the run after it dies.
+ * - Every step inside a probe writes what it is about to do before doing it, and a heartbeat
+ *   runs while it streams, so a death can be placed to the individual call rather than to a
+ *   six-second window.
  *
- * The one thing it would still be worth learning, if this is ever run again on healthier
- * hardware: every attempt so far, browser and plugin alike, pulled frames into readable memory
- * (YUV), while a normal camera app hands them to the display (PRIVATE). That untested
- * difference would explain why Samsung's own Expert RAW runs fine on the same phone.
- *
- * Before wiring this to anything, read the two points above and assume the hardware you are
- * pointing it at can be taken down by it.
+ * Everything goes through say(), which puts the line on the disk with an fsync before it
+ * reaches the live view. A run that takes the device down can still tell us what it was doing.
  */
 final class CameraDiagnosis {
 
@@ -114,6 +110,8 @@ final class CameraDiagnosis {
             describe(id);
         }
 
+        checkBuffers();
+
         List<Probe> probes = buildProbes(ids);
         say("──────── " + probes.size() + " Durchläufe, je bis zu " + (PROBE_MS / 1000) + "s");
         int number = 0;
@@ -145,6 +143,33 @@ final class CameraDiagnosis {
             Thread.sleep(PAUSE_MS);
         }
         say("════════ Vollprüfung fertig");
+    }
+
+    /**
+     * Allocates each buffer format on its own, with no camera involved at all.
+     *
+     * The run that restarted the phone died on the very first probe - the front camera, the
+     * healthy one, in PRIVATE format. That rules out the broken rear camera and rules out any
+     * cascade, and leaves the format itself as the suspect. If merely making a PRIVATE buffer
+     * queue is enough to take the device down, the camera is innocent entirely, and these four
+     * lines say so without opening anything.
+     */
+    private void checkBuffers() {
+        for (int format : new int[] { ImageFormat.YUV_420_888, ImageFormat.PRIVATE }) {
+            say(">>> PUFFER " + formatName(format) + " 640×480 – ohne Kamera");
+            ImageReader reader = null;
+            try {
+                reader = ImageReader.newInstance(640, 480, format, 3);
+                say("   → angelegt, hole Surface");
+                reader.getSurface();
+                say("   ✓ Surface steht");
+            } catch (Throwable error) {
+                say("   ✖ " + error);
+            } finally {
+                if (reader != null) reader.close();
+                say("<<< PUFFER " + formatName(format));
+            }
+        }
     }
 
     /**
@@ -261,20 +286,31 @@ final class CameraDiagnosis {
     private List<Probe> buildProbes(String[] ids) {
         List<Probe> probes = new ArrayList<>();
         String front = firstFacing(ids, CameraMetadata.LENS_FACING_FRONT);
+
+        // Known-survivable first: YUV is what the app uses every day and what the browser used
+        // in every log. PRIVATE goes last throughout, because the one run that took the phone
+        // down did it on PRIVATE - on the healthy front camera, on the first touch.
         if (front != null) {
-            probes.add(new Probe(front, ImageFormat.PRIVATE, false, 640,
-                "Frontkamera " + front + ", internes Format, Standard – Gegenprobe"));
+            probes.add(new Probe(front, ImageFormat.YUV_420_888, false, 640,
+                "Frontkamera " + front + ", lesbares Format – Gegenprobe"));
         }
         for (String id : ids) {
             if (!isFacing(id, CameraMetadata.LENS_FACING_BACK)) continue;
-            probes.add(new Probe(id, ImageFormat.PRIVATE, false, 1280,
-                "Kamera " + id + ", internes Format, Standard – wie eine normale Kamera-App"));
-            probes.add(new Probe(id, ImageFormat.PRIVATE, true, 640,
-                "Kamera " + id + ", internes Format, klein und langsam"));
             probes.add(new Probe(id, ImageFormat.YUV_420_888, false, 1280,
                 "Kamera " + id + ", lesbares Format, Standard"));
             probes.add(new Probe(id, ImageFormat.YUV_420_888, true, 640,
                 "Kamera " + id + ", lesbares Format, klein und langsam – bisheriger Weg"));
+        }
+        for (String id : ids) {
+            if (!isFacing(id, CameraMetadata.LENS_FACING_BACK)) continue;
+            probes.add(new Probe(id, ImageFormat.PRIVATE, true, 640,
+                "Kamera " + id + ", internes Format, klein und langsam – VERDÄCHTIG"));
+            probes.add(new Probe(id, ImageFormat.PRIVATE, false, 1280,
+                "Kamera " + id + ", internes Format, Standard – VERDÄCHTIG"));
+        }
+        if (front != null) {
+            probes.add(new Probe(front, ImageFormat.PRIVATE, false, 640,
+                "Frontkamera " + front + ", internes Format – das war der Übeltäter"));
         }
         return probes;
     }
@@ -307,8 +343,12 @@ final class CameraDiagnosis {
             Size size = pick(sizes, probe.maxEdge);
             say("   Strom " + size.getWidth() + "×" + size.getHeight());
 
+            say("   → lege Puffer an (" + formatName(probe.format) + ")");
             reader = ImageReader.newInstance(size.getWidth(), size.getHeight(), probe.format, 3);
+            say("   → Puffer steht, hole Surface");
             final ImageReader open = reader;
+            open.getSurface();
+            say("   → Surface steht");
             reader.setOnImageAvailableListener(source -> {
                 Image image = source.acquireLatestImage();
                 if (image == null) return;
@@ -316,10 +356,12 @@ final class CameraDiagnosis {
                 image.close();
             }, handler);
 
+            say("   → rufe openCamera(" + probe.cameraId + ")");
             manager.openCamera(probe.cameraId, new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(CameraDevice opened) {
                     device.set(opened);
+                    say("   → Gerät offen, lege Sitzung an");
                     try {
                         opened.createCaptureSession(
                             java.util.Collections.singletonList(open.getSurface()),
@@ -327,12 +369,14 @@ final class CameraDiagnosis {
                                 @Override
                                 public void onConfigured(CameraCaptureSession configured) {
                                     session.set(configured);
+                                    say("   → Sitzung steht, fordere Vorschau an");
                                     try {
                                         CaptureRequest.Builder builder =
                                             opened.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                                         builder.addTarget(open.getSurface());
                                         if (probe.tame) tame(builder, chars);
                                         configured.setRepeatingRequest(builder.build(), null, handler);
+                                        say("   → Vorschau angefordert");
                                     } catch (Exception error) {
                                         outcome.compareAndSet(null, "Vorschau nicht zu starten: " + error);
                                         finished.countDown();
@@ -376,7 +420,17 @@ final class CameraDiagnosis {
                 }
             }, handler);
 
-            boolean died = finished.await(PROBE_MS, TimeUnit.MILLISECONDS);
+            say("   → openCamera abgesetzt, beobachte " + (PROBE_MS / 1000) + "s");
+            boolean died = false;
+            long deadline = System.currentTimeMillis() + PROBE_MS;
+            while (System.currentTimeMillis() < deadline) {
+                if (finished.await(1000, TimeUnit.MILLISECONDS)) {
+                    died = true;
+                    break;
+                }
+                say("   → lebt " + ((System.currentTimeMillis() - started) / 1000) + "s, "
+                    + frames.get() + " Bilder");
+            }
             long lived = System.currentTimeMillis() - started;
             String firstFrame = firstFrameAt.get() == 0
                 ? "nie ein Bild"
@@ -457,6 +511,13 @@ final class CameraDiagnosis {
         } catch (Exception error) {
             return false;
         }
+    }
+
+    private String formatName(int format) {
+        if (format == ImageFormat.PRIVATE) return "PRIVATE";
+        if (format == ImageFormat.YUV_420_888) return "YUV";
+        if (format == ImageFormat.JPEG) return "JPEG";
+        return String.valueOf(format);
     }
 
     private boolean offers(int[] values, int wanted) {

@@ -8,6 +8,22 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.34.1 – Die Spur zeigt weg von der Rückkamera
+
+Der Bericht hat den Neustart überstanden, und er sagt etwas Unerwartetes: Das Gerät ist beim
+allerersten Durchlauf ausgegangen – an der **Frontkamera**, der gesunden, beim ersten
+Zugriff. Nicht an der defekten Rückkamera und nicht nach vielen Versuchen hintereinander.
+
+Damit bleibt als Unterschied nur die Betriebsart übrig, die ich neu eingeführt hatte: die, in
+der die Bilder direkt an den Bildschirm gehen. Genau die benutzt Expert RAW, deshalb wollte
+ich sie testen – und offenbar verträgt dieses Gerät sie nicht, unabhängig von der Kamera.
+
+Diese Fassung prüft das sauber. Sie legt die Puffer zuerst **ganz ohne Kamera** an: wenn schon
+das reicht, um das Gerät umzulegen, ist die Kamera vollkommen unschuldig. Danach laufen erst
+alle Kameras in der gewohnten Betriebsart – die, die seit Monaten funktioniert –, und erst
+ganz zum Schluss die verdächtige. Und in jedem Durchlauf steht jetzt jeder einzelne Schritt
+im Bericht, samt Lebenszeichen im Sekundentakt, statt einer Lücke von sechs Sekunden.
+
 ## 0.34.0 – Ein Bericht, der den Neustart übersteht
 
 Dass vom letzten Durchlauf nichts im Protokoll stand, war kein Zufall: Das Kamera-Protokoll
