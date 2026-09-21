@@ -29,6 +29,7 @@ export interface PickOptions {
   forDate?: string;
   camera?: boolean;
   multiple?: boolean;
+  deferMetadata?: boolean;
 }
 
 export interface GalleryPhoto {
@@ -53,7 +54,7 @@ function mediaStore(): MediaStorePlugin | null {
   return (plugins?.MediaStore as MediaStorePlugin | undefined) ?? null;
 }
 
-function base64ToBlob(base64: string, mime: string): Blob {
+export function base64ToBlob(base64: string, mime: string): Blob {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
@@ -149,7 +150,7 @@ export async function pickPhotos(options: PickOptions = {}): Promise<PickedPhoto
   const files = await pickWithInput(options);
   const picked: PickedPhoto[] = [];
   for (const file of files) {
-    const takenAt = await readTakenAt(file);
+    const takenAt = options.deferMetadata ? undefined : await readTakenAt(file);
     picked.push({
       file,
       name: file.name,

@@ -1,9 +1,10 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 interface SheetProps {
   open: boolean;
   onClose(): void;
+  onDone?(): void;
   title?: string;
   children: ReactNode;
 }
@@ -18,7 +19,9 @@ interface SheetProps {
  * phone it ended up shifted and unreadable. From the body there is no such frame, and
  * every sheet in the app is safe from it, wherever it is opened.
  */
-export function Sheet({ open, onClose, title, children }: SheetProps) {
+export function Sheet({ open, onClose, onDone, title, children }: SheetProps) {
+  const titleId = useId();
+
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
@@ -51,13 +54,16 @@ export function Sheet({ open, onClose, title, children }: SheetProps) {
       <div
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
         className="relative w-full md:w-[520px] max-h-[85dvh] overflow-y-auto rounded-t-2xl md:rounded-2xl
                    bg-panel border border-line pb-[env(safe-area-inset-bottom)]"
       >
         {title && (
           <div className="flex items-center justify-between px-4 py-3 border-b border-line sticky top-0 bg-panel z-10">
-            <h2 className="font-semibold">{title}</h2>
-            <button type="button" className="btn btn-ghost px-2 min-h-0 py-1" onClick={onClose}>
+            <h2 id={titleId} className="font-semibold">
+              {title}
+            </h2>
+            <button type="button" className="btn btn-ghost px-2 min-h-0 py-1" onClick={onDone ?? onClose}>
               Fertig
             </button>
           </div>

@@ -47,7 +47,10 @@ export default function ContactsPage() {
     const needle = search.trim().toLowerCase();
     const rows = needle
       ? contacts.filter((contact) =>
-          [contact.name, contact.company, contact.role, contact.notes].join(' ').toLowerCase().includes(needle),
+          [contact.name, contact.company, contact.role, contact.notes]
+            .join(' ')
+            .toLowerCase()
+            .includes(needle),
         )
       : contacts;
     return [...rows].sort((a, b) => a.name.localeCompare(b.name, 'de'));
@@ -92,7 +95,11 @@ export default function ContactsPage() {
             </button>
             {contact.phone && (
               <>
-                <a className="btn btn-ghost px-2 min-h-0 py-1 text-accent" href={telHref(contact.phone)} aria-label="Anrufen">
+                <a
+                  className="btn btn-ghost px-2 min-h-0 py-1 text-accent"
+                  href={telHref(contact.phone)}
+                  aria-label="Anrufen"
+                >
                   Anruf
                 </a>
                 <a
@@ -111,113 +118,129 @@ export default function ContactsPage() {
       </ul>
 
       {editing && (
-        <Sheet open onClose={close} title="Kontakt">
-          <ContactForm
-            contact={editing}
-            roles={lists.contactRoles}
-            onSave={async (contact) => {
-              await saveContact(contact);
-              close();
-            }}
-            onDelete={async (contact) => {
-              await deleteContact(contact.id);
-              close();
-            }}
-          />
-        </Sheet>
+        <ContactSheet
+          contact={editing}
+          roles={lists.contactRoles}
+          onClose={close}
+          onSave={async (contact) => {
+            await saveContact(contact);
+            close();
+          }}
+          onDelete={async (contact) => {
+            await deleteContact(contact.id);
+            close();
+          }}
+        />
       )}
     </>
   );
 }
 
-function ContactForm({
+function ContactSheet({
   contact,
   roles,
+  onClose,
   onSave,
   onDelete,
 }: {
   contact: Contact;
   roles: string[];
+  onClose(): void;
   onSave(contact: Contact): Promise<void>;
   onDelete(contact: Contact): Promise<void>;
 }) {
   const [draft, setDraft] = useState<Contact>(contact);
+
+  useEffect(() => {
+    setDraft((current) => (current.id !== contact.id ? contact : current));
+  }, [contact]);
+
   const update = (patch: Partial<Contact>) => setDraft({ ...draft, ...patch });
 
   return (
-    <div className="p-4">
-      <Field label="Name">
-        <input className="field" value={draft.name} onChange={(event) => update({ name: event.target.value })} />
-      </Field>
-      <Field label="Firma">
-        <input className="field" value={draft.company ?? ''} onChange={(event) => update({ company: event.target.value })} />
-      </Field>
-      <Field label="Rolle / Gewerk">
-        <ChipSelect
-          options={roles}
-          value={draft.role ? [draft.role] : []}
-          multiple={false}
-          onChange={(value) => update({ role: value[0] })}
-        />
-      </Field>
-      <Field label="Telefon">
-        <input
-          className="field"
-          type="tel"
-          inputMode="tel"
-          value={draft.phone ?? ''}
-          onChange={(event) => update({ phone: event.target.value })}
-        />
-      </Field>
-      <Field label="E-Mail">
-        <input
-          className="field"
-          type="email"
-          value={draft.email ?? ''}
-          onChange={(event) => update({ email: event.target.value })}
-        />
-      </Field>
-      <Field label="Status">
-        <ChipSelect
-          options={CONTACT_STATUS}
-          value={draft.status ? [draft.status] : []}
-          multiple={false}
-          onChange={(value) => update({ status: value[0] as ContactStatus | undefined })}
-        />
-      </Field>
-      <Field label="Bewertung">
-        <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map((stars) => (
-            <button
-              key={stars}
-              type="button"
-              className={`text-2xl ${(draft.rating ?? 0) >= stars ? 'text-accent' : 'text-line'}`}
-              onClick={() => update({ rating: stars as 1 | 2 | 3 | 4 | 5 })}
-              aria-label={`${stars} Sterne`}
-            >
-              ★
-            </button>
-          ))}
+    <Sheet open onClose={onClose} onDone={() => void onSave(draft)} title="Kontakt">
+      <div className="p-4">
+        <Field label="Name">
+          <input
+            className="field"
+            value={draft.name}
+            onChange={(event) => update({ name: event.target.value })}
+          />
+        </Field>
+        <Field label="Firma">
+          <input
+            className="field"
+            value={draft.company ?? ''}
+            onChange={(event) => update({ company: event.target.value })}
+          />
+        </Field>
+        <Field label="Rolle / Gewerk">
+          <ChipSelect
+            options={roles}
+            value={draft.role ? [draft.role] : []}
+            multiple={false}
+            onChange={(value) => update({ role: value[0] })}
+          />
+        </Field>
+        <Field label="Telefon">
+          <input
+            className="field"
+            type="tel"
+            inputMode="tel"
+            value={draft.phone ?? ''}
+            onChange={(event) => update({ phone: event.target.value })}
+          />
+        </Field>
+        <Field label="E-Mail">
+          <input
+            className="field"
+            type="email"
+            value={draft.email ?? ''}
+            onChange={(event) => update({ email: event.target.value })}
+          />
+        </Field>
+        <Field label="Status">
+          <ChipSelect
+            options={CONTACT_STATUS}
+            value={draft.status ? [draft.status] : []}
+            multiple={false}
+            onChange={(value) => update({ status: value[0] as ContactStatus | undefined })}
+          />
+        </Field>
+        <Field label="Bewertung">
+          <div className="flex gap-1">
+            {[1, 2, 3, 4, 5].map((stars) => (
+              <button
+                key={stars}
+                type="button"
+                className={`text-2xl ${(draft.rating ?? 0) >= stars ? 'text-accent' : 'text-line'}`}
+                onClick={() => update({ rating: stars as 1 | 2 | 3 | 4 | 5 })}
+                aria-label={`${stars} Sterne`}
+              >
+                ★
+              </button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Gewerke">
+          <TradePicker value={draft.tradeIds} onChange={(value) => update({ tradeIds: value })} />
+        </Field>
+        <Field label="Notizen">
+          <textarea
+            className="field min-h-[5rem]"
+            value={draft.notes ?? ''}
+            onChange={(event) => update({ notes: event.target.value })}
+          />
+        </Field>
+        <div className="flex gap-3">
+          <button type="button" className="btn btn-primary flex-1" onClick={() => void onSave(draft)}>
+            Speichern
+          </button>
+          <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
+            Löschen
+          </button>
         </div>
-      </Field>
-      <Field label="Gewerke">
-        <TradePicker value={draft.tradeIds} onChange={(value) => update({ tradeIds: value })} />
-      </Field>
-      <Field label="Notizen">
-        <textarea
-          className="field min-h-[5rem]"
-          value={draft.notes ?? ''}
-          onChange={(event) => update({ notes: event.target.value })}
-        />
-      </Field>
-      <div className="flex gap-3">
-        <button type="button" className="btn btn-primary flex-1" onClick={() => void onSave(draft)}>
-          Speichern
-        </button>
-        <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
-          Löschen
-        </button>
       </div>
-    </div>
+    </Sheet>
   );
 }

@@ -30,6 +30,7 @@ export interface AddPhotoInput {
    * the gallery first and passes it here.
    */
   originalFile?: Blob;
+  thumbnail?: Blob;
   existingPhotos?: readonly Photo[];
   existingCosts?: readonly Cost[];
 }
@@ -108,14 +109,14 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
   };
 
   if (!isPdf) {
-    const thumb = await makeThumbnail(input.file);
+    const thumbnail = input.thumbnail ?? (await makeThumbnail(main.blob)).blob;
     photo.thumbPath = `photos/${id}_thumb.jpg`;
-    await putLocalBlob(photo.thumbPath, thumb.blob);
+    await putLocalBlob(photo.thumbPath, thumbnail);
     await enqueue({
       id: `${id}-thumb`,
       storagePath: photo.thumbPath,
       contentType: 'image/jpeg',
-      blob: thumb.blob,
+      blob: thumbnail,
     });
   }
 
@@ -138,7 +139,7 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
   // strip undefined, Firestore rejects it
   const clean = Object.fromEntries(Object.entries(photo).filter(([, value]) => value !== undefined));
   const write = saveDoc<Photo>(COL.photos, clean as unknown as Photo);
-  await (input.kind === 'receipt' ? pendingWrite(write) : write);
+  await pendingWrite(write, input.kind === 'receipt' ? 10_000 : 0);
 
   await enqueue({
     id,

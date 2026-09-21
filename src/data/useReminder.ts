@@ -26,6 +26,7 @@ import {
   watchReminderTaps,
   type ReminderMode,
 } from '@/platform/reminder';
+import { rememberDiaryReminderDates } from '@/platform/diaryReminderMarker';
 
 /** how often the browser looks at the clock while the app is open */
 const TICK_MS = 60_000;
@@ -35,7 +36,7 @@ interface ReminderState {
   time: string;
   /** the days from today on that already have an entry */
   dates: string[];
-  /** false while the profile has not arrived yet - then nothing is touched */
+  /** false while profile or diary have not arrived yet - then nothing is touched */
   known: boolean;
 }
 
@@ -43,7 +44,7 @@ function useReminderState(): ReminderState {
   const { profile } = useAuth();
   // today and the days after it are the only ones a reminder can still be planned for,
   // and a query that does not react to older entries keeps the rescheduling rare
-  const { data: entries } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(40)]);
+  const { data: entries, loading } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(40)]);
 
   const dates = useMemo(
     () => entries.map((entry) => entry.date).filter((date) => date >= today()).sort(),
@@ -54,7 +55,7 @@ function useReminderState(): ReminderState {
     enabled: profile?.reminderEnabled ?? false,
     time: profile?.reminderTime ?? '20:00',
     dates,
-    known: profile !== null,
+    known: profile !== null && !loading,
   };
 }
 
@@ -83,6 +84,11 @@ export function useDiaryReminder(): void {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [apply]);
+
+  useEffect(() => {
+    if (!known) return;
+    void rememberDiaryReminderDates(signature ? signature.split(',') : []);
+  }, [known, signature]);
 
   useEffect(() => {
     if (!known || !enabled || reminderMode() !== 'web') return;

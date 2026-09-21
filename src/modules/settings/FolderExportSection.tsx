@@ -19,6 +19,7 @@ import {
 } from '@/platform/fileExport';
 import { readFromStorage } from '@/data/exportFiles';
 import { deviceId } from '@/lib/ids';
+import { SettingsHeading } from './SettingsHelp';
 
 /**
  * The export that carries the full resolution.
@@ -64,9 +65,7 @@ export function FolderExportSection() {
       <section className="card p-4">
         <h2 className="font-semibold mb-3">Export in einen Ordner</h2>
         <p className="text-sm text-muted">
-          Gibt es nur in der Android-App: nur dort liegen die Originale in der Galerie, und nur dort
-          darf eine App dauerhaft in einen Ordner schreiben. Im Browser steht stattdessen der
-          ZIP-Export bereit.
+          Der Ordnerexport ist in dieser App-Version nicht verfügbar. Bitte die Android-App aktualisieren.
         </p>
       </section>
     );
@@ -127,12 +126,11 @@ export function FolderExportSection() {
 
   return (
     <section className="card p-4">
-      <h2 className="font-semibold mb-3">Export in einen Ordner</h2>
-      <p className="text-sm text-muted mb-3">
+      <SettingsHeading title="Export in einen Ordner">
         Schreibt das ganze Tagebuch als einzelne Dateien in einen Ordner deiner Wahl – Fotos nach
         Tagen sortiert, dazu der Text und die Daten. Die Bilder dieses Handys kommen dabei in voller
         Auflösung direkt aus der Galerie.
-      </p>
+      </SettingsHeading>
 
       {loading ? (
         <p className="text-sm text-muted">Daten werden geladen…</p>

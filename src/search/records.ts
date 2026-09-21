@@ -14,6 +14,7 @@ import type {
   Contact,
   Cost,
   DiaryEntry,
+  Note,
   Phase,
   Photo,
   Plan,
@@ -37,6 +38,7 @@ export interface SearchSource {
   diary?: DiaryEntry[];
   costs?: Cost[];
   tasks?: Task[];
+  notes?: Note[];
   contacts?: Contact[];
   trades?: Trade[];
   phases?: Phase[];
@@ -48,6 +50,7 @@ export interface SearchSource {
 export const KIND_LABEL: Record<SearchKind, string> = {
   diary: 'Tagebuch',
   task: 'Aufgaben',
+  note: 'Notizen',
   cost: 'Kosten',
   contact: 'Kontakte',
   room: 'Räume',
@@ -61,6 +64,7 @@ export const KIND_LABEL: Record<SearchKind, string> = {
 export const KIND_BADGE: Record<SearchKind, string> = {
   diary: 'Eintrag',
   task: 'Aufgabe',
+  note: 'Notiz',
   cost: 'Beleg',
   contact: 'Kontakt',
   room: 'Raum',
@@ -74,6 +78,7 @@ export const KIND_BADGE: Record<SearchKind, string> = {
 export const KINDS: SearchKind[] = [
   'diary',
   'task',
+  'note',
   'cost',
   'contact',
   'room',
@@ -178,6 +183,22 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       ].filter(Boolean),
       date: task.due,
       to: `/aufgaben?aufgabe=${task.id}`,
+    });
+  }
+
+  // ------------------------------------------------------------------ Notizen
+  for (const note of source.notes ?? []) {
+    const rooms = names(note.roomIds, roomName);
+    const firstLine = note.text.split('\n')[0].trim() || 'Notiz';
+    records.push({
+      id: `note:${note.id}`,
+      kind: 'note',
+      title: firstLine,
+      subtitle: [note.pinned ? 'Angeheftet' : '', ...rooms].filter(Boolean).join(' · '),
+      body: note.text,
+      meta: [note.pinned ? 'Angeheftet' : '', ...dateWords(note.at.slice(0, 10)), ...rooms].filter(Boolean),
+      date: note.at.slice(0, 10),
+      to: `/notizen?notiz=${note.id}`,
     });
   }
 

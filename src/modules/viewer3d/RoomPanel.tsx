@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollection } from '@/data/hooks';
-import { COL, type Cost, type DiaryEntry, type Photo, type Task } from '@/data/types';
+import { COL, type Cost, type DiaryEntry, type Note, type Photo, type Task } from '@/data/types';
 import { photosForRoom } from '@/data/photoRooms';
 import { where } from '@/firebase/db';
 import { formatEuroShort } from '@/lib/money';
@@ -22,6 +22,7 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, roomFilter, [room.id]);
   const { data: costs } = useCollection<Cost>(COL.costs, roomFilter, [room.id]);
   const { data: tasks } = useCollection<Task>(COL.tasks, roomFilter, [room.id]);
+  const { data: notes } = useCollection<Note>(COL.notes, roomFilter, [room.id]);
   // all of them, not the ones carrying this room: a photo gets its room from the entry
   // or the receipt it hangs on, never from itself (see photoRooms.ts)
   const { data: photos } = useCollection<Photo>(COL.photos);
@@ -54,9 +55,9 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
       )}
 
       {isAuthenticated() && (
-        // four tiles on 360 pixels: the number must be allowed to shrink, or '1.234 €'
+        // five tiles on 360 pixels: the number must be allowed to shrink, or '1.234 €'
         // pushes the row wider than the screen and the last tile leaves it
-        <div className="grid grid-cols-4 gap-1.5 mt-3 text-center">
+        <div className="grid grid-cols-5 gap-1.5 mt-3 text-center">
           <Link to={`/tagebuch?raum=${room.id}`} className="card py-2 px-1 min-w-0">
             <div className="text-base font-medium truncate">{entries.length}</div>
             <div className="text-[10px] text-muted truncate">Einträge</div>
@@ -72,6 +73,10 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
           <Link to={`/aufgaben?raum=${room.id}`} className="card py-2 px-1 min-w-0">
             <div className="text-base font-medium truncate">{openTasks.length}</div>
             <div className="text-[10px] text-muted truncate">offen</div>
+          </Link>
+          <Link to={`/notizen?raum=${room.id}`} className="card py-2 px-1 min-w-0">
+            <div className="text-base font-medium truncate">{notes.length}</div>
+            <div className="text-[10px] text-muted truncate">Notizen</div>
           </Link>
         </div>
       )}

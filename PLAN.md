@@ -85,7 +85,7 @@ gegen die Firebase-Emulatoren).
 | Zoom/Pan für Pläne | **panzoom** (oder eigene Pointer-Implementierung wie im 3D-Viewer) | |
 | Charts (Kosten) | **recharts**, sparsam (Balken nach Kategorie/Monat) | |
 | Claude | **@anthropic-ai/sdk** (`dangerouslyAllowBrowser: true`, Key aus Einstellungen), **zod** + `zodOutputFormat` für strukturierte Ausgabe | |
-| Native (Phase 2) | **Capacitor 6**: `@capacitor/android`, `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/local-notifications`, `@capacitor/push-notifications`, `@capacitor-mlkit/text-recognition`, eigenes Plugin `MediaStore` (Kotlin) | |
+| Native (Phase 2) | **Capacitor 6**: `@capacitor/android`, `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/local-notifications`, `@capacitor/push-notifications`, `@capacitor-mlkit/text-recognition`, eigene Plugins `MediaStore`, `NativeCam` (Java) | |
 | Tests | **vitest** (Unit), **Playwright** (E2E, Chromium mobil-emuliert 360×780 @3x + Desktop), **Firebase Emulator Suite** (auth, firestore, storage, functions) | |
 | CI/CD | GitHub Actions: `deploy.yml` (Build + Pages-Deploy bei Push auf `main`), `ci.yml` (Lint, Typecheck, Unit, E2E gegen Emulator bei PR), später `android.yml` (APK-Build) | |
 | Lint/Format | ESLint (typescript-eslint, react-hooks), Prettier | |
@@ -225,6 +225,7 @@ interface Task {
   status: 'Offen'|'In Arbeit'|'Wartet auf'|'Erledigt';
   priority: 'Hoch'|'Mittel'|'Niedrig';
   due?: string;              // YYYY-MM-DD
+  reminderAt?: string;       // YYYY-MM-DDTHH:mm:ss, lokale Aufgaben-Erinnerung auf dem Gerät
   assignees: ('Thomas'|'Sarah'|'Handwerker'|'Beide')[];
   area?: string;             // "Bereich" (Seed: Kauf, Finanzen, Versicherung, Energieberatung, Förderung, Dach, Fenster, Heizung, Fassade, Elektrik, Sanitär, PV, Behörden, Planung, Innenausbau, Rückbau, Organisation, Keller, Gebäudehülle)
   tradeId?: string; phaseId?: string; roomIds: string[];
@@ -349,7 +350,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
 
 ### 8.1 Start (Dashboard)
-- Hero: Nordansicht-Foto (`public/img/nordansicht.jpg`) mit Overlay-Titel "Schlesierstraße 31" und aktueller Phase (aus `phases` mit Status "In Arbeit").
+- Hero: Nordansicht-Foto (`public/img/nordansicht.jpg`) mit Overlay-Titel "Schlesierstraße 31" und aktueller Phase (aus `phases` mit Status "In Arbeit"). Die Phase bleibt nur eine dezente Zeile im Bild, ist aber antippbar: ein kleines Sheet setzt genau eine Phase auf "In Arbeit", schließt bisher laufende Phasen ab und hält damit die automatische Phase für neue Tagebuch-Einträge und Aufgaben aktuell. Keine eigene Phasen-Karte auf dem Startscreen.
 - Karte "Heute": wenn kein Eintrag für heute → großer Button "Tagebuch-Eintrag für heute anlegen"; sonst Vorschau des Eintrags + "Bearbeiten".
 - Schnellaktionen: "Beleg erfassen" (öffnet Kosten-Editor mit Kamera), "Foto zum Tagebuch", "Aufgabe".
 - Letzte 3 Tagebucheinträge (Datum, Titel, erstes Thumbnail).
@@ -362,11 +363,18 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - **Liste**: chronologisch absteigend, gruppiert nach Monat; Karte je Eintrag: Datum (Wochentag), Titel, Wetter-Icon, Anwesend-Chips, erste 3 Thumbnails, Mängel-Marker. Suchfeld (Volltext clientseitig über `title`+`text`+`present`). Filter-Chips: Phase, Gewerk, Raum, "mit Fotos", "Mängel".
 - **Detail**: Text, Fotogrid (Tippen → Vollbild-Lightbox mit Wischen; Info-Button zeigt Originalname/Aufnahmezeit/Größe und – APK – "Original in Galerie öffnen"), Metadaten-Chips, Bearbeiten/Löschen.
 - **Editor** (auch für Nachträge an anderen Tagen):
-  - Datum (Default heute; `?date=` aus Shortcut/Erinnerung), Titel (auto "Tagebuch DD.MM.", editierbar), Text (Textarea, autogrow, Markdown-light), Wetter (Chip-Reihe), Anwesend (Multi-Chips aus `meta/lists.people` + "＋ Person" inline), Mängel (Toggle), Phase (Select, Default = aktuelle Phase), Gewerke (Multi), Räume (Multi, gruppiert nach Geschoss).
+  - Datum (Default heute; `?date=` aus Shortcut/Erinnerung), Titel (auto "Tagebuch DD.MM.", editierbar), Text (Textarea, autogrow, Markdown-light), Wetter (Select), Anwesend (kompakter Mehrfach-Picker aus `meta/lists.people` + Person hinzufügen), Mängel (Toggle), Phase (automatisch gesetztes Info-Tag aus der aktuellen Phase), Gewerke (bewusst wählbarer Mehrfach-Picker), Räume (Mehrfach-Picker, gruppiert nach Geschoss).
   - **Fotos**: Button "Fotos hinzufügen" → `platform/photos.pickPhotos({ suggestDate: entry.date })`.
     - PWA: `<input type="file" accept="image/*" multiple>`; nach Auswahl EXIF-Datum lesen; Fotos, deren Aufnahmedatum ≠ Eintragsdatum, bekommen ein gelbes Badge "anderes Datum (DD.MM.)" mit Möglichkeit, sie zu entfernen. Hinweistext im Picker: "Die Galerie ist nach Datum sortiert – wähle die Fotos von heute."
     - APK: eigener Picker-Screen: Raster der Galerie-Fotos **des Eintragsdatums** (MediaStore-Abfrage), Button "Andere Tage" öffnet Datumsnavigation bzw. den System-Picker. Mehrfachauswahl, dann Übernahme.
-    - Kamera-Button (PWA: `capture="environment"`; APK: Capacitor Camera).
+      Auswahl startet noch keinen Import. „Hochladen (Anzahl)“ schließt den Dialog sofort;
+      im Editor werden zunächst alle Vorschauen erzeugt, danach die Fotos lokal übernommen
+      und über die Outbox hochgeladen. Pro Bild zeigen Ladekreise Vorbereitung bzw. ausstehenden
+      Upload; fehlgeschlagene Importe lassen sich einzeln wiederholen. Formularfelder bleiben
+      bedienbar. Speichern und Verwerfen warten nur auf die lokale Übernahme, nicht auf Uploads.
+      Fotoimporte warten nicht auf Firestore-Serverbestätigungen; der Beleg-/OCR-Pfad behält
+      seine bisherige begrenzte Wartezeit. Lokale Anhänge bleiben bis zum bestätigenden Snapshot sichtbar.
+    - Kamera-Button (PWA: `capture="environment"`; APK: Capacitor Camera). "Original sichern" ist ein dezenter Inline-Toggle, kein Hauptaktionsknopf und keine gerahmte Schaltfläche.
     - Verarbeitung: `lib/image.resize(file, 1600)` + `thumb(320)` → Outbox (Abschnitt 7) → sofortige Vorschau. Reihenfolge per Drag/Pfeile änderbar, Bildunterschrift optional.
   - Autosave als Entwurf alle 5 s in IndexedDB (`drafts`), damit nichts verloren geht; beim Öffnen von `/tagebuch/neu` Entwurf anbieten.
   - Speichern schreibt Dokument (offline-fähig) und navigiert zum Detail.
@@ -409,8 +417,8 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 ### 8.6 Aufgaben
 - Liste mit Segment "Offen | Alle | Erledigt"; Gruppierung nach Fälligkeit (Überfällig, Heute, Diese Woche, Später, Ohne Datum); Zeile: Checkbox, Titel, Chips (Priorität farbig, Bereich, Zuständig), Fälligkeit. Filter: Zuständig (Thomas/Sarah/Beide), Bereich, Gewerk, Phase, Raum.
 - Schnellanlage: Eingabefeld oben ("Aufgabe… ⏎"), Details später.
-- Editor: Titel, Notizen, Status, Priorität, Fällig am, Zuständig (Multi), Bereich, Gewerk, Phase, Räume.
-- Erledigt-Haken setzt `status:'Erledigt'`, `doneAt`.
+- Editor: Titel, Notizen, Status, Priorität, Fällig am, Erinnerung, Zuständig (Multi), Bereich, Gewerk, Phase, Räume.
+- Erledigt-Haken setzt `status:'Erledigt'`, `doneAt` und löscht eine geplante Erinnerung. In der Android-App wird `reminderAt` beim Speichern der Aufgabe direkt als lokale Benachrichtigung gestellt oder gelöscht; dieser direkte Weg wartet nicht auf den nächsten Aufgaben-Snapshot. Falls die Benachrichtigungserlaubnis noch fehlt, fragt der Speichervorgang mit Erinnerung danach. Der laufende Aufgaben-Listener gleicht die Liste danach nur noch als Sicherheitsnetz ab. Kann Android die Aktion „Erledigt“ nicht registrieren, wird die Erinnerung trotzdem geplant; deren Aktion „Erledigt“ markiert die Aufgabe als abgeschlossen, wenn sie verfügbar ist.
 
 ### 8.7 Kontakte
 - Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.
@@ -419,6 +427,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
+- Die Standardgruppierung ist nach Bauphase: Fotos erben die Phase ausschließlich über ihren Tagebuch-Eintrag (`entry.phaseId`), nicht über ein eigenes Pflegefeld. Ein dezenter Umschalter bietet weiter die Monatsgruppierung. Belege werden hier nicht nach Phase gruppiert; die Fotos-Seite zeigt nur `kind:'photo'`.
 - Chips: Alle · Fotos · Belege. `?raum=<id>` filtert auf einen Raum – dorthin führt die Kachel „Fotos“ im Raumfenster des 3D-Modells, und zurück führt der Pfeil dorthin.
 - **Der Raum eines Fotos steht nicht am Foto.** `addPhoto` setzt `roomIds` nie: beim Fotografieren wählt niemand Räume aus. Ein Bild gehört zu einem Raum, wenn sein Tagebucheintrag oder sein Beleg ihn trägt (`src/data/photoRooms.ts`, testbar); das Feld am Foto zählt zusätzlich. Ohne diese Regel zeigt die Kachel „Fotos“ eines Raums null, so voll das Tagebuch auch ist.
 - Das Datum eines Fotos ist `takenAt`, sonst der Tag seines Eintrags, sonst der seines Belegs – Bilder ohne alles stehen unter „Ohne Datum“.
@@ -591,9 +600,13 @@ Profil, welche Tage schon einen Eintrag haben, beantwortet der Offline-Cache.
   `#/tagebuch/neu` (über den Hash, weil beim Kaltstart noch kein Router da ist).
 - `src/data/useReminder.ts` – hält beides synchron. Der Hook hängt an derselben
   `onSnapshot`-Abfrage wie der Rest: wer den heutigen Eintrag speichert, nimmt damit im
-  selben Moment die heutige Erinnerung mit. Neu geplant wird außerdem, wenn die App wieder
-  sichtbar wird. Ohne geladenes Profil passiert nichts – ein Offline-Start ohne Cache darf
-  die gestellten Wecker nicht löschen.
+  selben Moment die heutige Erinnerung mit. Zusätzlich löscht das Speichern eines Eintrags
+  den Termin für dieses Datum direkt über seine abgeleitete Android-id, ohne auf die nächste
+  Listenabfrage oder die Serverbestätigung des Firestore-Writes zu warten. Neu geplant wird
+  außerdem, wenn die App wieder sichtbar wird. Ohne geladenes Profil und ohne erste
+  Tagebuchantwort passiert nichts – ein Offline-Start ohne Cache darf die gestellten Wecker
+  nicht löschen und ein Start vor dem Tagebuch-Snapshot darf nicht kurz einen falschen Wecker
+  stellen.
 - Im Browser geht das nicht: eine Seite kann sich nicht selbst wecken. Dort erinnert die App,
   solange sie offen ist (Minutentakt, `dueReminder`, einmal pro Tag über
   `reno.reminder.lastShown`). Die Einstellungen sagen diesen Unterschied ausdrücklich.
@@ -601,9 +614,11 @@ Profil, welche Tage schon einen Eintrag haben, beantwortet der Offline-Cache.
   `onSchedule({ schedule: 'every 10 minutes', timeZone: 'Europe/Berlin' })`, schickt FCM an
   `users/*.fcmTokens`, wenn `reminderEnabled` und noch kein `diary`-Dokument mit
   `date == heute`. `src/platform/notifications.ts` holt den Token (`registerPushToken`,
-  stillschweigend wirkungslos ohne `VITE_VAPID_KEY`), `sw.ts` zeigt die Nachricht und
-  `notificationclick` öffnet die Route. Das braucht Blaze und `firebase deploy --only
-  functions`; ohne das bleibt es bei der Erinnerung vom Gerät, und die ist der Normalfall.
+  stillschweigend wirkungslos ohne `VITE_VAPID_KEY`), `sw.ts` zeigt die Nachricht erst nach
+  einem lokalen Gerätecheck: bekannte Tage mit Eintrag liegen zusätzlich in IndexedDB, damit
+  ein Offline-Eintrag auf diesem Gerät einen Server-Push noch unterdrücken kann.
+  `notificationclick` öffnet die Route. Das braucht Blaze und `firebase deploy --only functions`;
+  ohne das bleibt es bei der Erinnerung vom Gerät, und die ist der Normalfall.
 - APK: keine zusätzliche Einrichtung, kein `google-services.json`, kein Token. Die
   Berechtigung (`POST_NOTIFICATIONS` ab Android 13) fragt der Knopf in den Einstellungen.
   Darf die App keine exakten Wecker stellen (Android 14), stellt das Plugin ungenaue – die

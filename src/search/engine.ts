@@ -24,6 +24,7 @@ export type SearchKind =
   | 'diary'
   | 'cost'
   | 'task'
+  | 'note'
   | 'contact'
   | 'trade'
   | 'room'
@@ -87,13 +88,14 @@ const BODY_WEIGHT = 1.5;
 const KIND_ORDER: Record<SearchKind, number> = {
   diary: 0,
   task: 1,
-  cost: 2,
-  contact: 3,
-  room: 4,
-  trade: 5,
-  phase: 6,
-  plan: 7,
-  photo: 8,
+  note: 2,
+  cost: 3,
+  contact: 4,
+  room: 5,
+  trade: 6,
+  phase: 7,
+  plan: 8,
+  photo: 9,
 };
 
 const SPACE = 32;

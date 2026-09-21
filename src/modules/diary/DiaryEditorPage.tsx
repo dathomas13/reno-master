@@ -1,31 +1,49 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { Field, ChipSelect, Spinner } from '@/components/Fields';
-import { RoomPicker, TradePicker, PhaseSelect } from '@/components/Pickers';
+import { Field, Spinner } from '@/components/Fields';
+import { RoomPicker, TradePicker, PeoplePicker } from '@/components/Pickers';
 import { PhotoAttach } from './PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
-import { COL, type DiaryEntry, type Phase, type Photo, type Weather } from '@/data/types';
+import { COL, WEATHER, type DiaryEntry, type Phase, type Photo, type Weather } from '@/data/types';
 import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
+import { diaryTextPlaceholder } from './diaryPlaceholder';
+import { clearDiaryDraft, loadDiaryDraft, saveDiaryDraft } from './diaryDraft';
 
 export default function DiaryEditorPage() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const isNew = !id;
+  const dateParam = params.get('date');
+  const initialDate = dateParam ?? today();
 
   const { data: existing, loading } = useDocument<DiaryEntry>(COL.diary, id);
   const { data: allEntries } = useCollection<DiaryEntry>(COL.diary);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { lists, addTo } = useLists();
+  const activePhase = phases.find((phase) => phase.status === 'In Arbeit');
 
-  const [entry, setEntry] = useState<DiaryEntry>(() => emptyDiaryEntry(params.get('date') ?? today()));
-  const [photos, setPhotos] = useState<Photo[]>([]);
+  const [entry, setEntry] = useState<DiaryEntry>(() => loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
+  const entryPhase = phases.find((phase) => phase.id === entry.phaseId);
+  const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
+  const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
+  const [attaching, setAttaching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(isNew);
+  const closingWithoutDraft = useRef(false);
+
+  useEffect(() => {
+    if (!isNew) {
+      setReady(false);
+      return;
+    }
+    setEntry(loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
+    setReady(true);
+  }, [id, isNew, dateParam, initialDate]);
 
   // load an existing entry once
   useEffect(() => {
@@ -38,12 +56,22 @@ export default function DiaryEditorPage() {
   // default phase: the one that is currently running
   useEffect(() => {
     if (!isNew || entry.phaseId) return;
-    const running = phases.find((phase) => phase.status === 'In Arbeit');
-    if (running) setEntry((current) => ({ ...current, phaseId: running.id }));
-  }, [isNew, phases, entry.phaseId]);
+    if (activePhase) setEntry((current) => ({ ...current, phaseId: activePhase.id }));
+  }, [isNew, activePhase, entry.phaseId]);
 
-  const { data: entryPhotos } = useCollection<Photo>(COL.photos, [where('entryId', '==', entry.id)], [entry.id]);
-  useEffect(() => setPhotos(entryPhotos), [entryPhotos]);
+  const { data: entryPhotos } = useCollection<Photo>(
+    COL.photos,
+    [where('entryId', '==', entry.id)],
+    [entry.id],
+  );
+  const photos = [...new Map([
+    ...addedPhotos.filter((photo) => photo.entryId === entry.id),
+    ...entryPhotos.filter((photo) => photo.entryId === entry.id),
+  ].map((photo) => [photo.id, photo])).values()]
+    .filter((photo) => !removedPhotoIds.includes(photo.id));
+  useEffect(() => {
+    setAddedPhotos((current) => current.filter((photo) => !entryPhotos.some((item) => item.id === photo.id)));
+  }, [entryPhotos]);
 
   // a second entry for the same day is usually a mistake - point at the existing one
   const sameDay = useMemo(
@@ -55,11 +83,26 @@ export default function DiaryEditorPage() {
     setEntry((current) => ({ ...current, ...patch }));
   }
 
+  useEffect(() => {
+    if (!isNew || !ready || closingWithoutDraft.current) return;
+    saveDiaryDraft({ ...entry, photoIds: photos.map((photo) => photo.id) }, initialDate);
+  }, [isNew, ready, entry, photos, initialDate]);
+
+  function discardAndClose() {
+    if (attaching || saving) return;
+    closingWithoutDraft.current = true;
+    clearDiaryDraft();
+    navigate('/tagebuch', { replace: true });
+  }
+
   async function save() {
+    if (attaching || saving) return;
     setSaving(true);
     try {
       const title = entry.title.trim() || `Tagebuch ${formatDate(entry.date).slice(0, 6)}`;
       await saveDiaryEntry({ ...entry, title, photoIds: photos.map((photo) => photo.id) });
+      closingWithoutDraft.current = true;
+      clearDiaryDraft();
       navigate(`/tagebuch/${entry.id}`, { replace: true });
     } finally {
       setSaving(false);
@@ -74,9 +117,21 @@ export default function DiaryEditorPage() {
         title={isNew ? 'Neuer Eintrag' : 'Eintrag bearbeiten'}
         back
         action={
-          <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => void save()} disabled={saving}>
-            {saving ? 'Speichert…' : 'Speichern'}
-          </button>
+          <div className="flex gap-2">
+            {isNew && (
+              <button type="button" className="btn btn-danger px-3 min-h-0 py-2" onClick={discardAndClose} disabled={saving || attaching}>
+                Verwerfen
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-primary px-3 min-h-0 py-2"
+              onClick={() => void save()}
+              disabled={saving || attaching}
+            >
+              {saving ? 'Speichert…' : 'Speichern'}
+            </button>
+          </div>
         }
       />
 
@@ -121,32 +176,40 @@ export default function DiaryEditorPage() {
           <textarea
             className="field min-h-[9rem]"
             value={entry.text}
-            placeholder="Wolfgang hat die Perimeterdämmung auf der Nordseite angebracht…"
+            placeholder={diaryTextPlaceholder(entry.date)}
             onChange={(event) => update({ text: event.target.value })}
           />
         </Field>
 
         <Field label="Fotos">
           <PhotoAttach
+            key={entry.id}
             photos={photos}
             entryId={entry.id}
             forDate={entry.date}
-            onAdded={(photo) => setPhotos((current) => [...current, photo])}
-            onRemoved={(photo) => setPhotos((current) => current.filter((item) => item.id !== photo.id))}
+            disabled={saving}
+            onBusyChange={setAttaching}
+            onAdded={(photo) => setAddedPhotos((current) => [...current.filter((item) => item.id !== photo.id), photo])}
+            onRemoved={(photo) => setRemovedPhotoIds((current) => [...current, photo.id])}
           />
         </Field>
 
         <Field label="Wetter">
-          <ChipSelect
-            options={lists.weather as Weather[]}
-            value={entry.weather ? [entry.weather] : []}
-            multiple={false}
-            onChange={(value) => update({ weather: value[0] })}
-          />
+          <select
+            className="field"
+            aria-label="Wetter"
+            value={entry.weather ?? ''}
+            onChange={(event) => update({ weather: (event.target.value || undefined) as Weather | undefined })}
+          >
+            <option value="">kein Wetter</option>
+            {(lists.weather.length ? lists.weather : WEATHER).map((weather) => (
+              <option key={weather} value={weather}>{weather}</option>
+            ))}
+          </select>
         </Field>
 
         <Field label="Anwesend">
-          <ChipSelect
+          <PeoplePicker
             options={lists.people}
             value={entry.present}
             onChange={(value) => update({ present: value })}
@@ -167,9 +230,13 @@ export default function DiaryEditorPage() {
           <TradePicker value={entry.tradeIds} onChange={(value) => update({ tradeIds: value })} />
         </Field>
 
-        <Field label="Phase">
-          <PhaseSelect value={entry.phaseId} onChange={(value) => update({ phaseId: value })} />
-        </Field>
+        <div className="mb-4">
+          <span className="label">Phase</span>
+          <p className="mt-1 flex items-center gap-2 text-xs text-muted">
+            <span className="w-2 h-2 rounded-full bg-accent" aria-hidden="true" />
+            <span className="truncate">{entryPhase?.name ?? activePhase?.name ?? 'keine aktive Phase'}</span>
+          </p>
+        </div>
 
         <label className="flex items-center gap-3 py-2">
           <input
@@ -181,9 +248,19 @@ export default function DiaryEditorPage() {
           <span>Mängel festgestellt</span>
         </label>
 
-        <button type="button" className="btn btn-primary w-full mt-4" onClick={() => void save()} disabled={saving}>
+        <button
+          type="button"
+          className="btn btn-primary w-full mt-4"
+          onClick={() => void save()}
+          disabled={saving || attaching}
+        >
           {saving ? 'Speichert…' : 'Speichern'}
         </button>
+        {isNew && (
+          <button type="button" className="btn btn-danger w-full mt-2" onClick={discardAndClose} disabled={saving || attaching}>
+            Verwerfen und schließen
+          </button>
+        )}
       </div>
     </>
   );
