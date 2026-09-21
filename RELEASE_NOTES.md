@@ -8,10 +8,16 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
-## 0.41.0 – Installation über eine ältere Fassung repariert
+## 0.42.0 – Versionswahl warnt vor Downgrades
 
-- Eine neue Fassung installiert sich jetzt zuverlässig über eine ältere, auch beim Wechsel
-  zwischen Entwicklungszweigen – vorher lehnte Android das teils mit „nicht installiert“ ab.
+- Die Versionswahl in den Einstellungen sagt jetzt an, wenn die gewählte Fassung älter ist
+  als die installierte: Android verweigert das grundsätzlich, ganz gleich mit welchem
+  Schlüssel signiert wurde. Nur ein einmaliges Deinstallieren hilft dann weiter.
+
+## 0.41.0 – Fester Signaturschlüssel für Debug-Fassungen
+
+- Alle Debug-Fassungen dieser App verwenden jetzt denselben Signaturschlüssel, auch über
+  verschiedene Entwicklungszweige hinweg.
 
 ## 0.40.0 – Version von Hand installieren
 
