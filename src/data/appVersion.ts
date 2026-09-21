@@ -190,6 +190,12 @@ export function apkUrlFor(version: string): string {
 /** the fallback for a version.json that carries no address of its own */
 export const APK_URL = `https://github.com/${REPO}/releases/latest/download/reno-master.apk`;
 
+/** the address of exactly one version's APK, never a moving "latest" */
+export function apkFor(entry: RemoteVersion | null | undefined): string {
+  if (entry?.apk) return entry.apk;
+  return entry?.version ? apkUrlFor(entry.version) : APK_URL;
+}
+
 /**
  * Whether the release of a version is published yet.
  *

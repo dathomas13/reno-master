@@ -8,6 +8,13 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.38.0 – Version von Hand installieren
+
+- Neuer Abschnitt in den Einstellungen: die neueste Fassung lässt sich dort nachträglich
+  holen, auch nachdem „Später“ getippt wurde.
+- In der App kann dort außerdem gezielt eine andere veröffentlichte Fassung gewählt und
+  installiert werden, jeweils mit den Hinweisen dazu.
+
 ## 0.37.2 – Gedrehte Fotos aus der Tagesgalerie behoben
 
 - Fotos, die über „Fotos vom &lt;Datum&gt;“ ausgewählt wurden, landeten oft um 90° gedreht

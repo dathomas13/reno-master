@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { registerSW } from 'virtual:pwa-register';
 import { isNative } from '@/platform/index';
 import {
-  APK_URL,
-  apkUrlFor,
   checkForUpdate,
   dismissUpdate,
   fetchVersionHistory,
@@ -13,16 +10,10 @@ import {
   runningVersion,
   type RemoteVersion,
 } from '@/data/appVersion';
+import { useVersionInstall } from '@/data/useVersionInstall';
 import { APP_BUILD } from '@/lib/buildInfo';
-import {
-  canSelfUpdate,
-  formatProgress,
-  installUpdate,
-  openSourceSettings,
-  percentOf,
-  UpdateBlocked,
-  type UpdateProgress,
-} from '@/platform/appUpdate';
+import { formatProgress, openSourceSettings, percentOf } from '@/platform/appUpdate';
+import { onSwUpdateReady, swUpdateReady } from '@/platform/swUpdate';
 import { formatDate } from '@/lib/date';
 
 /**
@@ -38,11 +29,8 @@ import { formatDate } from '@/lib/date';
  */
 export function UpdateBanner() {
   const [swReady, setSwReady] = useState(false);
-  const [update, setUpdate] = useState<(() => Promise<void>) | null>(null);
   const [remote, setRemote] = useState<RemoteVersion | null>(null);
-  const [progress, setProgress] = useState<UpdateProgress | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState<'blocked' | 'failed' | 'notyet' | null>(null);
+  const { install, busy, progress, problem, setProblem, setProgress } = useVersionInstall();
   /** in the app: is the APK of that version published yet? null = could not find out */
   const [apkReady, setApkReady] = useState<boolean | null>(null);
   const [open, setOpen] = useState(false);
@@ -54,14 +42,10 @@ export function UpdateBanner() {
   }, []);
 
   useEffect(() => {
+    let unsubscribe: (() => void) | undefined;
     if (!isNative()) {
-      const updateSW = registerSW({
-        immediate: true,
-        onNeedRefresh() {
-          setUpdate(() => () => updateSW(true));
-          setSwReady(true);
-        },
-      });
+      setSwReady(swUpdateReady());
+      unsubscribe = onSwUpdateReady(() => setSwReady(true));
     }
 
     look();
@@ -70,7 +54,10 @@ export function UpdateBanner() {
       if (document.visibilityState === 'visible') look();
     };
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    return () => {
+      unsubscribe?.();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [look]);
 
   const visible = swReady || remote !== null;
@@ -114,47 +101,6 @@ export function UpdateBanner() {
     setProgress(null);
   }
 
-  /** the address of exactly the announced version, never a moving "latest" */
-  function apkFor(entry: RemoteVersion | null): string {
-    if (entry?.apk) return entry.apk;
-    return entry?.version ? apkUrlFor(entry.version) : APK_URL;
-  }
-
-  async function installNative() {
-    setBusy(true);
-    setProblem(null);
-    setProgress({ loaded: 0, total: 0 });
-    try {
-      await installUpdate(apkFor(remote), setProgress);
-      // from here Android's installer is on screen; the app is replaced and restarts
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      setProblem(
-        error instanceof UpdateBlocked ? 'blocked' : /\b404\b/.test(message) ? 'notyet' : 'failed',
-      );
-      setProgress(null);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function apply() {
-    if (isNative()) {
-      if (canSelfUpdate()) {
-        void installNative();
-        return;
-      }
-      // an older build without the update plugin: the browser has to do it
-      window.open(apkFor(remote), '_blank');
-      return;
-    }
-    if (update) {
-      void update();
-      return;
-    }
-    window.location.reload();
-  }
-
   const percent = progress ? percentOf(progress) : null;
 
   return (
@@ -196,7 +142,7 @@ export function UpdateBanner() {
             <button
               type="button"
               className="btn btn-primary px-3 py-1 min-h-0 disabled:opacity-50"
-              onClick={apply}
+              onClick={() => void install(remote)}
               disabled={stillBuilding}
             >
               {isNative() ? 'Installieren' : 'Neu laden'}
