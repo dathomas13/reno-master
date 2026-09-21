@@ -131,8 +131,12 @@ Offen:
    wieder durch `npm ci` ersetzen.
 3. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
    `ANDROID_*`-Secrets vor, baut und signiert er eine Release-APK, die sich über die alte
-   legt (Anleitung im README unter „Signaturschlüssel“). Ohne sie bleibt es beim
-   Debug-Schlüssel, und Android verweigert das Update über die alte Fassung.
+   legt (Anleitung im README unter „Signaturschlüssel“). Ohne sie signiert er mit dem
+   festen Debug-Schlüssel aus `tools/android/debug.keystore` (Androids eigene
+   Standardwerte, nicht geheim) - Debug-Builds lösen sich damit gegenseitig ab, auch
+   zwischen zwei Branches. Offen bleibt der Wechsel auf einen echten Release-Schlüssel;
+   der bricht die Kette einmalig, dann muss die alte App einmal von Hand deinstalliert
+   werden.
 4. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
    Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
    Tages, Abend-Erinnerung über `@capacitor/local-notifications`). Offen sind ML Kit für

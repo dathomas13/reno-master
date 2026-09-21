@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.41.0 – Installation über eine ältere Fassung repariert
+
+- Eine neue Fassung installiert sich jetzt zuverlässig über eine ältere, auch beim Wechsel
+  zwischen Entwicklungszweigen – vorher lehnte Android das teils mit „nicht installiert“ ab.
+
 ## 0.40.0 – Version von Hand installieren
 
 - Neuer Abschnitt in den Einstellungen: die neueste Fassung lässt sich dort nachträglich
