@@ -8,6 +8,26 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.34.0 – Ein Bericht, der den Neustart übersteht
+
+Dass vom letzten Durchlauf nichts im Protokoll stand, war kein Zufall: Das Kamera-Protokoll
+liegt im Speicher der App und wird erst später auf die Platte geschrieben. Bei einem
+App-Absturz reicht das, bei einem Neustart des ganzen Geräts nicht – alles war weg. Solange
+das so ist, lässt sich der Fehler gar nicht finden.
+
+Die Vollprüfung schreibt deshalb jetzt in eine eigene Datei, und zwar **bevor** sie etwas
+anfasst: erst „ich öffne gleich Kamera 2 in Betriebsart X“ auf die Platte, dann öffnen. Geht
+dabei das Gerät aus, steht hinterher genau diese Zeile als letzte drin – damit wissen wir, was
+es umgelegt hat. Der nächste Lauf erkennt das von selbst, sagt es dir und überspringt genau
+diese Einstellung, sodass die Prüfung weiterkommt als beim Mal davor.
+
+Der Knopf ist wieder da, unter Einstellungen → Kamera → Diagnose, zusammen mit „Bericht
+kopieren“. Der Bericht bleibt auch nach einem Neustart stehen und lässt sich jederzeit
+abrufen, ohne noch einmal zu prüfen.
+
+Und mit mehr Luft: vier Sekunden Pause zwischen den Durchläufen, acht beim Wechsel der Linse,
+Abbruch beim ersten harten Fehler statt Weitermachen.
+
 ## 0.33.2 – Aufräumen hinter der Vollprüfung
 
 An der App ändert sich nichts – der Knopf bleibt weg. Ich habe mir nur angesehen, was an der

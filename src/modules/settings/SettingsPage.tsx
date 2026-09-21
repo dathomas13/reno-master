@@ -7,7 +7,12 @@ import { APP_VERSION, APP_SHA, BUILD_DATE } from '@/firebase/app';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
 import { cameraOptionsFromSettings, listCameraDevices } from '@/platform/camera';
 import { clearCameraLog, noteUnfinishedCameraSession, readCameraLog } from '@/platform/cameraLog';
-import { nativeCameraSupported } from '@/platform/nativeCamera';
+import {
+  clearNativeCameraDiagnosis,
+  nativeCameraSupported,
+  readNativeCameraDiagnosis,
+  runNativeCameraDiagnosis,
+} from '@/platform/nativeCamera';
 import { CameraCapture } from '@/components/CameraCapture';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
@@ -40,6 +45,8 @@ export default function SettingsPage() {
   const [cameraLogLines, setCameraLogLines] = useState<string[]>([]);
   const [cameraLogCopied, setCameraLogCopied] = useState(false);
   const [nativeCamera, setNativeCamera] = useState(false);
+  const [cameraCheckRunning, setCameraCheckRunning] = useState(false);
+  const [cameraReport, setCameraReport] = useState('');
   const cameraOptions = useMemo(() => cameraOptionsFromSettings(settings), [settings]);
 
   useEffect(() => {
@@ -47,6 +54,9 @@ export default function SettingsPage() {
     noteUnfinishedCameraSession();
     setCameraLogLines(readCameraLog());
     void nativeCameraSupported().then(setNativeCamera);
+    // survives a restart of the phone, unlike the protocol above - so it is worth showing
+    // again on every visit, not just right after a run
+    void readNativeCameraDiagnosis().then(setCameraReport).catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -122,6 +132,31 @@ export default function SettingsPage() {
     image.onload = () => setCameraTestShot({ url, width: image.naturalWidth, height: image.naturalHeight, bytes: blob.size });
     image.onerror = () => setCameraTestShot({ url, width: 0, height: 0, bytes: blob.size });
     image.src = url;
+  }
+
+  async function runFullCameraCheck() {
+    setCameraCheckRunning(true);
+    setCameraError(null);
+    try {
+      setCameraReport(await runNativeCameraDiagnosis());
+    } catch (cause) {
+      setCameraError(cause instanceof Error ? cause.message : 'Die Vollprüfung ist gescheitert.');
+      // the run may have died without returning; the file knows more than the exception does
+      setCameraReport(await readNativeCameraDiagnosis().catch(() => ''));
+    } finally {
+      setCameraLogLines(readCameraLog());
+      setCameraCheckRunning(false);
+    }
+  }
+
+  async function copyCameraReport() {
+    try {
+      await navigator.clipboard.writeText(cameraReport);
+      setCameraLogCopied(true);
+      window.setTimeout(() => setCameraLogCopied(false), 2000);
+    } catch {
+      setCameraError('Kopieren nicht möglich – bitte den Text markieren.');
+    }
   }
 
   async function copyCameraLog() {
@@ -376,6 +411,51 @@ export default function SettingsPage() {
                     Protokoll löschen
                   </button>
                 </div>
+                {nativeCamera && (
+                  <div className="mb-4 border-t border-line pt-3">
+                    <p className="text-sm mb-2">
+                      <strong>Vollprüfung.</strong> Probiert jede Kamera des Geräts in jeder Betriebsart
+                      durch und schreibt jeden Schritt sofort auf die Platte – vor dem Zugriff, nicht danach.
+                      Startet das Gerät dabei neu, steht hinterher genau drin, bei welcher Einstellung es
+                      passiert ist, und der nächste Lauf überspringt sie.
+                    </p>
+                    <p className="text-sm text-warn mb-2">
+                      Achtung: Beim ersten Versuch hat das dieses Gerät neu gestartet. Nichts Ungesichertes
+                      offen lassen.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="btn text-sm"
+                        onClick={() => void runFullCameraCheck()}
+                        disabled={cameraCheckRunning}
+                      >
+                        {cameraCheckRunning ? 'Läuft… (gut eine Minute)' : 'Vollprüfung starten'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn text-sm"
+                        onClick={() => void copyCameraReport()}
+                        disabled={!cameraReport}
+                      >
+                        {cameraLogCopied ? 'Kopiert' : 'Bericht kopieren'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn text-sm"
+                        onClick={() => void clearNativeCameraDiagnosis().then(() => setCameraReport(''))}
+                        disabled={!cameraReport}
+                      >
+                        Bericht löschen
+                      </button>
+                    </div>
+                    {cameraReport && (
+                      <pre className="mt-2 text-[11px] leading-snug font-mono whitespace-pre-wrap break-all max-h-80 overflow-y-auto bg-black/20 rounded p-2">
+                        {cameraReport}
+                      </pre>
+                    )}
+                  </div>
+                )}
                 {cameraLogLines.length === 0 ? (
                   <p className="text-sm text-muted">Noch kein Protokoll. Es entsteht, sobald die Kamera geöffnet wird.</p>
                 ) : (

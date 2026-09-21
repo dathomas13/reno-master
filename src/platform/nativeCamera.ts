@@ -20,6 +20,8 @@ export interface NativeCamFrame {
 /** the plugin tries one lens after another, so opening is allowed to take a few seconds */
 const START_TIMEOUT_MS = 15000;
 const CAPTURE_TIMEOUT_MS = 5000;
+/** the whole table, with long rests between probes */
+const DIAGNOSIS_TIMEOUT_MS = 300000;
 
 /**
  * On the device Capacitor hands the listener handle back directly, not as a promise, and
@@ -39,6 +41,9 @@ interface NativeCamPlugin {
   start(): Promise<{ physicalCameraId?: string }>;
   capture(): Promise<{ base64: string; mime: string; width: number; height: number }>;
   stop(): Promise<void>;
+  diagnose(): Promise<{ report: string }>;
+  readDiagnosis(): Promise<{ report: string }>;
+  clearDiagnosis(): Promise<void>;
   addListener(event: 'frame', handler: (frame: NativeCamFrame) => void): FromBridge<Listener>;
   addListener(event: 'error', handler: (error: { message: string }) => void): FromBridge<Listener>;
   addListener(event: 'log', handler: (entry: { message: string }) => void): FromBridge<Listener>;
@@ -93,6 +98,39 @@ export function nativeCameraSupported(): Promise<boolean> {
       .catch(() => false);
   }
   return supportCache;
+}
+
+/**
+ * Runs the plugin's whole table of camera configurations once.
+ *
+ * Written by the plugin to a file with an fsync per line, not to the camera protocol: this
+ * check once restarted the phone, and localStorage writes do not survive that. What comes
+ * back is the report from the file, so it is readable even when the run never returned.
+ */
+export async function runNativeCameraDiagnosis(): Promise<string> {
+  const native = plugin();
+  if (!native) throw new Error('Kein Zugriff auf die native Kamera');
+  const logging = await Promise.resolve(
+    native.addListener('log', ({ message }) => cameraLog(`prüfung: ${message}`)),
+  );
+  try {
+    const { report } = await withTimeout(native.diagnose(), DIAGNOSIS_TIMEOUT_MS, 'Die Vollprüfung');
+    return report;
+  } finally {
+    await removeQuietly(logging);
+  }
+}
+
+/** the report of the last run - the only thing left after the phone restarts */
+export async function readNativeCameraDiagnosis(): Promise<string> {
+  const native = plugin();
+  if (!native) return '';
+  const { report } = await native.readDiagnosis();
+  return report;
+}
+
+export async function clearNativeCameraDiagnosis(): Promise<void> {
+  await plugin()?.clearDiagnosis();
 }
 
 export interface NativeCameraSession {

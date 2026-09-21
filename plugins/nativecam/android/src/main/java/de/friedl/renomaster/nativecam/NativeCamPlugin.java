@@ -155,6 +155,10 @@ public class NativeCamPlugin extends Plugin {
             call.reject("Ohne Kamera-Berechtigung geht es nicht.");
             return;
         }
+        if ("diagnose".equals(call.getMethodName())) {
+            diagnose(call);
+            return;
+        }
         startInternal(call);
     }
 
@@ -211,10 +215,58 @@ public class NativeCamPlugin extends Plugin {
         call.resolve();
     }
 
-    // There was a diagnose() here that walked a matrix of camera configurations back to back.
-    // On the device it rebooted the phone - not the app, the phone - which is a fault below
-    // the operating system and the end of what any app may do to this hardware. It is gone,
-    // and nothing here opens the camera except at the user's request, once.
+    /**
+     * Walks the table of camera configurations once - see CameraDiagnosis.
+     *
+     * This rebooted the phone the first time it ran, which is why every line of it goes to a
+     * file with an fsync before the camera is touched, and why the probe that a run died in is
+     * skipped on the next one. Only ever runs when the user asks for it.
+     */
+    @PluginMethod
+    public void diagnose(PluginCall call) {
+        if (getPermissionState(CAMERA) != PermissionState.GRANTED) {
+            requestPermissionForAlias(CAMERA, call, "cameraPermissionCallback");
+            return;
+        }
+        if (cameraDevice != null || !startSettled.get()) {
+            call.reject("Erst die Kamera-Ansicht schließen");
+            return;
+        }
+        CameraManager manager = manager();
+        if (manager == null) {
+            call.reject("Kein Kamera-Dienst auf diesem Gerät");
+            return;
+        }
+        DiagnosisLog disk = new DiagnosisLog(getContext());
+        new Thread(() -> {
+            try {
+                new CameraDiagnosis(manager, this::emitLog, disk).run();
+                call.resolve(report(disk));
+            } catch (Exception error) {
+                disk.line("✖ Vollprüfung abgebrochen: " + error);
+                emitLog("✖ Vollprüfung abgebrochen: " + error);
+                call.reject("Vollprüfung abgebrochen", error);
+            }
+        }, "NativeCamDiagnosis").start();
+    }
+
+    /** the report of the last run, which is the only thing a reboot leaves behind */
+    @PluginMethod
+    public void readDiagnosis(PluginCall call) {
+        call.resolve(report(new DiagnosisLog(getContext())));
+    }
+
+    @PluginMethod
+    public void clearDiagnosis(PluginCall call) {
+        new DiagnosisLog(getContext()).clear();
+        call.resolve();
+    }
+
+    private JSObject report(DiagnosisLog disk) {
+        JSObject result = new JSObject();
+        result.put("report", join(disk.read()));
+        return result;
+    }
 
     @Override
     protected void handleOnDestroy() {

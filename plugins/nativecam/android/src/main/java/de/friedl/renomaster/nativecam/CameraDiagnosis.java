@@ -71,49 +71,107 @@ final class CameraDiagnosis {
     private static final long CLOSE_TIMEOUT_MS = 3000;
 
     private final CameraManager manager;
-    private final Sink sink;
+    private final Sink events;
+    private final DiagnosisLog disk;
     /** cleared the moment the hardware faults, and never set again for this run */
     private final java.util.concurrent.atomic.AtomicBoolean safeToGoOn =
         new java.util.concurrent.atomic.AtomicBoolean(true);
 
-    CameraDiagnosis(CameraManager manager, Sink sink) {
+    CameraDiagnosis(CameraManager manager, Sink events, DiagnosisLog disk) {
         this.manager = manager;
-        this.sink = sink;
+        this.events = events;
+        this.disk = disk;
     }
 
+    /**
+     * Every line goes to the file first, with an fsync, and only then to the live view. When
+     * the phone dies mid-probe, whatever was said last is on the disk - that is the only way
+     * a run that takes the device down can still tell us which configuration did it.
+     */
+    private void say(String line) {
+        disk.line(line);
+        events.log(line);
+    }
+
+    private static final String BEGIN = ">>> LAUF ";
+    private static final String END = "<<< LAUF ";
+
     void run() throws Exception {
-        sink.log("════════ Vollprüfung startet");
+        // read the previous run before anything overwrites it: if it stops mid-probe, that
+        // probe is what took the phone down, and it is not getting a second chance
+        String victim = unfinishedProbeOfLastRun();
+        disk.clear();
+
+        say("════════ Vollprüfung startet");
+        if (victim != null) {
+            say("⚠ Der letzte Lauf endete mitten in: " + victim);
+            say("⚠ Genau diese Einstellung wird übersprungen – sie hat vermutlich das Gerät umgelegt");
+        }
         String[] ids = manager.getCameraIdList();
-        sink.log("Kameras des Geräts: " + join(Arrays.asList(ids)));
+        say("Kameras des Geräts: " + join(Arrays.asList(ids)));
 
         for (String id : ids) {
             describe(id);
         }
 
         List<Probe> probes = buildProbes(ids);
-        sink.log("──────── " + probes.size() + " Durchläufe, je bis zu " + (PROBE_MS / 1000) + "s");
+        say("──────── " + probes.size() + " Durchläufe, je bis zu " + (PROBE_MS / 1000) + "s");
         int number = 0;
         String previousCamera = null;
         for (Probe probe : probes) {
             number += 1;
             if (!safeToGoOn.get()) {
-                sink.log("✖ Die Kamera hat sich verabschiedet – Rest der Prüfung entfällt");
+                say("✖ Die Kamera hat sich verabschiedet – Rest der Prüfung entfällt");
                 break;
             }
             if (!serviceAlive(probe.cameraId)) {
-                sink.log("✖ Kamera " + probe.cameraId + " antwortet nicht mehr – Rest der Prüfung entfällt");
+                say("✖ Kamera " + probe.cameraId + " antwortet nicht mehr – Rest der Prüfung entfällt");
                 break;
+            }
+            if (probe.key().equals(victim)) {
+                say("⏭ übersprungen: " + probe.label);
+                continue;
             }
             if (previousCamera != null && !previousCamera.equals(probe.cameraId)) {
                 // changing sensor is the most demanding thing there is for the camera board
-                sink.log("   (Sensorwechsel – " + (SWITCH_PAUSE_MS / 1000) + "s Pause)");
+                say("   (Sensorwechsel – " + (SWITCH_PAUSE_MS / 1000) + "s Pause)");
                 Thread.sleep(SWITCH_PAUSE_MS);
             }
+            // said, and on the disk, BEFORE the camera is touched
+            say(BEGIN + number + " " + probe.key() + " – " + probe.label);
             probe(number, probe);
+            say(END + number + " " + probe.key());
             previousCamera = probe.cameraId;
             Thread.sleep(PAUSE_MS);
         }
-        sink.log("════════ Vollprüfung fertig");
+        say("════════ Vollprüfung fertig");
+    }
+
+    /**
+     * The probe the last run started and never finished, if any. That is the whole reason the
+     * report is written with an fsync per line: after the phone restarts, this sentence is the
+     * only witness left.
+     */
+    private String unfinishedProbeOfLastRun() {
+        String started = null;
+        for (String line : disk.read()) {
+            int begin = line.indexOf(BEGIN);
+            if (begin >= 0) {
+                started = keyOf(line.substring(begin + BEGIN.length()));
+                continue;
+            }
+            int end = line.indexOf(END);
+            if (end >= 0 && started != null && started.equals(keyOf(line.substring(end + END.length())))) {
+                started = null;
+            }
+        }
+        return started;
+    }
+
+    /** "3 cam0/PRIVATE/roh/1280 – Kamera 0, ..." -> "cam0/PRIVATE/roh/1280" */
+    private String keyOf(String rest) {
+        String[] words = rest.trim().split("\\s+");
+        return words.length >= 2 ? words[1] : null;
     }
 
     // ---------------------------------------------------------------- what the device claims
@@ -121,12 +179,12 @@ final class CameraDiagnosis {
     private void describe(String id) {
         try {
             CameraCharacteristics chars = manager.getCameraCharacteristics(id);
-            sink.log("── Kamera " + id + " (" + facing(chars) + ")");
-            sink.log("   Güteklasse: " + hardwareLevel(chars));
-            sink.log("   Fähigkeiten: " + capabilities(chars));
+            say("── Kamera " + id + " (" + facing(chars) + ")");
+            say("   Güteklasse: " + hardwareLevel(chars));
+            say("   Fähigkeiten: " + capabilities(chars));
             properties(chars);
         } catch (Exception error) {
-            sink.log("── Kamera " + id + ": nicht lesbar – " + error);
+            say("── Kamera " + id + ": nicht lesbar – " + error);
         }
     }
 
@@ -143,30 +201,30 @@ final class CameraDiagnosis {
         Integer maxOis = chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION) == null
             ? null : chars.get(CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION).length;
 
-        sink.log("   Sensor: " + (pixels == null ? "?" : pixels.getWidth() + "×" + pixels.getHeight())
+        say("   Sensor: " + (pixels == null ? "?" : pixels.getWidth() + "×" + pixels.getHeight())
             + ", Ausrichtung " + orientation
             + ", Brennweiten " + floats(focal)
             + ", Blenden " + floats(apertures)
             + ", Nahgrenze " + minFocus);
-        sink.log("   Belichtung: ISO " + iso + ", Zeit " + exposure + ", Zeitquelle " + timestamps);
-        sink.log("   Fokusarten: " + ints(chars.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES))
+        say("   Belichtung: ISO " + iso + ", Zeit " + exposure + ", Zeitquelle " + timestamps);
+        say("   Fokusarten: " + ints(chars.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES))
             + ", Bildstabilisator-Arten: " + maxOis);
-        sink.log("   Bildraten: " + ranges(chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)));
+        say("   Bildraten: " + ranges(chars.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES)));
 
         try {
-            sink.log("   Einzelne Linsen: " + join(new ArrayList<>(chars.getPhysicalCameraIds())));
+            say("   Einzelne Linsen: " + join(new ArrayList<>(chars.getPhysicalCameraIds())));
         } catch (Throwable ignored) {
-            sink.log("   Einzelne Linsen: keine");
+            say("   Einzelne Linsen: keine");
         }
 
         StreamConfigurationMap map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         if (map == null) {
-            sink.log("   ✖ nennt keine Ausgabeformate");
+            say("   ✖ nennt keine Ausgabeformate");
             return;
         }
-        sink.log("   Größen YUV: " + sizes(map.getOutputSizes(ImageFormat.YUV_420_888)));
-        sink.log("   Größen JPEG: " + sizes(map.getOutputSizes(ImageFormat.JPEG)));
-        sink.log("   Größen intern (PRIVATE): " + sizes(map.getOutputSizes(ImageFormat.PRIVATE)));
+        say("   Größen YUV: " + sizes(map.getOutputSizes(ImageFormat.YUV_420_888)));
+        say("   Größen JPEG: " + sizes(map.getOutputSizes(ImageFormat.JPEG)));
+        say("   Größen intern (PRIVATE): " + sizes(map.getOutputSizes(ImageFormat.PRIVATE)));
     }
 
     // ---------------------------------------------------------------- the matrix
@@ -184,6 +242,14 @@ final class CameraDiagnosis {
             this.tame = tame;
             this.maxEdge = maxEdge;
             this.label = label;
+        }
+
+        /** stable across runs, so a probe that killed the phone can be recognised next time */
+        String key() {
+            return "cam" + cameraId
+                + "/" + (format == ImageFormat.PRIVATE ? "PRIVATE" : "YUV")
+                + "/" + (tame ? "zahm" : "roh")
+                + "/" + maxEdge;
         }
     }
 
@@ -214,7 +280,7 @@ final class CameraDiagnosis {
     }
 
     private void probe(int number, Probe probe) {
-        sink.log("──────── " + number + ") " + probe.label);
+        say("──────── " + number + ") " + probe.label);
 
         HandlerThread thread = new HandlerThread("diagnose-" + number);
         thread.start();
@@ -235,11 +301,11 @@ final class CameraDiagnosis {
             StreamConfigurationMap map = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             Size[] sizes = map == null ? null : map.getOutputSizes(probe.format);
             if (sizes == null || sizes.length == 0) {
-                sink.log("   ✖ dieses Format bietet die Kamera nicht an");
+                say("   ✖ dieses Format bietet die Kamera nicht an");
                 return;
             }
             Size size = pick(sizes, probe.maxEdge);
-            sink.log("   Strom " + size.getWidth() + "×" + size.getHeight());
+            say("   Strom " + size.getWidth() + "×" + size.getHeight());
 
             reader = ImageReader.newInstance(size.getWidth(), size.getHeight(), probe.format, 3);
             final ImageReader open = reader;
@@ -316,14 +382,14 @@ final class CameraDiagnosis {
                 ? "nie ein Bild"
                 : "erstes Bild nach " + (firstFrameAt.get() - started) + " ms";
             if (died) {
-                sink.log("   ✖ " + outcome.get() + " nach " + lived + " ms, " + frames.get()
+                say("   ✖ " + outcome.get() + " nach " + lived + " ms, " + frames.get()
                     + " Bilder, " + firstFrame);
             } else {
-                sink.log("   ✓ hat " + lived + " ms durchgehalten, " + frames.get()
+                say("   ✓ hat " + lived + " ms durchgehalten, " + frames.get()
                     + " Bilder, " + firstFrame);
             }
         } catch (Exception error) {
-            sink.log("   ✖ Durchlauf abgebrochen: " + error);
+            say("   ✖ Durchlauf abgebrochen: " + error);
         } finally {
             CameraCaptureSession configured = session.get();
             if (configured != null) {
@@ -342,7 +408,7 @@ final class CameraDiagnosis {
                     // camera while this one - usually mid-fault - was still coming down, and
                     // quit the very thread onClosed would have arrived on.
                     if (!closed.await(CLOSE_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
-                        sink.log("   ⚠ Kamera hat das Schließen nicht bestätigt – Prüfung endet hier");
+                        say("   ⚠ Kamera hat das Schließen nicht bestätigt – Prüfung endet hier");
                         safeToGoOn.set(false);
                     }
                 } catch (InterruptedException interrupted) {
