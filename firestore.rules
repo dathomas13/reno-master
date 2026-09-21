@@ -29,6 +29,7 @@ service cloud.firestore {
     match /tasks/{doc}    { allow read, write: if allowed(); }
     match /notes/{doc}    { allow read, write: if allowed(); }
     match /contacts/{doc} { allow read, write: if allowed(); }
+    match /contactLogs/{doc} { allow read, write: if allowed(); }
     match /trades/{doc}   { allow read, write: if allowed(); }
     match /phases/{doc}   { allow read, write: if allowed(); }
     match /plans/{doc}    { allow read, write: if allowed(); }

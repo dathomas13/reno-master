@@ -5,6 +5,7 @@
 import {
   COL,
   type Contact,
+  type ContactLog,
   type Cost,
   type DiaryEntry,
   type Note,
@@ -157,18 +158,35 @@ export async function deleteNote(id: string): Promise<void> {
 
 // ------------------------------------------------------------------ contacts
 export function emptyContact(): Contact {
-  return { id: newId(), name: '', tradeIds: [] };
+  return { id: newId(), name: '', tradeIds: [], roles: [] };
 }
 
 export async function saveContact(contact: Contact): Promise<string> {
-  return saveDoc<Contact>(
-    COL.contacts,
-    clean(contact as unknown as Record<string, unknown>) as unknown as Contact,
-  );
+  const value = clean(contact as unknown as Record<string, unknown>);
+  // the role picker only ever writes `roles` now; drop the old single-value field so a
+  // contact never carries both and shows a stale role somewhere that still reads it
+  value.role = deleteField();
+  return saveDoc<Contact>(COL.contacts, value as unknown as Contact);
 }
 
 export async function deleteContact(id: string): Promise<void> {
   await removeDoc(COL.contacts, id);
+}
+
+// ------------------------------------------------------------------ contact logs (Gesprächsprotokoll)
+export function emptyContactLog(contactId: string): ContactLog {
+  return { id: newId(), contactId, at: toIsoDateTime(), text: '' };
+}
+
+export async function saveContactLog(log: ContactLog): Promise<string> {
+  return saveDoc<ContactLog>(
+    COL.contactLogs,
+    clean(log as unknown as Record<string, unknown>) as unknown as ContactLog,
+  );
+}
+
+export async function deleteContactLog(id: string): Promise<void> {
+  await removeDoc(COL.contactLogs, id);
 }
 
 // ------------------------------------------------------------------ plans, trades, phases

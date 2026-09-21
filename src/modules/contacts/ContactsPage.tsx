@@ -3,11 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
 import { Field, ChipSelect, EmptyState } from '@/components/Fields';
-import { TradePicker } from '@/components/Pickers';
+import { TradePicker, RolePicker } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
 import { COL, CONTACT_STATUS, type Contact, type ContactStatus } from '@/data/types';
+import { contactRoleNames } from '@/data/contactRoles';
 import { emptyContact, saveContact, deleteContact } from '@/data/repos';
+import { ContactImportSheet } from './ContactImportSheet';
+import { ContactLogSection } from './ContactLogSection';
 
 function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, '')}`;
@@ -21,9 +24,10 @@ function whatsappHref(phone: string): string {
 export default function ContactsPage() {
   const [params, setParams] = useSearchParams();
   const { data: contacts } = useCollection<Contact>(COL.contacts);
-  const { lists } = useLists();
+  const { lists, addTo } = useLists();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Contact | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const wanted = params.get('kontakt');
 
@@ -47,7 +51,7 @@ export default function ContactsPage() {
     const needle = search.trim().toLowerCase();
     const rows = needle
       ? contacts.filter((contact) =>
-          [contact.name, contact.company, contact.role, contact.notes]
+          [contact.name, contact.company, ...contactRoleNames(contact), contact.notes]
             .join(' ')
             .toLowerCase()
             .includes(needle),
@@ -62,13 +66,18 @@ export default function ContactsPage() {
         title="Kontakte"
         subtitle={`${contacts.length} Handwerker und Firmen`}
         action={
-          <button
-            type="button"
-            className="btn btn-primary px-3 min-h-0 py-2"
-            onClick={() => setEditing(emptyContact())}
-          >
-            Neu
-          </button>
+          <div className="flex gap-2">
+            <button type="button" className="btn px-3 min-h-0 py-2" onClick={() => setImporting(true)}>
+              Importieren
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary px-3 min-h-0 py-2"
+              onClick={() => setEditing(emptyContact())}
+            >
+              Neu
+            </button>
+          </div>
         }
       />
 
@@ -90,7 +99,9 @@ export default function ContactsPage() {
             <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(contact)}>
               <span className="block truncate">{contact.name}</span>
               <span className="block text-xs text-muted truncate">
-                {[contact.role, contact.company, contact.status].filter(Boolean).join(' · ')}
+                {[contactRoleNames(contact).join(', '), contact.company, contact.status]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
             </button>
             {contact.phone && (
@@ -120,7 +131,9 @@ export default function ContactsPage() {
       {editing && (
         <ContactSheet
           contact={editing}
+          isNew={!contacts.some((item) => item.id === editing.id)}
           roles={lists.contactRoles}
+          onAddRole={(role) => void addTo('contactRoles', role)}
           onClose={close}
           onSave={async (contact) => {
             await saveContact(contact);
@@ -132,19 +145,30 @@ export default function ContactsPage() {
           }}
         />
       )}
+
+      {importing && (
+        <ContactImportSheet
+          existingNames={contacts.map((contact) => contact.name)}
+          onClose={() => setImporting(false)}
+        />
+      )}
     </>
   );
 }
 
 function ContactSheet({
   contact,
+  isNew,
   roles,
+  onAddRole,
   onClose,
   onSave,
   onDelete,
 }: {
   contact: Contact;
+  isNew: boolean;
   roles: string[];
+  onAddRole(role: string): void;
   onClose(): void;
   onSave(contact: Contact): Promise<void>;
   onDelete(contact: Contact): Promise<void>;
@@ -174,12 +198,17 @@ function ContactSheet({
             onChange={(event) => update({ company: event.target.value })}
           />
         </Field>
-        <Field label="Rolle / Gewerk">
-          <ChipSelect
+        <Field label="Rollen">
+          <RolePicker
             options={roles}
-            value={draft.role ? [draft.role] : []}
-            multiple={false}
-            onChange={(value) => update({ role: value[0] })}
+            value={contactRoleNames(draft)}
+            onChange={(value) => update({ roles: value })}
+            onAdd={() => {
+              const role = prompt('Neue Rolle?')?.trim();
+              if (!role) return;
+              onAddRole(role);
+              update({ roles: [...contactRoleNames(draft), role] });
+            }}
           />
         </Field>
         <Field label="Telefon">
@@ -232,6 +261,13 @@ function ContactSheet({
             onChange={(event) => update({ notes: event.target.value })}
           />
         </Field>
+        {isNew ? (
+          <p className="text-xs text-muted mb-4">
+            Gesprächseinträge gibt es, sobald der Kontakt einmal gespeichert ist.
+          </p>
+        ) : (
+          <ContactLogSection contactId={draft.id} />
+        )}
         <div className="flex gap-3">
           <button type="button" className="btn btn-primary flex-1" onClick={() => void onSave(draft)}>
             Speichern

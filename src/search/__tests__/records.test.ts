@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildRecords, KINDS, KIND_LABEL } from '../records';
 import { buildIndex, search } from '../engine';
-import type { Contact, Cost, DiaryEntry, Task, Trade } from '@/data/types';
+import type { Contact, ContactLog, Cost, DiaryEntry, Task, Trade } from '@/data/types';
 
 const diary: DiaryEntry = {
   id: 'd1',
@@ -42,8 +42,17 @@ const contact: Contact = {
   id: 'k1',
   name: 'Sanitär Schröder',
   company: 'Schröder GmbH',
+  roles: ['Sanitär'],
   tradeIds: ['t1'],
   notes: 'Telefonat 10.09.: kommt nach dem Estrich.',
+};
+
+const contactLog: ContactLog = {
+  id: 'g1',
+  contactId: 'k1',
+  at: '2026-09-10T09:00:00',
+  channel: 'Anruf',
+  text: 'Kommt nach dem Estrich vorbei.',
 };
 
 const trade: Trade = { id: 't1', name: 'Fliesenarbeiten', status: 'Beauftragt', priority: 'Hoch' };
@@ -53,6 +62,7 @@ const records = buildRecords({
   costs: [cost],
   tasks: [task],
   contacts: [contact],
+  contactLogs: [contactLog],
   trades: [trade],
   rooms: [{ id: 'og.bad', name: 'Bad OG', floor: 'OG', floorLabel: 'Obergeschoss', areaM2: 8.4 }],
 });
@@ -60,16 +70,26 @@ const index = buildIndex(records);
 
 describe('buildRecords', () => {
   it('makes one record per thing, with a target to open', () => {
-    expect(records).toHaveLength(6);
+    expect(records).toHaveLength(7);
     const ids = records.map((record) => record.id);
     expect(ids).toContain('diary:d1');
     expect(ids).toContain('cost:c1');
     expect(ids).toContain('task:a1');
     expect(ids).toContain('contact:k1');
+    expect(ids).toContain('contactLog:g1');
     expect(ids).toContain('trade:t1');
     expect(ids).toContain('room:og.bad');
     expect(records.find((record) => record.id === 'task:a1')?.to).toBe('/aufgaben?aufgabe=a1');
     expect(records.find((record) => record.id === 'contact:k1')?.to).toBe('/kontakte?kontakt=k1');
+    expect(records.find((record) => record.id === 'contactLog:g1')?.to).toBe('/kontakte?kontakt=k1');
+  });
+
+  it('finds a contact by a role added through the extensible picker', () => {
+    expect(search(index, 'sanitär').map((hit) => hit.record.id)).toContain('contact:k1');
+  });
+
+  it('finds a Gesprächsprotokoll entry by its text and links back to the contact', () => {
+    expect(search(index, 'estrich vorbei').map((hit) => hit.record.id)).toContain('contactLog:g1');
   });
 
   it('finds an entry by the name of a room it is linked to', () => {

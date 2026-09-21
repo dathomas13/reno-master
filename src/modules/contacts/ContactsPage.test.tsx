@@ -12,13 +12,18 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/components/TopBar', () => ({
   TopBar: ({ action }: { action?: React.ReactNode }) => <header>{action}</header>,
 }));
-vi.mock('@/components/Pickers', () => ({ TradePicker: () => null }));
-vi.mock('@/data/hooks', () => ({ useCollection: () => ({ data: mocks.contacts, loading: false }) }));
-vi.mock('@/data/useLists', () => ({ useLists: () => ({ lists: { contactRoles: [] } }) }));
+vi.mock('@/components/Pickers', () => ({ TradePicker: () => null, RolePicker: () => null }));
+vi.mock('@/data/hooks', () => ({
+  useCollection: (name: string) => ({ data: name === 'contacts' ? mocks.contacts : [], loading: false }),
+}));
+vi.mock('@/data/useLists', () => ({ useLists: () => ({ lists: { contactRoles: [] }, addTo: vi.fn() }) }));
 vi.mock('@/data/repos', () => ({
-  emptyContact: () => ({ id: 'new-contact', name: '', tradeIds: [] }),
+  emptyContact: () => ({ id: 'new-contact', name: '', tradeIds: [], roles: [] }),
   saveContact: mocks.saveContact,
   deleteContact: vi.fn(),
+  emptyContactLog: (contactId: string) => ({ id: 'new-log', contactId, at: '2026-01-01T00:00:00', text: '' }),
+  saveContactLog: vi.fn(),
+  deleteContactLog: vi.fn(),
 }));
 
 beforeEach(() => {

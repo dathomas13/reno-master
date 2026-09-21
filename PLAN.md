@@ -421,9 +421,22 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Erledigt-Haken setzt `status:'Erledigt'`, `doneAt` und löscht eine geplante Erinnerung. In der Android-App wird `reminderAt` beim Speichern der Aufgabe direkt als lokale Benachrichtigung gestellt oder gelöscht; dieser direkte Weg wartet nicht auf den nächsten Aufgaben-Snapshot. Falls die Benachrichtigungserlaubnis noch fehlt, fragt der Speichervorgang mit Erinnerung danach. Der laufende Aufgaben-Listener gleicht die Liste danach nur noch als Sicherheitsnetz ab. Kann Android die Aktion „Erledigt“ nicht registrieren, wird die Erinnerung trotzdem geplant; deren Aktion „Erledigt“ markiert die Aufgabe als abgeschlossen, wenn sie verfügbar ist.
 
 ### 8.7 Kontakte
-- Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.
+- Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rollen, Status-Chip, Sterne.
 - Detail: Telefon (`tel:`-Link + WhatsApp-Link `https://wa.me/<nummer>`), E-Mail (`mailto:`), Gewerke, Status, Bewertung, Notizen; Buttons Anrufen / WhatsApp / E-Mail / Teilen (vCard über Web Share).
-- Editor mit allen Feldern.
+- Editor mit allen Feldern. **Rollen sind mehrfach wählbar und erweiterbar**: der Picker ist derselbe
+  Sheet-mit-Checkliste wie „Anwesend“ im Tagebuch (`RolePicker`/`MultiPicker` in `src/components/Pickers.tsx`),
+  nicht mehr eine flache Chip-Reihe – neue Rollen kommen über „Rolle hinzufügen“ direkt in die gemeinsame
+  Liste `meta/lists.contactRoles`. Kontakte, die noch das alte einzelne `role`-Feld tragen, werden beim
+  nächsten Speichern automatisch auf `roles: string[]` migriert (`contactRoleNames()` in
+  `src/data/contactRoles.ts` liest beide Formen).
+- **Import aus dem Adressbuch**: Button „Importieren“ neben „Neu“. Auf Chrome/Android öffnet das die native
+  Kontaktauswahl (Contact Picker API); überall sonst wird eine vCard-Datei (.vcf, ein oder mehrere Kontakte)
+  ausgewählt und geparst (`src/platform/contactsImport.ts`). Vor dem Anlegen zeigt eine Checkliste, wer
+  übernommen wird, mit Hinweis auf Namen, die schon als Kontakt bestehen.
+- **Gesprächsprotokoll**: eigene, datierte Einträge je Kontakt (Datum/Uhrzeit, Art – Anruf/Termin/E-Mail/
+  Nachricht/Sonstiges –, Text) statt Fließtext in den Notizen; Collection `contactLogs`, Feld `contactId`.
+  Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.
+  Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
@@ -435,7 +448,8 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 ### 8.9 Suche (`/suche`)
 - **Eine Suche über alles**: Tagebuch (Titel, Text, Anwesende, Wetter, Mängel), Kosten und Belege (Händler,
   Beschreibung, Kategorie, Rechnungsnummer, Notizen und der vom Beleg **gescannte Text** aus
-  `extraction.rawText`), Aufgaben, Kontakte (inklusive Notizen, wo die Gesprächsprotokolle stehen), Gewerke,
+  `extraction.rawText`), Aufgaben, Kontakte (inklusive Rollen und Notizen), die Gesprächsprotokoll-Einträge
+  der Kontakte (eigene Art `contactLog`, verlinkt zurück auf den Kontakt), Gewerke,
   Phasen, Räume des Modells, Pläne und Fotountertitel. Verknüpfungen zählen mit: ein Eintrag wird auch über
   den Namen seines Raums, seines Gewerks oder seiner Phase gefunden.
 - Mitgesucht wird, was nicht als Text dasteht: Status ("offen", "Beauftragt"), Zuständige, Beträge
