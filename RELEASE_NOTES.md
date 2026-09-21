@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.37.1 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts. Interne Notizen richtiggestellt.
+
 ## 0.37.0 – Fehlerprotokoll für die ganze App
 
 - Das Protokoll aus der Kamera-Fehlersuche ist jetzt allgemein: jede Stelle der App kann
