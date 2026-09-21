@@ -1,0 +1,32 @@
+ext {
+    androidxAppCompatVersion = project.hasProperty('androidxAppCompatVersion')
+        ? rootProject.ext.androidxAppCompatVersion : '1.7.0'
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace "de.friedl.renomaster.nativecam"
+    compileSdk project.hasProperty('compileSdkVersion') ? rootProject.ext.compileSdkVersion : 34
+    defaultConfig {
+        // Camera2's per-physical-camera routing (OutputConfiguration.setPhysicalCameraId,
+        // SessionConfiguration) needs API 28; below that isSupported() says so and the
+        // caller stays with getUserMedia.
+        minSdkVersion project.hasProperty('minSdkVersion') ? rootProject.ext.minSdkVersion : 22
+        targetSdkVersion project.hasProperty('targetSdkVersion') ? rootProject.ext.targetSdkVersion : 34
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+repositories {
+    google()
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':capacitor-android')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+}

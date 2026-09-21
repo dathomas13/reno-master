@@ -138,7 +138,7 @@ describe('task reminder notifications', () => {
       getPending: vi.fn(),
       cancel: vi.fn(),
       schedule: vi.fn(),
-      addListener: vi.fn().mockImplementation((_event, next) => {
+      addListener: vi.fn().mockImplementation((_event: string, next: typeof handler) => {
         handler = next;
         return Promise.resolve({ remove: vi.fn() });
       }),

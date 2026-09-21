@@ -103,3 +103,4 @@ describe('settings disclosure', () => {
     expect(patchDoc).toHaveBeenCalledWith('users', 'user-1', { reminderTime: '18:30' });
   });
 });
+

@@ -124,7 +124,7 @@ describe('receipt deduplication', () => {
     { originalName: 'andere-rechnung.pdf' },
     { contentType: 'image/jpeg' },
     { kind: 'photo' as const },
-  ])('keeps distinct files separate: %j', async (patch) => {
+  ])('keeps distinct files separate: %j', async (patch: Partial<Photo>) => {
     const photo = await addPhoto({ ...input, existingPhotos: [{ ...receipt, ...patch }] });
     expect(photo.id).not.toBe(receipt.id);
     expect(photo.costId).toBe('cost-1');

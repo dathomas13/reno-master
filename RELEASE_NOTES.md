@@ -1,12 +1,75 @@
 # Was neu ist
 
 Die Texte, die in der App im Update-Banner stehen. Sie sind für den Menschen am Telefon
-geschrieben, nicht für den Entwickler: was sich an der Bedienung ändert, in ganzen Sätzen,
-ohne Dateinamen, Testzahlen und Commit-Prosa.
+geschrieben, nicht für den Entwickler: was sich für ihn ändert, sonst nichts.
 
-Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bis drei kurze
-Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
-Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
+Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bis drei
+Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, keine
+Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
+Commit-Nachricht, und die liest sich im Banner auch so.
+
+## 0.37.1 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts. Interne Notizen richtiggestellt.
+
+## 0.37.0 – Fehlerprotokoll für die ganze App
+
+- Das Protokoll aus der Kamera-Fehlersuche ist jetzt allgemein: jede Stelle der App kann
+  hineinschreiben, es übersteht Abstürze und Neustarts.
+- Unbehandelte Fehler landen automatisch darin. Auf dem Telefon gibt es keine Konsole, also
+  ist das der einzige Weg, hinterher zu sehen, was schiefging.
+
+## 0.36.0 – Kamera zurück auf Standard
+
+- Kamera-Abschnitt aus den Einstellungen entfernt, nachdem die Fehlersuche abgeschlossen war.
+  Der Foto-Knopf öffnet wieder die Systemkamera.
+- Code und Messergebnisse bleiben im Projekt, falls die Frage je wieder aufkommt.
+
+## 0.35.0 – Rückkamera: Untersuchung abgeschlossen
+
+- Ergebnis: Die Rückkamera besteht aus drei Linsen, eine davon ist defekt, und sie lässt sich
+  von einer App nicht umgehen. Für Fotos bleibt der Weg über Systemkamera oder Expert RAW und
+  die Galerie-Auswahl im Eintrag.
+
+## 0.34.0–0.34.4 – Diagnose für die Rückkamera
+
+- Prüflauf, der alle Kameras des Geräts durchtestet, mit Bericht zum Einschicken.
+- Der Bericht liegt in einer Datei statt im Speicher der App und übersteht deshalb auch einen
+  Neustart des Geräts.
+
+## 0.33.0–0.33.2 – Kamera-Prüfung, zurückgenommen
+
+- Ein Prüflauf hat das Telefon neu gestartet und wurde sofort wieder entfernt.
+
+## 0.32.0–0.32.5 – Versuche an der Rückkamera
+
+- Mehrere Anläufe, die Rückkamera über einen anderen Weg anzusprechen. Ohne Erfolg, siehe
+  0.35.0.
+- Nebenbei behoben: Die Kamera-Ansicht lief nach einem Abbruch mit eingefrorenem Bild weiter,
+  und eine veraltete Linsen-Kennung führte zu „Gerät nicht gefunden“ statt zu einem neuen
+  Versuch.
+
+## 0.31.3–0.31.4 – Kamera-Ansicht, kleine Korrekturen
+
+- Bricht die Verbindung ab, zeigt die Ansicht das an, statt ein totes Bild stehen zu lassen.
+
+## 0.31.2 – Kamera-Diagnose
+
+Die gefundenen Linsen bleiben jetzt gespeichert; „Kameras suchen“ ist nur noch nötig, wenn
+sich etwas geändert hat. Unter Einstellungen → Kamera gibt es „Kamera testen“, das die
+Kamera-Ansicht direkt öffnet und das Testbild anzeigt, sowie eine Diagnose, die jeden Schritt
+beim Öffnen der Kamera protokolliert – auch dann, wenn die App dabei abstürzt. Der Text lässt
+sich mit einem Tippen kopieren.
+
+Dazu zwei Versuche gegen den Absturz der Rückkamera: Zoom und Fokus lassen sich festhalten,
+damit die logische Kamera nicht auf die defekte Linse umschaltet. Die Kamera-Ansicht zeigt
+unten eine Statuszeile, ob die Linse gerade Bilder liefert.
+
+## 0.31.1 – Eigene Kamera-Ansicht
+
+Unter Einstellungen → Kamera lässt sich jetzt eine App-eigene Kamera-Ansicht einschalten, die
+eine fest gewählte Linse direkt anspricht, statt die Systemkamera zu öffnen. Hilfreich, wenn
+die Systemkamera beim Start abstürzt, weil sie eine defekte Linse prüft.
 
 ## 0.31.0 – Notizen
 

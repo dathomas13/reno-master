@@ -176,6 +176,12 @@ export function PhotoAttach({
     saveSettings({ keepOriginals: next });
   }
 
+  function openCamera() {
+    // the system camera, through the file input - see components/CameraCapture and
+    // plugins/nativecam for the in-app viewfinder that is kept but no longer wired up
+    void pickFromFiles(true);
+  }
+
   function pickForDate() {
     if (galleryPickerAvailable() && forDate) {
       openDayGallery();
@@ -330,7 +336,7 @@ export function PhotoAttach({
   useEffect(() => {
     if (!autoCapture || captured.current || disabled) return;
     captured.current = true;
-    void pickFromFiles(true);
+    openCamera();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCapture, disabled]);
 
@@ -345,7 +351,7 @@ export function PhotoAttach({
         <button type="button" className="btn" onClick={() => void pickFromFiles(false)} disabled={busy || disabled}>
           Aus Galerie
         </button>
-        <button type="button" className="btn" onClick={() => void pickFromFiles(true)} disabled={busy || disabled}>
+        <button type="button" className="btn" onClick={openCamera} disabled={busy || disabled}>
           Kamera
         </button>
         {kind === 'receipt' && (

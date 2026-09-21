@@ -102,6 +102,20 @@ Steht:
   `tools/icon/android/ic_stat_reno.xml`, der APK-Workflow prüft sie. Einstellungen →
   Abend-Erinnerung → „Diagnose“ fragt das Gerät, was es wirklich tut. Details in
   `PLAN.md`, Abschnitt 11.
+- **Die Rückkamera des S24 ist defekt, und zwar unrettbar für jede App.** Kamera 0 ist der
+  Verbund der Linsen 2, 5 und 6; Linse 2 ist hinüber (liefert nie ein Bild, fällt nach ~0,7 s
+  aus), und weil der Verbund sie mit hochfährt, bricht er nach ~1,6 s ab – unabhängig von
+  Auflösung, Bildrate, Fokus und Stabilisator. Die gute Linse einzeln zu öffnen verweigert
+  Android (`No camera device with ID "5" available`). Die vollständige Messreihe steht in
+  `plugins/nativecam/README.md`; **wer die Kamera-Ansicht anfassen will, liest die zuerst und
+  fängt nicht von vorn an.** Fotos laufen über Systemkamera/Expert RAW und die Galerie-Auswahl.
+  **Aus der Oberfläche ist das alles entfernt** – kein Kamera-Abschnitt in den Einstellungen,
+  keine Diagnose, kein Protokoll, und der Foto-Knopf nimmt wieder den Datei-Dialog. Der Code
+  liegt vollständig weiter da (`src/components/CameraCapture.tsx`, `src/platform/camera.ts`,
+  `nativeCamera.ts`, `plugins/nativecam`) und ist an keiner Stelle angeschlossen;
+  wer weitermachen will, hängt ihn in `PhotoAttach.openCamera` wieder ein.
+  Zweiter, unabhängiger Befund: ein `ImageReader` mit `ImageFormat.PRIVATE` an einer laufenden
+  Kamera startet dieses Gerät neu – nicht benutzen.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
@@ -135,13 +149,19 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
+- **Zum Debuggen `src/platform/debugLog.ts` benutzen, nicht `console.log`.** Auf dem Telefon
+  gibt es keine Konsole. `debugLog('<bereich>', '…')` schreibt sofort in den localStorage und
+  übersteht Absturz, Reload und Neustart, `readDebugLog('<bereich>')` liest zurück. Für
+  Vorgänge, die die App mitreißen können, `beginSession`/`endSession` – der nächste Start
+  vermerkt dann im Protokoll, dass der vorige nie zu Ende kam.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
-- **Zu jedem Release ein Absatz in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`). Das ist
-  der Text, den das Update-Banner in der App zeigt, und er ist für Thomas geschrieben, nicht für
-  den nächsten Agenten: ganze Sätze, was sich an der Bedienung ändert. Keine Dateinamen, keine
-  Testzahlen, keine Commit-Prosa – die steht im Commit. Ohne Eintrag nimmt der Build die
-  Commit-Nachricht, und die liest sich im Banner auch so.
+- **Zu jedem Release ein Eintrag in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`),
+  darunter **ein bis drei Stichpunkte, je ein bis zwei Zeilen**. Das ist der Text im
+  Update-Banner: was sich für den Benutzer ändert, sonst nichts. Keine Erklärungen, keine
+  Begründungen, keine Fehlersuche-Geschichten, keine Dateinamen, keine Testzahlen – das
+  gehört in den Commit. Wenn der Eintrag aussieht wie eine Chat-Antwort, ist er falsch.
+  Ohne Eintrag nimmt der Build die Commit-Nachricht, und die liest sich im Banner auch so.
 - **Jeder Entwicklungsschritt ist ein Release**, auch aus einem Sitzungsbranch: das
   Telefon aktualisiert sich über `releases/latest` selbst, ein Umweg über Artefakte im
   Browser ist nicht gewollt. Also bei jedem Push die Version in `package.json` anheben –
