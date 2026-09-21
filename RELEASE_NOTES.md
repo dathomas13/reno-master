@@ -8,7 +8,22 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
-## 0.34.2 – Die Prüfung läuft jetzt bis zum Ende durch
+## 0.34.3 – Die Linse einzeln ansprechen, ohne den Verbund
+
+Die vollständige Tabelle ist da, und sie schließt zwei Dinge endgültig aus. Last ist es nicht:
+die Rückkamera stirbt bei 320×240 und 15 Bildern/s genauso nach anderthalb Sekunden wie bei
+voller Auflösung – sogar etwas früher. Und es ist auch keine Frage der Datenmenge, sondern der
+Zeit: immer rund 1,5 Sekunden nach dem Öffnen, egal was sie dabei zu tun hat.
+
+Dafür hat das Datenblatt etwas verraten, das bisher untergegangen war: Die hintere Kamera 0
+ist gar keine Kamera, sondern ein Verbund aus drei Linsen – 2, 5 und 6. Und Linse 2, einzeln
+geöffnet, gibt nach 750 Millisekunden auf, ohne je ein Bild zu liefern. Das ist die defekte.
+Wird der Verbund geöffnet, fährt das Gerät alle drei hoch, auch die kaputte – und daran stirbt
+dann die ganze Gruppe.
+
+Diese Fassung prüft deshalb, ob sich die **gute Linse einzeln** ansprechen lässt, ohne ihre
+beiden Geschwister. Wenn ja, wäre die Rückkamera doch noch zu retten. Wenn das Gerät das
+verweigert, steht es hinterher als klare Absage im Bericht – auch das wäre eine Antwort.
 
 Der letzte Durchlauf hat den Neustart geklärt: Frontkamera, 640×480, gleiche Einstellungen –
 in der gewohnten Betriebsart sechs Sekunden und 130 Bilder, in der neuen ein Neustart des

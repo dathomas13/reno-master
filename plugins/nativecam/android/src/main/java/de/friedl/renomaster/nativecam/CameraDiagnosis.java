@@ -118,6 +118,13 @@ final class CameraDiagnosis {
         for (String id : ids) {
             describe(id);
         }
+        List<String> physical = hiddenPhysicalIds(ids);
+        if (!physical.isEmpty()) {
+            say("── Einzelne Linsen hinter den Verbundkameras: " + join(physical));
+            for (String id : physical) {
+                describe(id);
+            }
+        }
 
         checkBuffers();
 
@@ -292,6 +299,33 @@ final class CameraDiagnosis {
      * at fault rather than the rear hardware. Then the rear cameras, display-format before
      * readable-format, because that is the untested difference.
      */
+    /**
+     * The physical sensors that sit behind a logical camera and are not in getCameraIdList().
+     *
+     * This is the question the whole table pointed at. Camera 0 is not a camera, it is lenses
+     * 2, 5 and 6 in a group - and lens 2, opened on its own, dies in 750ms without ever
+     * producing a frame. That is the broken one. Opening the group brings all three up, so the
+     * group dies with it at about 1.5s no matter what is asked of it. Pinning an output to one
+     * sensor did not help, because that only redirects frames and still opens the group.
+     *
+     * Since Android 10 a physical camera may be opened directly. If lens 5 can be had on its
+     * own, the broken one never powers up and the rear camera might simply work.
+     */
+    private List<String> hiddenPhysicalIds(String[] ids) {
+        List<String> listed = Arrays.asList(ids);
+        List<String> physical = new ArrayList<>();
+        for (String id : ids) {
+            try {
+                for (String inner : manager.getCameraCharacteristics(id).getPhysicalCameraIds()) {
+                    if (!listed.contains(inner) && !physical.contains(inner)) physical.add(inner);
+                }
+            } catch (Throwable ignored) {
+                // nothing to add for this one
+            }
+        }
+        return physical;
+    }
+
     private List<Probe> buildProbes(String[] ids) {
         List<Probe> probes = new ArrayList<>();
         String front = firstFacing(ids, CameraMetadata.LENS_FACING_FRONT);
@@ -314,6 +348,14 @@ final class CameraDiagnosis {
             probes.add(new Probe(id, ImageFormat.YUV_420_888, true, 320,
                 "Kamera " + id + ", kleinste Auflösung, langsamste Bildrate – Minimallast"));
         }
+        // the point of this run: each hidden sensor opened on its own, without its group
+        for (String id : hiddenPhysicalIds(ids)) {
+            probes.add(new Probe(id, ImageFormat.YUV_420_888, false, 1280,
+                "Linse " + id + " direkt, ohne Verbund – die eigentliche Frage"));
+            probes.add(new Probe(id, ImageFormat.YUV_420_888, true, 640,
+                "Linse " + id + " direkt, klein und langsam"));
+        }
+
         if (TEST_PRIVATE) {
             for (String id : ids) {
                 if (!isFacing(id, CameraMetadata.LENS_FACING_BACK)) continue;
