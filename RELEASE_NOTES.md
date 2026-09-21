@@ -25,6 +25,8 @@ Diese Fassung prüft deshalb, ob sich die **gute Linse einzeln** ansprechen läs
 beiden Geschwister. Wenn ja, wäre die Rückkamera doch noch zu retten. Wenn das Gerät das
 verweigert, steht es hinterher als klare Absage im Bericht – auch das wäre eine Antwort.
 
+## 0.34.2 – Die Prüfung läuft jetzt bis zum Ende durch
+
 Der letzte Durchlauf hat den Neustart geklärt: Frontkamera, 640×480, gleiche Einstellungen –
 in der gewohnten Betriebsart sechs Sekunden und 130 Bilder, in der neuen ein Neustart des
 Geräts. Es lag also an der Betriebsart, nicht an einer Kamera. Die ist damit erledigt und
