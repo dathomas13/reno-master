@@ -109,7 +109,7 @@
 <text class="room-area" x="7125" y="6275">9.0 m²</text>
 <text class="room-label" x="5520" y="3172" font-size="230px">Treppe</text>
 <text class="room-area" x="5520" y="3402">3.6 m²</text>
-<text class="room-label" x="6545" y="4543" font-size="120px" textLength="620" lengthAdjust="spacingAndGlyphs">Garderobe (?)</text>
+<text class="room-label" x="6545" y="4543" font-size="120px" textLength="620" lengthAdjust="spacingAndGlyphs">Garderobe</text>
 <text class="room-label" x="7972" y="4050" font-size="230px">Bad</text>
 <text class="room-area" x="7972" y="4280">3.8 m²</text>
 <text class="room-label" x="10982" y="8070" font-size="230px">Hauswirtschaftsraum</text>

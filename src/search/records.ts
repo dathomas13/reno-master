@@ -31,7 +31,12 @@ export interface RoomLike {
   name: string;
   floor: string;
   floorLabel: string;
-  areaM2: number;
+  /** missing for a Soll room without surveyed geometry yet */
+  areaM2?: number;
+  /** the counterpart name(s) - a merged predecessor's name, or the other side of a
+   * rename (RoomsContext's `aliases()`) - so a search for the old name still finds
+   * what is now filed under the new one, and the other way round */
+  aliases?: string[];
 }
 
 export interface SearchSource {
@@ -98,6 +103,19 @@ function names(ids: string[] | undefined, lookup: Map<string, string>): string[]
   return (ids ?? []).map((id) => lookup.get(id)).filter((name): name is string => Boolean(name));
 }
 
+/** every room name AND its counterpart names (aliases) for a set of stored room ids -
+ * an entry filed under "Öllager" stays findable under "Technikraum" once renamed, and
+ * a search for the old name still finds an entry newly filed under "Technikraum" */
+function roomWords(ids: string[] | undefined, roomName: Map<string, string>, roomAliases: Map<string, string[]>): string[] {
+  const words = new Set<string>();
+  for (const id of ids ?? []) {
+    const name = roomName.get(id);
+    if (name) words.add(name);
+    for (const alias of roomAliases.get(id) ?? []) words.add(alias);
+  }
+  return [...words];
+}
+
 function amountWords(amount?: number): string[] {
   if (amount === undefined || amount === null || !Number.isFinite(amount)) return [];
   return [formatEuro(amount), String(amount)];
@@ -105,6 +123,7 @@ function amountWords(amount?: number): string[] {
 
 export function buildRecords(source: SearchSource): SearchRecord[] {
   const roomName = new Map((source.rooms ?? []).map((room) => [room.id, room.name]));
+  const roomAliases = new Map((source.rooms ?? []).map((room) => [room.id, room.aliases ?? []]));
   const tradeName = new Map((source.trades ?? []).map((trade) => [trade.id, trade.name]));
   const phaseName = new Map((source.phases ?? []).map((phase) => [phase.id, phase.name]));
 
@@ -123,7 +142,7 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
         entry.weather ?? '',
         entry.defects ? 'Mängel' : '',
         ...(entry.present ?? []),
-        ...names(entry.roomIds, roomName),
+        ...roomWords(entry.roomIds, roomName, roomAliases),
         ...names(entry.tradeIds, tradeName),
         phaseName.get(entry.phaseId ?? '') ?? '',
       ].filter(Boolean),
@@ -134,7 +153,6 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
 
   // ------------------------------------------------------------------ Kosten und Belege
   for (const cost of source.costs ?? []) {
-    const rooms = names(cost.roomIds, roomName);
     records.push({
       id: `cost:${cost.id}`,
       kind: 'cost',
@@ -153,7 +171,7 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
         cost.paymentMethod ?? '',
         ...amountWords(cost.amountGross),
         tradeName.get(cost.tradeId ?? '') ?? '',
-        ...rooms,
+        ...roomWords(cost.roomIds, roomName, roomAliases),
       ].filter(Boolean),
       date: cost.date,
       badge: formatEuro(cost.amountGross || 0),
@@ -179,7 +197,7 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
         ...dateWords(task.due),
         tradeName.get(task.tradeId ?? '') ?? '',
         phaseName.get(task.phaseId ?? '') ?? '',
-        ...names(task.roomIds, roomName),
+        ...roomWords(task.roomIds, roomName, roomAliases),
       ].filter(Boolean),
       date: task.due,
       to: `/aufgaben?aufgabe=${task.id}`,
@@ -196,7 +214,11 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       title: firstLine,
       subtitle: [note.pinned ? 'Angeheftet' : '', ...rooms].filter(Boolean).join(' · '),
       body: note.text,
-      meta: [note.pinned ? 'Angeheftet' : '', ...dateWords(note.at.slice(0, 10)), ...rooms].filter(Boolean),
+      meta: [
+        note.pinned ? 'Angeheftet' : '',
+        ...dateWords(note.at.slice(0, 10)),
+        ...roomWords(note.roomIds, roomName, roomAliases),
+      ].filter(Boolean),
       date: note.at.slice(0, 10),
       to: `/notizen?notiz=${note.id}`,
     });
@@ -261,8 +283,11 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       id: `room:${room.id}`,
       kind: 'room',
       title: room.name,
-      subtitle: `${room.floorLabel} · ${room.areaM2.toFixed(1).replace('.', ',')} m²`,
-      meta: [room.floorLabel, room.floor, room.id],
+      subtitle:
+        room.areaM2 === undefined
+          ? room.floorLabel
+          : `${room.floorLabel} · ${room.areaM2.toFixed(1).replace('.', ',')} m²`,
+      meta: [room.floorLabel, room.floor, room.id, ...(room.aliases ?? [])],
       to: `/3d?raum=${room.id}`,
     });
   }
@@ -295,7 +320,7 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
         photo.originalName ?? '',
         photo.kind === 'receipt' ? 'Beleg' : 'Foto',
         ...dateWords(photo.takenAt?.slice(0, 10)),
-        ...names(photo.roomIds, roomName),
+        ...roomWords(photo.roomIds, roomName, roomAliases),
       ].filter(Boolean),
       date: photo.takenAt?.slice(0, 10),
       to: photo.entryId

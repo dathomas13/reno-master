@@ -300,6 +300,27 @@ export default function SettingsPage() {
         <ModelSection signedIn={!!user} />
 
         <section className="card p-4">
+          <SettingsHeading title="Räume">
+            Gilt für Tagebuch, Kosten, Aufgaben, Notizen, Fotos und die Suche - für die
+            Raumauswahl in Formularen und für Filter. Das 3D-Modell und die Pläne zeigen
+            immer die Namen ihrer eigenen Modellvariante (Ist oder Soll), unabhängig
+            davon. Ein Eintrag geht dadurch nie verloren: ein alter Eintrag unter
+            „Heizung“ oder „Öllager“ erscheint unter „Planung“ zusammen bei
+            „Technikraum“.
+          </SettingsHeading>
+          <Field label="Raumbezeichnungen">
+            <select
+              className="field"
+              value={settings.roomNaming}
+              onChange={(event) => update({ roomNaming: event.target.value as LocalSettings['roomNaming'] })}
+            >
+              <option value="bestand">Bestand</option>
+              <option value="planung">Planung</option>
+            </select>
+          </Field>
+        </section>
+
+        <section className="card p-4">
           <h2 className="font-semibold mb-3">Offline</h2>
           <p className="text-sm text-muted">Belegter Speicher: {storage || 'unbekannt'}</p>
           <p className="text-sm text-muted mb-3">Wartende Uploads: {jobs.length}</p>

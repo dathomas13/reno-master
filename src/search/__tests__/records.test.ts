@@ -11,7 +11,7 @@ const diary: DiaryEntry = {
   present: ['Thomas', 'Herr Weber'],
   defects: true,
   tradeIds: ['t1'],
-  roomIds: ['og.bad'],
+  roomIds: ['og-bad'],
   photoIds: [],
 };
 
@@ -23,7 +23,7 @@ const cost: Cost = {
   amountGross: 1234.56,
   category: 'Material',
   tradeId: 't1',
-  roomIds: ['og.bad'],
+  roomIds: ['og-bad'],
   paymentStatus: 'offen',
   receiptPhotoIds: [],
   extraction: { engine: 'claude', at: '2026-09-13T18:00:00', rawText: 'Feinsteinzeug Anthrazit 60x60' },
@@ -54,7 +54,7 @@ const records = buildRecords({
   tasks: [task],
   contacts: [contact],
   trades: [trade],
-  rooms: [{ id: 'og.bad', name: 'Bad OG', floor: 'OG', floorLabel: 'Obergeschoss', areaM2: 8.4 }],
+  rooms: [{ id: 'og-bad', name: 'Bad OG', floor: 'OG', floorLabel: 'Obergeschoss', areaM2: 8.4 }],
 });
 const index = buildIndex(records);
 
@@ -67,7 +67,7 @@ describe('buildRecords', () => {
     expect(ids).toContain('task:a1');
     expect(ids).toContain('contact:k1');
     expect(ids).toContain('trade:t1');
-    expect(ids).toContain('room:og.bad');
+    expect(ids).toContain('room:og-bad');
     expect(records.find((record) => record.id === 'task:a1')?.to).toBe('/aufgaben?aufgabe=a1');
     expect(records.find((record) => record.id === 'contact:k1')?.to).toBe('/kontakte?kontakt=k1');
   });
@@ -96,5 +96,46 @@ describe('buildRecords', () => {
 
   it('labels every kind', () => {
     for (const kind of KINDS) expect(KIND_LABEL[kind].length > 0).toBe(true);
+  });
+});
+
+describe('buildRecords - room aliases', () => {
+  // Heizung and Öllager merged into Technikraum; an entry filed under the new id must
+  // still turn up when someone searches for the old name, and vice versa
+  const entry: DiaryEntry = {
+    id: 'd2',
+    date: '2026-09-15',
+    title: 'Rohre verlegt',
+    text: '',
+    present: [],
+    defects: false,
+    tradeIds: [],
+    roomIds: ['kg-technik'],
+    photoIds: [],
+  };
+  const aliasRecords = buildRecords({
+    diary: [entry],
+    rooms: [
+      { id: 'kg-technik', name: 'Technikraum', floor: 'KG', floorLabel: 'Keller', aliases: ['Heizung', 'Öllager'] },
+    ],
+  });
+  const aliasIndex = buildIndex(aliasRecords);
+
+  it('finds a room by its own name', () => {
+    expect(search(aliasIndex, 'Technikraum').map((hit) => hit.record.id)).toContain('room:kg-technik');
+  });
+
+  it('finds an entry filed under the new id by an old room name', () => {
+    expect(search(aliasIndex, 'Öllager').map((hit) => hit.record.id)).toContain('diary:d2');
+  });
+
+  it('finds the room itself by an old name too', () => {
+    expect(search(aliasIndex, 'Heizung').map((hit) => hit.record.id)).toContain('room:kg-technik');
+  });
+
+  it('never shows an alias in what the user reads - only in what they can type', () => {
+    const record = aliasRecords.find((r) => r.id === 'room:kg-technik');
+    expect(record?.title).toBe('Technikraum');
+    expect(record?.subtitle).not.toContain('Heizung');
   });
 });

@@ -24,26 +24,26 @@ def room(rid: str, name: str, floor: str, *rects: tuple[int, int, int, int]):
 
 
 ROOMS = [
-    # ---------------- Kellergeschoss (Wohnung WE2 im Süden, Keller im Norden)
+    # ---------------- Kellergeschoss (Wohnräume im Süden, Keller im Norden)
     # Aufmaß 09/2026; die gestempelten Flächen des Plans stimmen exakt.
-    room("kg-esskueche",    "Essküche (WE2)",       "KG", (  400,   400,  2710,  4860)),   # 10,30
-    room("kg-wohnzimmer",   "Wohnzimmer (WE2)",     "KG", ( 2835,   400,  8235,  4860)),   # 24,08
-    room("kg-schlafzimmer", "Schlafzimmer (WE2)",   "KG", ( 8505,   400, 12595,  4200)),   # 15,54
-    room("kg-flur",         "Flur (WE2)",           "KG", ( 8505,  4470, 10105,  7020)),   # 4,08
-    room("kg-bad",          "Bad (WE2)",            "KG", (10255,  4470, 12595,  7020)),   # 5,97
+    room("kg-esskueche",    "Essküche",             "KG", (  400,   400,  2710,  4860)),   # 10,30
+    room("kg-wohnzimmer",   "Wohnzimmer",           "KG", ( 2835,   400,  8235,  4860)),   # 24,08
+    room("kg-schlafzimmer", "Schlafzimmer",         "KG", ( 8505,   400, 12595,  4200)),   # 15,54
+    room("kg-flur",         "Flur",                 "KG", ( 8505,  4470, 10105,  7020)),   # 4,08
+    room("kg-bad",          "Bad",                  "KG", (10255,  4470, 12595,  7020)),   # 5,97
     # Heizung: der Kamin steht an der Südwand, deshalb drei Rechtecke um ihn herum
     room("kg-heizung",      "Heizung",              "KG", ( 8470,  7140,  9000,  8790),
                                                           ( 9000,  7565, 10625,  8790),
                                                           (10625,  7140, 12630,  8790)),
     room("kg-oellager",     "Öllager",              "KG", ( 8470,  8930, 12630, 11450)),   # 10,48
     # im Plan als VORRAUM gestempelt (Treppe ins EG und hinunter ins KG)
-    room("kg-treppenhaus",  "Vorraum/Treppenhaus",  "KG", (  400,  5130,  4745,  7365)),
+    room("kg-treppenhaus",  "Treppenhaus",          "KG", (  400,  5130,  4745,  7365)),
     room("kg-diele",        "Diele",                "KG", ( 5015,  5130,  8235,  7365)),   # 7,20
     room("kg-keller1",      "Keller 1",             "KG", (  365,  7610,  3500, 11450)),   # 12,04
     room("kg-kellerflur",   "Kellerflur",           "KG", ( 3640,  7610,  8235,  8790)),
     room("kg-obst",         "Obstkeller",           "KG", ( 3640,  8930,  4760, 11450)),
     room("kg-keller2",      "Keller 2",             "KG", ( 5000,  8930,  8220, 11450)),   # 8,11
-    # ---------------- Erdgeschoss (Hauptwohnung WE1) - Aufmaß 09/2026
+    # ---------------- Erdgeschoss - Aufmaß 09/2026
     room("eg-wohnzimmer",   "Wohnzimmer",           "EG", (  400,   400,  8245,  4860)),   # 7,845 × 4,460
     # Loggia: lichte Weite 4,050 zwischen den außen verputzten Wandscheiben, 2,510 tief
     # bis zur Stufenkante (die Wandscheiben springen 125 nach Süden vor).
@@ -56,7 +56,7 @@ ROOMS = [
     room("eg-speise",       "Speisekammer",         "EG", (10750,  7055, 12595,  8695)),   # 1,845 × 1,640
     room("eg-flur",         "Flur",                 "EG", ( 8505,  8840,  9985, 11415)),   # 1,480 × 2,575
     room("eg-bad",          "Bad",                  "EG", (10130,  8840, 12595, 11415)),   # 2,465 × 2,575
-    room("eg-windfang",     "Eingang/Treppenhaus",  "EG", (  400,  5130,  4745,  7365)),   # 4,345 × 2,235
+    room("eg-treppenhaus",  "Treppenhaus",          "EG", (  400,  5130,  4745,  7365)),   # 4,345 × 2,235
     # Der Plan stempelt 21,08 m² (3,230 × 6,525); geometrisch sind es 3,230 × 6,285.
     # Hier steht die Geometrie, die Fläche rechnet build_rooms.py daraus.
     room("eg-diele",        "Diele",                "EG", ( 5015,  5130,  8245, 11415)),
@@ -71,7 +71,7 @@ ROOMS = [
     room("og-kind3",        "Kind 3",               "OG", ( 5015,   675,  9235,  4545)),   # 16,33
     room("og-diele",        "Diele",                "OG", ( 5015,  4705,  9235,  6835)),
     room("og-treppe",       "Treppe",               "OG", ( 5015,  6835,  6025, 10450)),
-    room("og-g",            "Garderobe (?)",        "OG", ( 6145,  6955,  6945,  7505)),
+    room("og-g",            "Garderobe",            "OG", ( 6145,  6955,  6945,  7505)),
     # im Plan "BAD*" (3,81) - aus Blatt 4 übernommen, L-förmig um die Garderobe
     room("og-wc",           "Bad",                  "OG", ( 7065,  6955,  8880,  8575),
                                                           ( 6145,  7625,  7065,  8575)),

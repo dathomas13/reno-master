@@ -10,7 +10,10 @@ export interface LocalSettings {
   geminiModel: string;
   ocrEngine: 'auto' | 'mlkit' | 'claude' | 'gemini' | 'off';
   defaultModelVariant: 'ist' | 'soll';
-  showRoomsInPlanViews: boolean;
+  /** ob Tagebuch, Kosten, Aufgaben, Notizen, Fotos und Suche die Bestands- oder die
+   * Planungsnamen der Räume zeigen; wirkt nicht auf 3D und Pläne, die zeigen immer die
+   * Namen ihrer eigenen Modellvariante */
+  roomNaming: 'bestand' | 'planung';
   /**
    * Upload the untouched photo next to the 1600 px copy. Off by default because it
    * costs roughly ten times the storage; on for the pictures that have to stay
@@ -38,7 +41,7 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   geminiModel: 'gemini-2.5-flash',
   ocrEngine: 'auto',
   defaultModelVariant: 'ist',
-  showRoomsInPlanViews: true,
+  roomNaming: 'bestand',
   keepOriginals: false,
   useCustomCamera: false,
   cameraDeviceId: '',
@@ -63,6 +66,10 @@ export function loadSettings(): LocalSettings {
   }
 }
 
+/** fired after every saveSettings() call, so a persistently mounted context (RoomsContext
+ * reading roomNaming) picks up a change made on a different screen without a reload */
+export const SETTINGS_EVENT = 'reno:settings';
+
 export function saveSettings(settings: Partial<LocalSettings>): LocalSettings {
   const next = { ...loadSettings(), ...settings };
   try {
@@ -70,5 +77,6 @@ export function saveSettings(settings: Partial<LocalSettings>): LocalSettings {
   } catch {
     // private mode or storage full - settings simply do not persist
   }
+  window.dispatchEvent(new CustomEvent<LocalSettings>(SETTINGS_EVENT, { detail: next }));
   return next;
 }

@@ -36,11 +36,12 @@ Die App rechnet beim Laden um: three.js-Punkt = `(x, z, −y) / 1000`. Norden is
 | `haus_model.py` | **Datenbasis Bestand (Ist).** Wände `W(...)`, Öffnungen `O(...)`, Treppen, Dach, Gaube, Balkon, Konfidenz-Tags A/B/C. Nur hier wird der Bestand geändert. |
 | `haus_model_soll.py` | **Datenbasis Zielzustand (Soll).** Startet als `from haus_model import *`. Hier die Wände/Öffnungen überschreiben, die sich durch die Sanierung ändern. |
 | `rooms_ist.py` / `rooms_soll.py` | Raumliste je Variante (Rechtecke, Innenkanten). |
+| `rooms_map.py` | Welcher Ist-Raum künftig welcher Soll-Raum ist – siehe Abschnitt 6.1. |
 | `build_scene_lite.py` | **Der übliche Weg.** Baut `public/models/<variante>.json` direkt aus der Datenbasis, nur mit der Standardbibliothek. |
 | `build_scene.py` | Dasselbe aus echten Volumenkörpern. **Braucht CadQuery/OCP (~150 MB)** – nötig für STEP/STL, nicht für den Viewer. |
 | `extract_scene_from_html.py` | Fallback: zieht die Szene aus einer bereits gebauten `Haus_3D.html`. |
 | `check_scene.py` | Prüft eine erzeugte Szene (Schema, geschlossene Hüllen, Orientierung) und vergleicht sie mit `--against` gegen eine Referenz. |
-| `build_rooms.py` | Erzeugt `public/models/rooms-<variante>.json` **und prüft** die Räume gegen die Wände. |
+| `build_rooms.py` | Erzeugt `public/models/rooms-<variante>.json` **und prüft** die Räume gegen die Wände, sowie `public/models/room-map.json` aus `rooms_map.py`. |
 | `build_plans_svg.py` | Erzeugt die 2D-Grundrisse `public/plans/<variante>-<geschoss>.svg` und `index.json`. |
 | `make_manifest.py` | Schreibt `public/models/manifest.json` (Versionen, Datum, Notiz) – die App zeigt das an. |
 | `check_walls.py` | Konsistenzprüfung: freie Wandenden, Räume, Öffnungen innerhalb der Wand. |
@@ -160,7 +161,39 @@ abgelehnt und das bisherige Modell bleibt in Betrieb.
 `id` ist der Schlüssel, mit dem Tagebucheinträge, Fotos, Kosten und Aufgaben verknüpft sind.
 **Eine einmal vergebene id niemals umbenennen**, solange der Raum derselbe bleibt – sonst
 verlieren bestehende Einträge ihre Zuordnung. Ein Raum darf aus mehreren Rechtecken bestehen
-(L-Form, Kamin in der Ecke).
+(L-Form, Kamin in der Ecke). `rects` darf auch leer sein: ein Soll-Raum ohne Aufmaß taucht
+dann in Auswahl, Listen und Suche auf, wird aber erst gezeichnet, sobald die Wände feststehen.
+
+### 6.1 Wenn sich ein Raum durch die Sanierung wirklich ändert
+
+Legen sich zwei Räume zusammen, teilt sich einer, oder entsteht ein neuer – die id bleibt
+trotzdem unangetastet. Stattdessen: der veränderte Raum bekommt in `rooms_soll.py` eine
+**neue** id, und `rooms_map.py` bekommt eine Zeile, die die alte id auf die neue zeigen
+lässt.
+
+```python
+# rooms_soll.py
+room("kg-technik", "Technikraum", "KG"),   # ersetzt kg-heizung und kg-oellager
+
+# rooms_map.py
+MAP = {
+    "kg-heizung":  "kg-technik",
+    "kg-oellager": "kg-technik",
+    ...                              # jede Ist-id kommt vor, auch unveränderte auf sich selbst
+}
+```
+
+`rooms_map.py` ist **vollständig** (jede id aus `rooms_ist.py` kommt genau einmal vor,
+auch ein unveränderter Raum auf sich selbst) und **einspaltig** (ein Ziel je Zeile; bei
+einer Teilung zeigt die alte id auf den Raum, der am ehesten ihr Nachfolger ist).
+`build_rooms.py` schreibt daraus `public/models/room-map.json` und meldet eine fehlende
+oder ins Leere zeigende Zeile.
+
+Die App liest die Zuordnung nur vorwärts: ein alter Tagebucheintrag unter „Heizung“ oder
+„Öllager“ erscheint in der Einstellung „Planung“ unter „Technikraum“; ein neuer Eintrag
+unter „Technikraum“ muss nicht umgekehrt unter „Öllager“ auffindbar sein. Details und die
+Einstellung Bestand/Planung stehen in `src/data/roomNaming.ts` und in `PLAN.md`,
+Abschnitt 9.4.
 
 ## 7. Verifikation ohne Installation
 

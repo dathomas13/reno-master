@@ -16,28 +16,37 @@ export interface PhotoSource {
   costs: Cost[];
 }
 
-/** the ids of the entries and receipts that are linked to this room */
-function ownersOf(roomId: string, source: PhotoSource): { entries: Set<string>; costs: Set<string> } {
+function hasAny(ids: string[] | undefined, wanted: string[]): boolean {
+  return Boolean(ids?.some((id) => wanted.includes(id)));
+}
+
+/** the ids of the entries and receipts that are linked to any of these room ids */
+function ownersOf(roomIds: string[], source: PhotoSource): { entries: Set<string>; costs: Set<string> } {
   return {
-    entries: new Set(source.entries.filter((entry) => entry.roomIds?.includes(roomId)).map((entry) => entry.id)),
-    costs: new Set(source.costs.filter((cost) => cost.roomIds?.includes(roomId)).map((cost) => cost.id)),
+    entries: new Set(source.entries.filter((entry) => hasAny(entry.roomIds, roomIds)).map((entry) => entry.id)),
+    costs: new Set(source.costs.filter((cost) => hasAny(cost.roomIds, roomIds)).map((cost) => cost.id)),
   };
 }
 
-export function belongsToRoom(photo: Photo, roomId: string, source: PhotoSource): boolean {
-  if (photo.roomIds?.includes(roomId)) return true;
-  const owners = ownersOf(roomId, source);
+/**
+ * `roomIds` is the full set of stored ids a room stands for now - a merged room's own id
+ * plus every id it absorbed (RoomsContext's `idsFor`), so a photo filed under either the
+ * old or the new id still counts.
+ */
+export function belongsToRoom(photo: Photo, roomIds: string[], source: PhotoSource): boolean {
+  if (hasAny(photo.roomIds, roomIds)) return true;
+  const owners = ownersOf(roomIds, source);
   return Boolean(
     (photo.entryId && owners.entries.has(photo.entryId)) || (photo.costId && owners.costs.has(photo.costId)),
   );
 }
 
-/** every photo of a room, newest first */
-export function photosForRoom(roomId: string, source: PhotoSource): Photo[] {
-  const owners = ownersOf(roomId, source);
+/** every photo of a room (or the set of ids it absorbed), newest first */
+export function photosForRoom(roomIds: string[], source: PhotoSource): Photo[] {
+  const owners = ownersOf(roomIds, source);
   const found = source.photos.filter(
     (photo) =>
-      photo.roomIds?.includes(roomId) ||
+      hasAny(photo.roomIds, roomIds) ||
       (photo.entryId && owners.entries.has(photo.entryId)) ||
       (photo.costId && owners.costs.has(photo.costId)),
   );
