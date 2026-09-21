@@ -8,6 +8,18 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.36.0 – Kamera zurück auf Standard
+
+Die Kamera-Sache ist geklärt, also ist sie jetzt auch aus der App verschwunden. Der
+Foto-Knopf im Eintrag öffnet wieder ganz normal die Systemkamera, so wie vor dieser ganzen
+Geschichte. In den Einstellungen ist der komplette Kamera-Abschnitt weg – keine Linsen-Liste,
+keine Schalter, kein Testbild, keine Diagnose, kein Protokoll. Nichts davon war je für den
+normalen Gebrauch gedacht, und es hilft bei einer defekten Kamera ja auch nicht.
+
+Verloren ist nichts: Der gesamte Code und die vollständigen Messergebnisse bleiben im Projekt
+liegen. Sollte die Kamera je repariert werden oder die Frage wieder aufkommen, ist alles da
+und muss nur wieder eingehängt werden.
+
 ## 0.35.0 – Die Kamera-Frage ist beantwortet
 
 Der letzte Test hat die Antwort gebracht, und es ist die unerfreuliche: Die gute Linse lässt

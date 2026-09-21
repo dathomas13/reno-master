@@ -109,6 +109,11 @@ Steht:
   Android (`No camera device with ID "5" available`). Die vollständige Messreihe steht in
   `plugins/nativecam/README.md`; **wer die Kamera-Ansicht anfassen will, liest die zuerst und
   fängt nicht von vorn an.** Fotos laufen über Systemkamera/Expert RAW und die Galerie-Auswahl.
+  **Aus der Oberfläche ist das alles entfernt** – kein Kamera-Abschnitt in den Einstellungen,
+  keine Diagnose, kein Protokoll, und der Foto-Knopf nimmt wieder den Datei-Dialog. Der Code
+  liegt vollständig weiter da (`src/components/CameraCapture.tsx`, `src/platform/camera.ts`,
+  `nativeCamera.ts`, `cameraLog.ts`, `plugins/nativecam`) und ist an keiner Stelle angeschlossen;
+  wer weitermachen will, hängt ihn in `PhotoAttach.openCamera` wieder ein.
   Zweiter, unabhängiger Befund: ein `ImageReader` mit `ImageFormat.PRIVATE` an einer laufenden
   Kamera startet dieses Gerät neu – nicht benutzen.
 - `public/img/nordansicht.jpg` liegt im Repo.

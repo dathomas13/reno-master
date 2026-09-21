@@ -104,38 +104,3 @@ describe('settings disclosure', () => {
   });
 });
 
-describe('camera settings', () => {
-  it('shows the lenses found last time without searching again', async () => {
-    localStorage.setItem(
-      'reno.settings',
-      JSON.stringify({
-        useCustomCamera: true,
-        cameraDeviceId: 'back-0',
-        cameraDevices: [
-          { deviceId: 'back-0', label: 'camera2 0, facing back' },
-          { deviceId: 'back-2', label: 'camera2 2, facing back' },
-        ],
-      }),
-    );
-    await openSettings();
-
-    expect(screen.getByRole('radio', { name: 'camera2 0, facing back' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: 'camera2 2, facing back' })).not.toBeChecked();
-    expect(screen.getByRole('button', { name: 'Kameras suchen' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Kamera testen' })).toBeInTheDocument();
-  });
-
-  it('reads the camera protocol and notes a session that never closed', async () => {
-    localStorage.setItem('reno.settings', JSON.stringify({ useCustomCamera: true }));
-    localStorage.setItem('reno.cameraLog', JSON.stringify(['20:00:01.000 ──── Kamera geöffnet: Linse back-0']));
-    localStorage.setItem('reno.cameraOpen', '2026-09-19T20:00:01.000Z');
-    await openSettings();
-
-    const protocol = screen.getByText(/Kamera geöffnet: Linse back-0/);
-    expect(protocol.textContent).toMatch(/endete ohne Schließen – Absturz\?/);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Protokoll löschen' }));
-    expect(screen.getByText(/Noch kein Protokoll/)).toBeInTheDocument();
-    expect(localStorage.getItem('reno.cameraLog')).toBeNull();
-  });
-});

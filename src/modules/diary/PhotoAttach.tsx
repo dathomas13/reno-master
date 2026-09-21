@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Lightbox, PhotoImage } from '@/components/PhotoView';
-import { CameraCapture } from '@/components/CameraCapture';
 import { addPhoto, deletePhoto, ReceiptAlreadyLinkedError } from '@/data/photos';
 import {
   pickPhotos, pickFiles, galleryPickerAvailable, listGalleryPhotosForDay, readGalleryPhoto,
   readGalleryOriginal, galleryThumbnail, type GalleryPhoto,
 } from '@/platform/photos';
-import { cameraOptionsFromSettings, customCameraSupported } from '@/platform/camera';
 import { loadSettings, saveSettings } from '@/lib/settings';
-import { formatDate, toIsoDateTime } from '@/lib/date';
+import { formatDate } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
 import type { Cost, Photo } from '@/data/types';
 import { makeThumbnail } from '@/lib/image';
@@ -108,12 +106,6 @@ export function PhotoAttach({
   const [warning, setWarning] = useState<string | null>(null);
   // remembered per device: whoever photographs cable runs wants it on for a whole day
   const [keepOriginals, setKeepOriginals] = useState(() => loadSettings().keepOriginals);
-  // read once per mount, like keepOriginals above - Einstellungen is a separate screen
-  const [cameraSettings] = useState(() => {
-    const settings = loadSettings();
-    return { useCustomCamera: settings.useCustomCamera, options: cameraOptionsFromSettings(settings) };
-  });
-  const [cameraOpen, setCameraOpen] = useState(false);
 
   useEffect(() => {
     const urls = previewUrls.current;
@@ -185,17 +177,9 @@ export function PhotoAttach({
   }
 
   function openCamera() {
-    if (cameraSettings.useCustomCamera && customCameraSupported()) {
-      setCameraOpen(true);
-      return;
-    }
+    // the system camera, through the file input - see components/CameraCapture and
+    // plugins/nativecam for the in-app viewfinder that is kept but no longer wired up
     void pickFromFiles(true);
-  }
-
-  async function handleCameraCapture(blob: Blob) {
-    setCameraOpen(false);
-    setWarning(null);
-    await addFromBlobs([{ blob, name: `Kamera-${Date.now()}.jpg`, takenAt: toIsoDateTime() }]);
   }
 
   function pickForDate() {
@@ -517,14 +501,6 @@ export function PhotoAttach({
           </button>
         </div>
       </Sheet>
-
-      {cameraOpen && (
-        <CameraCapture
-          options={cameraSettings.options}
-          onCapture={(blob) => void handleCameraCapture(blob)}
-          onClose={() => setCameraOpen(false)}
-        />
-      )}
     </div>
   );
 }

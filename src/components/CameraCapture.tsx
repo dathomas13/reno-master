@@ -16,6 +16,16 @@ interface CameraCaptureProps {
 }
 
 /**
+ * NOT WIRED UP. Nothing renders this any more, and that is on purpose.
+ *
+ * It exists for one phone whose rear camera is broken beyond what any app can work around
+ * (the measurements are in plugins/nativecam/README.md). On every healthy device the system
+ * camera does this better, so the app takes photos through the file input again and none of
+ * this appears in the interface. Kept whole - component, platform/camera.ts, platform/
+ * nativeCamera.ts, platform/cameraLog.ts and the nativecam plugin - so that picking the
+ * question back up costs a render call rather than a rewrite: PhotoAttach.openCamera is where
+ * it used to hang.
+ *
  * Full-screen live preview with a shutter button that grabs the current frame. Stays out of
  * the system camera app entirely - see platform/camera.ts for why that matters.
  *
@@ -71,7 +81,6 @@ function CameraShell({
               {error}
               <br />
               Fotos lassen sich auch mit der Systemkamera aufnehmen und danach aus der Galerie übernehmen.
-              Unter Einstellungen → Kamera steht, was das Gerät beim Öffnen gemeldet hat.
             </p>
           </div>
         ) : (
