@@ -7,6 +7,7 @@
  *  - a vCard (.vcf) file, which every phone's contacts app and Google Contacts can export,
  *    one contact or hundreds at once. That one has no platform requirement at all.
  */
+import { debugLog } from './debugLog';
 
 export interface ImportedContact {
   name: string;
@@ -20,6 +21,9 @@ interface ContactsManager {
     properties: string[],
     options?: { multiple?: boolean },
   ): Promise<Array<{ name?: string[]; tel?: string[]; email?: string[] }>>;
+  /** not every implementation has this; asking for a property it does not support makes
+   *  `select` reject before any dialog opens, so this is checked first where it exists */
+  getProperties?(): Promise<string[]>;
 }
 
 function contactsManager(): ContactsManager | null {
@@ -32,18 +36,48 @@ export function canPickDeviceContacts(): boolean {
   return contactsManager() !== null;
 }
 
+function describeError(error: unknown): string {
+  return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+}
+
 /** opens the native picker; resolves to [] if it is unavailable or the user cancels */
 export async function pickDeviceContacts(): Promise<ImportedContact[]> {
   const manager = contactsManager();
-  if (!manager) return [];
-  const picked = await manager.select(['name', 'tel', 'email'], { multiple: true });
-  return picked
-    .map((entry) => ({
-      name: entry.name?.[0]?.trim() ?? '',
-      phone: entry.tel?.[0]?.trim() || undefined,
-      email: entry.email?.[0]?.trim() || undefined,
-    }))
-    .filter((contact) => contact.name);
+  if (!manager) {
+    debugLog('kontakteimport', 'kein ContactsManager im Browser gefunden');
+    return [];
+  }
+
+  let properties = ['name', 'tel', 'email'];
+  if (manager.getProperties) {
+    try {
+      const supported = await manager.getProperties();
+      debugLog('kontakteimport', `unterstützte Felder: ${supported.join(', ') || '(keine)'}`);
+      properties = properties.filter((property) => supported.includes(property));
+    } catch (error) {
+      debugLog('kontakteimport', `getProperties() fehlgeschlagen: ${describeError(error)}`);
+    }
+  }
+  if (properties.length === 0) {
+    debugLog('kontakteimport', 'keines der gewünschten Felder (name, tel, email) wird unterstützt');
+    return [];
+  }
+
+  debugLog('kontakteimport', `öffne die Auswahl mit Feldern: ${properties.join(', ')}`);
+  try {
+    const picked = await manager.select(properties, { multiple: true });
+    debugLog('kontakteimport', `Auswahl lieferte ${picked.length} Eintrag/Einträge`);
+    return picked
+      .map((entry) => ({
+        name: entry.name?.[0]?.trim() ?? '',
+        phone: entry.tel?.[0]?.trim() || undefined,
+        email: entry.email?.[0]?.trim() || undefined,
+      }))
+      .filter((contact) => contact.name);
+  } catch (error) {
+    debugLog('kontakteimport', `Auswahl fehlgeschlagen: ${describeError(error)}`);
+    throw error;
+  }
 }
 
 /** un-does vCard line folding: a continuation line starts with a space or tab */

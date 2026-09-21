@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { canPickDeviceContacts, parseVCard } from '../contactsImport';
+import { describe, expect, it, vi } from 'vitest';
+import { canPickDeviceContacts, parseVCard, pickDeviceContacts } from '../contactsImport';
 
 describe('parseVCard', () => {
   it('reads name, phone, email and company from a single card', () => {
@@ -51,5 +51,42 @@ describe('parseVCard', () => {
 describe('canPickDeviceContacts', () => {
   it('is false outside of a Chromium contacts-picker browser', () => {
     expect(canPickDeviceContacts()).toBe(false);
+  });
+});
+
+describe('pickDeviceContacts', () => {
+  function installManager(contacts: { select: unknown; getProperties?: unknown }) {
+    (window as unknown as { ContactsManager: unknown }).ContactsManager = function () {
+      /* only its presence is checked */
+    };
+    (navigator as unknown as { contacts: unknown }).contacts = contacts;
+  }
+
+  it('drops fields the device does not support so the picker does not reject before it opens', async () => {
+    const select = vi.fn(() => Promise.resolve([{ name: ['Erika Mustermann'] }]));
+    installManager({ select, getProperties: () => Promise.resolve(['name', 'tel']) });
+
+    const result = await pickDeviceContacts();
+
+    expect(select.mock.calls[0][0]).toEqual(['name', 'tel']);
+    expect(result).toEqual([{ name: 'Erika Mustermann', phone: undefined, email: undefined }]);
+  });
+
+  it('lets a rejected selection surface instead of the caller seeing nothing happen', async () => {
+    installManager({
+      select: () => Promise.reject(new TypeError('Unsupported property: email')),
+      getProperties: () => Promise.resolve(['name', 'tel', 'email']),
+    });
+
+    await expect(pickDeviceContacts()).rejects.toThrow('Unsupported property: email');
+  });
+
+  it('still asks for the full field list when the browser has no getProperties', async () => {
+    const select = vi.fn(() => Promise.resolve([]));
+    installManager({ select });
+
+    await pickDeviceContacts();
+
+    expect(select.mock.calls[0][0]).toEqual(['name', 'tel', 'email']);
   });
 });

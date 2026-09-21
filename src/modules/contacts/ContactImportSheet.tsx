@@ -7,6 +7,7 @@ import {
   pickDeviceContacts,
   type ImportedContact,
 } from '@/platform/contactsImport';
+import { debugLog, readDebugLog } from '@/platform/debugLog';
 import { emptyContact, saveContact } from '@/data/repos';
 
 /**
@@ -25,6 +26,7 @@ export function ContactImportSheet({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [log, setLog] = useState<string[]>([]);
 
   const known = new Set(existingNames.map((name) => name.trim().toLowerCase()));
 
@@ -45,8 +47,12 @@ export function ContactImportSheet({
     setError(null);
     try {
       showCandidates(await pickDeviceContacts());
+    } catch (err) {
+      debugLog('kontakteimport', `fromDevice: ${err instanceof Error ? err.message : String(err)}`);
+      setError('Die Adressbuch-Auswahl hat nicht geklappt. Details unter „Diagnose“.');
     } finally {
       setBusy(false);
+      setLog(readDebugLog('kontakteimport').slice(-8));
     }
   }
 
@@ -117,6 +123,16 @@ export function ContactImportSheet({
               </p>
             )}
             {error && <p className="text-sm text-bad">{error}</p>}
+            {log.length > 0 && (
+              <details>
+                <summary className="text-sm text-muted cursor-pointer">Diagnose</summary>
+                <ul className="text-xs text-muted mt-2 flex flex-col gap-1">
+                  {log.map((line, index) => (
+                    <li key={index}>{line}</li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
         )}
 
