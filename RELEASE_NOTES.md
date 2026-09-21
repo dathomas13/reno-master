@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.39.0 – Adressbuch-Import behoben
+
+- „Aus dem Adressbuch wählen“ tat manchmal nichts. Fehler werden jetzt angezeigt statt
+  stillschweigend zu verschwinden, mit Diagnose zum Aufklappen direkt im Dialog.
+
 ## 0.38.0 – Kontakte überarbeitet
 
 - Rollen eines Kontakts: jetzt mehrere möglich, Auswahl wie beim Tagebuch mit „Rolle
