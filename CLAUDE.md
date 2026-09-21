@@ -149,13 +149,19 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
+- **Zum Debuggen `src/platform/debugLog.ts` benutzen, nicht `console.log`.** Auf dem Telefon
+  gibt es keine Konsole. `debugLog('<bereich>', '…')` schreibt sofort in den localStorage und
+  übersteht Absturz, Reload und Neustart, `readDebugLog('<bereich>')` liest zurück. Für
+  Vorgänge, die die App mitreißen können, `beginSession`/`endSession` – der nächste Start
+  vermerkt dann im Protokoll, dass der vorige nie zu Ende kam.
 - Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
-- **Zu jedem Release ein Absatz in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`). Das ist
-  der Text, den das Update-Banner in der App zeigt, und er ist für Thomas geschrieben, nicht für
-  den nächsten Agenten: ganze Sätze, was sich an der Bedienung ändert. Keine Dateinamen, keine
-  Testzahlen, keine Commit-Prosa – die steht im Commit. Ohne Eintrag nimmt der Build die
-  Commit-Nachricht, und die liest sich im Banner auch so.
+- **Zu jedem Release ein Eintrag in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`),
+  darunter **ein bis drei Stichpunkte, je ein bis zwei Zeilen**. Das ist der Text im
+  Update-Banner: was sich für den Benutzer ändert, sonst nichts. Keine Erklärungen, keine
+  Begründungen, keine Fehlersuche-Geschichten, keine Dateinamen, keine Testzahlen – das
+  gehört in den Commit. Wenn der Eintrag aussieht wie eine Chat-Antwort, ist er falsch.
+  Ohne Eintrag nimmt der Build die Commit-Nachricht, und die liest sich im Banner auch so.
 - **Jeder Entwicklungsschritt ist ein Release**, auch aus einem Sitzungsbranch: das
   Telefon aktualisiert sich über `releases/latest` selbst, ein Umweg über Artefakte im
   Browser ist nicht gewollt. Also bei jedem Push die Version in `package.json` anheben –

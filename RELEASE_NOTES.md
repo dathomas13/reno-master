@@ -1,264 +1,53 @@
 # Was neu ist
 
 Die Texte, die in der App im Update-Banner stehen. Sie sind für den Menschen am Telefon
-geschrieben, nicht für den Entwickler: was sich an der Bedienung ändert, in ganzen Sätzen,
-ohne Dateinamen, Testzahlen und Commit-Prosa.
+geschrieben, nicht für den Entwickler: was sich für ihn ändert, sonst nichts.
 
-Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bis drei kurze
-Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
-Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
+Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bis drei
+Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, keine
+Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
+Commit-Nachricht, und die liest sich im Banner auch so.
+
+## 0.37.0 – Fehlerprotokoll für die ganze App
+
+- Das Protokoll aus der Kamera-Fehlersuche ist jetzt allgemein: jede Stelle der App kann
+  hineinschreiben, es übersteht Abstürze und Neustarts.
+- Unbehandelte Fehler landen automatisch darin. Auf dem Telefon gibt es keine Konsole, also
+  ist das der einzige Weg, hinterher zu sehen, was schiefging.
 
 ## 0.36.0 – Kamera zurück auf Standard
 
-Die Kamera-Sache ist geklärt, also ist sie jetzt auch aus der App verschwunden. Der
-Foto-Knopf im Eintrag öffnet wieder ganz normal die Systemkamera, so wie vor dieser ganzen
-Geschichte. In den Einstellungen ist der komplette Kamera-Abschnitt weg – keine Linsen-Liste,
-keine Schalter, kein Testbild, keine Diagnose, kein Protokoll. Nichts davon war je für den
-normalen Gebrauch gedacht, und es hilft bei einer defekten Kamera ja auch nicht.
+- Kamera-Abschnitt aus den Einstellungen entfernt, nachdem die Fehlersuche abgeschlossen war.
+  Der Foto-Knopf öffnet wieder die Systemkamera.
+- Code und Messergebnisse bleiben im Projekt, falls die Frage je wieder aufkommt.
 
-Verloren ist nichts: Der gesamte Code und die vollständigen Messergebnisse bleiben im Projekt
-liegen. Sollte die Kamera je repariert werden oder die Frage wieder aufkommen, ist alles da
-und muss nur wieder eingehängt werden.
+## 0.35.0 – Rückkamera: Untersuchung abgeschlossen
 
-## 0.35.0 – Die Kamera-Frage ist beantwortet
+- Ergebnis: Die Rückkamera besteht aus drei Linsen, eine davon ist defekt, und sie lässt sich
+  von einer App nicht umgehen. Für Fotos bleibt der Weg über Systemkamera oder Expert RAW und
+  die Galerie-Auswahl im Eintrag.
 
-Der letzte Test hat die Antwort gebracht, und es ist die unerfreuliche: Die gute Linse lässt
-sich nicht einzeln ansprechen. Android liest ihr Datenblatt bereitwillig vor – 4080×3060,
-f/1.8, alles dran – aber beim Öffnen sagt es „Kamera mit der Nummer 5 ist nicht verfügbar“.
-Sie existiert nur als Teil ihrer Gruppe, und in dieser Gruppe steckt die defekte Linse.
+## 0.34.0–0.34.4 – Diagnose für die Rückkamera
 
-Damit ist die Sache vollständig geklärt, und ich höre auf, daran zu bauen:
+- Prüflauf, der alle Kameras des Geräts durchtestet, mit Bericht zum Einschicken.
+- Der Bericht liegt in einer Datei statt im Speicher der App und übersteht deshalb auch einen
+  Neustart des Geräts.
 
-Die hintere Kamera ist ein Verbund aus drei Linsen. Eine davon ist hinüber – sie liefert
-einzeln geöffnet nie ein Bild und fällt nach einer dreiviertel Sekunde aus, jedes Mal. Wer den
-Verbund öffnet, fährt sie mit hoch, und nach anderthalb Sekunden reißt sie alles mit. Das ist
-unabhängig von Auflösung, Bildrate, Fokus und Stabilisator gemessen worden – auch bei 320×240
-und langsamster Bildrate, also einem Vierzigstel der Datenmenge, stirbt sie genauso schnell.
-Die Frontkamera läuft im selben Test tadellos, sechs Sekunden, 159 Bilder.
+## 0.33.0–0.33.2 – Kamera-Prüfung, zurückgenommen
 
-Dass Expert RAW funktioniert, passt dazu: Samsungs eigene Apps sprechen die Sensoren über eine
-Schnittstelle an, die anderen Apps nicht offensteht. Der Weg daran vorbei existiert also – nur
-nicht für uns.
+- Ein Prüflauf hat das Telefon neu gestartet und wurde sofort wieder entfernt.
 
-**Für dich heißt das praktisch:** Fotos mit Expert RAW oder der Systemkamera aufnehmen und im
-Eintrag über die Galerie-Auswahl übernehmen. Die App schlägt dir dort die Bilder des jeweiligen
-Tages vor, das ist genau dafür gebaut. Wenn dich die Kamera-Ansicht der App nur aufhält,
-schalte sie unter Einstellungen → Kamera ab.
+## 0.32.0–0.32.5 – Versuche an der Rückkamera
 
-Die Vollprüfung bleibt drin, falls die Kamera je repariert wird – dann sagt ein Durchlauf in
-drei Minuten, ob sie wieder taugt.
+- Mehrere Anläufe, die Rückkamera über einen anderen Weg anzusprechen. Ohne Erfolg, siehe
+  0.35.0.
+- Nebenbei behoben: Die Kamera-Ansicht lief nach einem Abbruch mit eingefrorenem Bild weiter,
+  und eine veraltete Linsen-Kennung führte zu „Gerät nicht gefunden“ statt zu einem neuen
+  Versuch.
 
-## 0.34.3 – Die Linse einzeln ansprechen, ohne den Verbund
+## 0.31.3–0.31.4 – Kamera-Ansicht, kleine Korrekturen
 
-Die vollständige Tabelle ist da, und sie schließt zwei Dinge endgültig aus. Last ist es nicht:
-die Rückkamera stirbt bei 320×240 und 15 Bildern/s genauso nach anderthalb Sekunden wie bei
-voller Auflösung – sogar etwas früher. Und es ist auch keine Frage der Datenmenge, sondern der
-Zeit: immer rund 1,5 Sekunden nach dem Öffnen, egal was sie dabei zu tun hat.
-
-Dafür hat das Datenblatt etwas verraten, das bisher untergegangen war: Die hintere Kamera 0
-ist gar keine Kamera, sondern ein Verbund aus drei Linsen – 2, 5 und 6. Und Linse 2, einzeln
-geöffnet, gibt nach 750 Millisekunden auf, ohne je ein Bild zu liefern. Das ist die defekte.
-Wird der Verbund geöffnet, fährt das Gerät alle drei hoch, auch die kaputte – und daran stirbt
-dann die ganze Gruppe.
-
-Diese Fassung prüft deshalb, ob sich die **gute Linse einzeln** ansprechen lässt, ohne ihre
-beiden Geschwister. Wenn ja, wäre die Rückkamera doch noch zu retten. Wenn das Gerät das
-verweigert, steht es hinterher als klare Absage im Bericht – auch das wäre eine Antwort.
-
-## 0.34.2 – Die Prüfung läuft jetzt bis zum Ende durch
-
-Der letzte Durchlauf hat den Neustart geklärt: Frontkamera, 640×480, gleiche Einstellungen –
-in der gewohnten Betriebsart sechs Sekunden und 130 Bilder, in der neuen ein Neustart des
-Geräts. Es lag also an der Betriebsart, nicht an einer Kamera. Die ist damit erledigt und
-wird nicht mehr angefasst; der Bericht schreibt auch hin, warum.
-
-Abgewürgt hatte die Prüfung dann meine eigene Sicherung: Sie bricht bei einem harten
-Kamerafehler alles ab – und genau der ist bei deiner Rückkamera ja der Normalfall, also war
-nach Durchlauf 2 von 10 Schluss. Jetzt bricht nur noch ab, wenn der Kameradienst selbst
-aussteigt, und die Prüfung kommt durch alle Kameras.
-
-Neu dabei: ein Durchlauf mit der allerkleinsten Auflösung und der langsamsten Bildrate. Wenn
-die Rückkamera selbst dabei nach zwei Sekunden aussteigt, ist Last endgültig nicht die
-Ursache – und dann ist die Frage für die App beantwortet.
-
-## 0.34.1 – Die Spur zeigt weg von der Rückkamera
-
-Der Bericht hat den Neustart überstanden, und er sagt etwas Unerwartetes: Das Gerät ist beim
-allerersten Durchlauf ausgegangen – an der **Frontkamera**, der gesunden, beim ersten
-Zugriff. Nicht an der defekten Rückkamera und nicht nach vielen Versuchen hintereinander.
-
-Damit bleibt als Unterschied nur die Betriebsart übrig, die ich neu eingeführt hatte: die, in
-der die Bilder direkt an den Bildschirm gehen. Genau die benutzt Expert RAW, deshalb wollte
-ich sie testen – und offenbar verträgt dieses Gerät sie nicht, unabhängig von der Kamera.
-
-Diese Fassung prüft das sauber. Sie legt die Puffer zuerst **ganz ohne Kamera** an: wenn schon
-das reicht, um das Gerät umzulegen, ist die Kamera vollkommen unschuldig. Danach laufen erst
-alle Kameras in der gewohnten Betriebsart – die, die seit Monaten funktioniert –, und erst
-ganz zum Schluss die verdächtige. Und in jedem Durchlauf steht jetzt jeder einzelne Schritt
-im Bericht, samt Lebenszeichen im Sekundentakt, statt einer Lücke von sechs Sekunden.
-
-## 0.34.0 – Ein Bericht, der den Neustart übersteht
-
-Dass vom letzten Durchlauf nichts im Protokoll stand, war kein Zufall: Das Kamera-Protokoll
-liegt im Speicher der App und wird erst später auf die Platte geschrieben. Bei einem
-App-Absturz reicht das, bei einem Neustart des ganzen Geräts nicht – alles war weg. Solange
-das so ist, lässt sich der Fehler gar nicht finden.
-
-Die Vollprüfung schreibt deshalb jetzt in eine eigene Datei, und zwar **bevor** sie etwas
-anfasst: erst „ich öffne gleich Kamera 2 in Betriebsart X“ auf die Platte, dann öffnen. Geht
-dabei das Gerät aus, steht hinterher genau diese Zeile als letzte drin – damit wissen wir, was
-es umgelegt hat. Der nächste Lauf erkennt das von selbst, sagt es dir und überspringt genau
-diese Einstellung, sodass die Prüfung weiterkommt als beim Mal davor.
-
-Der Knopf ist wieder da, unter Einstellungen → Kamera → Diagnose, zusammen mit „Bericht
-kopieren“. Der Bericht bleibt auch nach einem Neustart stehen und lässt sich jederzeit
-abrufen, ohne noch einmal zu prüfen.
-
-Und mit mehr Luft: vier Sekunden Pause zwischen den Durchläufen, acht beim Wechsel der Linse,
-Abbruch beim ersten harten Fehler statt Weitermachen.
-
-## 0.33.2 – Aufräumen hinter der Vollprüfung
-
-An der App ändert sich nichts – der Knopf bleibt weg. Ich habe mir nur angesehen, was an der
-Prüfung eigentlich so gefährlich war, und zwei handfeste Fehler gefunden: Sie hat nach jedem
-Durchlauf die Kamera zwar geschlossen, aber nicht abgewartet, bis das Gerät das bestätigt –
-und dann schon die nächste geöffnet, oft mitten im Abbau einer gerade abgestürzten Kamera.
-Und sie lief nach einem harten Fehler einfach weiter, statt aufzuhören.
-
-Beides ist im Code behoben und aufgeschrieben, damit die Erkenntnis nicht verloren geht. Der
-Code selbst hängt an keiner Schaltfläche mehr und kann von nichts ausgelöst werden.
-
-## 0.33.1 – „Alles durchtesten“ ist wieder raus
-
-Der Knopf aus der letzten Fassung hat beim Durchlaufen das ganze Telefon neu gestartet. Das
-ist entfernt und kommt nicht wieder – es tut mir leid, dass du das abbekommen hast.
-
-Damit ist die Frage aber auch beantwortet, ohne dass noch etwas geprüft werden müsste: Eine
-App kann ein Telefon nicht neu starten. Wenn das Ansprechen der Kamera das Gerät mitreißt,
-sitzt der Fehler unterhalb des Betriebssystems, in der Hardware – genau da, wo du ihn vermutet
-hast. Dagegen kann keine App etwas ausrichten, und ich höre damit auf, es zu versuchen.
-
-Die Kamera-Ansicht der App fasst die Kamera jetzt nur noch ein einziges Mal an, statt es bei
-einem Fehlschlag nochmal zu probieren. Für Fotos bleibt der Weg, der funktioniert: mit Expert
-RAW oder der Systemkamera aufnehmen und das Bild im Eintrag aus der Galerie übernehmen.
-
-## 0.33.0 – Alles durchtesten, auf einmal
-
-Auch klein und langsam hat nichts geändert: die Rückkamera bricht nach knapp zwei Sekunden ab,
-egal wie wenig man von ihr verlangt. Dass die Zeit dabei immer gleich bleibt, spricht gegen
-Überlastung und eher für etwas, das nach zwei Sekunden einmalig passiert.
-
-Statt weiter eine Vermutung pro Fassung zu prüfen, steht unter Einstellungen → Kamera →
-Diagnose jetzt der Knopf **„Alles durchtesten"**. Er probiert in einem Durchgang jede Kamera
-des Geräts in jeder Betriebsart durch – auch die Frontkamera als Gegenprobe und, erstmals, die
-Betriebsart, in der die Bilder direkt an den Bildschirm gehen statt durch den Arbeitsspeicher
-der App. Genau das ist der Unterschied zu Samsungs eigener Kamera-App und bisher nie getestet
-worden. Vorher schreibt er auf, was jede Kamera über sich selbst meldet.
-
-Das dauert gut eine Minute, belastet die Kamera absichtlich und ist zum Einschicken gedacht:
-danach Protokoll kopieren. Eine Runde statt sechs.
-
-Solange das offen ist: Fotos gehen zuverlässig über die Systemkamera oder Expert RAW und
-danach die Galerie-Auswahl im Eintrag. Wer die Kamera-Ansicht der App nicht braucht, schaltet
-sie unter Einstellungen → Kamera einfach ab.
-
-## 0.32.5 – Die Kamera so langsam wie möglich
-
-Fokus und Bildstabilisator waren es nicht – abgeschaltet hat die Kamera trotzdem nach zwei
-Sekunden aufgegeben. Bleibt als Erklärung die Stromversorgung der Kamera-Platine, und darauf
-kann eine App nur auf eine Art antworten: weniger verlangen. In allen bisherigen Protokollen
-lief die Kamera mit 60 Bildern pro Sekunde, doppelt so schnell wie eine normale Kamera-App
-anfordert. Diese Fassung stellt die langsamste Bildrate ein, die der Sensor anbietet, und
-beginnt mit einem kleinen Bild; größer wird es erst, wenn das kleine durchhält.
-
-Ob das reicht, ist offen. Falls nicht, ist der verlässliche Weg für Fotos weiterhin: mit der
-Systemkamera oder Expert RAW aufnehmen und das Bild danach aus der Galerie in den Eintrag
-übernehmen – das funktioniert unabhängig von diesem ganzen Kapitel. Die Fehlermeldung der
-Kamera-Ansicht sagt das jetzt auch so.
-
-## 0.32.4 – Das Bild bleibt jetzt stehen
-
-Die Rückkamera hat beim letzten Mal zum ersten Mal ein Bild geliefert – Autofokus und
-Bildstabilisator abzuschalten war offenbar der Punkt. Weggerissen hat es dann ein Fehler in
-der App selbst, eine Zehntelsekunde später: die Kamera-Ansicht stolperte über die Art, wie das
-Gerät ihre Anmeldungen zurückgibt, und schaltete sofort auf den alten Weg zurück. Weil die
-Kamera dabei nicht richtig losgelassen wurde, fand auch der alte Weg nichts mehr – daher
-„Gerät nicht gefunden“ direkt danach.
-
-Beides ist behoben. Die Kamera wird jetzt in jedem Fall wieder freigegeben, auch wenn etwas
-anderes schiefgeht, und ein gescheiterter Versuch bleibt für den Rest der Sitzung gescheitert,
-statt die Gerätekamera noch einmal anzufassen.
-
-Damit sollte die Vorschau zum ersten Mal wirklich stehen bleiben. Ob sie das über die
-kritischen zwei Sekunden hinaus tut, zeigt erst der Gebrauch.
-
-## 0.32.3 – Nichts im Objektiv darf sich mehr bewegen
-
-Die Diagnose vom letzten Mal hat die bisherige Annahme umgeworfen: Es ist nicht die eine
-defekte Linse, an der die Kamera stirbt – die Hauptlinse gibt genauso auf wie die
-Ultraweitwinkel-Linse, und zwar immer ein bis zwei Sekunden nach dem Start. Das ist genau der
-Moment, in dem der Autofokus seinen ersten Zug macht und der Bildstabilisator anspringt. Diese
-Fassung schaltet deshalb beides ab, bevor das erste Bild überhaupt angefordert wird, und
-stellt den Fokus fest auf etwa einen Meter. Ob das der Punkt war, sagt die nächste Diagnose.
-
-Zwei Dinge sind dabei unabhängig davon besser geworden. Die App probiert jetzt höchstens zwei
-Wege statt drei und hört sofort auf, sobald die Kamera des Geräts gar nicht mehr antwortet –
-denn jeder weitere Versuch hat sie bisher tiefer mitgerissen, bis auch der gewohnte Weg nichts
-mehr fand. Und wenn der neue Weg einmal gescheitert ist, benutzt die App für den Rest der
-Sitzung direkt den alten, statt es jedes Mal aufs Neue zu versuchen.
-
-Außerdem erholt sich die Kamera-Ansicht jetzt von einer Linse, die es nicht mehr gibt: Nach
-einem Neustart der Gerätekamera stimmen die gespeicherten Linsen-Kennungen nicht mehr, und
-statt mit „Gerät nicht gefunden“ abzubrechen, nimmt die App einfach wieder die Rückkamera.
-
-## 0.32.2 – Die Kamera sucht sich die heile Linse selbst
-
-Die erste Fassung der eigenen Kamera hat die falsche Linse erwischt und nach einer Sekunde
-aufgegeben – und danach blieb die Ansicht beim Öffnen einfach hängen. Beides ist behoben: die
-App probiert jetzt die Linsen der Rückkamera der Reihe nach durch, von der Hauptlinse abwärts,
-und zeigt erst dann „bereit“, wenn wirklich ein Bild ankommt. Liefert eine Linse nichts,
-übernimmt nach zweieinhalb Sekunden die nächste; hilft keine, geht es automatisch auf den
-alten Weg zurück statt in eine ewig wartende Ansicht.
-
-Die Fotos dieser Kamera sind vorerst kleiner (Full-HD statt voller Auflösung). Das ist der
-Preis dafür, dass sich eine einzelne Linse überhaupt ansteuern lässt – sobald sie sich als
-stabil erweist, lässt sich das wieder anheben.
-
-Was die Kamera dabei auf deinem Gerät vorfindet und welche Linse sie nimmt, steht jetzt
-Schritt für Schritt in der Diagnose unter Einstellungen → Kamera. Die Linsen-Liste dort gilt
-nur noch für die Browser-Fassung; in der App entscheidet die Kamera selbst, und das steht
-jetzt auch so daneben.
-
-## 0.32.1 – Eigene Kamera für die APK
-
-Die Rückkamera-Abstürze aus den letzten Fassungen hatten eine Ursache, die sich im Browser
-nicht beheben ließ: Samsungs Rückkamera besteht intern aus zwei Linsen, und das Gerät schaltet
-selbst zwischen ihnen um, sobald es meint, näher heranzoomen oder fokussieren zu müssen –
-genau dieser Wechsel bringt die Kamera zum Absturz. Aus dem Browser heraus lässt sich das
-nicht verhindern, weil dort nur das Gerät als Ganzes sichtbar ist, nicht die einzelne Linse
-dahinter.
-
-**Nur in der APK** (nicht auf der Webseite) spricht die Kamera-Ansicht deshalb ab jetzt direkt
-die Hauptlinse an, ohne den Umweg über das umschaltende Gerät – der Absturz-Auslöser fällt
-damit weg. Die Vorschau ist dabei etwas ruckeliger als eine echte Live-Ansicht (ein neues Bild
-alle paar Zehntelsekunden statt fließend), reicht aber zum Einrahmen eines Fotos. Klappt das
-auf einem Gerät nicht, wechselt die App von selbst zurück auf den bisherigen Weg. Auf der
-Webseite ändert sich nichts.
-
-## 0.31.4 – Fehlermeldung ohne Nebengeräusch
-
-Eine Linse, die schon tot ankommt, meldete den Fehler zwar richtig, hat dabei aber die
-Bildvorschau mitten in einem laufenden Abspielversuch unter dem Fuß weggezogen. Das stand
-als zusätzlicher, verwirrender Fehler im Diagnose-Protokoll. Die Reihenfolge ist jetzt so,
-dass der Fehler erst gemeldet wird, nachdem dieser Versuch fertig ist.
-
-## 0.31.3 – Kamera meldet sich ab statt einzufrieren
-
-Wenn die Rückkamera-Linse trotz der Absturz-Versuche mittendrin abschaltet, zeigt die
-Kamera-Ansicht das jetzt sofort als Fehler an, statt weiter ein eingefrorenes Bild mit
-aktivem Auslöser zu zeigen. Außerdem merkt sich die App eine ausgewählte Linse nicht mehr
-stur: ist sie beim nächsten Öffnen nicht mehr auffindbar, wechselt die App von selbst auf
-die automatische Auswahl, statt jedes Mal mit einer Fehlermeldung abzubrechen.
+- Bricht die Verbindung ab, zeigt die Ansicht das an, statt ein totes Bild stehen zu lassen.
 
 ## 0.31.2 – Kamera-Diagnose
 

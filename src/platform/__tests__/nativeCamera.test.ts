@@ -92,7 +92,7 @@ describe('openNativeCamera', () => {
 
     await openNativeCamera();
 
-    lines.push(...JSON.parse(localStorage.getItem('reno.cameraLog') ?? '[]'));
+    lines.push(...JSON.parse(localStorage.getItem('reno.debugLog') ?? '[]'));
     expect(lines.some((line) => line.includes('nativ: Linse 2: 4080×3060'))).toBe(true);
   });
 

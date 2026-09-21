@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildConstraints, openCamera } from '../camera';
-import { clearCameraLog, readCameraLog } from '../cameraLog';
+import { clearDebugLog, readDebugLog } from '../debugLog';
 
 function fakeTrack(overrides: Partial<MediaStreamTrack> = {}): MediaStreamTrack {
   return {
@@ -25,7 +25,7 @@ function fakeStream(track: MediaStreamTrack | null): MediaStream {
 
 beforeEach(() => {
   localStorage.clear();
-  clearCameraLog();
+  clearDebugLog();
 });
 
 afterEach(() => {
@@ -58,7 +58,7 @@ describe('openCamera', () => {
     expect(getUserMedia).toHaveBeenCalledTimes(2);
     expect(getUserMedia).toHaveBeenNthCalledWith(1, { audio: false, video: { deviceId: { exact: 'stale-id' } } });
     expect(getUserMedia).toHaveBeenNthCalledWith(2, { audio: false, video: { facingMode: 'environment' } });
-    expect(readCameraLog().some((line) => line.includes('automatische Auswahl'))).toBe(true);
+    expect(readDebugLog('kamera').some((line) => line.includes('automatische Auswahl'))).toBe(true);
   });
 
   it('drops the lens on a NotFoundError too - a restarted camera service answers that way', async () => {

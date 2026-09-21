@@ -9,7 +9,7 @@
  */
 import { isNative } from './index';
 import { base64ToBlob } from './photos';
-import { cameraLog } from './cameraLog';
+import { debugLog } from './debugLog';
 
 export interface NativeCamFrame {
   base64: string;
@@ -111,7 +111,7 @@ export async function runNativeCameraDiagnosis(): Promise<string> {
   const native = plugin();
   if (!native) throw new Error('Kein Zugriff auf die native Kamera');
   const logging = await Promise.resolve(
-    native.addListener('log', ({ message }) => cameraLog(`prüfung: ${message}`)),
+    native.addListener('log', ({ message }) => debugLog('kamera', `prüfung: ${message}`)),
   );
   try {
     const { report } = await withTimeout(native.diagnose(), DIAGNOSIS_TIMEOUT_MS, 'Die Vollprüfung');
@@ -149,7 +149,7 @@ export async function openNativeCamera(): Promise<NativeCameraSession> {
   // attached before start(), so which lenses exist and what each one did lands in the
   // protocol - that is the only thing left to read when the camera takes the app with it
   const logging = await Promise.resolve(
-    native.addListener('log', ({ message }) => cameraLog(`nativ: ${message}`)),
+    native.addListener('log', ({ message }) => debugLog('kamera', `nativ: ${message}`)),
   );
 
   let opened: { physicalCameraId?: string };

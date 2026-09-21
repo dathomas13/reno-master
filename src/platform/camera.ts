@@ -11,7 +11,7 @@
  * focus so the switch never happens; everything they do lands in the camera protocol.
  */
 import type { LocalSettings } from '@/lib/settings';
-import { cameraLog } from './cameraLog';
+import { debugLog } from './debugLog';
 
 export interface CameraDeviceOption {
   deviceId: string;
@@ -57,7 +57,7 @@ export async function listCameraDevices(): Promise<CameraDeviceOption[]> {
     }
   }
   const devices = cams.map((cam, index) => ({ deviceId: cam.deviceId, label: cam.label || `Kamera ${index + 1}` }));
-  cameraLog(`Kameras gefunden: ${devices.map((d) => `${d.label} [${d.deviceId.slice(0, 8)}]`).join(', ') || 'keine'}`);
+  debugLog('kamera', `Kameras gefunden: ${devices.map((d) => `${d.label} [${d.deviceId.slice(0, 8)}]`).join(', ') || 'keine'}`);
   return devices;
 }
 
@@ -116,31 +116,31 @@ function capabilitiesOf(track: MediaStreamTrack): ExtendedCapabilities {
  */
 export async function openCamera(options: CameraOptions): Promise<MediaStream> {
   const constraints = buildConstraints(options);
-  cameraLog(`getUserMedia ${JSON.stringify(constraints.video)}`);
+  debugLog('kamera', `getUserMedia ${JSON.stringify(constraints.video)}`);
   const started = Date.now();
   let stream: MediaStream;
   try {
     stream = await navigator.mediaDevices.getUserMedia(constraints);
   } catch (cause) {
     const error = cause as { name?: string; message?: string; constraint?: string };
-    cameraLog(`✖ getUserMedia scheitert nach ${Date.now() - started} ms: ${error.name ?? ''} ${error.message ?? ''} ${error.constraint ?? ''}`);
+    debugLog('kamera', `✖ getUserMedia scheitert nach ${Date.now() - started} ms: ${error.name ?? ''} ${error.message ?? ''} ${error.constraint ?? ''}`);
     // The device ids from enumerateDevices() are only valid for the permission session that
     // produced them; a standing choice in settings goes stale as soon as that session ends -
     // and a device whose camera service restarted answers NotFoundError rather than the
     // OverconstrainedError this only used to catch. Whatever the name, a named lens that will
     // not open is worth one retry without it. Only a refused permission is not.
     if (options.deviceId && error.name !== 'NotAllowedError' && error.name !== 'SecurityError') {
-      cameraLog('Linse nicht verfügbar, wechsle auf automatische Auswahl');
+      debugLog('kamera', 'Linse nicht verfügbar, wechsle auf automatische Auswahl');
       return openCamera({ ...options, deviceId: undefined });
     }
     throw cause;
   }
   const track = stream.getVideoTracks()[0];
-  cameraLog(`Stream nach ${Date.now() - started} ms: ${track ? describeTrack(track) : 'ohne Videospur'}`);
+  debugLog('kamera', `Stream nach ${Date.now() - started} ms: ${track ? describeTrack(track) : 'ohne Videospur'}`);
   if (!track) return stream;
 
   const caps = capabilitiesOf(track);
-  cameraLog(
+  debugLog('kamera',
     `Fähigkeiten: zoom=${fmt(caps.zoom)} focusMode=${fmt(caps.focusMode)} focusDistance=${fmt(caps.focusDistance)} ` +
       `width=${fmt(caps.width)} height=${fmt(caps.height)} facing=${fmt(caps.facingMode)}`,
   );
@@ -152,7 +152,7 @@ export async function openCamera(options: CameraOptions): Promise<MediaStream> {
       const zoom = Math.min(Math.max(1, caps.zoom.min), caps.zoom.max);
       advanced.push({ zoom });
     } else {
-      cameraLog('Zoom festhalten: Gerät bietet keinen Zoom über die Spur an');
+      debugLog('kamera', 'Zoom festhalten: Gerät bietet keinen Zoom über die Spur an');
     }
   }
   if (options.fixedFocus) {
@@ -166,16 +166,16 @@ export async function openCamera(options: CameraOptions): Promise<MediaStream> {
       const mode = caps.focusMode.includes('single-shot') ? 'single-shot' : caps.focusMode[0];
       advanced.push({ focusMode: mode });
     } else {
-      cameraLog('Fokus festhalten: Gerät bietet keinen Fokusmodus über die Spur an');
+      debugLog('kamera', 'Fokus festhalten: Gerät bietet keinen Fokusmodus über die Spur an');
     }
   }
   if (advanced.length) {
     try {
       await track.applyConstraints({ advanced } as MediaTrackConstraints);
-      cameraLog(`applyConstraints ${JSON.stringify(advanced)} angenommen → ${describeTrack(track)}`);
+      debugLog('kamera', `applyConstraints ${JSON.stringify(advanced)} angenommen → ${describeTrack(track)}`);
     } catch (cause) {
       const error = cause as { name?: string; message?: string };
-      cameraLog(`✖ applyConstraints ${JSON.stringify(advanced)} abgelehnt: ${error.name ?? ''} ${error.message ?? ''}`);
+      debugLog('kamera', `✖ applyConstraints ${JSON.stringify(advanced)} abgelehnt: ${error.name ?? ''} ${error.message ?? ''}`);
     }
   }
   return stream;

@@ -16,7 +16,7 @@ import java.util.Locale;
 /**
  * A log that survives the phone restarting under it.
  *
- * The camera protocol in platform/cameraLog.ts writes to localStorage, which looks synchronous
+ * The camera protocol in platform/debugLog.ts writes to localStorage, which looks synchronous
  * and is not: the WebView buffers and hands over to storage later. An app crash still gets
  * flushed by the system - which is what that protocol was built for - but the full camera
  * check took the whole phone down, and every line of it was gone afterwards. Nothing could be

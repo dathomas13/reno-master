@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { describeTrack, openCamera, type CameraOptions } from '@/platform/camera';
-import { beginCameraSession, cameraLog, endCameraSession } from '@/platform/cameraLog';
+import { beginSession, debugLog, endSession } from '@/platform/debugLog';
 import { isNative } from '@/platform/index';
 import {
   giveUpOnNativeCamera,
@@ -22,7 +22,7 @@ interface CameraCaptureProps {
  * (the measurements are in plugins/nativecam/README.md). On every healthy device the system
  * camera does this better, so the app takes photos through the file input again and none of
  * this appears in the interface. Kept whole - component, platform/camera.ts, platform/
- * nativeCamera.ts, platform/cameraLog.ts and the nativecam plugin - so that picking the
+ * nativeCamera.ts and the nativecam plugin - so that picking the
  * question back up costs a render call rather than a rewrite: PhotoAttach.openCamera is where
  * it used to hang.
  *
@@ -121,7 +121,7 @@ function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
     const cleanups: (() => void)[] = [];
     setReady(false);
     setError(null);
-    beginCameraSession(options.deviceId ? `Linse ${options.deviceId.slice(0, 8)}` : 'automatisch');
+    beginSession('kamera', options.deviceId ? `Linse ${options.deviceId.slice(0, 8)}` : 'automatisch');
 
     const video = videoRef.current;
     const elapsed = () => `${((Date.now() - opened) / 1000).toFixed(1)}s`;
@@ -150,7 +150,7 @@ function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
             setError('Die Kamera hat die Verbindung beendet (Linse abgestürzt?).');
           };
           const onTrack = (name: string) => () => {
-            cameraLog(`Spur ${name} bei ${elapsed()}: ${describeTrack(track)}`);
+            debugLog('kamera', `Spur ${name} bei ${elapsed()}: ${describeTrack(track)}`);
             refreshStatus(track);
             if (name === 'ended') onEnded();
           };
@@ -165,11 +165,11 @@ function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
           // unmounts the <video>, and doing that while play() is still in flight aborts it
           // with a misleading "removed from the document" error.
           endedOnArrival = track.readyState === 'ended';
-          if (endedOnArrival) cameraLog(`Spur bereits beendet bei ${elapsed()}: ${describeTrack(track)}`);
+          if (endedOnArrival) debugLog('kamera', `Spur bereits beendet bei ${elapsed()}: ${describeTrack(track)}`);
         }
         if (video) {
           const onVideo = (name: string) => () => {
-            cameraLog(`Video ${name} bei ${elapsed()}: ${video.videoWidth}×${video.videoHeight}`);
+            debugLog('kamera', `Video ${name} bei ${elapsed()}: ${video.videoWidth}×${video.videoHeight}`);
             refreshStatus(track);
             if (name === 'playing' && active) setReady(true);
           };
@@ -181,9 +181,9 @@ function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
           video.srcObject = stream;
           try {
             await video.play();
-            cameraLog(`play() ok bei ${elapsed()}`);
+            debugLog('kamera', `play() ok bei ${elapsed()}`);
           } catch (cause) {
-            cameraLog(`✖ play() scheitert: ${cause instanceof Error ? `${cause.name} ${cause.message}` : String(cause)}`);
+            debugLog('kamera', `✖ play() scheitert: ${cause instanceof Error ? `${cause.name} ${cause.message}` : String(cause)}`);
           }
         }
         refreshStatus(track);
@@ -194,7 +194,7 @@ function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
           ticks += 1;
           refreshStatus(track);
           if (ticks <= 10 || ticks % 5 === 0) {
-            cameraLog(`lebt ${elapsed()}: ${video?.videoWidth ?? 0}×${video?.videoHeight ?? 0} ${track ? describeTrack(track) : ''}`);
+            debugLog('kamera', `lebt ${elapsed()}: ${video?.videoWidth ?? 0}×${video?.videoHeight ?? 0} ${track ? describeTrack(track) : ''}`);
           }
         }, 1000);
         cleanups.push(() => window.clearInterval(timer));
@@ -210,7 +210,7 @@ function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
       cleanups.forEach((fn) => fn());
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
-      endCameraSession(`nach ${elapsed()}`);
+      endSession('kamera', `nach ${elapsed()}`);
     };
   }, [options]);
 
@@ -223,7 +223,7 @@ function WebCameraCapture({ options, onCapture, onClose }: CameraCaptureProps) {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.drawImage(video, 0, 0);
-    cameraLog(`Auslöser: ${canvas.width}×${canvas.height}`);
+    debugLog('kamera', `Auslöser: ${canvas.width}×${canvas.height}`);
     canvas.toBlob(
       (blob) => {
         if (blob) onCapture(blob);
@@ -257,7 +257,7 @@ function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCapturePr
     let active = true;
     const opened = Date.now();
     const elapsed = () => `${((Date.now() - opened) / 1000).toFixed(1)}s`;
-    beginCameraSession('nativ');
+    beginSession('kamera', 'nativ');
     let offFrame: (() => void) | null = null;
     let offError: (() => void) | null = null;
     let framesSeen = 0;
@@ -269,20 +269,20 @@ function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCapturePr
           return;
         }
         sessionRef.current = session;
-        cameraLog(`Native Kamera bereit${session.physicalCameraId ? ` (Sensor ${session.physicalCameraId})` : ''}`);
+        debugLog('kamera', `Native Kamera bereit${session.physicalCameraId ? ` (Sensor ${session.physicalCameraId})` : ''}`);
         offFrame = session.onFrame((nextFrame) => {
           if (!active) return;
           framesSeen += 1;
           setFrame(`data:image/jpeg;base64,${nextFrame.base64}`);
           setStatus(`${elapsed()} · ${nextFrame.width}×${nextFrame.height} · nativ`);
           if (framesSeen === 1) {
-            cameraLog(`erstes Bild bei ${elapsed()}: ${nextFrame.width}×${nextFrame.height}`);
+            debugLog('kamera', `erstes Bild bei ${elapsed()}: ${nextFrame.width}×${nextFrame.height}`);
             setReady(true);
           }
         });
         offError = session.onError((message) => {
           if (!active) return;
-          cameraLog(`✖ native Kamera: ${message}`);
+          debugLog('kamera', `✖ native Kamera: ${message}`);
           setReady(false);
           setError(`Die Kamera hat die Verbindung beendet (${message}).`);
         });
@@ -290,7 +290,7 @@ function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCapturePr
       .catch((cause: unknown) => {
         if (!active) return;
         const message = cause instanceof Error ? cause.message : String(cause);
-        cameraLog(`✖ native Kamera scheitert, wechsle auf getUserMedia: ${message}`);
+        debugLog('kamera', `✖ native Kamera scheitert, wechsle auf getUserMedia: ${message}`);
         // whatever went wrong, it will go wrong again this run - and each attempt leaves the
         // camera service worse off for the browser path that has to carry us instead
         giveUpOnNativeCamera();
@@ -305,7 +305,7 @@ function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCapturePr
       offError?.();
       void sessionRef.current?.close();
       sessionRef.current = null;
-      endCameraSession(`nach ${elapsed()}`);
+      endSession('kamera', `nach ${elapsed()}`);
     };
   }, [onFallback]);
 
@@ -316,10 +316,10 @@ function NativeCameraCapture({ onCapture, onClose, onFallback }: CameraCapturePr
     capturingRef.current = true;
     try {
       const blob = await session.capture();
-      cameraLog(`Auslöser (nativ): ${blob.size} Bytes`);
+      debugLog('kamera', `Auslöser (nativ): ${blob.size} Bytes`);
       onCapture(blob);
     } catch (cause) {
-      cameraLog(`✖ native Aufnahme scheitert: ${cause instanceof Error ? cause.message : String(cause)}`);
+      debugLog('kamera', `✖ native Aufnahme scheitert: ${cause instanceof Error ? cause.message : String(cause)}`);
     } finally {
       capturingRef.current = false;
     }
