@@ -13,8 +13,8 @@ service cloud.firestore {
     function allowed() {
       return request.auth != null
         && request.auth.token.email.lower() in [
-             'tom.friedl@web.de',
-             'sarah-schmid.1@web.de'
+             'thomas_email_hier_eintragen',
+             'sarah_email_hier_eintragen'
            ];
     }
 

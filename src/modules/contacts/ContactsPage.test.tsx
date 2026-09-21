@@ -27,7 +27,7 @@ vi.mock('@/data/repos', () => ({
 }));
 
 beforeEach(() => {
-  mocks.contacts = [{ id: 'contact-1', name: 'Alter Name', tradeIds: [] }];
+  mocks.contacts = [{ id: 'contact-1', name: 'Alter Name', tradeIds: [], roles: [] }];
   mocks.saveContact.mockClear();
 });
 afterEach(cleanup);
