@@ -63,7 +63,7 @@ describe('pickDeviceContacts', () => {
   }
 
   it('drops fields the device does not support so the picker does not reject before it opens', async () => {
-    const select = vi.fn(() => Promise.resolve([{ name: ['Erika Mustermann'] }]));
+    const select = vi.fn((_properties: string[]) => Promise.resolve([{ name: ['Erika Mustermann'] }]));
     installManager({ select, getProperties: () => Promise.resolve(['name', 'tel']) });
 
     const result = await pickDeviceContacts();
@@ -82,7 +82,7 @@ describe('pickDeviceContacts', () => {
   });
 
   it('still asks for the full field list when the browser has no getProperties', async () => {
-    const select = vi.fn(() => Promise.resolve([]));
+    const select = vi.fn((_properties: string[]) => Promise.resolve([]));
     installManager({ select });
 
     await pickDeviceContacts();
