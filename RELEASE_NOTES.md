@@ -8,6 +8,22 @@ Eine Überschrift pro Version, `## <Version> – <Schlagzeile>`, darunter ein bi
 Absätze. Die Schlagzeile ist die Zeile, die im eingeklappten Banner steht. Fehlt eine
 Version hier, nimmt der Build die Commit-Nachricht – und die liest sich dann auch so.
 
+## 0.34.2 – Die Prüfung läuft jetzt bis zum Ende durch
+
+Der letzte Durchlauf hat den Neustart geklärt: Frontkamera, 640×480, gleiche Einstellungen –
+in der gewohnten Betriebsart sechs Sekunden und 130 Bilder, in der neuen ein Neustart des
+Geräts. Es lag also an der Betriebsart, nicht an einer Kamera. Die ist damit erledigt und
+wird nicht mehr angefasst; der Bericht schreibt auch hin, warum.
+
+Abgewürgt hatte die Prüfung dann meine eigene Sicherung: Sie bricht bei einem harten
+Kamerafehler alles ab – und genau der ist bei deiner Rückkamera ja der Normalfall, also war
+nach Durchlauf 2 von 10 Schluss. Jetzt bricht nur noch ab, wenn der Kameradienst selbst
+aussteigt, und die Prüfung kommt durch alle Kameras.
+
+Neu dabei: ein Durchlauf mit der allerkleinsten Auflösung und der langsamsten Bildrate. Wenn
+die Rückkamera selbst dabei nach zwei Sekunden aussteigt, ist Last endgültig nicht die
+Ursache – und dann ist die Frage für die App beantwortet.
+
 ## 0.34.1 – Die Spur zeigt weg von der Rückkamera
 
 Der Bericht hat den Neustart überstanden, und er sagt etwas Unerwartetes: Das Gerät ist beim

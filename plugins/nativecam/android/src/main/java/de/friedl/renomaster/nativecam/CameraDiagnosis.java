@@ -27,10 +27,11 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Tries a matrix of camera configurations one after another and writes down what each did.
  *
- * This restarted the phone once - the whole phone, not the app - and what the report said
- * afterwards changed the picture completely. The run died on the very first probe: the FRONT
- * camera, the healthy one, at 640x480, with default settings. Not the broken rear camera, not
- * after a cascade of failed opens, but on the first clean touch.
+ * This restarted the phone once - the whole phone, not the app - and the report that survived
+ * it changed the picture completely. The run died on the very first probe: the FRONT camera,
+ * the healthy one, at 640x480, with default settings. Not the broken rear camera, not after a
+ * cascade of failed opens, but on the first clean touch. The next run, identical except for
+ * the buffer format, sailed through that same probe with 130 frames in six seconds.
  *
  * The only thing about that configuration that had never run on this device before was the
  * buffer format: ImageFormat.PRIVATE, which is what an ordinary camera app hands to the
@@ -41,9 +42,10 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * - checkBuffers() allocates each format with no camera involved whatsoever. If PRIVATE alone
  *   is fatal, four lines prove it and nothing needs to be opened.
- * - The probe list runs YUV on every camera first - that is what the app does daily and what
- *   every surviving log used - and only then PRIVATE, ending with the exact configuration that
- *   took the device down, which the skip logic will drop anyway on the run after it dies.
+ * - The probe list is YUV only, which is what the app does daily and what every surviving log
+ *   used. The PRIVATE probes sit behind TEST_PRIVATE, off: the A/B is in (same camera, same
+ *   size, same settings - YUV ran 6s and 130 frames, PRIVATE restarted the phone), and every
+ *   further run of it costs another reboot for an answer already known.
  * - Every step inside a probe writes what it is about to do before doing it, and a heartbeat
  *   runs while it streams, so a death can be placed to the individual call rather than to a
  *   six-second window.
@@ -56,6 +58,13 @@ final class CameraDiagnosis {
     interface Sink {
         void log(String line);
     }
+
+    /**
+     * PRIVATE buffers on a live camera restart this phone - a clean A/B against the same
+     * camera, size and settings in YUV proved it. Off by default because every run of it costs
+     * a reboot and the answer is already in; one flag brings it back for a confirmation.
+     */
+    private static final boolean TEST_PRIVATE = false;
 
     /** how long each configuration is watched before it counts as survived */
     private static final long PROBE_MS = 6000;
@@ -119,7 +128,7 @@ final class CameraDiagnosis {
         for (Probe probe : probes) {
             number += 1;
             if (!safeToGoOn.get()) {
-                say("✖ Die Kamera hat sich verabschiedet – Rest der Prüfung entfällt");
+                say("✖ Der Kameradienst ist ausgefallen – Rest der Prüfung entfällt");
                 break;
             }
             if (!serviceAlive(probe.cameraId)) {
@@ -300,17 +309,29 @@ final class CameraDiagnosis {
                 "Kamera " + id + ", lesbares Format, Standard"));
             probes.add(new Probe(id, ImageFormat.YUV_420_888, true, 640,
                 "Kamera " + id + ", lesbares Format, klein und langsam – bisheriger Weg"));
+            // the least this camera can possibly be asked to do: if even that dies at two
+            // seconds, load is not the axis and nothing in software will save it
+            probes.add(new Probe(id, ImageFormat.YUV_420_888, true, 320,
+                "Kamera " + id + ", kleinste Auflösung, langsamste Bildrate – Minimallast"));
         }
-        for (String id : ids) {
-            if (!isFacing(id, CameraMetadata.LENS_FACING_BACK)) continue;
-            probes.add(new Probe(id, ImageFormat.PRIVATE, true, 640,
-                "Kamera " + id + ", internes Format, klein und langsam – VERDÄCHTIG"));
-            probes.add(new Probe(id, ImageFormat.PRIVATE, false, 1280,
-                "Kamera " + id + ", internes Format, Standard – VERDÄCHTIG"));
-        }
-        if (front != null) {
-            probes.add(new Probe(front, ImageFormat.PRIVATE, false, 640,
-                "Frontkamera " + front + ", internes Format – das war der Übeltäter"));
+        if (TEST_PRIVATE) {
+            for (String id : ids) {
+                if (!isFacing(id, CameraMetadata.LENS_FACING_BACK)) continue;
+                probes.add(new Probe(id, ImageFormat.PRIVATE, true, 640,
+                    "Kamera " + id + ", internes Format, klein und langsam – LEGT DAS GERÄT UM"));
+                probes.add(new Probe(id, ImageFormat.PRIVATE, false, 1280,
+                    "Kamera " + id + ", internes Format, Standard – LEGT DAS GERÄT UM"));
+            }
+            if (front != null) {
+                probes.add(new Probe(front, ImageFormat.PRIVATE, false, 640,
+                    "Frontkamera " + front + ", internes Format – LEGT DAS GERÄT UM"));
+            }
+        } else {
+            say("⏭ Internes Format (PRIVATE) an einer Kamera: ausgelassen.");
+            say("   Frontkamera 640×480 Standard lief mit YUV 6s und 130 Bilder, mit PRIVATE hat sie");
+            say("   das Telefon neu gestartet – gleiche Kamera, gleiche Größe, nur das Format anders.");
+            say("   Das Anlegen des Puffers allein ist unschuldig (siehe oben). Erneutes Prüfen");
+            say("   kostet nur einen weiteren Neustart; TEST_PRIVATE schaltet es wieder ein.");
         }
         return probes;
     }
@@ -403,17 +424,17 @@ final class CameraDiagnosis {
                 @Override
                 public void onDisconnected(CameraDevice opened) {
                     outcome.compareAndSet(null, "getrennt");
-                    safeToGoOn.set(false);
                     finished.countDown();
                 }
 
                 @Override
                 public void onError(CameraDevice opened, int error) {
                     outcome.compareAndSet(null, "Kamera-Fehler " + error + " (" + errorName(error) + ")");
-                    // a fault in the camera itself: everything after this would be hitting
-                    // hardware that is already down, which is how the phone got rebooted
-                    if (error == CameraDevice.StateCallback.ERROR_CAMERA_DEVICE
-                        || error == CameraDevice.StateCallback.ERROR_CAMERA_SERVICE) {
+                    // ERROR_CAMERA_DEVICE is what this phone's rear camera does every single
+                    // time; stopping the run on it meant never getting past probe 2 of 10. The
+                    // teardown is awaited and the service checked before each probe anyway, so
+                    // only the service itself going down ends the run.
+                    if (error == CameraDevice.StateCallback.ERROR_CAMERA_SERVICE) {
                         safeToGoOn.set(false);
                     }
                     finished.countDown();
