@@ -14,7 +14,7 @@ import {
 } from '@/platform/appUpdate';
 import { applySwUpdate, swUpdateReady } from '@/platform/swUpdate';
 
-export type InstallProblem = 'blocked' | 'failed' | 'notyet';
+type InstallProblem = 'blocked' | 'failed' | 'notyet';
 
 export function useVersionInstall() {
   const [busy, setBusy] = useState(false);
