@@ -5,6 +5,7 @@ import {
   canPickDeviceContacts,
   parseVCard,
   pickDeviceContacts,
+  primaryPhone,
   type ImportedContact,
 } from '@/platform/contactsImport';
 import { debugLog, readDebugLog } from '@/platform/debugLog';
@@ -52,7 +53,7 @@ export function ContactImportSheet({
           .map((_, index) => index)
           .filter((index) => {
             const contact = candidates[index];
-            return [contact.name, contact.phone, contact.email, contact.company]
+            return [contact.name, ...contact.phones.map((phone) => phone.number), contact.email, contact.company]
               .filter(Boolean)
               .join(' ')
               .toLowerCase()
@@ -103,12 +104,16 @@ export function ContactImportSheet({
       const chosen = [...selected].map((index) => candidates[index]).filter((found) => found.name.trim());
       debugLog('kontakteimport', `importiere: ${chosen.map((found) => found.name).join(', ') || '(keine)'}`);
       for (const found of chosen) {
+        const primary = primaryPhone(found.phones);
+        const extraPhones = found.phones.filter((phone) => phone !== primary);
+        const extraNote = extraPhones.map((phone) => `${phone.label}: ${phone.number}`).join('\n');
         await saveContact({
           ...emptyContact(),
           name: found.name,
-          phone: found.phone,
+          phone: primary?.number,
           email: found.email,
           company: found.company,
+          notes: extraNote || undefined,
         });
       }
       onClose();
@@ -177,7 +182,11 @@ export function ContactImportSheet({
                       <span className="flex-1 min-w-0">
                         <span className="block truncate">{contact.name}</span>
                         <span className="block text-xs text-muted truncate">
-                          {[contact.phone, contact.email, duplicate ? 'bereits vorhanden' : '']
+                          {[
+                            contact.phones.map((phone) => phone.number).join(', '),
+                            contact.email,
+                            duplicate ? 'bereits vorhanden' : '',
+                          ]
                             .filter(Boolean)
                             .join(' · ')}
                         </span>

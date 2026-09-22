@@ -104,15 +104,10 @@ public class ContactsPlugin extends Plugin {
             return;
         }
 
-        // phone and email have their own dedicated content URI, one row per value - the
-        // first of each is enough here, the review list is not a full contact card
-        Map<String, String> phones = firstValuePerContact(
-            resolver,
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-            ContactsContract.CommonDataKinds.Phone.NUMBER,
-            null, null
-        );
+        // a contact can carry more than one phone number (Mobil, Arbeit, ...) - all of them
+        // come back, labelled; email and company stay first-value-only, the review list is
+        // not a full contact card for those
+        Map<String, JSArray> phones = allPhonesPerContact(resolver);
         Map<String, String> emails = firstValuePerContact(
             resolver,
             ContactsContract.CommonDataKinds.Email.CONTENT_URI,
@@ -136,7 +131,8 @@ public class ContactsPlugin extends Plugin {
             String id = entry.getKey();
             JSObject contact = new JSObject();
             contact.put("name", entry.getValue());
-            putIfPresent(contact, "phone", phones.get(id));
+            JSArray contactPhones = phones.get(id);
+            contact.put("phones", contactPhones != null ? contactPhones : new JSArray());
             putIfPresent(contact, "email", emails.get(id));
             putIfPresent(contact, "company", companies.get(id));
             contacts.put(contact);
@@ -153,7 +149,54 @@ public class ContactsPlugin extends Plugin {
         }
     }
 
-    /** the first value of a contacts data table per contact id, e.g. the first phone number */
+    /** every phone number per contact id, labelled (Mobil, Arbeit, ...) via the system's own
+     *  {@link ContactsContract.CommonDataKinds.Phone#getTypeLabel} - the same words the phone's
+     *  own contacts app uses, custom labels included */
+    private Map<String, JSArray> allPhonesPerContact(ContentResolver resolver) {
+        Map<String, JSArray> result = new LinkedHashMap<>();
+        String[] columns = {
+            ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.TYPE,
+            ContactsContract.CommonDataKinds.Phone.LABEL
+        };
+        try (Cursor cursor = resolver.query(
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI, columns, null, null, null
+        )) {
+            if (cursor == null) return result;
+            int idColumn = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.CONTACT_ID);
+            int numberColumn = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.NUMBER);
+            int typeColumn = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.TYPE);
+            int labelColumn = cursor.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Phone.LABEL);
+            while (cursor.moveToNext()) {
+                String number = cursor.getString(numberColumn);
+                if (number == null || number.trim().isEmpty()) continue;
+                String id = cursor.getString(idColumn);
+                int type = cursor.getInt(typeColumn);
+                CharSequence customLabel = cursor.getString(labelColumn);
+                CharSequence label = ContactsContract.CommonDataKinds.Phone.getTypeLabel(
+                    getContext().getResources(), type, customLabel
+                );
+
+                JSObject phone = new JSObject();
+                phone.put("label", label.toString());
+                phone.put("number", number.trim());
+
+                JSArray contactPhones = result.get(id);
+                if (contactPhones == null) {
+                    contactPhones = new JSArray();
+                    result.put(id, contactPhones);
+                }
+                contactPhones.put(phone);
+            }
+        } catch (Exception error) {
+            // no phone data at all just means the field stays empty for everyone - not
+            // worth failing the whole import over
+        }
+        return result;
+    }
+
+    /** the first value of a contacts data table per contact id, e.g. the first email address */
     private Map<String, String> firstValuePerContact(
         ContentResolver resolver, Uri uri, String idColumnName, String valueColumnName,
         String selection, String[] selectionArgs

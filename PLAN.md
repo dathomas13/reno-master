@@ -438,6 +438,10 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   – und immer zusätzlich – wird eine vCard-Datei (.vcf, ein oder mehrere Kontakte) ausgewählt und geparst.
   Alle drei Wege landen in derselben Checkliste vor dem Anlegen, mit Hinweis auf Namen, die schon als
   Kontakt bestehen.
+- **Mehrere Telefonnummern**: ein Kontakt im Adressbuch kann mehr als eine Nummer haben (Mobil, Arbeit, ...).
+  Der Import behält alle, beschriftet (`ImportedContact.phones` in `contactsImport.ts`); beim Anlegen bekommt
+  `Contact.phone` die bevorzugt mobile Nummer (`primaryPhone()`), der Rest landet beschriftet in den Notizen,
+  weil `Contact` selbst nur ein Telefonfeld hat.
 - **Gesprächsprotokoll**: eigene, datierte Einträge je Kontakt (Datum/Uhrzeit, Art – Anruf/Termin/E-Mail/
   Nachricht/Sonstiges –, Text) statt Fließtext in den Notizen; Collection `contactLogs`, Feld `contactId`.
   Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.

@@ -13,15 +13,29 @@
  *    picker Intent to fall back to either. The plugin reads the address book directly
  *    instead (like MediaStore reads the gallery) and hands back the same shape, so from
  *    here on the review screen does not care which path a contact came from.
+ *
+ * A contact can carry more than one phone number (Mobil, Arbeit, ...) - all of them come
+ * back, labelled, in `phones`. `Contact` itself only has room for one, so the caller picks
+ * with `primaryPhone` and is expected to keep the rest, e.g. in the notes.
  */
 import { debugLog } from './debugLog';
 import { isNative } from './index';
 
+export interface ImportedPhone {
+  label: string;
+  number: string;
+}
+
 export interface ImportedContact {
   name: string;
-  phone?: string;
+  phones: ImportedPhone[];
   email?: string;
   company?: string;
+}
+
+/** the number meant for calling/WhatsApp - mobile first, else whichever came first */
+export function primaryPhone(phones: ImportedPhone[]): ImportedPhone | undefined {
+  return phones.find((phone) => /mobil|mobile|handy|cell/i.test(phone.label)) ?? phones[0];
 }
 
 interface ContactsManager {
@@ -113,11 +127,19 @@ async function pickWebContacts(): Promise<ImportedContact[]> {
     const picked = await manager.select(properties, { multiple: true });
     debugLog('kontakteimport', `Auswahl lieferte ${picked.length} Eintrag/Einträge`);
     return picked
-      .map((entry) => ({
-        name: entry.name?.[0]?.trim() ?? '',
-        phone: entry.tel?.[0]?.trim() || undefined,
-        email: entry.email?.[0]?.trim() || undefined,
-      }))
+      .map((entry) => {
+        // the API hands over bare numbers, no type - it is not lying to call them all
+        // "Telefon", unlike the native address book which actually knows Mobil/Arbeit
+        const numbers = (entry.tel ?? []).map((number) => number.trim()).filter(Boolean);
+        return {
+          name: entry.name?.[0]?.trim() ?? '',
+          phones: numbers.map((number, index) => ({
+            label: numbers.length > 1 ? `Telefon ${index + 1}` : 'Telefon',
+            number,
+          })),
+          email: entry.email?.[0]?.trim() || undefined,
+        };
+      })
       .filter((contact) => contact.name);
   } catch (error) {
     debugLog('kontakteimport', `Auswahl fehlgeschlagen: ${describeError(error)}`);
@@ -143,17 +165,30 @@ function unfoldLines(text: string): string[] {
   return lines;
 }
 
+/** "TEL;TYPE=WORK,VOICE" -> "Arbeit" - same words in every vCard version worth reading */
+function vcardPhoneLabel(paramString: string): string {
+  const upper = paramString.toUpperCase();
+  if (upper.includes('CELL') || upper.includes('MOBILE')) return 'Mobil';
+  if (upper.includes('WORK')) return 'Arbeit';
+  if (upper.includes('HOME')) return 'Privat';
+  if (upper.includes('FAX')) return 'Fax';
+  if (upper.includes('MAIN')) return 'Haupt';
+  if (upper.includes('PAGER')) return 'Pager';
+  return 'Telefon';
+}
+
 /** parses one or more vCards (VCF 2.1/3.0/4.0) from a text file into the app's shape */
 export function parseVCard(text: string): ImportedContact[] {
   const cards = text.split(/BEGIN:VCARD/i).slice(1);
   const contacts: ImportedContact[] = [];
 
   for (const card of cards) {
-    const contact: ImportedContact = { name: '' };
+    const contact: ImportedContact = { name: '', phones: [] };
     for (const line of unfoldLines(card)) {
       const colon = line.indexOf(':');
       if (colon < 0) continue;
-      const key = line.slice(0, colon).split(';')[0].trim().toUpperCase();
+      const paramString = line.slice(0, colon);
+      const key = paramString.split(';')[0].trim().toUpperCase();
       const value = line.slice(colon + 1).trim();
       if (!value) continue;
 
@@ -162,8 +197,8 @@ export function parseVCard(text: string): ImportedContact[] {
       } else if (key === 'N' && !contact.name) {
         // 'Nachname;Vorname;...' -> 'Vorname Nachname'
         contact.name = value.split(';').filter(Boolean).reverse().join(' ');
-      } else if (key === 'TEL' && !contact.phone) {
-        contact.phone = value;
+      } else if (key === 'TEL') {
+        contact.phones.push({ label: vcardPhoneLabel(paramString), number: value });
       } else if (key === 'EMAIL' && !contact.email) {
         contact.email = value;
       } else if (key === 'ORG' && !contact.company) {

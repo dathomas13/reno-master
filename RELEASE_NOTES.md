@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.48.1 – Kontakt-Import: alle Telefonnummern
+
+- Kontakte mit mehreren Nummern (z. B. Mobil und Arbeit) übernehmen jetzt beide statt nur
+  einer; die zweite Nummer landet in den Notizen.
+
 ## 0.48.0 – Neuer Bereich „Gespräche“
 
 - Alle Gesprächsprotokoll-Einträge aller Kontakte an einem Ort, mit Suchfeld, über „Mehr“

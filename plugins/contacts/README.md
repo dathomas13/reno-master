@@ -17,17 +17,19 @@ anzeigt, übernimmt Auswahl und Import.
 |---|---|
 | `hasPermission()` | `{ granted }` - liegt die Leseberechtigung schon vor? |
 | `requestPermission()` | Fragt danach, `{ granted }` mit dem Ergebnis |
-| `listContacts({ limit? })` | `{ contacts: [{ name, phone?, email?, company? }] }`, alphabetisch |
+| `listContacts({ limit? })` | `{ contacts: [{ name, phones: [{ label, number }], email?, company? }] }`, alphabetisch |
 
 `listContacts` fragt die Berechtigung selbst nach, falls sie fehlt - ein eigener Aufruf von
 `requestPermission()` davor ist nicht nötig, aber möglich, um vorher etwas anzuzeigen.
 
 ## Details, die nicht offensichtlich sind
 
-- **Drei Tabellen, eine Zeile pro Kontakt.** Android trennt Name, Telefonnummern, E-Mails
-  und Firma in eigene Tabellen (`ContactsContract.CommonDataKinds.*`), mit potenziell
-  mehreren Zeilen je Kontakt. Für die Import-Übersicht reicht der jeweils erste Treffer je
-  Feld - keine volle Kontaktkarte.
+- **Drei Tabellen, eine Zeile pro Kontakt - bei Telefonnummern mehrere.** Android trennt
+  Name, Telefonnummern, E-Mails und Firma in eigene Tabellen
+  (`ContactsContract.CommonDataKinds.*`), mit potenziell mehreren Zeilen je Kontakt. Bei
+  Telefonnummern zählt das: ein Kontakt mit Mobil- und Arbeitsnummer bekommt beide, jede mit
+  ihrer über `Phone.getTypeLabel()` gelesenen Bezeichnung (auch eigene Beschriftungen). Für
+  E-Mail und Firma reicht der jeweils erste Treffer - keine volle Kontaktkarte.
 - Ein Kontakt ohne Namen wird übersprungen; ohne Namen gibt es später auch keinen
   `Contact`-Namen zum Speichern.
 - Die Berechtigung `READ_CONTACTS` bringt das Plugin selbst mit.

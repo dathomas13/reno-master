@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { canPickDeviceContacts, parseVCard, pickDeviceContacts } from '../contactsImport';
+import { canPickDeviceContacts, parseVCard, pickDeviceContacts, primaryPhone } from '../contactsImport';
 
 describe('parseVCard', () => {
   it('reads name, phone, email and company from a single card', () => {
@@ -14,13 +14,38 @@ describe('parseVCard', () => {
     ].join('\n');
 
     expect(parseVCard(vcard)).toEqual([
-      { name: 'Max Mustermann', phone: '+49 151 12345678', email: 'max@example.com', company: 'Mustermann Elektro GmbH' },
+      {
+        name: 'Max Mustermann',
+        phones: [{ label: 'Mobil', number: '+49 151 12345678' }],
+        email: 'max@example.com',
+        company: 'Mustermann Elektro GmbH',
+      },
+    ]);
+  });
+
+  it('keeps every phone number of a card, each with its own label', () => {
+    const vcard = [
+      'BEGIN:VCARD',
+      'FN:Max Mustermann',
+      'TEL;TYPE=CELL:+49 151 12345678',
+      'TEL;TYPE=WORK:+49 30 1234567',
+      'END:VCARD',
+    ].join('\n');
+
+    expect(parseVCard(vcard)).toEqual([
+      {
+        name: 'Max Mustermann',
+        phones: [
+          { label: 'Mobil', number: '+49 151 12345678' },
+          { label: 'Arbeit', number: '+49 30 1234567' },
+        ],
+      },
     ]);
   });
 
   it('falls back to the N field when FN is missing', () => {
     const vcard = ['BEGIN:VCARD', 'N:Mustermann;Erika;;;', 'END:VCARD'].join('\n');
-    expect(parseVCard(vcard)).toEqual([{ name: 'Erika Mustermann' }]);
+    expect(parseVCard(vcard)).toEqual([{ name: 'Erika Mustermann', phones: [] }]);
   });
 
   it('reads several cards from one file, skipping ones without a name', () => {
@@ -35,16 +60,41 @@ describe('parseVCard', () => {
       'FN:Zweite Person',
       'END:VCARD',
     ].join('\n');
-    expect(parseVCard(vcard)).toEqual([{ name: 'Erste Person' }, { name: 'Zweite Person' }]);
+    expect(parseVCard(vcard)).toEqual([
+      { name: 'Erste Person', phones: [] },
+      { name: 'Zweite Person', phones: [] },
+    ]);
   });
 
   it('un-folds a continuation line before reading it', () => {
     const vcard = ['BEGIN:VCARD', 'FN:Lange', ' r Name', 'END:VCARD'].join('\r\n');
-    expect(parseVCard(vcard)).toEqual([{ name: 'Langer Name' }]);
+    expect(parseVCard(vcard)).toEqual([{ name: 'Langer Name', phones: [] }]);
   });
 
   it('returns nothing for text with no vCard in it', () => {
     expect(parseVCard('nichts hier')).toEqual([]);
+  });
+});
+
+describe('primaryPhone', () => {
+  it('prefers a number labelled mobile over any other', () => {
+    const phones = [
+      { label: 'Arbeit', number: '111' },
+      { label: 'Mobil', number: '222' },
+    ];
+    expect(primaryPhone(phones)).toEqual({ label: 'Mobil', number: '222' });
+  });
+
+  it('falls back to the first number when none is labelled mobile', () => {
+    const phones = [
+      { label: 'Arbeit', number: '111' },
+      { label: 'Privat', number: '222' },
+    ];
+    expect(primaryPhone(phones)).toEqual({ label: 'Arbeit', number: '111' });
+  });
+
+  it('is undefined for a contact with no phone number at all', () => {
+    expect(primaryPhone([])).toBeUndefined();
   });
 });
 
@@ -69,7 +119,27 @@ describe('pickDeviceContacts', () => {
     const result = await pickDeviceContacts();
 
     expect(select.mock.calls[0][0]).toEqual(['name', 'tel']);
-    expect(result).toEqual([{ name: 'Erika Mustermann', phone: undefined, email: undefined }]);
+    expect(result).toEqual([{ name: 'Erika Mustermann', phones: [], email: undefined }]);
+  });
+
+  it('labels a single number "Telefon" but numbers several ones so they stay distinct', async () => {
+    const select = vi.fn((_properties: string[]) =>
+      Promise.resolve([{ name: ['Zwei Nummern'], tel: ['111', '222'] }]),
+    );
+    installManager({ select, getProperties: () => Promise.resolve(['name', 'tel']) });
+
+    const result = await pickDeviceContacts();
+
+    expect(result).toEqual([
+      {
+        name: 'Zwei Nummern',
+        phones: [
+          { label: 'Telefon 1', number: '111' },
+          { label: 'Telefon 2', number: '222' },
+        ],
+        email: undefined,
+      },
+    ]);
   });
 
   it('lets a rejected selection surface instead of the caller seeing nothing happen', async () => {
@@ -111,8 +181,20 @@ describe('pickDeviceContacts (native)', () => {
     expect(canPickDeviceContacts()).toBe(false);
   });
 
-  it('reads the address book straight away once permission is already granted', async () => {
-    const listContacts = vi.fn(() => Promise.resolve({ contacts: [{ name: 'Erika Mustermann' }] }));
+  it('reads the address book straight away once permission is already granted, keeping every phone number', async () => {
+    const listContacts = vi.fn(() =>
+      Promise.resolve({
+        contacts: [
+          {
+            name: 'Erika Mustermann',
+            phones: [
+              { label: 'Mobil', number: '111' },
+              { label: 'Arbeit', number: '222' },
+            ],
+          },
+        ],
+      }),
+    );
     const requestPermission = vi.fn();
     installNative({
       hasPermission: () => Promise.resolve({ granted: true }),
@@ -122,7 +204,15 @@ describe('pickDeviceContacts (native)', () => {
 
     const result = await pickDeviceContacts();
 
-    expect(result).toEqual([{ name: 'Erika Mustermann' }]);
+    expect(result).toEqual([
+      {
+        name: 'Erika Mustermann',
+        phones: [
+          { label: 'Mobil', number: '111' },
+          { label: 'Arbeit', number: '222' },
+        ],
+      },
+    ]);
     expect(requestPermission).not.toHaveBeenCalled();
   });
 
