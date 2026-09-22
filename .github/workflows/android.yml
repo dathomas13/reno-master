@@ -113,11 +113,7 @@ jobs:
         id: signing
         # Ohne festen Schlüssel signiert jeder Lauf anders und Android lehnt die
         # Installation über die alte Fassung ab. Liegt das Secret vor, wird ab hier mit
-        # dem Release-Schlüssel gebaut; fehlt es, kommt der feste Debug-Schlüssel aus dem
-        # Repo zum Zug - Androids eigene Standardwerte, nicht geheim, aber immer derselbe,
-        # statt dass jeder Runner sich einen neuen Wegwerf-Schlüssel erzeugt. Ohne das
-        # verweigert Android jede Aktualisierung von einem Debug-Build auf einen anderen,
-        # auch zwischen zwei Branches.
+        # dem Release-Schlüssel gebaut; fehlt es, bleibt alles wie bisher.
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -126,10 +122,8 @@ jobs:
         run: |
           set -e
           if [ -z "$KEYSTORE_BASE64" ]; then
-            mkdir -p ~/.android
-            cp tools/android/debug.keystore ~/.android/debug.keystore
             echo "signed=false" >> "$GITHUB_OUTPUT"
-            echo "Kein ANDROID_KEYSTORE_BASE64 hinterlegt - fester Debug-Schlüssel aus dem Repo."
+            echo "Kein ANDROID_KEYSTORE_BASE64 hinterlegt - Debug-Build mit Wegwerf-Schlüssel."
             exit 0
           fi
           if [ -z "$KEYSTORE_PASSWORD" ]; then
@@ -239,7 +233,7 @@ jobs:
           if [ "${{ steps.signing.outputs.signed }}" = "true" ]; then
             hinweis="Signiert mit dem festen Release-Schlüssel: diese Fassung installiert sich über die vorige."
           else
-            hinweis="Debug-Build mit dem festen Debug-Schlüssel aus dem Repo: löst jeden anderen Debug-Build dieses Projekts ab, auch von einem anderen Branch. Nur der einmalige Wechsel auf den echten Release-Schlüssel bricht die Kette - dann einmal die alte App deinstallieren."
+            hinweis="Debug-Build mit Wegwerf-Schlüssel. Android verweigert die Installation über eine ältere Fassung - die alte App vorher deinstallieren."
           fi
           # ein erneut gestarteter Lauf trägt dieselbe Nummer, der Tag ist dann schon da:
           # in dem Fall nur die Datei ersetzen, statt am vorhandenen Release zu scheitern

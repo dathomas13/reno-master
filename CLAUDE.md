@@ -77,6 +77,12 @@ Steht:
 - Firebase-Projekt `reno-master-307f7` in `europe-west3`, Anmeldung mit beiden Konten,
   Selbstregistrierung abgeschaltet, Regeln in der Konsole veröffentlicht.
 - Die sieben `VITE_`-Werte liegen als GitHub *Repository variables* und stecken im Bundle.
+- **Der Release-Signaturschlüssel liegt als Secret vor** (`ANDROID_KEYSTORE_BASE64` u. a.,
+  siehe README unter „Signaturschlüssel“) und wird auch benutzt: der Workflow baut
+  `assembleRelease`, nicht `assembleDebug`. Geprüft am 22.09.2026 am Zertifikat zweier
+  veröffentlichter APKs (identischer Fingerabdruck, Aussteller „Reno Master“) - falls das
+  hier je wieder als offen auftaucht, zuerst dagegen prüfen statt einen Debug-Schlüssel-Fix
+  zu bauen, der dann nie zum Zug kommt.
 - Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 248 Unit-Tests (Zahl aus dem vitest-Lauf in der CI, nicht geschätzt).
 - **Das EG ist aufgemessen** (Thomas, 09/2026, DXF „Grundriss_EG_Bestand_Fertigmasse“):
   Ist-Modell v0.24 trägt im EG **Fertigmaße inkl. Putz**, Haus 12.995 × 11.815 statt
@@ -129,16 +135,8 @@ Offen:
    den zugeklappten Browser am Laptop – und braucht dafür Blaze und die Firebase-CLI.
 2. `package-lock.json` erzeugen und committen, dann in beiden Workflows `npm install`
    wieder durch `npm ci` ersetzen.
-3. **Fester Signaturschlüssel für die APK.** Der Workflow ist vorbereitet: liegen die vier
-   `ANDROID_*`-Secrets vor, baut und signiert er eine Release-APK, die sich über die alte
-   legt (Anleitung im README unter „Signaturschlüssel“). Ohne sie signiert er mit dem
-   festen Debug-Schlüssel aus `tools/android/debug.keystore` (Androids eigene
-   Standardwerte, nicht geheim) - Debug-Builds lösen sich damit gegenseitig ab, auch
-   zwischen zwei Branches. Offen bleibt der Wechsel auf einen echten Release-Schlüssel;
-   der bricht die Kette einmalig, dann muss die alte App einmal von Hand deinstalliert
-   werden.
-4. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*,
-   Debug-Build als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
+3. **APK**: Basis und Galerie-Zugriff stehen (Capacitor 6, Workflow *Android APK*, signierte
+   APK als Artefakt, eigenes Plugin `plugins/mediastore` für die Fotos eines
    Tages, Abend-Erinnerung über `@capacitor/local-notifications`). Offen sind ML Kit für
    das Beleg-Auslesen auf dem Gerät und Push. Push braucht zusätzlich
    `google-services.json` und den google-services-Eintrag in Gradle – die Erinnerung

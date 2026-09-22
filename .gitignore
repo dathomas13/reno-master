@@ -43,6 +43,3 @@ Thumbs.db
 *.jks
 *.keystore
 keystore.properties
-# Ausnahme: der feste Debug-Schlüssel für Android-CI-Builds - Androids eigene
-# Standardwerte (Passwort "android"), nicht geheim, absichtlich im Repo.
-!tools/android/debug.keystore

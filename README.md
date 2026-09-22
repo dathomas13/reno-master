@@ -240,11 +240,8 @@ sind (*Settings* → *Secrets and variables* → *Actions* → **Secrets**):
 | `ANDROID_KEY_ALIAS` | Alias des Schlüssels, Vorgabe `reno` |
 | `ANDROID_KEY_PASSWORD` | Passwort des Schlüssels, Vorgabe = Keystore-Passwort |
 
-Fehlt `ANDROID_KEYSTORE_BASE64`, baut der Workflow eine Debug-APK, signiert mit dem festen
-Schlüssel aus `tools/android/debug.keystore` (Androids eigene Standardwerte, absichtlich im
-Repo, nicht geheim). Debug-Builds lösen sich damit gegenseitig ab, auch über Branches
-hinweg — nur der einmalige Wechsel auf den echten Release-Schlüssel bricht die Kette, dann
-einmal die alte App von Hand deinstallieren.
+Fehlt `ANDROID_KEYSTORE_BASE64`, baut der Workflow wie bisher eine Debug-APK — nichts
+geht kaputt, nur das Update über die alte Fassung bleibt dann aus.
 
 Einen Keystore erzeugt man einmalig mit dem JDK:
 
