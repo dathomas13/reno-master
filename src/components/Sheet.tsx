@@ -5,6 +5,9 @@ interface SheetProps {
   open: boolean;
   onClose(): void;
   onDone?(): void;
+  /** label of the header button; defaults to "Fertig" - name it "Abbrechen" wherever it
+   *  does not actually save anything (no onDone), so it never reads like it did */
+  doneLabel?: string;
   title?: string;
   children: ReactNode;
 }
@@ -19,7 +22,7 @@ interface SheetProps {
  * phone it ended up shifted and unreadable. From the body there is no such frame, and
  * every sheet in the app is safe from it, wherever it is opened.
  */
-export function Sheet({ open, onClose, onDone, title, children }: SheetProps) {
+export function Sheet({ open, onClose, onDone, doneLabel = 'Fertig', title, children }: SheetProps) {
   const titleId = useId();
 
   useEffect(() => {
@@ -64,7 +67,7 @@ export function Sheet({ open, onClose, onDone, title, children }: SheetProps) {
               {title}
             </h2>
             <button type="button" className="btn btn-ghost px-2 min-h-0 py-1" onClick={onDone ?? onClose}>
-              Fertig
+              {doneLabel}
             </button>
           </div>
         )}

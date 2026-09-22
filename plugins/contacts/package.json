@@ -1,0 +1,17 @@
+{
+  "name": "@reno/contacts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Liest das Adressbuch des Geräts für den Kontakt-Import",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": ["android/", "index.js", "index.d.ts"],
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "devDependencies": {
+    "@capacitor/core": "^6.2.0"
+  }
+}

@@ -24,6 +24,7 @@ import CostEditorPage from '@/modules/costs/CostEditorPage';
 import TasksPage from '@/modules/tasks/TasksPage';
 import NotesPage from '@/modules/notes/NotesPage';
 import ContactsPage from '@/modules/contacts/ContactsPage';
+import ContactLogsPage from '@/modules/contacts/ContactLogsPage';
 import SearchPage from '@/modules/search/SearchPage';
 import FilesPage from '@/modules/files/FilesPage';
 import PhotosPage from '@/modules/photos/PhotosPage';
@@ -101,6 +102,7 @@ function Protected() {
           <Route path="/aufgaben" element={<TasksPage />} />
           <Route path="/notizen" element={<NotesPage />} />
           <Route path="/kontakte" element={<ContactsPage />} />
+          <Route path="/gespraeche" element={<ContactLogsPage />} />
           <Route path="/suche" element={<SearchPage />} />
           <Route path="/dateien" element={<FilesPage />} />
           <Route path="/fotos" element={<PhotosPage />} />
