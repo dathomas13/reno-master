@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  apkFor,
   apkUrlFor,
   newerVersions,
   notesParagraphs,
@@ -112,6 +113,26 @@ describe('apkUrlFor', () => {
     // the trap this replaces: with "latest" the phone downloads whatever release happens
     // to be newest at that second, which during the two minutes after a push is the old one
     expect(apkUrlFor('0.25.0')).not.toContain('latest');
+  });
+});
+
+describe('apkFor', () => {
+  it('prefers the address the entry itself carries', () => {
+    // version.json for the build just published names its own APK; versions.json entries
+    // do not and fall back to the address built from the version
+    expect(apkFor({ ...remote(35), apk: 'https://cdn.example.test/reno-master.apk' })).toBe(
+      'https://cdn.example.test/reno-master.apk',
+    );
+  });
+
+  it('otherwise names the exact version, never "latest"', () => {
+    expect(apkFor(remote(35))).toBe(
+      'https://github.com/dathomas13/reno-master/releases/download/v0.9.35/reno-master.apk',
+    );
+  });
+
+  it('falls back to "latest" only when there is no version to name', () => {
+    expect(apkFor(null)).toContain('releases/latest/download');
   });
 });
 
