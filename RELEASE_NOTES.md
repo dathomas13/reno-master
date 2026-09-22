@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.48.0 – Neuer Bereich „Gespräche“
+
+- Alle Gesprächsprotokoll-Einträge aller Kontakte an einem Ort, mit Suchfeld, über „Mehr“
+  erreichbar. Tippen öffnet den zugehörigen Kontakt.
+
 ## 0.47.1 – Kontakt-Import: Feinschliff
 
 - Beim Import ist jetzt nichts vorausgewählt, dafür gibt es ein Suchfeld in der Liste, und

@@ -29,6 +29,7 @@ const ICONS = {
   task: 'M5 12l4 4 10-10M4 20h16',
   note: 'M5 4h11l4 4v12H5zM16 4v4h4M9 12h6M9 16h6',
   contact: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6',
+  chat: 'M4 4h16v12H8l-4 4z',
   photo: 'M3 7h4l1.5-2h7L17 7h4v13H3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
   receipt: 'M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5zM8.5 8h7M8.5 12h7M8.5 16h4',
   search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21',
@@ -49,6 +50,7 @@ const MORE_NAV: NavItem[] = [
   { to: '/aufgaben', label: 'Aufgaben', icon: <Icon path={ICONS.task} /> },
   { to: '/notizen', label: 'Notizen', icon: <Icon path={ICONS.note} /> },
   { to: '/kontakte', label: 'Kontakte', icon: <Icon path={ICONS.contact} /> },
+  { to: '/gespraeche', label: 'Gespräche', icon: <Icon path={ICONS.chat} /> },
   { to: '/einstellungen', label: 'Einstellungen', icon: <Icon path={ICONS.settings} /> },
 ];
 
