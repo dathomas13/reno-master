@@ -8,6 +8,13 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.47.1 – Kontakt-Import: Feinschliff
+
+- Beim Import ist jetzt nichts vorausgewählt, dafür gibt es ein Suchfeld in der Liste, und
+  der Knopf zum Schließen ohne Import heißt jetzt „Abbrechen“.
+- Ein Kontakt ohne Namen lässt sich nicht mehr speichern; alte Kontakte ohne Namen zeigen
+  jetzt „(ohne Namen)“ an, statt unsichtbar in der Liste zu stehen.
+
 ## 0.47.0 – Adressbuch-Import in der App funktioniert jetzt wirklich
 
 - „Aus dem Adressbuch wählen“ ist zurück und liest jetzt direkt vom Gerät (einmalige Frage

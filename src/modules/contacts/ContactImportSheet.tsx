@@ -25,6 +25,7 @@ export function ContactImportSheet({
 }) {
   const [candidates, setCandidates] = useState<ImportedContact[] | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [log, setLog] = useState<string[]>([]);
@@ -37,11 +38,27 @@ export function ContactImportSheet({
       return;
     }
     setCandidates(found);
-    setSelected(
-      new Set(found.map((_, index) => index).filter((index) => !known.has(found[index].name.trim().toLowerCase()))),
-    );
+    // nothing pre-selected - an address book can hold hundreds of entries, and picking is
+    // the whole point of this screen, not an afterthought to un-pick from
+    setSelected(new Set());
+    setFilter('');
     setError(null);
   }
+
+  const needle = filter.trim().toLowerCase();
+  const visibleIndexes =
+    candidates && needle
+      ? candidates
+          .map((_, index) => index)
+          .filter((index) => {
+            const contact = candidates[index];
+            return [contact.name, contact.phone, contact.email, contact.company]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase()
+              .includes(needle);
+          })
+      : (candidates?.map((_, index) => index) ?? []);
 
   async function fromDevice() {
     setBusy(true);
@@ -83,8 +100,9 @@ export function ContactImportSheet({
     if (!candidates) return;
     setBusy(true);
     try {
-      for (const index of selected) {
-        const found = candidates[index];
+      const chosen = [...selected].map((index) => candidates[index]).filter((found) => found.name.trim());
+      debugLog('kontakteimport', `importiere: ${chosen.map((found) => found.name).join(', ') || '(keine)'}`);
+      for (const found of chosen) {
         await saveContact({
           ...emptyContact(),
           name: found.name,
@@ -100,7 +118,7 @@ export function ContactImportSheet({
   }
 
   return (
-    <Sheet open onClose={onClose} title="Kontakte importieren">
+    <Sheet open onClose={onClose} doneLabel="Abbrechen" title="Kontakte importieren">
       <div className="p-4">
         {!candidates && (
           <div className="flex flex-col gap-3">
@@ -139,8 +157,18 @@ export function ContactImportSheet({
 
         {candidates && (
           <>
+            <input
+              className="field mb-3"
+              type="search"
+              placeholder="Suchen…"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              autoFocus
+            />
+            {visibleIndexes.length === 0 && <p className="text-sm text-muted mb-3">Nichts gefunden.</p>}
             <ul className="mb-3">
-              {candidates.map((contact, index) => {
+              {visibleIndexes.map((index) => {
+                const contact = candidates[index];
                 const duplicate = known.has(contact.name.trim().toLowerCase());
                 return (
                   <li key={index}>

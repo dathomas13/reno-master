@@ -57,7 +57,7 @@ export default function ContactsPage() {
             .includes(needle),
         )
       : contacts;
-    return [...rows].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    return [...rows].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
   }, [contacts, search]);
 
   return (
@@ -97,7 +97,9 @@ export default function ContactsPage() {
         {filtered.map((contact) => (
           <li key={contact.id} className="list-row">
             <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(contact)}>
-              <span className="block truncate">{contact.name}</span>
+              <span className={`block truncate ${contact.name ? '' : 'italic text-muted'}`}>
+                {contact.name || '(ohne Namen)'}
+              </span>
               <span className="block text-xs text-muted truncate">
                 {[contactRoleNames(contact).join(', '), contact.company, contact.status]
                   .filter(Boolean)
@@ -180,9 +182,10 @@ function ContactSheet({
   }, [contact]);
 
   const update = (patch: Partial<Contact>) => setDraft({ ...draft, ...patch });
+  const canSave = draft.name.trim().length > 0;
 
   return (
-    <Sheet open onClose={onClose} onDone={() => void onSave(draft)} title="Kontakt">
+    <Sheet open onClose={onClose} onDone={canSave ? () => void onSave(draft) : onClose} title="Kontakt">
       <div className="p-4">
         <Field label="Name">
           <input
@@ -269,7 +272,12 @@ function ContactSheet({
           <ContactLogSection contactId={draft.id} />
         )}
         <div className="flex gap-3">
-          <button type="button" className="btn btn-primary flex-1" onClick={() => void onSave(draft)}>
+          <button
+            type="button"
+            className="btn btn-primary flex-1"
+            disabled={!canSave}
+            onClick={() => void onSave(draft)}
+          >
             Speichern
           </button>
           <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>

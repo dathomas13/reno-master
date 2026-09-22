@@ -54,4 +54,24 @@ describe('contacts page', () => {
       expect.objectContaining({ id: 'contact-1', name: 'Neuer Name' }),
     );
   });
+
+  it('never saves a contact with an empty name - Fertig just closes instead', async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ContactsPage />
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Neu' }));
+    });
+    const dialog = screen.getByRole('dialog', { name: 'Kontakt' });
+    await act(async () => {
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Fertig' }));
+    });
+
+    expect(mocks.saveContact).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog', { name: 'Kontakt' })).not.toBeInTheDocument();
+  });
 });
