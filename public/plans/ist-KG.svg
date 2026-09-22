@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1100 -1100 15195 15015" data-variant="ist" data-floor="KG" data-version="0.25" role="img" aria-label="Kellergeschoss Bestand">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1100 -1100 15195 15015" data-variant="ist" data-floor="KG" data-version="0.26" role="img" aria-label="Kellergeschoss Bestand">
 <style>
   svg { --bg:#1d2126; --ink:#e8e4da; --muted:#9aa3ad; --accent:#c9a86a;
         --wall-a:#d9d3c5; --wall-b:#c9b990; --wall-c:#b8845a; --room:#c9a86a;
@@ -183,5 +183,5 @@
 <line class="dim" x1="5000" y1="12905" x2="5000" y2="13045"/>
 <text class="dim-text" x="2500" y="13255">5 m</text></g>
 <text class="title" x="0" y="-620">Kellergeschoss</text>
-<text class="subtitle" x="0" y="-300">Bestand · Modell v0.25 · Schlesierstraße 31</text>
+<text class="subtitle" x="0" y="-300">Bestand · Modell v0.26 · Schlesierstraße 31</text>
 </svg>

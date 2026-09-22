@@ -2,16 +2,16 @@
   "ist": {
     "file": "ist.json",
     "rooms": "rooms-ist.json",
-    "version": "0.25",
-    "updatedAt": "2026-09-17",
+    "version": "0.26",
+    "updatedAt": "2026-09-22",
     "note": "KG- und OG-Aufmaß 09/2026 (Fertigmaße)",
     "bytes": 97532
   },
   "soll": {
     "file": "soll.json",
     "rooms": "rooms-soll.json",
-    "version": "0.0",
-    "updatedAt": "2026-09-17",
+    "version": "0.1",
+    "updatedAt": "2026-09-22",
     "note": "Platzhalter – identisch mit Ist, bis das Soll-Modell gebaut ist",
     "bytes": 97552
   }
