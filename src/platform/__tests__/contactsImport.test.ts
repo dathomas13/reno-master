@@ -89,4 +89,16 @@ describe('pickDeviceContacts', () => {
 
     expect(select.mock.calls[0][0]).toEqual(['name', 'tel', 'email']);
   });
+
+  it('skips the APK WebView instead of hitting its "Unable to open a contact selector"', async () => {
+    const select = vi.fn((_properties: string[]) => Promise.resolve([{ name: ['Erika Mustermann'] }]));
+    installManager({ select, getProperties: () => Promise.resolve(['name', 'tel', 'email']) });
+    (globalThis as unknown as { Capacitor: { isNativePlatform(): boolean } }).Capacitor = {
+      isNativePlatform: () => true,
+    };
+
+    expect(canPickDeviceContacts()).toBe(false);
+    expect(await pickDeviceContacts()).toEqual([]);
+    expect(select).not.toHaveBeenCalled();
+  });
 });

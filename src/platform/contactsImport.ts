@@ -6,8 +6,14 @@
  *    that means Chrome, which is exactly the device this app is built for first.
  *  - a vCard (.vcf) file, which every phone's contacts app and Google Contacts can export,
  *    one contact or hundreds at once. That one has no platform requirement at all.
+ *
+ * The APK's WebView reports `navigator.contacts` as present too - the JS surface is there,
+ * `getProperties()` even answers - but `select()` always rejects with "Unable to open a
+ * contact selector": the WebView has no Activity wired up to host the picker UI the way a
+ * full Chrome tab does. So this is web (PWA/browser tab) only, native or not.
  */
 import { debugLog } from './debugLog';
+import { isNative } from './index';
 
 export interface ImportedContact {
   name: string;
@@ -31,9 +37,9 @@ function contactsManager(): ContactsManager | null {
   return 'contacts' in navigator && 'ContactsManager' in window ? (nav.contacts ?? null) : null;
 }
 
-/** true when the browser can open the device's own contacts picker */
+/** true when the browser can open the device's own contacts picker - web only, see above */
 export function canPickDeviceContacts(): boolean {
-  return contactsManager() !== null;
+  return !isNative() && contactsManager() !== null;
 }
 
 function describeError(error: unknown): string {
@@ -42,6 +48,10 @@ function describeError(error: unknown): string {
 
 /** opens the native picker; resolves to [] if it is unavailable or the user cancels */
 export async function pickDeviceContacts(): Promise<ImportedContact[]> {
+  if (isNative()) {
+    debugLog('kontakteimport', 'APK-WebView: Adressbuch-Auswahl übersprungen, nur vCard geht hier');
+    return [];
+  }
   const manager = contactsManager();
   if (!manager) {
     debugLog('kontakteimport', 'kein ContactsManager im Browser gefunden');
