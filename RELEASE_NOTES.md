@@ -8,7 +8,7 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
-## 0.41.4 – Kontakte überarbeitet
+## 0.46.0 – Kontakte überarbeitet
 
 - Rollen eines Kontakts: jetzt mehrere möglich, mit „Rolle hinzufügen“ für neue Rollen wie
   beim Tagebuch.
@@ -16,6 +16,43 @@ Commit-Nachricht, und die liest sich im Banner auch so.
   Adressbuch-Auswahl zeigt jetzt eine Meldung statt scheinbar nichts zu tun, wenn sie
   fehlschlägt.
 - Neu: Gesprächsprotokoll je Kontakt – datierte Einträge statt Fließtext in den Notizen.
+
+## 0.45.1 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts.
+
+## 0.45.0 – Versionsauswahl vereinfacht
+
+- Der Abschnitt „App“ in den Einstellungen zeigt jetzt nur noch die neueste Fassung zum
+  Nachholen, mit ihren Hinweisen. Eine bestimmte andere Fassung auszuwählen ist raus, weil
+  Android eine ältere ohnehin nicht annimmt.
+
+## 0.44.0 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts. Interne Notizen richtiggestellt.
+
+## 0.43.0 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts. Ein Versuch, ältere Fassungen einfacher zu
+  installieren, hat sich als nicht umsetzbar herausgestellt und wurde zurückgenommen.
+
+## 0.42.0 – Versionswahl warnt vor Downgrades
+
+- Die Versionswahl in den Einstellungen sagt jetzt an, wenn die gewählte Fassung älter ist
+  als die installierte: Android verweigert das grundsätzlich, ganz gleich mit welchem
+  Schlüssel signiert wurde. Nur ein einmaliges Deinstallieren hilft dann weiter.
+
+## 0.41.0 – Fester Signaturschlüssel für Debug-Fassungen
+
+- Alle Debug-Fassungen dieser App verwenden jetzt denselben Signaturschlüssel, auch über
+  verschiedene Entwicklungszweige hinweg.
+
+## 0.40.0 – Version von Hand installieren
+
+- Neuer Abschnitt in den Einstellungen: die neueste Fassung lässt sich dort nachträglich
+  holen, auch nachdem „Später“ getippt wurde.
+- In der App kann dort außerdem gezielt eine andere veröffentlichte Fassung gewählt und
+  installiert werden, jeweils mit den Hinweisen dazu.
 
 ## 0.37.2 – Gedrehte Fotos aus der Tagesgalerie behoben
 
