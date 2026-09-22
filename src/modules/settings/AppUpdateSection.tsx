@@ -42,17 +42,19 @@ export function AppUpdateSection() {
   const newest = history ? (newerVersions(APP_BUILD, history)[0] ?? null) : null;
   const target = sorted.find((entry) => entry.version === selected) ?? null;
   const isRunning = target !== null && target.version === runningVersion();
-  // Android verweigert das Installieren einer kleineren Versionsnummer über eine
-  // installierte App grundsätzlich - außer die installierte App ist selbst "debuggable",
-  // dann erlaubt es das Plugin über PackageInstaller.setRequestDowngrade. Jede Fassung ohne
-  // den Release-Signaturschlüssel ist das, muss aber nicht so bleiben - deshalb hier nur ein
-  // Hinweis, kein Sperren des Knopfs.
+  // Android selbst verweigert das Installieren einer APK mit kleinerem versionCode als der
+  // schon installierten - unabhängig vom Signaturschlüssel. Ein Weg drumherum (die
+  // installierte App muss dafür "debuggable" sein, das Plugin müsste das Flag setzen) wurde
+  // ausprobiert und verworfen: das nötige Android-Flag ist nicht Teil des öffentlichen SDK
+  // und verlangt beim Setzen ohnehin eine Berechtigung, die eine seitwärts installierte App
+  // nie bekommt (siehe plugins/appupdate/README.md). Das lässt sich von hier aus also nicht
+  // umgehen, nur ehrlich ansagen, statt es erfolglos versuchen zu lassen.
   const isDowngrade = target !== null && !isRunning && target.build < APP_BUILD;
 
   // The site is published a minute or two before the matching APK is built; offering
   // "Installieren" in that window would fetch the previous release and look successful.
   useEffect(() => {
-    if (!isNative() || !target || isRunning) {
+    if (!isNative() || !target || isRunning || isDowngrade) {
       setApkReady(null);
       return;
     }
@@ -63,7 +65,7 @@ export function AppUpdateSection() {
     return () => {
       active = false;
     };
-  }, [target, isRunning]);
+  }, [target, isRunning, isDowngrade]);
 
   const stillBuilding = isNative() && apkReady === false;
   const percent = progress ? percentOf(progress) : null;
@@ -131,17 +133,16 @@ export function AppUpdateSection() {
             type="button"
             className="btn btn-primary disabled:opacity-50"
             onClick={() => target && void install(target)}
-            disabled={busy || isRunning || stillBuilding || !target}
+            disabled={busy || isRunning || isDowngrade || stillBuilding || !target}
           >
             {busy ? 'Wird installiert…' : 'Installieren'}
           </button>
 
           {isDowngrade && (
             <p className="text-xs text-muted mt-2">
-              Diese Fassung ist älter als die installierte. Solange hier eine Debug-Fassung
-              läuft, erlaubt Android das trotzdem. Bei einer signiert veröffentlichten
-              Fassung verweigert es das weiterhin – dann hilft nur, die App einmal zu
-              deinstallieren.
+              Android verweigert das Installieren einer älteren Fassung über eine neuere. Um
+              wirklich zurückzuwechseln, hilft nur: die App einmal deinstallieren und diese
+              Fassung danach frisch installieren.
             </p>
           )}
         </>

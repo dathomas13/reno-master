@@ -1,18 +1,13 @@
 package de.friedl.renomaster.appupdate;
 
 import android.app.Activity;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.pm.PackageInstaller;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
-import android.util.Log;
 
-import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -21,10 +16,8 @@ import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -36,48 +29,18 @@ import java.net.URL;
  * own progress, and hand the file to Android's package installer, which asks the user
  * once. That is the difference between "here is a link" and an update inside the app.
  *
- * The install itself goes through PackageInstaller.Session, not a plain "open this file"
- * intent. The reason is a single flag: Session.setRequestDowngrade(true). Android refuses
- * to put an older APK over a newer one - always, for the plain file-open path, no matter
- * who signed it - unless the installed app is debuggable, in which case the flag is
- * honoured even for a normal, unprivileged app like this one. Every build this project
- * ships without the release secrets is a debug build, so this is the one path that can
- * actually move to an older version without the user deinstalling first.
+ * The file goes into the app's own external files directory and is handed over through a
+ * FileProvider, because since Android 7 a file:// URI to another process is refused.
  */
 @CapacitorPlugin(name = "AppUpdate")
 public class AppUpdatePlugin extends Plugin {
 
-    private static final String TAG = "RenoAppUpdate";
     private static final String FOLDER = "updates";
     private static final String FILE_NAME = "reno-master.apk";
     private static final String APK_TYPE = "application/vnd.android.package-archive";
     private static final int BUFFER = 64 * 1024;
     /** a redirect chain longer than this is a loop, not a download */
     private static final int MAX_REDIRECTS = 5;
-    private static final String INSTALL_ACTION = "de.friedl.renomaster.appupdate.INSTALL_RESULT";
-
-    private final BroadcastReceiver installReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            handleInstallResult(context, intent);
-        }
-    };
-
-    @Override
-    public void load() {
-        IntentFilter filter = new IntentFilter(INSTALL_ACTION);
-        // only this app sends it (via its own PendingIntent), never another process
-        ContextCompat.registerReceiver(getContext(), installReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
-    }
-
-    @Override
-    protected void handleOnDestroy() {
-        try {
-            getContext().unregisterReceiver(installReceiver);
-        } catch (IllegalArgumentException alreadyGone) {
-            // load() may not have run yet, or this already happened - either way, fine
-        }
-    }
 
     /** true when the user has allowed this app to install packages */
     @PluginMethod
@@ -108,9 +71,7 @@ public class AppUpdatePlugin extends Plugin {
 
     /**
      * Downloads the APK and starts the installer. Progress is reported as "progress"
-     * events with loaded/total in bytes; the call resolves once the session is committed
-     * and Android has taken over - not once the install itself has finished, since that
-     * needs a confirmation only the user can give.
+     * events with loaded/total in bytes; the call resolves once the installer is up.
      */
     @PluginMethod
     public void downloadAndInstall(PluginCall call) {
@@ -232,73 +193,18 @@ public class AppUpdatePlugin extends Plugin {
         notifyListeners("progress", event);
     }
 
-    /**
-     * Hands the APK to Android's PackageInstaller as a session instead of a plain
-     * ACTION_VIEW file intent. Functionally the same system dialog appears at the end for
-     * a normal update - the only difference this buys is setRequestDowngrade(true), which
-     * a file-open intent has no equivalent for and which the plain path never honours
-     * regardless of this flag.
-     */
-    private void install(File apk) throws Exception {
+    private void install(File apk) {
         Context context = getContext();
-        PackageInstaller installer = context.getPackageManager().getPackageInstaller();
-        PackageInstaller.SessionParams params =
-            new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            // only effective when the currently installed app is itself debuggable - true
-            // for every build this project ships without the release signing secrets
-            params.setRequestDowngrade(true);
-        }
-
-        int sessionId = installer.createSession(params);
-        PackageInstaller.Session session = installer.openSession(sessionId);
-        try {
-            try (InputStream input = new FileInputStream(apk);
-                 OutputStream output = session.openWrite(FILE_NAME, 0, apk.length())) {
-                byte[] buffer = new byte[BUFFER];
-                int read;
-                while ((read = input.read(buffer)) != -1) {
-                    output.write(buffer, 0, read);
-                }
-                session.fsync(output);
-            }
-
-            Intent statusIntent = new Intent(INSTALL_ACTION).setPackage(context.getPackageName());
-            int flags = PendingIntent.FLAG_UPDATE_CURRENT
-                | (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? PendingIntent.FLAG_MUTABLE : 0);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(context, sessionId, statusIntent, flags);
-            session.commit(pendingIntent.getIntentSender());
-        } catch (Exception error) {
-            session.abandon();
-            throw error;
-        } finally {
-            session.close();
-        }
-    }
-
-    /**
-     * A fresh side load always needs the user's confirmation - Android reports that as
-     * STATUS_PENDING_USER_ACTION with the dialog to show, not as an error. Everything else
-     * is a real failure and only reaches the debug log: downloadAndInstall() has already
-     * resolved by the time this arrives, so there is no pending promise left to reject.
-     */
-    private void handleInstallResult(Context context, Intent intent) {
-        int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
-        if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
-            Intent confirm = intent.getParcelableExtra(Intent.EXTRA_INTENT);
-            if (confirm == null) return;
-            confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            Activity activity = getActivity();
-            if (activity != null) {
-                activity.startActivity(confirm);
-            } else {
-                context.startActivity(confirm);
-            }
-            return;
-        }
-        if (status != PackageInstaller.STATUS_SUCCESS) {
-            String message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
-            Log.w(TAG, "Installation nicht abgeschlossen (Status " + status + "): " + message);
+        Uri uri = FileProvider.getUriForFile(context, context.getPackageName() + ".updateprovider", apk);
+        Intent intent = new Intent(Intent.ACTION_VIEW)
+            .setDataAndType(uri, APK_TYPE)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Activity activity = getActivity();
+        if (activity != null) {
+            activity.startActivity(intent);
+        } else {
+            context.startActivity(intent);
         }
     }
 }

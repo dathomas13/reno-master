@@ -35,16 +35,11 @@ Geräteeigentümer. Alles davor gehört uns.
   Klassennamen zusammenführt — Capacitor bringt bereits einen mit, zwei Einträge derselben
   Klasse brechen den Build.
 - Die Berechtigung `REQUEST_INSTALL_PACKAGES` bringt das Plugin selbst mit.
-- **Installiert wird über `PackageInstaller.Session`, nicht über einen einfachen
-  „Datei öffnen"-Intent.** Der einzige Grund: `setRequestDowngrade(true)`. Android verweigert
-  eine APK mit kleinerer Versionsnummer über eine installierte grundsätzlich - dieses Flag
-  ändert daran nichts, außer die installierte App ist selbst `debuggable`. Jede Fassung ohne
-  den Release-Signaturschlüssel (siehe README, Abschnitt „Signaturschlüssel") ist das, und
-  genau dafür ist dieser Weg gedacht: eine ältere Debug-Fassung soll sich installieren
-  lassen, ohne dass die App vorher deinstalliert werden muss. Über eine release-signierte
-  Fassung greift das Flag nicht - dort bleibt es beim Deinstallieren.
-- Das Ergebnis der Installation kommt asynchron über einen `PendingIntent` zurück
-  (`handleInstallResult`). `downloadAndInstall()` löst sein Versprechen schon auf, sobald die
-  Sitzung übergeben ist, nicht erst wenn Android fertig ist - es gibt also kein zweites
-  Signal an die Web-Seite, ob die Installation am Ende wirklich geklappt hat, genau wie beim
-  vorigen, einfacheren Weg auch.
+- **Eine ältere Fassung über eine neuere zu installieren, geht von hier aus nicht - das ist
+  ausprobiert und wieder verworfen.** `PackageInstaller.SessionParams.setRequestDowngrade()`
+  klingt nach der Lösung, ist aber `@hide`: kein Teil des öffentlichen SDK, der Build bricht
+  schon beim Kompilieren (`cannot find symbol`). Das Feld ließe sich nur per Reflection
+  setzen, und selbst dann verlangt Android beim Commit der Sitzung die Berechtigung
+  `INSTALL_PACKAGES` - eine Systemrechte-Berechtigung, die eine seitwärts installierte App
+  nie bekommt, ob debuggable oder nicht. Historisch brauchte dieser Weg root. Der einzige
+  echte Weg zu einer älteren Fassung bleibt: die App einmal deinstallieren.

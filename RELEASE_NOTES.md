@@ -8,11 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
-## 0.43.0 – Neuer Installationsweg für ältere Fassungen
+## 0.43.0 – Nur Aufräumen
 
-- Eine ältere Fassung über die Versionswahl zu installieren, nimmt jetzt einen anderen Weg,
-  den Android bei einer Debug-Fassung eher erlaubt. Garantiert ist das nicht – zeigt sich
-  erst beim Ausprobieren.
+- An der Bedienung ändert sich nichts. Ein Versuch, ältere Fassungen einfacher zu
+  installieren, hat sich als nicht umsetzbar herausgestellt und wurde zurückgenommen.
 
 ## 0.42.0 – Versionswahl warnt vor Downgrades
 
