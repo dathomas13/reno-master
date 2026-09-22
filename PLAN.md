@@ -339,11 +339,11 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 ## 8. Module / Screens
 
 ### 8.0 App-Shell & Navigation
-- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Suche, Fotos, Pläne, Aufgaben, Kontakte, Einstellungen.
+- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Suche, Dateien, Aufgaben, Notizen, Kontakte, Gespräche, Einstellungen.
 - Desktop (≥ 900 px): linke Sidebar mit allen 8 Zielen, Inhalt max. 1100 px breit, Listen zweispaltig wo sinnvoll.
 - TopBar: Titel, Sync-Badge, kontextabhängige Aktion (z. B. "+").
 - **Sheets werden per Portal an `document.body` gehängt.** `backdrop-blur` (wie `filter` und `transform`) macht ein Element zum Bezugsrahmen für `position: fixed` darin – TopBar und Bottom-Navigation haben es. Ein Sheet, das im Baum darunter steht, misst sich sonst an einer 56 px hohen Kopfzeile und erscheint am Telefon verschoben und unlesbar.
-- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
+- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/gespraeche` (alle Gesprächsprotokolle über alle Kontakte, aus "Mehr" erreichbar), `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
 - Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
@@ -421,9 +421,38 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Erledigt-Haken setzt `status:'Erledigt'`, `doneAt` und löscht eine geplante Erinnerung. In der Android-App wird `reminderAt` beim Speichern der Aufgabe direkt als lokale Benachrichtigung gestellt oder gelöscht; dieser direkte Weg wartet nicht auf den nächsten Aufgaben-Snapshot. Falls die Benachrichtigungserlaubnis noch fehlt, fragt der Speichervorgang mit Erinnerung danach. Der laufende Aufgaben-Listener gleicht die Liste danach nur noch als Sicherheitsnetz ab. Kann Android die Aktion „Erledigt“ nicht registrieren, wird die Erinnerung trotzdem geplant; deren Aktion „Erledigt“ markiert die Aufgabe als abgeschlossen, wenn sie verfügbar ist.
 
 ### 8.7 Kontakte
-- Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rolle, Status-Chip, Sterne.
+- Liste alphabetisch mit Suchfeld, Gruppierung nach Rolle/Gewerk optional; Zeile: Name, Firma, Rollen, Status-Chip, Sterne.
 - Detail: Telefon (`tel:`-Link + WhatsApp-Link `https://wa.me/<nummer>`), E-Mail (`mailto:`), Gewerke, Status, Bewertung, Notizen; Buttons Anrufen / WhatsApp / E-Mail / Teilen (vCard über Web Share).
-- Editor mit allen Feldern.
+- Editor mit allen Feldern. **Rollen sind mehrfach wählbar und erweiterbar**: der Picker ist derselbe
+  Sheet-mit-Checkliste wie „Anwesend“ im Tagebuch (`RolePicker`/`MultiPicker` in `src/components/Pickers.tsx`),
+  nicht mehr eine flache Chip-Reihe – neue Rollen kommen über „Rolle hinzufügen“ direkt in die gemeinsame
+  Liste `meta/lists.contactRoles`. Kontakte, die noch das alte einzelne `role`-Feld tragen, werden beim
+  nächsten Speichern automatisch auf `roles: string[]` migriert (`contactRoleNames()` in
+  `src/data/contactRoles.ts` liest beide Formen).
+- **Import aus dem Adressbuch**: Button „Importieren“ neben „Neu“. Woher die Auswahl kommt, hängt an der
+  Plattform (`src/platform/contactsImport.ts`): in der App liest das eigene Plugin `plugins/contacts` das
+  Adressbuch direkt (Berechtigung `READ_CONTACTS`) – die Web Contact Picker API meldet sich im WebView der
+  App zwar als vorhanden, aber ihr `select()` scheitert dort immer mit „Unable to open a contact selector“,
+  weil dem WebView die Activity für den Auswahldialog fehlt, und Android kennt ohnehin keinen zuverlässigen
+  Mehrfachauswahl-Intent. Im Browser (Chrome/Android) läuft stattdessen die Contact Picker API. Überall sonst
+  – und immer zusätzlich – wird eine vCard-Datei (.vcf, ein oder mehrere Kontakte) ausgewählt und geparst.
+  Alle drei Wege landen in derselben Checkliste vor dem Anlegen, mit Hinweis auf Namen, die schon als
+  Kontakt bestehen.
+- **Mehrere Telefonnummern**: ein Kontakt im Adressbuch kann mehr als eine Nummer haben (Mobil, Arbeit, ...).
+  Der Import behält alle, beschriftet (`ImportedContact.phones` in `contactsImport.ts`); beim Anlegen bekommt
+  `Contact.phone` die bevorzugt mobile Nummer (`primaryPhone()`), der Rest landet beschriftet in den Notizen,
+  weil `Contact` selbst nur ein Telefonfeld hat.
+- **Gesprächsprotokoll**: eigene, datierte Einträge je Kontakt (Datum/Uhrzeit, Art – Anruf/Termin/E-Mail/
+  Nachricht/Sonstiges –, Text) statt Fließtext in den Notizen; Collection `contactLogs`, Feld `contactId`.
+  Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.
+  Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
+  Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, aus "Mehr" erreichbar) zeigt alle Einträge über
+  alle Kontakte, neueste zuerst, mit Suchfeld; Tippen öffnet den zugehörigen Kontakt.
+  **Kein Löschen in Kaskade**: löscht man einen Kontakt, bleiben seine Einträge stehen (eigene Collection,
+  keine Firestore-Kaskade). Unter `/gespraeche` zeigt so ein verwaister Eintrag "Kontakt gelöscht" statt
+  eines Namens; Tippen öffnet ihn direkt dort (`ContactLogEditor`, jetzt mit `contacts`-Prop exportiert)
+  statt zum – nicht mehr vorhandenen – Kontakt zu verlinken, mit einem zusätzlichen "Kontakt"-Feld, um ihn
+  einem anderen zuzuordnen.
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
@@ -435,7 +464,8 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 ### 8.9 Suche (`/suche`)
 - **Eine Suche über alles**: Tagebuch (Titel, Text, Anwesende, Wetter, Mängel), Kosten und Belege (Händler,
   Beschreibung, Kategorie, Rechnungsnummer, Notizen und der vom Beleg **gescannte Text** aus
-  `extraction.rawText`), Aufgaben, Kontakte (inklusive Notizen, wo die Gesprächsprotokolle stehen), Gewerke,
+  `extraction.rawText`), Aufgaben, Kontakte (inklusive Rollen und Notizen), die Gesprächsprotokoll-Einträge
+  der Kontakte (eigene Art `contactLog`, verlinkt zurück auf den Kontakt), Gewerke,
   Phasen, Räume des Modells, Pläne und Fotountertitel. Verknüpfungen zählen mit: ein Eintrag wird auch über
   den Namen seines Raums, seines Gewerks oder seiner Phase gefunden.
 - Mitgesucht wird, was nicht als Text dasteht: Status ("offen", "Beauftragt"), Zuständige, Beträge

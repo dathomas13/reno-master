@@ -26,6 +26,7 @@ export type SearchKind =
   | 'task'
   | 'note'
   | 'contact'
+  | 'contactLog'
   | 'trade'
   | 'room'
   | 'phase'
@@ -91,11 +92,12 @@ const KIND_ORDER: Record<SearchKind, number> = {
   note: 2,
   cost: 3,
   contact: 4,
-  room: 5,
-  trade: 6,
-  phase: 7,
-  plan: 8,
-  photo: 9,
+  contactLog: 5,
+  room: 6,
+  trade: 7,
+  phase: 8,
+  plan: 9,
+  photo: 10,
 };
 
 const SPACE = 32;

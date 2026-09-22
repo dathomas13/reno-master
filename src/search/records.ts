@@ -12,6 +12,7 @@
  */
 import type {
   Contact,
+  ContactLog,
   Cost,
   DiaryEntry,
   Note,
@@ -22,6 +23,7 @@ import type {
   Trade,
 } from '@/data/types';
 import type { SearchKind, SearchRecord } from './engine';
+import { contactRoleNames } from '@/data/contactRoles';
 import { formatDate, formatDateLong, formatDateWithWeekday } from '@/lib/date';
 import { formatEuro } from '@/lib/money';
 
@@ -45,6 +47,7 @@ export interface SearchSource {
   tasks?: Task[];
   notes?: Note[];
   contacts?: Contact[];
+  contactLogs?: ContactLog[];
   trades?: Trade[];
   phases?: Phase[];
   plans?: Plan[];
@@ -58,6 +61,7 @@ export const KIND_LABEL: Record<SearchKind, string> = {
   note: 'Notizen',
   cost: 'Kosten',
   contact: 'Kontakte',
+  contactLog: 'Gesprächsprotokoll',
   room: 'Räume',
   trade: 'Gewerke',
   phase: 'Phasen',
@@ -72,6 +76,7 @@ export const KIND_BADGE: Record<SearchKind, string> = {
   note: 'Notiz',
   cost: 'Beleg',
   contact: 'Kontakt',
+  contactLog: 'Gespräch',
   room: 'Raum',
   trade: 'Gewerk',
   phase: 'Phase',
@@ -86,6 +91,7 @@ export const KINDS: SearchKind[] = [
   'note',
   'cost',
   'contact',
+  'contactLog',
   'room',
   'trade',
   'phase',
@@ -225,23 +231,40 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
   }
 
   // ------------------------------------------------------------------ Kontakte
+  const contactName = new Map((source.contacts ?? []).map((contact) => [contact.id, contact.name]));
   for (const contact of source.contacts ?? []) {
+    const roles = contactRoleNames(contact);
     records.push({
       id: `contact:${contact.id}`,
       kind: 'contact',
       title: contact.name,
-      subtitle: [contact.role, contact.company, contact.status].filter(Boolean).join(' · '),
-      // the notes are where the phone calls end up, so they are searched like a text
+      subtitle: [roles.join(', '), contact.company, contact.status].filter(Boolean).join(' · '),
       body: contact.notes ?? '',
       meta: [
         contact.company ?? '',
-        contact.role ?? '',
+        ...roles,
         contact.phone ?? '',
         contact.email ?? '',
         contact.status ?? '',
         ...names(contact.tradeIds, tradeName),
       ].filter(Boolean),
       to: `/kontakte?kontakt=${contact.id}`,
+    });
+  }
+
+  // ------------------------------------------------------------------ Gesprächsprotokoll
+  for (const log of source.contactLogs ?? []) {
+    const person = contactName.get(log.contactId) ?? '';
+    const firstLine = log.text.split('\n')[0].trim() || 'Gesprächseintrag';
+    records.push({
+      id: `contactLog:${log.id}`,
+      kind: 'contactLog',
+      title: firstLine,
+      subtitle: [person, log.channel ?? '', ...dateWords(log.at.slice(0, 10))].filter(Boolean).join(' · '),
+      body: log.text,
+      meta: [person, log.channel ?? '', ...dateWords(log.at.slice(0, 10))].filter(Boolean),
+      date: log.at.slice(0, 10),
+      to: `/kontakte?kontakt=${log.contactId}`,
     });
   }
 

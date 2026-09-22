@@ -19,7 +19,6 @@ vi.mock('@/auth/AuthContext', () => ({
   }),
 }));
 vi.mock('@/firebase/auth', () => ({ signOut: vi.fn() }));
-vi.mock('@/firebase/app', () => ({ APP_VERSION: 'test', APP_SHA: 'test', BUILD_DATE: 'test' }));
 vi.mock('@/firebase/db', () => ({ patchDoc }));
 vi.mock('@/offline/outbox', () => ({ listJobs: vi.fn().mockResolvedValue([]), retryAll: vi.fn() }));
 vi.mock('@/platform', () => ({ isNative: () => mocks.native }));
@@ -33,6 +32,7 @@ vi.mock('@/data/useReminder', () => ({ useReminderStatus: () => ({ enabled: fals
 vi.mock('./ExportSection', () => ({ ExportSection: () => <h2>Archiv exportieren</h2> }));
 vi.mock('./FolderExportSection', () => ({ FolderExportSection: () => <h2>Export in einen Ordner</h2> }));
 vi.mock('./ModelSection', () => ({ ModelSection: () => null }));
+vi.mock('./AppUpdateSection', () => ({ AppUpdateSection: () => null }));
 
 beforeEach(() => {
   localStorage.clear();

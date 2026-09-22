@@ -26,6 +26,7 @@ const KIND_COLOR: Record<SearchKind, string> = {
   note: 'text-good border-good/40 bg-good/10',
   cost: 'text-warn border-warn/40 bg-warn/10',
   contact: 'text-ink border-line bg-panel2',
+  contactLog: 'text-ink border-line bg-panel2',
   room: 'text-ink border-line bg-panel2',
   trade: 'text-ink border-line bg-panel2',
   phase: 'text-muted border-line bg-panel2',

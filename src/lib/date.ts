@@ -54,6 +54,13 @@ export function formatDateLong(iso: string): string {
   return `${date.getDate()}. ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
 
+/** '13.09.2026, 14:30' */
+export function formatDateTime(isoDateTime: string): string {
+  const [datePart, timePart] = isoDateTime.split('T');
+  const hm = (timePart ?? '').slice(0, 5);
+  return hm ? `${formatDate(datePart)}, ${hm}` : formatDate(datePart);
+}
+
 /** 'September 2026', used as the month separator in lists */
 export function formatMonth(iso: string): string {
   const date = parseIsoDate(iso);

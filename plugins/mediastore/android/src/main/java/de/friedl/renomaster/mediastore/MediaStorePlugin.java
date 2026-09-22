@@ -7,11 +7,14 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Size;
+
+import androidx.exifinterface.media.ExifInterface;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -26,6 +29,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -362,6 +366,7 @@ public class MediaStorePlugin extends Plugin {
         if (decoded == null) {
             throw new IllegalStateException("Bild konnte nicht dekodiert werden");
         }
+        decoded = applyExifOrientation(resolver, uri, decoded);
 
         int width = decoded.getWidth();
         int height = decoded.getHeight();
@@ -376,6 +381,54 @@ public class MediaStorePlugin extends Plugin {
             decoded.recycle();
         }
         return scaled;
+    }
+
+    /**
+     * MediaStore liefert das Bild so, wie der Sensor es geschrieben hat, und legt die
+     * Drehung nur im EXIF-Tag ab; BitmapFactory liest dieses Tag nicht, und beim
+     * erneuten JPEG-Kodieren (Bitmap.compress) geht es verloren. Ohne diese Korrektur
+     * bleiben Hochkant-Fotos quer.
+     */
+    private Bitmap applyExifOrientation(ContentResolver resolver, Uri uri, Bitmap bitmap) throws IOException {
+        int orientation;
+        try (InputStream stream = resolver.openInputStream(uri)) {
+            if (stream == null) return bitmap;
+            orientation = new ExifInterface(stream)
+                .getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+        }
+        Matrix matrix = new Matrix();
+        switch (orientation) {
+            case ExifInterface.ORIENTATION_ROTATE_90:
+                matrix.postRotate(90);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_180:
+                matrix.postRotate(180);
+                break;
+            case ExifInterface.ORIENTATION_ROTATE_270:
+                matrix.postRotate(270);
+                break;
+            case ExifInterface.ORIENTATION_FLIP_HORIZONTAL:
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_FLIP_VERTICAL:
+                matrix.postScale(1, -1);
+                break;
+            case ExifInterface.ORIENTATION_TRANSPOSE:
+                matrix.postRotate(90);
+                matrix.postScale(-1, 1);
+                break;
+            case ExifInterface.ORIENTATION_TRANSVERSE:
+                matrix.postRotate(270);
+                matrix.postScale(-1, 1);
+                break;
+            default:
+                return bitmap;
+        }
+        Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        if (rotated != bitmap) {
+            bitmap.recycle();
+        }
+        return rotated;
     }
 
     private JSObject asJpeg(Bitmap bitmap, int quality) {

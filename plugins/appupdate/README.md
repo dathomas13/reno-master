@@ -35,3 +35,11 @@ Geräteeigentümer. Alles davor gehört uns.
   Klassennamen zusammenführt — Capacitor bringt bereits einen mit, zwei Einträge derselben
   Klasse brechen den Build.
 - Die Berechtigung `REQUEST_INSTALL_PACKAGES` bringt das Plugin selbst mit.
+- **Eine ältere Fassung über eine neuere zu installieren, geht von hier aus nicht - das ist
+  ausprobiert und wieder verworfen.** `PackageInstaller.SessionParams.setRequestDowngrade()`
+  klingt nach der Lösung, ist aber `@hide`: kein Teil des öffentlichen SDK, der Build bricht
+  schon beim Kompilieren (`cannot find symbol`). Das Feld ließe sich nur per Reflection
+  setzen, und selbst dann verlangt Android beim Commit der Sitzung die Berechtigung
+  `INSTALL_PACKAGES` - eine Systemrechte-Berechtigung, die eine seitwärts installierte App
+  nie bekommt, ob debuggable oder nicht. Historisch brauchte dieser Weg root. Der einzige
+  echte Weg zu einer älteren Fassung bleibt: die App einmal deinstallieren.

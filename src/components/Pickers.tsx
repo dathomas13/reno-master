@@ -77,6 +77,31 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
   );
 }
 
+interface StringMultiPickerProps {
+  label: string;
+  value: string[];
+  options: string[];
+  onChange(value: string[]): void;
+  onAdd(): void;
+  emptyLabel: string;
+  addLabel: string;
+}
+
+/** a `MultiPicker` over a flat, editable list of names rather than ids - roles, people */
+function StringMultiPicker({ label, value, options, onChange, onAdd, emptyLabel, addLabel }: StringMultiPickerProps) {
+  return (
+    <MultiPicker
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={options.map((name) => ({ id: name, name }))}
+      emptyLabel={emptyLabel}
+      onAdd={onAdd}
+      addLabel={addLabel}
+    />
+  );
+}
+
 export function PeoplePicker({
   value,
   options,
@@ -89,14 +114,39 @@ export function PeoplePicker({
   onAdd(): void;
 }) {
   return (
-    <MultiPicker
+    <StringMultiPicker
       label="Anwesend"
       value={value}
+      options={options}
       onChange={onChange}
-      options={options.map((name) => ({ id: name, name }))}
-      emptyLabel="niemand ausgewählt"
       onAdd={onAdd}
+      emptyLabel="niemand ausgewählt"
       addLabel="Person hinzufügen"
+    />
+  );
+}
+
+/** a contact's roles/Gewerke, e.g. "Elektriker" - erweiterbar: new roles are added inline */
+export function RolePicker({
+  value,
+  options,
+  onChange,
+  onAdd,
+}: {
+  value: string[];
+  options: string[];
+  onChange(value: string[]): void;
+  onAdd(): void;
+}) {
+  return (
+    <StringMultiPicker
+      label="Rollen"
+      value={value}
+      options={options}
+      onChange={onChange}
+      onAdd={onAdd}
+      emptyLabel="keine Rolle"
+      addLabel="Rolle hinzufügen"
     />
   );
 }

@@ -144,13 +144,26 @@ export type ContactStatus = (typeof CONTACT_STATUS)[number];
 export interface Contact extends BaseDoc {
   name: string;
   company?: string;
+  /** @deprecated replaced by `roles`; only read for contacts saved before that change */
   role?: string;
+  roles: string[];
   phone?: string;
   email?: string;
   tradeIds: string[];
   status?: ContactStatus;
   rating?: 1 | 2 | 3 | 4 | 5;
   notes?: string;
+}
+
+export const CONTACT_LOG_CHANNELS = ['Anruf', 'Termin', 'E-Mail', 'Nachricht', 'Sonstiges'] as const;
+export type ContactLogChannel = (typeof CONTACT_LOG_CHANNELS)[number];
+
+/** one dated entry of a Gesprächsprotokoll; several belong to one contact via `contactId` */
+export interface ContactLog extends BaseDoc {
+  contactId: string;
+  at: IsoDateTime;
+  channel?: ContactLogChannel;
+  text: string;
 }
 
 export const TRADE_STATUS = [
@@ -231,4 +244,5 @@ export const COL = {
   plans: 'plans',
   users: 'users',
   meta: 'meta',
+  contactLogs: 'contactLogs',
 } as const;

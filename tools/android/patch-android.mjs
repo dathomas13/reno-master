@@ -68,6 +68,9 @@ const PERMISSIONS = [
   '<uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />',
   // lets the app install its own next version; Android still asks the user
   '<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />',
+  // for the contact import; the ContactsPlugin brings this too, declared again here like
+  // the media permissions above
+  '<uses-permission android:name="android.permission.READ_CONTACTS" />',
   '<uses-permission\n        android:name="android.permission.READ_EXTERNAL_STORAGE"\n        android:maxSdkVersion="32" />',
 ];
 

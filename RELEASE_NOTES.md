@@ -8,13 +8,98 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
-## 0.38.0 – Raumnamen aufgeräumt
+## 0.48.3 – Raumnamen aufgeräumt
 
 - Namen wie „Essküche (WE2)“ heißen jetzt schlicht „Essküche“; beide Treppenhäuser
   heißen „Treppenhaus“, unterschieden durch das Geschoss.
 - Neu in Einstellungen → Räume: Umschalter zwischen „Bestand“ und „Planung“. Werden
   Räume beim Umbau zusammengelegt oder umbenannt (z. B. Heizung und Öllager zu
   Technikraum), bleiben alte Einträge unter dem neuen Namen auffindbar.
+
+## 0.48.2 – Gespräche: verwaiste Einträge lassen sich wieder öffnen
+
+- Wurde ein Kontakt gelöscht, ließen sich seine Gesprächseinträge unter „Gespräche“ nicht
+  mehr öffnen. Jetzt geht das wieder, mit der Möglichkeit, den Eintrag einem anderen
+  Kontakt zuzuordnen.
+
+## 0.48.1 – Kontakt-Import: alle Telefonnummern
+
+- Kontakte mit mehreren Nummern (z. B. Mobil und Arbeit) übernehmen jetzt beide statt nur
+  einer; die zweite Nummer landet in den Notizen.
+
+## 0.48.0 – Neuer Bereich „Gespräche“
+
+- Alle Gesprächsprotokoll-Einträge aller Kontakte an einem Ort, mit Suchfeld, über „Mehr“
+  erreichbar. Tippen öffnet den zugehörigen Kontakt.
+
+## 0.47.1 – Kontakt-Import: Feinschliff
+
+- Beim Import ist jetzt nichts vorausgewählt, dafür gibt es ein Suchfeld in der Liste, und
+  der Knopf zum Schließen ohne Import heißt jetzt „Abbrechen“.
+- Ein Kontakt ohne Namen lässt sich nicht mehr speichern; alte Kontakte ohne Namen zeigen
+  jetzt „(ohne Namen)“ an, statt unsichtbar in der Liste zu stehen.
+
+## 0.47.0 – Adressbuch-Import in der App funktioniert jetzt wirklich
+
+- „Aus dem Adressbuch wählen“ ist zurück und liest jetzt direkt vom Gerät (einmalige Frage
+  nach der Berechtigung), statt über einen Weg zu gehen, der in der App nie funktionieren
+  konnte.
+
+## 0.46.1 – Adressbuch-Import in der App korrigiert
+
+- „Aus dem Adressbuch wählen“ scheiterte in der installierten App immer sofort. Der Knopf
+  erscheint dort jetzt nicht mehr, vCard-Datei bleibt dort der Weg zum Import.
+
+## 0.46.0 – Kontakte überarbeitet
+
+- Rollen eines Kontakts: jetzt mehrere möglich, mit „Rolle hinzufügen“ für neue Rollen wie
+  beim Tagebuch.
+- Kontakte lassen sich aus dem Adressbuch oder per vCard-Datei importieren; die
+  Adressbuch-Auswahl zeigt jetzt eine Meldung statt scheinbar nichts zu tun, wenn sie
+  fehlschlägt.
+- Neu: Gesprächsprotokoll je Kontakt – datierte Einträge statt Fließtext in den Notizen.
+
+## 0.45.1 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts.
+
+## 0.45.0 – Versionsauswahl vereinfacht
+
+- Der Abschnitt „App“ in den Einstellungen zeigt jetzt nur noch die neueste Fassung zum
+  Nachholen, mit ihren Hinweisen. Eine bestimmte andere Fassung auszuwählen ist raus, weil
+  Android eine ältere ohnehin nicht annimmt.
+
+## 0.44.0 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts. Interne Notizen richtiggestellt.
+
+## 0.43.0 – Nur Aufräumen
+
+- An der Bedienung ändert sich nichts. Ein Versuch, ältere Fassungen einfacher zu
+  installieren, hat sich als nicht umsetzbar herausgestellt und wurde zurückgenommen.
+
+## 0.42.0 – Versionswahl warnt vor Downgrades
+
+- Die Versionswahl in den Einstellungen sagt jetzt an, wenn die gewählte Fassung älter ist
+  als die installierte: Android verweigert das grundsätzlich, ganz gleich mit welchem
+  Schlüssel signiert wurde. Nur ein einmaliges Deinstallieren hilft dann weiter.
+
+## 0.41.0 – Fester Signaturschlüssel für Debug-Fassungen
+
+- Alle Debug-Fassungen dieser App verwenden jetzt denselben Signaturschlüssel, auch über
+  verschiedene Entwicklungszweige hinweg.
+
+## 0.40.0 – Version von Hand installieren
+
+- Neuer Abschnitt in den Einstellungen: die neueste Fassung lässt sich dort nachträglich
+  holen, auch nachdem „Später“ getippt wurde.
+- In der App kann dort außerdem gezielt eine andere veröffentlichte Fassung gewählt und
+  installiert werden, jeweils mit den Hinweisen dazu.
+
+## 0.37.2 – Gedrehte Fotos aus der Tagesgalerie behoben
+
+- Fotos, die über „Fotos vom &lt;Datum&gt;“ ausgewählt wurden, landeten oft um 90° gedreht
+  im Tagebuch. Das ist jetzt korrigiert.
 
 ## 0.37.1 – Nur Aufräumen
 

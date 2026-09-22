@@ -13,6 +13,7 @@ import { useRooms } from '@/data/RoomsContext';
 import {
   COL,
   type Contact,
+  type ContactLog,
   type Cost,
   type DiaryEntry,
   type Note,
@@ -32,6 +33,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   const tasks = useCollection<Task>(COL.tasks);
   const notes = useCollection<Note>(COL.notes);
   const contacts = useCollection<Contact>(COL.contacts);
+  const contactLogs = useCollection<ContactLog>(COL.contactLogs);
   const trades = useCollection<Trade>(COL.trades);
   const phases = useCollection<Phase>(COL.phases);
   const plans = useCollection<Plan>(COL.plans);
@@ -59,6 +61,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
         tasks: tasks.data,
         notes: notes.data,
         contacts: contacts.data,
+        contactLogs: contactLogs.data,
         trades: trades.data,
         phases: phases.data,
         plans: plans.data,
@@ -71,6 +74,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
       tasks.data,
       notes.data,
       contacts.data,
+      contactLogs.data,
       trades.data,
       phases.data,
       plans.data,
@@ -82,7 +86,13 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   const index = useMemo(() => buildIndex(records), [records]);
 
   const loading =
-    diary.loading || costs.loading || tasks.loading || notes.loading || contacts.loading || trades.loading;
+    diary.loading ||
+    costs.loading ||
+    tasks.loading ||
+    notes.loading ||
+    contacts.loading ||
+    contactLogs.loading ||
+    trades.loading;
 
   return { index, count: records.length, loading };
 }
