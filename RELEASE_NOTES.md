@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.48.5 – Raumnamen auch ohne Neustart aktuell
+
+- Blieb die App offen, während ein neues Modell ankam, zeigten Tagebuch, Kosten,
+  Aufgaben, Notizen und Fotos trotzdem noch die alten Raumnamen – nur das 3D-Modell war
+  aktuell. Jetzt ziehen alle Bildschirme gleichzeitig nach.
+
 ## 0.48.4 – Neue Raumnamen kommen jetzt auch bei dir an
 
 - Geräte, die die App schon vorher offen hatten, zeigten trotz Update weiter die alten

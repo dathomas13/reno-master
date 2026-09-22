@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { loadRooms, loadRoomMap, sortRooms } from './models';
+import { MODEL_EVENT } from './modelSync';
 import { buildRoomNaming, disambiguatedNames, type RoomNamingView } from './roomNaming';
 import { loadSettings, SETTINGS_EVENT, type LocalSettings } from '@/lib/settings';
 import { LAYER_LABEL, type Room } from '@/modules/viewer3d/houseScene';
@@ -58,14 +59,25 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([loadRooms('ist'), loadRooms('soll'), loadRoomMap()]).then(([istDoc, sollDoc, mapDoc]) => {
-      if (!active) return;
-      setIst(istDoc.rooms);
-      setSoll(sollDoc.rooms);
-      setMap(mapDoc.map);
-    });
+    function load() {
+      void Promise.all([loadRooms('ist'), loadRooms('soll'), loadRoomMap()]).then(([istDoc, sollDoc, mapDoc]) => {
+        if (!active) return;
+        setIst(istDoc.rooms);
+        setSoll(sollDoc.rooms);
+        setMap(mapDoc.map);
+      });
+    }
+    load();
+    // RoomsProvider mounts once and stays mounted for the app's whole session (App.tsx
+    // wraps the whole route tree in it), unlike ViewerPage which remounts per visit - so
+    // a model that syncs in a newer release while the app is already open (modelSync's
+    // background check, or another device publishing one) needs its own listener here,
+    // the same MODEL_EVENT ViewerPage already reacts to. Without this, room names stay
+    // stuck at whatever the session first loaded until a full page reload.
+    window.addEventListener(MODEL_EVENT, load);
     return () => {
       active = false;
+      window.removeEventListener(MODEL_EVENT, load);
     };
   }, []);
 
