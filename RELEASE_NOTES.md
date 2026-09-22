@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.48.2 – Gespräche: verwaiste Einträge lassen sich wieder öffnen
+
+- Wurde ein Kontakt gelöscht, ließen sich seine Gesprächseinträge unter „Gespräche“ nicht
+  mehr öffnen. Jetzt geht das wieder, mit der Möglichkeit, den Eintrag einem anderen
+  Kontakt zuzuordnen.
+
 ## 0.48.1 – Kontakt-Import: alle Telefonnummern
 
 - Kontakte mit mehreren Nummern (z. B. Mobil und Arbeit) übernehmen jetzt beide statt nur

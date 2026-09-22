@@ -448,6 +448,11 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
   Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, aus "Mehr" erreichbar) zeigt alle Einträge über
   alle Kontakte, neueste zuerst, mit Suchfeld; Tippen öffnet den zugehörigen Kontakt.
+  **Kein Löschen in Kaskade**: löscht man einen Kontakt, bleiben seine Einträge stehen (eigene Collection,
+  keine Firestore-Kaskade). Unter `/gespraeche` zeigt so ein verwaister Eintrag "Kontakt gelöscht" statt
+  eines Namens; Tippen öffnet ihn direkt dort (`ContactLogEditor`, jetzt mit `contacts`-Prop exportiert)
+  statt zum – nicht mehr vorhandenen – Kontakt zu verlinken, mit einem zusätzlichen "Kontakt"-Feld, um ihn
+  einem anderen zuzuordnen.
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.

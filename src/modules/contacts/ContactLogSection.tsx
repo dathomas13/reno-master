@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { where } from '@/firebase/db';
 import { useCollection } from '@/data/hooks';
-import { COL, CONTACT_LOG_CHANNELS, type ContactLog, type ContactLogChannel } from '@/data/types';
+import { COL, CONTACT_LOG_CHANNELS, type Contact, type ContactLog, type ContactLogChannel } from '@/data/types';
 import { emptyContactLog, saveContactLog, deleteContactLog } from '@/data/repos';
 import { Field, ChipSelect } from '@/components/Fields';
 import { Sheet } from '@/components/Sheet';
@@ -62,23 +62,59 @@ function fromDateTimeInput(value: string): string {
   return value ? `${value}:00` : value;
 }
 
-function ContactLogEditor({
+/**
+ * `contacts` is only passed when a log's own contact is gone (`ContactLogsPage`, after the
+ * contact behind it was deleted) - then the sheet shows a "Kontakt" field to pick a new home
+ * for the entry instead of leaving it orphaned. Editing from inside a contact's own sheet
+ * (`ContactLogSection` above) never passes it: the contact there is fixed by context.
+ */
+export function ContactLogEditor({
   log,
+  contacts,
   onClose,
   onSave,
   onDelete,
 }: {
   log: ContactLog;
+  contacts?: Contact[];
   onClose(): void;
   onSave(log: ContactLog): Promise<void>;
   onDelete(log: ContactLog): Promise<void>;
 }) {
   const [draft, setDraft] = useState(log);
   const update = (patch: Partial<ContactLog>) => setDraft({ ...draft, ...patch });
+  const contactPicked = !contacts || contacts.some((contact) => contact.id === draft.contactId);
 
   return (
-    <Sheet open onClose={onClose} onDone={() => void onSave(draft)} title="Gesprächseintrag">
+    <Sheet
+      open
+      onClose={onClose}
+      onDone={contactPicked ? () => void onSave(draft) : onClose}
+      title="Gesprächseintrag"
+    >
       <div className="p-4">
+        {contacts && (
+          <Field label="Kontakt">
+            <select
+              className="field"
+              value={contactPicked ? draft.contactId : ''}
+              onChange={(event) => update({ contactId: event.target.value })}
+            >
+              {!contactPicked && (
+                <option value="" disabled>
+                  Kontakt wählen…
+                </option>
+              )}
+              {[...contacts]
+                .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'))
+                .map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {contact.name || '(ohne Namen)'}
+                  </option>
+                ))}
+            </select>
+          </Field>
+        )}
         <Field label="Wann">
           <input
             className="field"
@@ -104,7 +140,12 @@ function ContactLogEditor({
           />
         </Field>
         <div className="flex gap-3">
-          <button type="button" className="btn btn-primary flex-1" onClick={() => void onSave(draft)}>
+          <button
+            type="button"
+            className="btn btn-primary flex-1"
+            disabled={!contactPicked}
+            onClick={() => void onSave(draft)}
+          >
             Speichern
           </button>
           <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
