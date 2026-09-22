@@ -104,25 +104,31 @@ public class ContactsPlugin extends Plugin {
             return;
         }
 
-        // phone, email and company sit in their own tables, one row per value - the first
-        // of each is enough here, the review list is not a full contact card
+        // phone and email have their own dedicated content URI, one row per value - the
+        // first of each is enough here, the review list is not a full contact card
         Map<String, String> phones = firstValuePerContact(
             resolver,
             ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
             ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
-            ContactsContract.CommonDataKinds.Phone.NUMBER
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            null, null
         );
         Map<String, String> emails = firstValuePerContact(
             resolver,
             ContactsContract.CommonDataKinds.Email.CONTENT_URI,
             ContactsContract.CommonDataKinds.Email.CONTACT_ID,
-            ContactsContract.CommonDataKinds.Email.ADDRESS
+            ContactsContract.CommonDataKinds.Email.ADDRESS,
+            null, null
         );
+        // Organization has no CONTENT_URI of its own - it is just another mimetype row in
+        // the generic Data table, so it needs the mimetype filter the other two get built in
         Map<String, String> companies = firstValuePerContact(
             resolver,
-            ContactsContract.CommonDataKinds.Organization.CONTENT_URI,
+            ContactsContract.Data.CONTENT_URI,
             ContactsContract.CommonDataKinds.Organization.CONTACT_ID,
-            ContactsContract.CommonDataKinds.Organization.COMPANY
+            ContactsContract.CommonDataKinds.Organization.COMPANY,
+            ContactsContract.Data.MIMETYPE + " = ?",
+            new String[] { ContactsContract.CommonDataKinds.Organization.CONTENT_ITEM_TYPE }
         );
 
         JSArray contacts = new JSArray();
@@ -149,11 +155,12 @@ public class ContactsPlugin extends Plugin {
 
     /** the first value of a contacts data table per contact id, e.g. the first phone number */
     private Map<String, String> firstValuePerContact(
-        ContentResolver resolver, Uri uri, String idColumnName, String valueColumnName
+        ContentResolver resolver, Uri uri, String idColumnName, String valueColumnName,
+        String selection, String[] selectionArgs
     ) {
         Map<String, String> result = new HashMap<>();
         String[] columns = { idColumnName, valueColumnName };
-        try (Cursor cursor = resolver.query(uri, columns, null, null, null)) {
+        try (Cursor cursor = resolver.query(uri, columns, selection, selectionArgs, null)) {
             if (cursor == null) return result;
             int idColumn = cursor.getColumnIndexOrThrow(idColumnName);
             int valueColumn = cursor.getColumnIndexOrThrow(valueColumnName);
