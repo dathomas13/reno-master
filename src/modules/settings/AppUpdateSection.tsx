@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
+import { useEffect, useState } from 'react';
+import { SettingsHeading } from './SettingsHelp';
 import { isNative } from '@/platform/index';
 import {
-  fetchVersionHistory,
-  newerVersions,
+  fetchRemoteVersion,
   notesParagraphs,
   releaseReady,
   runningVersion,
@@ -15,57 +14,37 @@ import { formatProgress, openSourceSettings, percentOf } from '@/platform/appUpd
 import { formatDate } from '@/lib/date';
 
 /**
- * Installs a version by hand: the newest one, for when "Später" was tapped once too
- * often, or - in the app, where every published version stays downloadable as its own
- * APK - any other version from the list. The web build has no such archive of its own; a
- * browser always runs the one bundle that is currently published, so there the dropdown
- * would offer a choice with nothing behind it.
+ * Installs the newest published version by hand, for when "Später" was tapped once too
+ * often. A picker for any other version was tried here and dropped again: Android refuses
+ * to install an older versionCode over a newer one no matter what, so a "which version"
+ * choice only ever has one usable answer - the newest - which this offers directly instead.
  */
 export function AppUpdateSection() {
-  const [history, setHistory] = useState<RemoteVersion[] | null>(null);
-  const [selected, setSelected] = useState('');
+  const [remote, setRemote] = useState<RemoteVersion | null>(null);
   const [apkReady, setApkReady] = useState<boolean | null>(null);
   const { install, busy, progress, problem } = useVersionInstall();
 
   useEffect(() => {
-    void fetchVersionHistory().then((all) => {
-      setHistory(all);
-      const running = all.find((entry) => entry.version === runningVersion());
-      setSelected(running?.version ?? all[0]?.version ?? '');
-    });
+    void fetchRemoteVersion().then(setRemote);
   }, []);
 
-  const sorted = useMemo(
-    () => (history ? [...history].sort((a, b) => b.build - a.build) : []),
-    [history],
-  );
-  const newest = history ? (newerVersions(APP_BUILD, history)[0] ?? null) : null;
-  const target = sorted.find((entry) => entry.version === selected) ?? null;
-  const isRunning = target !== null && target.version === runningVersion();
-  // Android selbst verweigert das Installieren einer APK mit kleinerem versionCode als der
-  // schon installierten - unabhängig vom Signaturschlüssel. Ein Weg drumherum (die
-  // installierte App muss dafür "debuggable" sein, das Plugin müsste das Flag setzen) wurde
-  // ausprobiert und verworfen: das nötige Android-Flag ist nicht Teil des öffentlichen SDK
-  // und verlangt beim Setzen ohnehin eine Berechtigung, die eine seitwärts installierte App
-  // nie bekommt (siehe plugins/appupdate/README.md). Das lässt sich von hier aus also nicht
-  // umgehen, nur ehrlich ansagen, statt es erfolglos versuchen zu lassen.
-  const isDowngrade = target !== null && !isRunning && target.build < APP_BUILD;
+  const newest = remote && remote.build > APP_BUILD ? remote : null;
 
   // The site is published a minute or two before the matching APK is built; offering
   // "Installieren" in that window would fetch the previous release and look successful.
   useEffect(() => {
-    if (!isNative() || !target || isRunning || isDowngrade) {
+    if (!isNative() || !newest) {
       setApkReady(null);
       return;
     }
     let active = true;
-    void releaseReady(target.version).then((ready) => {
+    void releaseReady(newest.version).then((ready) => {
       if (active) setApkReady(ready);
     });
     return () => {
       active = false;
     };
-  }, [target, isRunning, isDowngrade]);
+  }, [newest]);
 
   const stillBuilding = isNative() && apkReady === false;
   const percent = progress ? percentOf(progress) : null;
@@ -74,85 +53,38 @@ export function AppUpdateSection() {
     <section className="card p-4">
       <SettingsHeading title="App">
         Neue Fassungen bietet die App von selbst an. Hier lässt sich die neueste nachträglich
-        holen, wenn „Später“ getippt wurde
-        {isNative() ? ', oder gezielt eine andere Fassung installieren' : ''}.
+        holen, wenn „Später“ getippt wurde.
       </SettingsHeading>
       <p className="text-sm text-muted">Version {runningVersion()}</p>
       <p className="text-xs text-muted mb-3">
         gebaut am {BUILD_DATE} · Stand {APP_SHA}
       </p>
 
-      {newest && (
-        <button
-          type="button"
-          className="btn"
-          onClick={() => void install(newest)}
-          disabled={busy}
-        >
-          Neueste Version installieren ({newest.version})
-        </button>
-      )}
-
-      {isNative() && history && history.length > 0 && (
+      {newest ? (
         <>
-          <Field label="Andere Version">
-            <select
-              className="field"
-              value={selected}
-              onChange={(event) => setSelected(event.target.value)}
-            >
-              {sorted.map((entry) => (
-                <option key={entry.version} value={entry.version}>
-                  {entry.version}
-                  {entry.version === runningVersion() ? ' · installiert' : ''}
-                  {entry.subject ? ` – ${entry.subject}` : ''}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          {target && (
-            <div className="text-xs mb-3">
-              <p className="text-ink">
-                {target.version}
-                {target.date ? ` · ${formatDate(target.date)}` : ''}
+          <div className="text-xs mb-3">
+            <p className="text-ink">
+              {newest.version}
+              {newest.date ? ` · ${formatDate(newest.date)}` : ''}
+            </p>
+            {newest.subject && <p className="text-ink/90">{newest.subject}</p>}
+            {notesParagraphs(newest.notes).map((paragraph, position) => (
+              <p key={position} className="mt-1 whitespace-pre-line text-muted">
+                {paragraph}
               </p>
-              {target.subject && <p className="text-ink/90">{target.subject}</p>}
-              {notesParagraphs(target.notes).map((paragraph, position) => (
-                <p key={position} className="mt-1 whitespace-pre-line text-muted">
-                  {paragraph}
-                </p>
-              ))}
-              {!target.notes && !target.subject && (
-                <p className="mt-1 text-muted">Keine Hinweise zu dieser Fassung.</p>
-              )}
-            </div>
-          )}
-
+            ))}
+          </div>
           <button
             type="button"
             className="btn btn-primary disabled:opacity-50"
-            onClick={() => target && void install(target)}
-            disabled={busy || isRunning || isDowngrade || stillBuilding || !target}
+            onClick={() => void install(newest)}
+            disabled={busy || stillBuilding}
           >
-            {busy ? 'Wird installiert…' : 'Installieren'}
+            {busy ? 'Wird installiert…' : `Version ${newest.version} installieren`}
           </button>
-
-          {isDowngrade && (
-            <p className="text-xs text-muted mt-2">
-              Android verweigert das Installieren einer älteren Fassung über eine neuere. Um
-              wirklich zurückzuwechseln, hilft nur: die App einmal deinstallieren und diese
-              Fassung danach frisch installieren.
-            </p>
-          )}
         </>
-      )}
-
-      {!isNative() && (
-        <p className="text-xs text-muted mt-2">
-          Eine andere Fassung wählen geht nur in der installierten App – im Browser läuft immer
-          die zuletzt veröffentlichte.
-        </p>
+      ) : (
+        <p className="text-sm text-muted">Diese Fassung ist die neueste veröffentlichte.</p>
       )}
 
       {busy && (
