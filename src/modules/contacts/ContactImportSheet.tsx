@@ -11,9 +11,10 @@ import { debugLog, readDebugLog } from '@/platform/debugLog';
 import { emptyContact, saveContact } from '@/data/repos';
 
 /**
- * Bringing contacts in from outside the app: the device's own address book where the
- * browser allows it, a vCard file everywhere else. Either way lands on the same review
- * list, so the person picks who is actually worth a new contact before anything is saved.
+ * Bringing contacts in from outside the app: the device's own address book (native plugin
+ * in the app, Contact Picker API in a supporting browser), a vCard file everywhere else.
+ * Either way lands on the same review list, so the person picks who is actually worth a
+ * new contact before anything is saved.
  */
 export function ContactImportSheet({
   existingNames,
@@ -118,8 +119,8 @@ export function ContactImportSheet({
             </button>
             {!canPickDeviceContacts() && (
               <p className="text-xs text-muted">
-                Die direkte Adressbuch-Auswahl gibt es nur in Chrome auf dem Handy. Sonst die Kontakte als
-                vCard-Datei (.vcf) exportieren und hier auswählen.
+                Die direkte Adressbuch-Auswahl gibt es hier nicht. Kontakte stattdessen als vCard-Datei
+                (.vcf) exportieren und hier auswählen.
               </p>
             )}
             {error && <p className="text-sm text-bad">{error}</p>}

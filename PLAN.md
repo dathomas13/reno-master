@@ -429,10 +429,15 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Liste `meta/lists.contactRoles`. Kontakte, die noch das alte einzelne `role`-Feld tragen, werden beim
   nächsten Speichern automatisch auf `roles: string[]` migriert (`contactRoleNames()` in
   `src/data/contactRoles.ts` liest beide Formen).
-- **Import aus dem Adressbuch**: Button „Importieren“ neben „Neu“. Auf Chrome/Android öffnet das die native
-  Kontaktauswahl (Contact Picker API); überall sonst wird eine vCard-Datei (.vcf, ein oder mehrere Kontakte)
-  ausgewählt und geparst (`src/platform/contactsImport.ts`). Vor dem Anlegen zeigt eine Checkliste, wer
-  übernommen wird, mit Hinweis auf Namen, die schon als Kontakt bestehen.
+- **Import aus dem Adressbuch**: Button „Importieren“ neben „Neu“. Woher die Auswahl kommt, hängt an der
+  Plattform (`src/platform/contactsImport.ts`): in der App liest das eigene Plugin `plugins/contacts` das
+  Adressbuch direkt (Berechtigung `READ_CONTACTS`) – die Web Contact Picker API meldet sich im WebView der
+  App zwar als vorhanden, aber ihr `select()` scheitert dort immer mit „Unable to open a contact selector“,
+  weil dem WebView die Activity für den Auswahldialog fehlt, und Android kennt ohnehin keinen zuverlässigen
+  Mehrfachauswahl-Intent. Im Browser (Chrome/Android) läuft stattdessen die Contact Picker API. Überall sonst
+  – und immer zusätzlich – wird eine vCard-Datei (.vcf, ein oder mehrere Kontakte) ausgewählt und geparst.
+  Alle drei Wege landen in derselben Checkliste vor dem Anlegen, mit Hinweis auf Namen, die schon als
+  Kontakt bestehen.
 - **Gesprächsprotokoll**: eigene, datierte Einträge je Kontakt (Datum/Uhrzeit, Art – Anruf/Termin/E-Mail/
   Nachricht/Sonstiges –, Text) statt Fließtext in den Notizen; Collection `contactLogs`, Feld `contactId`.
   Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.

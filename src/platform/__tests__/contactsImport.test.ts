@@ -89,16 +89,67 @@ describe('pickDeviceContacts', () => {
 
     expect(select.mock.calls[0][0]).toEqual(['name', 'tel', 'email']);
   });
+});
 
-  it('skips the APK WebView instead of hitting its "Unable to open a contact selector"', async () => {
-    const select = vi.fn((_properties: string[]) => Promise.resolve([{ name: ['Erika Mustermann'] }]));
-    installManager({ select, getProperties: () => Promise.resolve(['name', 'tel', 'email']) });
-    (globalThis as unknown as { Capacitor: { isNativePlatform(): boolean } }).Capacitor = {
+describe('pickDeviceContacts (native)', () => {
+  function installNative(plugin: Record<string, unknown> | null) {
+    (globalThis as unknown as {
+      Capacitor: { isNativePlatform(): boolean; Plugins: Record<string, unknown> };
+    }).Capacitor = {
       isNativePlatform: () => true,
+      Plugins: plugin ? { Contacts: plugin } : {},
     };
+  }
 
+  it('is true once the app runs natively and the plugin is there - not the web Contact Picker check', () => {
+    installNative({});
+    expect(canPickDeviceContacts()).toBe(true);
+  });
+
+  it('is false when the app runs natively but an older build lacks the plugin', () => {
+    installNative(null);
     expect(canPickDeviceContacts()).toBe(false);
+  });
+
+  it('reads the address book straight away once permission is already granted', async () => {
+    const listContacts = vi.fn(() => Promise.resolve({ contacts: [{ name: 'Erika Mustermann' }] }));
+    const requestPermission = vi.fn();
+    installNative({
+      hasPermission: () => Promise.resolve({ granted: true }),
+      requestPermission,
+      listContacts,
+    });
+
+    const result = await pickDeviceContacts();
+
+    expect(result).toEqual([{ name: 'Erika Mustermann' }]);
+    expect(requestPermission).not.toHaveBeenCalled();
+  });
+
+  it('asks for permission first when it is missing, then reads the address book', async () => {
+    const listContacts = vi.fn(() => Promise.resolve({ contacts: [] }));
+    const requestPermission = vi.fn(() => Promise.resolve({ granted: true }));
+    installNative({
+      hasPermission: () => Promise.resolve({ granted: false }),
+      requestPermission,
+      listContacts,
+    });
+
+    await pickDeviceContacts();
+
+    expect(requestPermission).toHaveBeenCalled();
+    expect(listContacts).toHaveBeenCalled();
+  });
+
+  it('gives up quietly when permission is refused, without reading anything', async () => {
+    const listContacts = vi.fn();
+    installNative({
+      hasPermission: () => Promise.resolve({ granted: false }),
+      requestPermission: () => Promise.resolve({ granted: false }),
+      listContacts,
+    });
+
     expect(await pickDeviceContacts()).toEqual([]);
-    expect(select).not.toHaveBeenCalled();
+    expect(listContacts).not.toHaveBeenCalled();
   });
 });
