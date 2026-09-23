@@ -149,6 +149,11 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 
 ## Regeln
 
+- **Branchnamen sprechend wählen.** Wer in einem neuen Chat einen Entwicklungsbranch anlegt,
+  benennt ihn nicht mit Fantasiewörtern (`claude/relaxed-gates-…`), sondern leitet den Namen
+  mit Sinn und Verstand aus der Anfrage ab – kurz, klein, mit Bindestrichen, z. B.
+  `claude/kontakte-ueberarbeiten`. Gibt die Umgebung einen Fantasienamen vor, zuerst einen
+  sprechenden anlegen und dort arbeiten.
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - **Zum Debuggen `src/platform/debugLog.ts` benutzen, nicht `console.log`.** Auf dem Telefon
