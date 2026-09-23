@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.48.3 – Gespräche: Eintrag öffnet sich direkt
+
+- Ein Tipp auf einen Eintrag unter „Gespräche“ öffnet jetzt das Gespräch selbst statt des Kontakts.
+- Die Vorschau zeigt bis zu drei Zeilen Text, auch wenn nach dem ersten Wort ein Absatz folgt.
+
 ## 0.48.2 – Gespräche: verwaiste Einträge lassen sich wieder öffnen
 
 - Wurde ein Kontakt gelöscht, ließen sich seine Gesprächseinträge unter „Gespräche“ nicht
