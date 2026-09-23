@@ -38,7 +38,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   const phases = useCollection<Phase>(COL.phases);
   const plans = useCollection<Plan>(COL.plans);
   const photos = useCollection<Photo>(COL.photos);
-  const { rooms } = useRooms();
+  const { rooms, aliases } = useRooms();
 
   const roomsForSearch = useMemo<RoomLike[]>(
     () =>
@@ -48,8 +48,9 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
         floor: room.floor,
         floorLabel: LAYER_LABEL[room.floor as Layer] ?? room.floor,
         areaM2: room.areaM2,
+        aliases: aliases(room.id),
       })),
-    [rooms],
+    [rooms, aliases],
   );
 
   const records = useMemo(

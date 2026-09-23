@@ -7,6 +7,7 @@ import {
   planSync,
   releaseFromDoc,
   releaseToDoc,
+  validateRoomMap,
   validateRooms,
   validateScene,
   type ReleaseInfo,
@@ -136,6 +137,27 @@ describe('validateRooms', () => {
   it('rejects a missing list', () => {
     expect(validateRooms({})).not.toBeNull();
     expect(validateRooms(null)).not.toBeNull();
+  });
+
+  it('accepts a room without rectangles - not surveyed yet, not an error', () => {
+    expect(validateRooms({ rooms: [{ id: 'kg-technik', name: 'Technikraum', rects: [] }] })).toBeNull();
+  });
+});
+
+describe('validateRoomMap', () => {
+  it('accepts a sound mapping, including an empty one', () => {
+    expect(validateRoomMap({ map: {} })).toBeNull();
+    expect(validateRoomMap({ map: { 'kg-heizung': 'kg-technik' } })).toBeNull();
+  });
+
+  it('rejects a missing or malformed map', () => {
+    expect(validateRoomMap({})).not.toBeNull();
+    expect(validateRoomMap(null)).not.toBeNull();
+    expect(validateRoomMap({ map: [] })).not.toBeNull();
+  });
+
+  it('rejects an entry without a target', () => {
+    expect(validateRoomMap({ map: { 'kg-heizung': '' } })).not.toBeNull();
   });
 });
 

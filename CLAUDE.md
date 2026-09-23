@@ -156,7 +156,11 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   übersteht Absturz, Reload und Neustart, `readDebugLog('<bereich>')` liest zurück. Für
   Vorgänge, die die App mitreißen können, `beginSession`/`endSession` – der nächste Start
   vermerkt dann im Protokoll, dass der vorige nie zu Ende kam.
-- Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
+- Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen –
+  ändert sich ein Raum wirklich (Zusammenlegung, Teilung, Verschiebung), bekommt er eine neue
+  id in `tools/model/rooms_soll.py` plus eine Zeile in `tools/model/rooms_map.py`, die die
+  alte id auf die neue zeigen lässt. Details und die Einstellung Bestand/Planung dazu in
+  `tools/model/README-MODELL.md`.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
 - **Zu jedem Release ein Eintrag in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`),
   darunter **ein bis drei Stichpunkte, je ein bis zwei Zeilen**. Das ist der Text im

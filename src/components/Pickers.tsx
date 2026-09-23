@@ -151,14 +151,46 @@ export function RolePicker({
   );
 }
 
+/**
+ * `value`/`onChange` operate on stored room ids, which may predate the active naming
+ * (an old entry keeps its Ist id even once the picker offers Soll rooms). MultiPicker
+ * only knows how to check off exactly the ids in its own `options`, so this translates
+ * both ways: a stored id shows checked under whichever option id it resolves to now,
+ * and toggling an option adds/removes every stored id that belongs to it (`idsFor`),
+ * never just the one that happened to be there.
+ */
 export function RoomPicker({ value, onChange }: { value: string[]; onChange(value: string[]): void }) {
-  const { rooms } = useRooms();
-  const options = rooms.map((room) => ({
-    id: room.id,
-    name: room.name,
-    group: LAYER_LABEL[room.floor as Layer] ?? room.floor,
-  }));
-  return <MultiPicker label="Räume" value={value} onChange={onChange} options={options} emptyLabel="kein Raum" />;
+  const { rooms, idsFor, writeId } = useRooms();
+  const options = useMemo(
+    () =>
+      rooms.map((room) => ({
+        id: room.id,
+        name: room.name,
+        group: LAYER_LABEL[room.floor as Layer] ?? room.floor,
+      })),
+    [rooms],
+  );
+
+  const displayValue = useMemo(() => {
+    const shown = new Set<string>();
+    for (const raw of value) {
+      const option = options.find((o) => idsFor(o.id).includes(raw));
+      shown.add(option ? option.id : raw);
+    }
+    return [...shown];
+  }, [value, options, idsFor]);
+
+  function handleChange(nextDisplay: string[]) {
+    const removed = displayValue.filter((id) => !nextDisplay.includes(id));
+    const added = nextDisplay.filter((id) => !displayValue.includes(id));
+    const removedRaw = removed.flatMap((id) => idsFor(id));
+    const kept = value.filter((raw) => !removedRaw.includes(raw));
+    onChange([...new Set([...kept, ...added.map(writeId)])]);
+  }
+
+  return (
+    <MultiPicker label="Räume" value={displayValue} onChange={handleChange} options={options} emptyLabel="kein Raum" />
+  );
 }
 
 export function TradePicker({ value, onChange }: { value: string[]; onChange(value: string[]): void }) {

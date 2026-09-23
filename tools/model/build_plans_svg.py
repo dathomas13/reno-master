@@ -89,6 +89,8 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
     for room in rooms_doc["rooms"]:
         if room["floor"] != floor:
             continue
+        if not room["rects"]:
+            continue   # noch keine Geometrie (Soll-Raum ohne Aufmaß) - nichts zu zeichnen
         add(f'<g class="room-group" data-room-id="{room["id"]}">')
         for x0, y0, x1, y1 in room["rects"]:
             rect(x0, y0, x1, y1, "room", f' data-room-id="{room["id"]}"')

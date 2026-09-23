@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1100 -1100 15195 15015" data-variant="soll" data-floor="OG" data-version="0.0" role="img" aria-label="Obergeschoss Zielzustand">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1100 -1100 15195 15015" data-variant="soll" data-floor="OG" data-version="0.1" role="img" aria-label="Obergeschoss Zielzustand">
 <style>
   svg { --bg:#1d2126; --ink:#e8e4da; --muted:#9aa3ad; --accent:#c9a86a;
         --wall-a:#d9d3c5; --wall-b:#c9b990; --wall-c:#b8845a; --room:#c9a86a;
@@ -109,7 +109,7 @@
 <text class="room-area" x="7125" y="6275">9.0 m²</text>
 <text class="room-label" x="5520" y="3172" font-size="230px">Treppe</text>
 <text class="room-area" x="5520" y="3402">3.6 m²</text>
-<text class="room-label" x="6545" y="4543" font-size="120px" textLength="620" lengthAdjust="spacingAndGlyphs">Garderobe (?)</text>
+<text class="room-label" x="6545" y="4543" font-size="120px" textLength="620" lengthAdjust="spacingAndGlyphs">Garderobe</text>
 <text class="room-label" x="7972" y="4050" font-size="230px">Bad</text>
 <text class="room-area" x="7972" y="4280">3.8 m²</text>
 <text class="room-label" x="10982" y="8070" font-size="230px">Hauswirtschaftsraum</text>
@@ -137,5 +137,5 @@
 <line class="dim" x1="5000" y1="12905" x2="5000" y2="13045"/>
 <text class="dim-text" x="2500" y="13255">5 m</text></g>
 <text class="title" x="0" y="-620">Obergeschoss</text>
-<text class="subtitle" x="0" y="-300">Zielzustand · Modell v0.0 · Schlesierstraße 31</text>
+<text class="subtitle" x="0" y="-300">Zielzustand · Modell v0.1 · Schlesierstraße 31</text>
 </svg>

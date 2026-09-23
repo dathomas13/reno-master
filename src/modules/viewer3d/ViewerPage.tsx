@@ -17,7 +17,8 @@ import {
 import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitControls';
 import { lastViewerState, rememberViewerState, type ViewerState } from './viewerState';
 import { RoomPanel } from './RoomPanel';
-import { activeRelease, loadRooms, loadScene, type Variant } from '@/data/models';
+import { activeRelease, loadRoomMap, loadRooms, loadScene, type Variant } from '@/data/models';
+import { resolveInVariant } from '@/data/roomNaming';
 import { SOURCE_LABEL, type ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings, saveSettings } from '@/lib/settings';
@@ -200,7 +201,7 @@ export default function ViewerPage() {
 
     void (async () => {
       try {
-        const [doc, rooms] = await Promise.all([loadScene(variant), loadRooms(variant)]);
+        const [doc, rooms, roomMap] = await Promise.all([loadScene(variant), loadRooms(variant), loadRoomMap()]);
         if (disposed) return;
         const house = buildHouse(THREE, scene, doc, { rooms });
         houseRef.current = house;
@@ -235,9 +236,11 @@ export default function ViewerPage() {
 
         // a link with ?raum= means "show me this room": it sets the floor view and wins
         // over whatever was kept. Without it the room whose panel was open comes back.
+        // The id may come from the other variant's naming (Soll id opened here on Ist,
+        // or vice versa) - resolveInVariant finds this variant's own room for it.
         const wanted = params.get('raum');
         if (wanted) {
-          const found = rooms.rooms.find((item) => item.id === wanted);
+          const found = resolveInVariant(wanted, variant, rooms.rooms, roomMap.map);
           if (found) {
             const label = `${found.floor}-Grundriss`;
             const preset2 = VIEW_PRESETS.find((item) => item.label === label);
@@ -246,7 +249,7 @@ export default function ViewerPage() {
             setRoom(found);
           }
         } else if (keptView?.roomId) {
-          const found = rooms.rooms.find((item) => item.id === keptView.roomId);
+          const found = resolveInVariant(keptView.roomId, variant, rooms.rooms, roomMap.map);
           if (found) {
             house.highlightRoom(found.id);
             setRoom(found);

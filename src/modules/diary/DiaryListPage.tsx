@@ -22,14 +22,14 @@ export default function DiaryListPage() {
   const { data: entries, loading } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc')]);
   const { data: photos } = useCollection<Photo>(COL.photos);
   const { data: phases } = useCollection<Phase>(COL.phases);
-  const { name: roomName } = useRooms();
+  const { shortLabel: roomLabel, matches } = useRooms();
   const [search, setSearch] = useState('');
 
   // the room panel in the 3D view and the search link here with a filter
   const roomFilter = params.get('raum');
   const phaseFilter = params.get('phase');
   const filterLabel = roomFilter
-    ? roomName(roomFilter)
+    ? roomLabel(roomFilter)
     : (phases.find((phase) => phase.id === phaseFilter)?.name ?? phaseFilter);
 
   const photosByEntry = useMemo(() => {
@@ -44,12 +44,12 @@ export default function DiaryListPage() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return entries.filter((entry) => {
-      if (roomFilter && !entry.roomIds.includes(roomFilter)) return false;
+      if (roomFilter && !matches(entry.roomIds, roomFilter)) return false;
       if (phaseFilter && entry.phaseId !== phaseFilter) return false;
       if (!needle) return true;
       return [entry.title, entry.text, ...entry.present].join(' ').toLowerCase().includes(needle);
     });
-  }, [entries, search, roomFilter, phaseFilter]);
+  }, [entries, search, roomFilter, phaseFilter, matches]);
 
   const hasToday = entries.some((entry) => entry.date === today());
 

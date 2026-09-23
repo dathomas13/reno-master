@@ -17,7 +17,7 @@ export default function CostsPage() {
   const [params, setParams] = useSearchParams();
   const { data: costs, loading } = useCollection<Cost>(COL.costs, [orderBy('date', 'desc')]);
   const { data: trades } = useCollection<Trade>(COL.trades);
-  const { name: roomName } = useRooms();
+  const { shortLabel: roomLabel, matches } = useRooms();
   const [tab, setTab] = useState<Tab>('liste');
   const [search, setSearch] = useState('');
 
@@ -28,7 +28,7 @@ export default function CostsPage() {
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return costs.filter((cost) => {
-      if (roomFilter && !cost.roomIds.includes(roomFilter)) return false;
+      if (roomFilter && !matches(cost.roomIds, roomFilter)) return false;
       if (categoryFilter && cost.category !== categoryFilter) return false;
       if (tradeFilter && cost.tradeId !== tradeFilter) return false;
       if (!needle) return true;
@@ -37,7 +37,7 @@ export default function CostsPage() {
         .toLowerCase()
         .includes(needle);
     });
-  }, [costs, search, roomFilter, categoryFilter, tradeFilter]);
+  }, [costs, search, roomFilter, categoryFilter, tradeFilter, matches]);
 
   const total = sumGross(filtered);
   const thisMonth = totalForMonth(costs, monthKey(today()));
@@ -96,7 +96,7 @@ export default function CostsPage() {
           >
             Filter:{' '}
             {roomFilter
-              ? roomName(roomFilter)
+              ? roomLabel(roomFilter)
               : tradeFilter
                 ? (trades.find((trade) => trade.id === tradeFilter)?.name ?? 'Gewerk')
                 : categoryFilter}{' '}

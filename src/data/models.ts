@@ -10,7 +10,7 @@
  * currently in effect and hands it out.
  */
 import type { RoomDoc, SceneDoc, Room } from '@/modules/viewer3d/houseScene';
-import { isNewer, type ReleaseInfo, type Variant } from './modelRelease';
+import { isNewer, type ReleaseInfo, type RoomMapDoc, type Variant } from './modelRelease';
 import { readRelease } from './modelStore';
 
 export type { Variant };
@@ -136,12 +136,22 @@ export function loadBundledPlans(): Promise<{ plans: BundledPlan[] }> {
   return fetchJson<{ plans: BundledPlan[] }>('plans/index.json').catch(() => ({ plans: [] }));
 }
 
-/** flat room list of both variants, for pickers and for showing a name by id */
-export async function loadAllRooms(): Promise<Room[]> {
-  const [ist, soll] = await Promise.all([loadRooms('ist'), loadRooms('soll')]);
-  const byId = new Map<string, Room>();
-  for (const room of [...ist.rooms, ...soll.rooms]) if (!byId.has(room.id)) byId.set(room.id, room);
-  return [...byId.values()];
+let roomMapCache: Promise<RoomMapDoc> | null = null;
+
+/**
+ * The Ist -> Soll room mapping, for RoomsContext. Bundled only, no release channel like
+ * loadScene/loadRooms have - it changes together with the room lists it maps between,
+ * and "Modell veröffentlichen" does not (yet) publish it. Missing or malformed falls
+ * back to an empty mapping: every id then resolves to itself, which is how the app
+ * behaved before this file existed - see roomNaming.ts.
+ */
+export function loadRoomMap(): Promise<RoomMapDoc> {
+  roomMapCache ??= fetchJson<RoomMapDoc>('models/room-map.json').catch(() => ({
+    from: 'ist' as Variant,
+    to: 'soll' as Variant,
+    map: {},
+  }));
+  return roomMapCache;
 }
 
 export const FLOOR_ORDER = ['KG', 'EG', 'OG', 'DACH', 'GAR'];

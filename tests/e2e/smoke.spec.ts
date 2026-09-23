@@ -26,8 +26,15 @@ test('the model files are served and are complete', async ({ request }) => {
   expect(doc.prims.length).toBeGreaterThan(100);
 
   const rooms = await request.get('/reno-master/models/rooms-ist.json');
-  const roomDoc = (await rooms.json()) as { rooms: unknown[] };
+  const roomDoc = (await rooms.json()) as { rooms: { id: string }[] };
   expect(roomDoc.rooms.length).toBeGreaterThan(30);
+
+  // every Ist room has a Soll counterpart - the mapping that lets Planung naming
+  // aggregate old entries (Heizung, Öllager) under a merged room (Technikraum)
+  const roomMap = await request.get('/reno-master/models/room-map.json');
+  expect(roomMap.ok()).toBeTruthy();
+  const mapDoc = (await roomMap.json()) as { map: Record<string, string> };
+  for (const room of roomDoc.rooms) expect(mapDoc.map[room.id]).toBeTruthy();
 });
 
 test('the generated floor plans carry tappable rooms', async ({ request }) => {
