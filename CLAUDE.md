@@ -134,9 +134,10 @@ Steht:
   Kamera startet dieses Gerät neu – nicht benutzen.
 - **Das Modell lässt sich ohne Chat bearbeiten** (09/2026): Hausdatei als einzige Quelle,
   Export als ZIP (Anleitung, `haus-ist.json`, `haus-soll.json`, DXF-Grundrisse), Import
-  mit Prüfung, Änderungsbericht, Vorschau im 3D und Veröffentlichen über Firestore. Offen
-  laut `tools/model/PLAN-MODELL-WORKFLOW.md`: 2D-Pläne aus der Quelle (Stufe 3),
-  DXF-Import, Änderung per Sprache in der App (Stufe 6).
+  mit Prüfung, Änderungsbericht, Vorschau im 3D und Veröffentlichen über Firestore. Die
+  2D-Pläne zeichnet die App ebenfalls aus der Hausdatei (`modelBuild/plansSvg.ts`, byte-gleich
+  zu `build_plans_svg.py`), sie folgen einem Import also sofort. Offen laut
+  `tools/model/PLAN-MODELL-WORKFLOW.md`: DXF-Import, Änderung per Sprache in der App (Stufe 6).
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

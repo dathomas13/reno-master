@@ -11,6 +11,7 @@
  */
 import type { RoomDoc, SceneDoc, Room } from '@/modules/viewer3d/houseScene';
 import { isNewer, type ReleaseInfo, type Variant } from './modelRelease';
+import { buildPlanSvg, buildRooms, parseSource, type HouseSource, type PlanFloor } from '@/modules/modelBuild';
 import { readRelease } from './modelStore';
 
 export type { Variant };
@@ -44,6 +45,8 @@ export interface PreviewModel {
   version: string;
   scene: SceneDoc;
   rooms: RoomDoc;
+  /** the house file it was built from, so the 2D plans can show the preview as well */
+  source?: HouseSource;
 }
 
 const previews = new Map<Variant, PreviewModel>();
@@ -207,6 +210,42 @@ export interface BundledPlan {
 
 export function loadBundledPlans(): Promise<{ plans: BundledPlan[] }> {
   return fetchJson<{ plans: BundledPlan[] }>('plans/index.json').catch(() => ({ plans: [] }));
+}
+
+/**
+ * The SVG of a generated floor plan, for the model in use.
+ *
+ * Drawn on the device from the house file (src/modules/modelBuild/plansSvg.ts, the same
+ * output as build_plans_svg.py), so a model imported in the app shows up in the plans at
+ * once and not only after the next deploy. A preview is drawn too. Only when there is no
+ * house file for the model in use - a scene published on its own - the bundled SVG is
+ * loaded, which may then be older than the 3D view.
+ */
+export async function loadPlanSvg(plan: Pick<BundledPlan, 'variant' | 'floor' | 'path'>): Promise<string> {
+  const floor = plan.floor as PlanFloor;
+  try {
+    const preview = previews.get(plan.variant);
+    let source: HouseSource | null = preview?.source ?? null;
+    let version = preview?.version ?? '';
+    if (!preview) {
+      const active = await loadSource(plan.variant);
+      if (active?.matches) {
+        const parsed = parseSource(active.text);
+        if (parsed.ok) {
+          source = parsed.source;
+          version = active.version;
+        }
+      }
+    }
+    if (source && ['KG', 'EG', 'OG'].includes(floor)) {
+      return buildPlanSvg(source, buildRooms(source, ''), floor, version);
+    }
+  } catch {
+    // fall through to the bundled file
+  }
+  const response = await fetch(`${base}${plan.path}`);
+  if (!response.ok) throw new Error(`${plan.path}: ${response.status}`);
+  return response.text();
 }
 
 /** flat room list of both variants, for pickers and for showing a name by id */

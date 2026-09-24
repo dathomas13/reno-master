@@ -13,7 +13,10 @@ import { looksLikeZip, readZip } from '@/lib/unzip';
 import { today } from '@/lib/date';
 import {
   buildDxf,
+  buildPlanSvg,
+  buildRooms,
   nextVersion,
+  PLAN_FLOORS,
   parseSource,
   prepareImport,
   type HouseSource,
@@ -58,7 +61,13 @@ export async function buildExportArchive(now = new Date()): Promise<ExportArchiv
     versions.push(`${VARIANT_LABEL[variant]} v${source.version}`);
     files.push([`haus-${variant}.json`, source.text]);
     const parsed = parseSource(source.text);
-    if (parsed.ok) files.push([`grundriss-${variant}.dxf`, buildDxf(parsed.source)]);
+    if (parsed.ok) {
+      files.push([`grundriss-${variant}.dxf`, buildDxf(parsed.source)]);
+      const rooms = buildRooms(parsed.source, '');
+      for (const floor of PLAN_FLOORS) {
+        files.push([`grundriss-${variant}-${floor}.svg`, buildPlanSvg(parsed.source, rooms, floor, source.version)]);
+      }
+    }
   }
   if (files.length === 0) throw new Error('Es gibt kein Modell zum Exportieren.');
 
@@ -148,6 +157,7 @@ export function previewImport(result: Extract<ImportResult, { ok: true }>): void
     version: result.version,
     scene: result.scene as SceneDoc,
     rooms: result.rooms as RoomDoc,
+    source: result.source,
   });
 }
 

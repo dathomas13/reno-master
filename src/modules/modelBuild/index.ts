@@ -13,6 +13,8 @@ import { parseSource, type HouseSource } from './source';
 import type { BuiltRooms, BuiltScene } from './types';
 
 export { buildDxf } from './dxf';
+export { buildRooms } from './checks';
+export { buildPlanSvg, FLOOR_LABEL, PLAN_FLOORS, VARIANT_LABEL, type PlanFloor } from './plansSvg';
 export { formatSource } from './format';
 export { parseSource, SOURCE_FORMAT, type HouseSource } from './source';
 export type { BuiltRooms, BuiltScene } from './types';

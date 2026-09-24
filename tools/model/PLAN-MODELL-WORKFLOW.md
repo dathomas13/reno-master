@@ -4,14 +4,16 @@ Stand 24.09.2026. Bewertung des heutigen Ablaufs und der Umbauplan. Die Anleitun
 externe Werkzeug (KI oder Mensch) steht getrennt in [`ANLEITUNG-EXTERN.md`](ANLEITUNG-EXTERN.md).
 Sie liegt auch in jedem Export-ZIP.
 
-**Stand der Umsetzung (App 0.49.0):** Stufen 0, 1 und 2 sind fertig, von Stufe 4 der
-DXF-Export. Offen sind Stufe 3 (Pläne aus der Quelle – bis dahin zeigen die 2D-Pläne nach
-einem Import ohne Deploy noch den gebündelten Stand), der DXF-Import, Stufe 5 als Werkzeug
-(heute nur als Regel in `README-MODELL.md`, Abschnitt 5) und Stufe 6.
+**Stand der Umsetzung (App 0.50.0):** Stufen 0 bis 3 sind fertig, von Stufe 4 der
+DXF-Export. Offen sind der DXF-Import, Stufe 5 als Werkzeug (heute nur als Regel in
+`README-MODELL.md`, Abschnitt 5) und Stufe 6.
 Abweichungen vom Plan: Die Hausdateien liegen direkt unter `public/models/` statt unter
 `tools/model/source/`, damit es nur eine Kopie gibt. Gebaut wird im Hauptthread (0,2 s
-am Rechner), ein Web Worker war dafür nicht nötig. Das Export-ZIP enthält noch keine
-SVG-Bilder, weil die erst mit Stufe 3 aus der Quelle entstehen.
+am Rechner), ein Web Worker war dafür nicht nötig. Die Pläne (Stufe 3) zeichnet
+`src/modules/modelBuild/plansSvg.ts` byte-gleich zu `build_plans_svg.py`; die
+Planansicht nimmt sie aus der Hausdatei des Modells in Gebrauch (auch aus einer
+Vorschau) und die gebündelten SVGs nur noch, wenn ein Modell ohne Hausdatei
+veröffentlicht wurde.
 
 ---
 

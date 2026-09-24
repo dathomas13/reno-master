@@ -9,6 +9,7 @@ import { buildDxf } from '../dxf';
 import { formatSource } from '../format';
 import { parseSource, type HouseSource } from '../source';
 import { nextVersion, prepareImport } from '../index';
+import { buildPlanSvg, PLAN_FLOORS, pyFixed } from '../plansSvg';
 
 // both runners (vitest, tools/verify) start in the repository root
 const read = (file: string) => readFileSync(join(process.cwd(), 'public', 'models', file), 'utf8');
@@ -197,5 +198,45 @@ describe('buildDxf', () => {
     expect(dxf).toMatch('KG_RAUMTEXT');
     expect(dxf).toMatch('Essk\\U+00FCche');
     expect(dxf.trimEnd().endsWith('EOF')).toBe(true);
+  });
+});
+
+describe('buildPlanSvg', () => {
+  it('draws the same plans as tools/model/build_plans_svg.py, byte for byte', () => {
+    const manifest = JSON.parse(read('manifest.json'));
+    for (const variant of ['ist', 'soll'] as const) {
+      const parsed = parseSource(read(`haus-${variant}.json`));
+      if (!parsed.ok) throw new Error(parsed.errors.join('\n'));
+      const rooms = buildRooms(parsed.source, '');
+      for (const floor of PLAN_FLOORS) {
+        const committed = readFileSync(join(process.cwd(), 'public', 'plans', `${variant}-${floor}.svg`), 'utf8');
+        const mine = buildPlanSvg(parsed.source, rooms, floor, manifest[variant].version);
+        expect(`${variant}-${floor} ${mine === committed}`).toBe(`${variant}-${floor} true`);
+      }
+    }
+  });
+
+  it('follows a moved wall', () => {
+    const parsed = parseSource(edited((doc) => {
+      const wall = doc.walls.find((w) => w.id === 'eg-gard-wc-13');
+      if (!wall) throw new Error('wall missing');
+      wall.x0 += 20;
+      wall.x1 += 20;
+    }));
+    if (!parsed.ok) throw new Error('parse failed');
+    const svg = buildPlanSvg(parsed.source, buildRooms(parsed.source, ''), 'EG', '0.26');
+    expect(svg).toMatch('x="8890"');
+    expect(svg).toMatch('Modell v0.26');
+  });
+});
+
+describe('pyFixed', () => {
+  it('formats like Python f-strings', () => {
+    expect(pyFixed(2.5)).toBe('2');
+    expect(pyFixed(3.5)).toBe('4');
+    expect(pyFixed(-0.3)).toBe('-0');
+    // 12.995 is really 12.99499… in binary, so Python says 12.99
+    expect(pyFixed(12.995, 2)).toBe('12.99');
+    expect(pyFixed(12.345, 1)).toBe('12.3');
   });
 });

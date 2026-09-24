@@ -4,7 +4,7 @@ import { TopBar } from '@/components/TopBar';
 import { Spinner } from '@/components/Fields';
 import { useCollection } from '@/data/hooks';
 import { COL, type Plan } from '@/data/types';
-import { loadBundledPlans } from '@/data/models';
+import { loadBundledPlans, loadPlanSvg, MODEL_EVENT } from '@/data/models';
 import { resolveFileUrl } from '@/offline/fileUrls';
 import { RoomPanel } from '@/modules/viewer3d/RoomPanel';
 import { useRooms } from '@/data/RoomsContext';
@@ -82,6 +82,7 @@ export default function PlanViewPage() {
   const [url, setUrl] = useState<string | null>(null);
   const [svg, setSvg] = useState<string | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+  const [modelKey, setModelKey] = useState(0);
   const container = useRef<HTMLDivElement>(null);
   usePanZoom(container);
 
@@ -99,13 +100,20 @@ export default function PlanViewPage() {
       const bundled = plans.find((item) => item.id === id);
       if (!bundled || !active) return;
       setPlan({ ...bundled, floor: bundled.floor as Plan['floor'] } as Plan);
-      const response = await fetch(`${import.meta.env.BASE_URL}${bundled.path}`);
-      if (active) setSvg(await response.text());
+      const text = await loadPlanSvg(bundled).catch(() => null);
+      if (active) setSvg(text);
     })();
     return () => {
       active = false;
     };
-  }, [id, uploaded]);
+  }, [id, uploaded, modelKey]);
+
+  // a model imported or synced while the plan is open is drawn again at once
+  useEffect(() => {
+    const onModel = () => setModelKey((key) => key + 1);
+    window.addEventListener(MODEL_EVENT, onModel);
+    return () => window.removeEventListener(MODEL_EVENT, onModel);
+  }, []);
 
   /** the generated plans carry data-room-id, so a tap opens the same panel as in 3D */
   function onSvgClick(event: MouseEvent<HTMLDivElement>) {

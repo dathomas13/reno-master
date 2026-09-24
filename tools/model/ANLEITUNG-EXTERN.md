@@ -25,6 +25,7 @@ Skript oder einen Menschen mit Texteditor. Wer sie gelesen hat, braucht nichts a
 | `haus-ist.json` | **Quelle Bestand**: Wände, Öffnungen, Treppen, Räume, Grundmaße | **ja, wenn geändert** |
 | `haus-soll.json` | **Quelle Zielzustand**, am Anfang eine Kopie von Ist | **ja, wenn geändert** |
 | `grundriss-ist.dxf`, `grundriss-soll.dxf` | Grundrisse aller Geschosse für CAD, aus der Hausdatei erzeugt. Ursprung und Einheit wie unten. | nein |
+| `grundriss-ist-KG.svg`, `-EG.svg`, `-OG.svg` (ebenso `soll`) | dieselben Grundrisse als Bild mit Raumnamen und Flächen, für KIs und Menschen ohne CAD | nein |
 
 Das berechnete 3D-Netz ist nicht im Export. Die App erzeugt es aus der Hausdatei.
 

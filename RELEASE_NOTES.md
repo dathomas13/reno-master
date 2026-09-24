@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.50.0 – Grundrisse folgen dem importierten Modell
+
+- Die 2D-Grundrisse zeigen ein in der App importiertes Modell sofort, auch schon in der
+  Vorschau – nicht erst nach dem nächsten Update.
+- Das Modell-Export-ZIP enthält jetzt auch die Grundrisse als Bilder.
+
 ## 0.49.2 – 3D-Modell exportieren und importieren in der Webansicht
 
 - Export und Import des 3D-Modells sind jetzt auch in der Webansicht da; 0.49.1 kam dort

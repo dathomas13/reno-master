@@ -275,7 +275,7 @@ interface Plan {
   pages?: number; bytes?: number; order: number; notes?: string;
 }
 ```
-Die gebündelten SVGs werden beim Seed als `source:'bundled'` eingetragen (bzw. rein clientseitig aus `public/plans/index.json` gelesen – Entscheidung: **`public/plans/index.json`**, kein Firestore nötig für bundled).
+Die gebündelten SVGs werden beim Seed als `source:'bundled'` eingetragen (bzw. rein clientseitig aus `public/plans/index.json` gelesen – Entscheidung: **`public/plans/index.json`**, kein Firestore nötig für bundled). Seit 0.50.0 liefert `public/plans/index.json` nur noch die Liste; den Inhalt zeichnet die App mit `loadPlanSvg` aus der Hausdatei des Modells in Gebrauch (`src/modules/modelBuild/plansSvg.ts`), die gebündelte SVG ist nur Rückfall.
 
 ### 5.9 `users/{uid}`
 ```ts
