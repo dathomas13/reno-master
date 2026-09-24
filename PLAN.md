@@ -344,7 +344,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - TopBar: Titel, Sync-Badge, kontextabhängige Aktion (z. B. "+").
 - **Sheets werden per Portal an `document.body` gehängt.** `backdrop-blur` (wie `filter` und `transform`) macht ein Element zum Bezugsrahmen für `position: fixed` darin – TopBar und Bottom-Navigation haben es. Ein Sheet, das im Baum darunter steht, misst sich sonst an einer 56 px hohen Kopfzeile und erscheint am Telefon verschoben und unlesbar.
 - Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/gespraeche` (alle Gesprächsprotokolle über alle Kontakte, aus "Mehr" erreichbar), `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
-- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
+- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/gespraeche?eintrag=<id>` (öffnet den Gesprächseintrag), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
@@ -447,12 +447,12 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.
   Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
   Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, aus "Mehr" erreichbar) zeigt alle Einträge über
-  alle Kontakte, neueste zuerst, mit Suchfeld; Tippen öffnet den zugehörigen Kontakt.
+  alle Kontakte, neueste zuerst, mit Suchfeld und bis zu dreizeiliger Vorschau (Zeilenumbrüche zu
+  Leerzeichen gefaltet); Tippen öffnet den Eintrag selbst (`ContactLogEditor` mit „Kontakt“-Feld),
+  ebenso ein Suchtreffer über `?eintrag=<id>`.
   **Kein Löschen in Kaskade**: löscht man einen Kontakt, bleiben seine Einträge stehen (eigene Collection,
   keine Firestore-Kaskade). Unter `/gespraeche` zeigt so ein verwaister Eintrag "Kontakt gelöscht" statt
-  eines Namens; Tippen öffnet ihn direkt dort (`ContactLogEditor`, jetzt mit `contacts`-Prop exportiert)
-  statt zum – nicht mehr vorhandenen – Kontakt zu verlinken, mit einem zusätzlichen "Kontakt"-Feld, um ihn
-  einem anderen zuzuordnen.
+  eines Namens; über das "Kontakt"-Feld im Editor lässt er sich einem anderen zuordnen.
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
@@ -548,55 +548,79 @@ Die App validiert beim Laden (zod-Schema) und zeigt bei Formatfehlern eine klare
 ### 9.3 Grundriss-SVGs
 `build_plans_svg.py` zeichnet pro Geschoss: Wände (Rechtecke, Farbe nach Tag wie `plan2d.py`), Öffnungen (Fenster blau, Türen grün, "offen" weiß), Treppen (schraffiert), Räume als transparente Flächen mit `data-room-id` und Raumname + Fläche als Text in der Mitte, Maßketten außen (Gesamtmaße), Nordpfeil, Maßstabsleiste, Titel ("EG – Bestand v0.22"). ViewBox in mm (`0 0 14240 12820` mit 500 mm Rand), y-Achse gespiegelt (Norden oben). Stil an das App-Theme angepasst (dunkler Hintergrund, helle Wände) **und** druckfreundliche Variante per CSS-Klasse.
 
-### 9.4 Räume `public/models/rooms-{ist|soll}.json`
+### 9.4 Räume (`rooms-{ist|soll}.json`, im Modell-Dokument das Feld `rooms`) und die Umbenennungstabelle `roomMap`
 ```json
-{ "variant": "ist", "rooms": [ { "id": "eg-wohnzimmer", "name": "Wohnzimmer", "floor": "EG", "poly": [[x,y],[x,y],...] } ] }
+{ "variant": "ist", "generatedAt": "2026-09-17",
+  "rooms": [ { "id": "eg-wohnzimmer", "name": "Wohnzimmer", "floor": "EG", "rects": [[x0,y0,x1,y1], ...], "areaM2": 34.99 } ] }
 ```
-`poly` in mm im Modell-Koordinatensystem (Innenkanten). Für die Ist-Variante werden die Räume in `tools/model/rooms_ist.py` **als Rechtecke aus der Wandtabelle** definiert. Startwerte (Innenmaße; der Entwicklungs-Agent übernimmt sie, der Modell-Agent prüft/verfeinert später; Namen mit "?" sind Annahmen):
+`rects` sind achsenparallele Rechtecke in mm (Innenkanten), meist eines, bei L-Räumen oder
+Räumen mit Kamin mehrere. `areaM2` fehlt, wenn `rects` leer ist – ein Soll-Raum ohne
+Aufmaß (siehe unten). Definiert werden die Räume seit 0.52.0 in den Hausdateien
+(`rooms` in `haus-ist.json` und `haus-soll.json`), die App baut und prüft sie beim Import,
+`tools/model/build_rooms.py` tut dasselbe für exportierte Dateien.
 
-| id | Name | Geschoss | x0 | y0 | x1 | y1 |
-|---|---|---|---|---|---|---|
-| kg-esskueche | Essküche (WE2) | KG | 365 | 365 | 2750 | 4875 |
-| kg-wohnzimmer | Wohnzimmer (WE2) | KG | 2865 | 365 | 8375 | 4875 |
-| kg-schlafzimmer | Schlafzimmer (WE2) | KG | 8615 | 365 | 12875 | 4125 |
-| kg-flur | Flur (WE2) | KG | 8615 | 4365 | 10250 | 7000 |
-| kg-bad | Bad (WE2) | KG | 10365 | 4365 | 12875 | 7000 |
-| kg-heizung | Heizung | KG | 8615 | 7240 | 12875 | 8850 |
-| kg-oellager | Öllager | KG | 8615 | 8965 | 12875 | 11455 |
-| kg-treppenhaus | Treppenhaus | KG | 365 | 5115 | 4875 | 7375 |
-| kg-diele | Diele | KG | 5115 | 5115 | 8375 | 7375 |
-| kg-keller1 | Keller 1 | KG | 365 | 7615 | 3625 | 11455 |
-| kg-kellerflur | Kellerflur (?) | KG | 3740 | 7615 | 8375 | 8850 |
-| kg-obst | Obstkeller | KG | 3740 | 8965 | 4875 | 11455 |
-| kg-keller2 | Keller 2 | KG | 5115 | 8965 | 8375 | 11455 |
-| eg-wohnzimmer | Wohnzimmer | EG | 365 | 365 | 8375 | 4875 |
-| eg-loggia | Loggia | EG | 8615 | 365 | 12875 | 2615 |
-| eg-esskueche | Essküche | EG | 8615 | 2730 | 12875 | 6920 |
-| eg-garderobe | Garderobe | EG | 8615 | 7035 | 8930 | 8705 |
-| eg-wc | WC | EG | 9045 | 7035 | 10750 | 8705 |
-| eg-speise | Speisekammer | EG | 10865 | 7035 | 12875 | 8705 |
-| eg-flur | Flur | EG | 8615 | 8820 | 10250 | 11455 |
-| eg-bad | Bad | EG | 10365 | 8820 | 12875 | 11455 |
-| eg-windfang | Windfang/Treppenhaus | EG | 365 | 5115 | 4875 | 7375 |
-| eg-diele | Diele | EG | 5115 | 5115 | 8375 | 11455 |
-| eg-zimmer-nw | Zimmer Nord-West (?) | EG | 365 | 7615 | 4875 | 11455 |
-| og-abstell-sw | Abstellraum Süd-West | OG | 365 | 365 | 4995 | 1385 |
-| og-kind2 | Kind 2 | OG | 365 | 1505 | 4995 | 5505 |
-| og-kind1 | Kind 1 | OG | 365 | 5625 | 4995 | 9665 |
-| og-abstell-nw | Abstellraum Nord-West | OG | 365 | 9785 | 4995 | 11455 |
-| og-kind3 | Kind 3 | OG | 5115 | 365 | 9375 | 4375 |
-| og-diele | Diele | OG | 5115 | 4495 | 9000 | 6630 |
-| og-treppe | Treppe | OG | 5115 | 6750 | 6125 | 11455 |
-| og-g | G (Garderobe?) | OG | 6245 | 6750 | 7045 | 7300 |
-| og-dusche | Dusche | OG | 6245 | 7420 | 7045 | 8370 |
-| og-wc | WC | OG | 7165 | 6750 | 9000 | 8370 |
-| og-abstell | Abstellraum | OG | 6245 | 8490 | 9000 | 11455 |
-| og-abstell-so | Abstellraum Süd-Ost | OG | 9495 | 365 | 12875 | 1385 |
-| og-hwr | HWR | OG | 9495 | 1505 | 12875 | 5505 |
-| og-waescheboden | Wäscheboden | OG | 9120 | 5625 | 12875 | 11455 |
-| gar-garage | Garage | GAR | -7760 | 5340 | -1750 | 11850 |
+**`roomMap` in `haus-soll.json`** ordnet jeder Ist-id genau eine Soll-id zu, vollständig
+(jede Ist-id kommt vor, auch wo sie sich nicht ändert) und einspaltig (auch bei einer
+Zusammenlegung zeigt jede beteiligte alte id auf dieselbe neue id). Sie reist mit dem
+Soll-Modell durch die Datenbank; `loadRoomMap` in `src/data/models.ts` liest sie aus der
+Hausdatei des Soll-Modells in Gebrauch. Der Import lehnt ein Ziel ab, das es in den
+Soll-Räumen nicht gibt; `build_rooms.py` meldet zusätzlich fehlende Ist-ids. Stand:
 
-Trefferprüfung im 3D: Raum-Meshes sind pickbar (Raycaster); in SVG per `data-room-id`. Raum-Auswahl in Formularen: Select gruppiert nach Geschoss, Reihenfolge wie Tabelle. `roomIds` in allen Modulen sind die `id`-Strings; die Soll-Variante darf andere IDs haben – die App zeigt in Formularen die Räume der **Standardvariante** und blendet für Fremd-IDs den Namen aus der jeweils anderen Datei ein.
+| id | Name | Geschoss | wird zu |
+|---|---|---|---|
+| kg-esskueche | Essküche | KG |  |
+| kg-wohnzimmer | Wohnzimmer | KG |  |
+| kg-schlafzimmer | Schlafzimmer | KG |  |
+| kg-flur | Flur | KG |  |
+| kg-bad | Bad | KG |  |
+| kg-heizung | Heizung | KG | `kg-technik` |
+| kg-oellager | Öllager | KG | `kg-technik` |
+| kg-treppenhaus | Treppenhaus | KG |  |
+| kg-diele | Diele | KG |  |
+| kg-keller1 | Keller 1 | KG |  |
+| kg-kellerflur | Kellerflur | KG |  |
+| kg-obst | Obstkeller | KG |  |
+| kg-keller2 | Keller 2 | KG |  |
+| eg-wohnzimmer | Wohnzimmer | EG |  |
+| eg-loggia | Loggia | EG |  |
+| eg-esskueche | Essküche | EG |  |
+| eg-garderobe | Garderobe | EG |  |
+| eg-wc | WC | EG |  |
+| eg-speise | Speisekammer | EG |  |
+| eg-flur | Flur | EG |  |
+| eg-bad | Bad | EG |  |
+| eg-treppenhaus | Treppenhaus | EG |  |
+| eg-diele | Diele | EG |  |
+| eg-zimmer-nw | Schlafzimmer | EG |  |
+| og-kind2 | Kind 2 | OG |  |
+| og-kind1 | Kind 1 | OG |  |
+| og-kind3 | Kind 3 | OG |  |
+| og-diele | Diele | OG |  |
+| og-treppe | Treppe | OG |  |
+| og-g | Garderobe | OG |  |
+| og-wc | Bad | OG |  |
+| og-hwr | Hauswirtschaftsraum | OG |  |
+| og-waescheboden | Wäscheboden | OG |  |
+| gar-garage | Garage | GAR |  |
+
+**Ein Soll-Raum darf ohne Rechtecke in der Liste stehen** (`room(rid, name, floor)` ohne
+weitere Argumente): er taucht in Auswahl, Listen und Suche auf und sammelt die alten
+Einträge seiner Vorgänger ein, wird im 3D und im Grundriss aber erst gezeichnet, sobald
+die Wände feststehen. So kann die Soll-Namensliste und die Zuordnung stehen, bevor das
+Soll-Aufmaß da ist.
+
+**Bestand/Planung** (Einstellungen → Räume, gerätelokal, `src/data/roomNaming.ts`):
+wirkt auf Tagebuch, Kosten, Aufgaben, Notizen, Fotos, die Suche und die Raum-Auswahl in
+Formularen – **nicht** auf 3D und Pläne, die immer die Namen ihrer eigenen Modellvariante
+zeigen. In Stellung Planung zeigt eine gespeicherte Ist-id den Namen des Soll-Raums, auf
+den sie zeigt, und ein Filter oder eine Raum-Kachel fasst den Soll-Raum und alle Ist-Räume
+zusammen, die auf ihn zeigen (`kg-technik` findet also `kg-heizung`- und
+`kg-oellager`-Einträge). Ein neuer Eintrag speichert die id der Ansicht, in der er angelegt
+wurde, nie eine übersetzte; die Zuordnung wird nur vorwärts gelesen. Trefferprüfung im 3D:
+Raum-Meshes sind pickbar (Raycaster); in SVG per `data-room-id`. Ein Link `?raum=<id>` aus
+der anderen Variante wird über `resolveInVariant` aufgelöst: vorwärts (Ist → Soll) über die
+Zuordnung, immer eindeutig; rückwärts (Soll → Ist) über den flächenmäßig größten
+Vorgänger, wenn mehrere zusammengelegt wurden.
 
 ---
 

@@ -20,7 +20,15 @@ vi.mock('@/data/hooks', () => ({
   useCollection: () => ({ data: mocks.tasks, loading: false }),
 }));
 vi.mock('@/data/useLists', () => ({ useLists: () => ({ lists: { taskAreas: [] } }) }));
-vi.mock('@/data/RoomsContext', () => ({ useRooms: () => ({ name: (id: string) => id }) }));
+vi.mock('@/data/RoomsContext', () => ({
+  useRooms: () => ({
+    name: (id: string) => id,
+    shortLabel: (id: string) => id,
+    matches: (roomIds: string[], filterId: string) => roomIds.includes(filterId),
+    idsFor: (id: string) => [id],
+    writeId: (id: string) => id,
+  }),
+}));
 vi.mock('@/data/repos', () => ({
   emptyTask: () => ({
     id: 'new-task',

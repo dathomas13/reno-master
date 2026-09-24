@@ -4,10 +4,9 @@ import { TopBar } from '@/components/TopBar';
 import { Spinner } from '@/components/Fields';
 import { useCollection } from '@/data/hooks';
 import { COL, type Plan } from '@/data/types';
-import { loadPlanSvg, modelPlans, MODEL_EVENT } from '@/data/models';
+import { loadPlanSvg, loadRooms, modelPlans, MODEL_EVENT, type Variant } from '@/data/models';
 import { resolveFileUrl } from '@/offline/fileUrls';
 import { RoomPanel } from '@/modules/viewer3d/RoomPanel';
-import { useRooms } from '@/data/RoomsContext';
 import type { Room } from '@/modules/viewer3d/houseScene';
 
 /** pinch to zoom, drag to pan - the same gestures as the 3D view */
@@ -77,10 +76,10 @@ export default function PlanViewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data: uploaded } = useCollection<Plan>(COL.plans);
-  const { byId } = useRooms();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [svg, setSvg] = useState<string | null>(null);
+  const [roomById, setRoomById] = useState<Map<string, Room>>(new Map());
   const [room, setRoom] = useState<Room | null>(null);
   const [modelKey, setModelKey] = useState(0);
   // why a generated plan cannot be drawn - no model on this device yet
@@ -101,6 +100,11 @@ export default function PlanViewPage() {
       const generated = modelPlans().find((item) => item.id === id);
       if (!generated || !active) return;
       setPlan({ ...generated, floor: generated.floor as Plan['floor'] } as Plan);
+      // the plan carries data-room-id from ITS OWN variant's room list - a Soll plan's
+      // ids are Soll ids, an Ist plan's are Ist ids, never the naming setting's mix
+      void loadRooms(generated.variant as Variant).then((doc) => {
+        if (active) setRoomById(new Map(doc.rooms.map((r) => [r.id, r])));
+      });
       try {
         const text = await loadPlanSvg(generated);
         if (active) {
@@ -127,7 +131,7 @@ export default function PlanViewPage() {
   function onSvgClick(event: MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
     const roomId = target.closest('[data-room-id]')?.getAttribute('data-room-id');
-    if (roomId) setRoom(byId.get(roomId) ?? null);
+    if (roomId) setRoom(roomById.get(roomId) ?? null);
   }
 
   if (!plan) return <Spinner />;

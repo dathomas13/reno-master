@@ -2,7 +2,7 @@
  * The 2D floor plans as SVG, built from a house file on the device.
  *
  * Port of tools/model/build_plans_svg.py - byte for byte the same output, which
- * plansSvg.test.ts checks against the committed public/plans/*.svg. With it the plans
+ * modelBuild.test.ts checks against tools/model/testdata/plans/*.svg. With it the plans
  * follow a model imported in the app instead of showing the bundled state until the
  * next deploy.
  *
@@ -98,6 +98,7 @@ export function buildPlanSvg(
   add('<g id="rooms">');
   for (const room of rooms.rooms) {
     if (room.floor !== floor) continue;
+    if (room.rects.length === 0) continue; // no geometry yet (a planned room) - nothing to draw
     // ids and names come from a house file someone else may have written - the SVG goes
     // into the page as markup, so every text is escaped (a plain id stays unchanged)
     const id = escape(room.id, true);
@@ -118,7 +119,7 @@ export function buildPlanSvg(
     const showArea = bh > 620 && bw > 900;
     const dy = showArea ? 0 : size * 0.35;
     labels.push(`<text class="room-label" x="${f0(cx)}" y="${f0(cy - dy)}" font-size="${size}px"${fit}>${name}</text>`);
-    if (showArea) labels.push(`<text class="room-area" x="${f0(cx)}" y="${f0(cy + 230)}">${pyFixed(room.areaM2, 1)} m²</text>`);
+    if (showArea) labels.push(`<text class="room-area" x="${f0(cx)}" y="${f0(cy + 230)}">${pyFixed(room.areaM2 ?? 0, 1)} m²</text>`);
     add('</g>');
   }
   add('</g>');

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollection } from '@/data/hooks';
+import { useRooms } from '@/data/RoomsContext';
 import { COL, type Cost, type DiaryEntry, type Note, type Photo, type Task } from '@/data/types';
 import { photosForRoom } from '@/data/photoRooms';
 import { where } from '@/firebase/db';
@@ -18,11 +19,15 @@ import { LAYER_LABEL, type Layer, type Room } from './houseScene';
  * distance to the navigation in one place.
  */
 export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
-  const roomFilter = [where('roomIds', 'array-contains', room.id)];
-  const { data: entries } = useCollection<DiaryEntry>(COL.diary, roomFilter, [room.id]);
-  const { data: costs } = useCollection<Cost>(COL.costs, roomFilter, [room.id]);
-  const { data: tasks } = useCollection<Task>(COL.tasks, roomFilter, [room.id]);
-  const { data: notes } = useCollection<Note>(COL.notes, roomFilter, [room.id]);
+  const { idsFor } = useRooms();
+  // a merged room (Technikraum) must also find what was filed under its predecessors
+  // (Heizung, Öllager) - idsFor gives every id that counts, one id when none merged
+  const roomIds = idsFor(room.id);
+  const roomFilter = [where('roomIds', 'array-contains-any', roomIds)];
+  const { data: entries } = useCollection<DiaryEntry>(COL.diary, roomFilter, roomIds);
+  const { data: costs } = useCollection<Cost>(COL.costs, roomFilter, roomIds);
+  const { data: tasks } = useCollection<Task>(COL.tasks, roomFilter, roomIds);
+  const { data: notes } = useCollection<Note>(COL.notes, roomFilter, roomIds);
   // all of them, not the ones carrying this room: a photo gets its room from the entry
   // or the receipt it hangs on, never from itself (see photoRooms.ts)
   const { data: photos } = useCollection<Photo>(COL.photos);
@@ -30,8 +35,8 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
   const openTasks = tasks.filter((task) => task.status !== 'Erledigt');
   const total = costs.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const roomPhotos = useMemo(
-    () => photosForRoom(room.id, { photos, entries, costs }),
-    [room.id, photos, entries, costs],
+    () => photosForRoom(roomIds, { photos, entries, costs }),
+    [roomIds, photos, entries, costs],
   );
 
   return (
@@ -40,7 +45,8 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold truncate">{room.name}</h2>
           <p className="text-xs text-muted">
-            {LAYER_LABEL[room.floor as Layer] ?? room.floor} · {room.areaM2.toFixed(1).replace('.', ',')} m²
+            {LAYER_LABEL[room.floor as Layer] ?? room.floor}
+            {room.areaM2 !== undefined && ` · ${room.areaM2.toFixed(1).replace('.', ',')} m²`}
           </p>
         </div>
         <button type="button" className="btn btn-ghost px-2 py-1 min-h-0" onClick={onClose}>

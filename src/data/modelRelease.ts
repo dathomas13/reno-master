@@ -164,7 +164,26 @@ export function validateRooms(doc: unknown): string | null {
     const room = entry as { id?: unknown; name?: unknown; rects?: unknown };
     if (typeof room?.id !== 'string' || !room.id) return `Raum ${index} hat keine id.`;
     if (typeof room.name !== 'string') return `Raum ${index} hat keinen Namen.`;
+    // leer ist erlaubt: ein Soll-Raum ohne Aufmaß hat noch keine Flächen, siehe roomNaming.ts
     if (!Array.isArray(room.rects)) return `Raum ${index} hat keine Flächen.`;
+  }
+  return null;
+}
+
+/** the Ist -> Soll room mapping (roomMap of the Soll house file): every Ist id -> the Soll id it becomes */
+export interface RoomMapDoc {
+  from: Variant;
+  to: Variant;
+  map: Record<string, string>;
+}
+
+export function validateRoomMap(doc: unknown): string | null {
+  if (!doc || typeof doc !== 'object') return 'Die Raumzuordnung ist keine gültige JSON-Struktur.';
+  const map = (doc as { map?: unknown }).map;
+  if (!map || typeof map !== 'object' || Array.isArray(map)) return 'Die Raumzuordnung fehlt.';
+  for (const [id, target] of Object.entries(map as Record<string, unknown>)) {
+    if (!id) return 'Die Raumzuordnung enthält eine leere id.';
+    if (typeof target !== 'string' || !target) return `Die Raumzuordnung für ${id} hat kein Ziel.`;
   }
   return null;
 }

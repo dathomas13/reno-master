@@ -150,10 +150,26 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
 - Die Fläche rechnet die App selbst aus. Eine gestempelte Planfläche gehört in `note`.
 - **Die `id` eines Raums niemals ändern oder wiederverwenden.** An ihr hängen Tagebuch,
   Fotos, Kosten und Aufgaben. Umbenennen geht über `name`. Neuer Raum: neue id nach dem
-  Muster `<geschoss>-<name>` (`eg-hwr`). Fällt ein Raum weg, weil zwei Räume
-  zusammengelegt werden: die id des größeren behalten, die andere entfernen. Die App nennt
-  entfernte ids beim Import und veröffentlicht erst, wenn das ausdrücklich bestätigt ist.
-  Einträge an einem entfernten Raum verlieren ihre Zuordnung.
+  Muster `<geschoss>-<name>` (`eg-hwr`).
+- **Im Bestand (`haus-ist.json`) fällt kein Raum weg.** Die App nennt entfernte ids beim
+  Import und veröffentlicht erst nach ausdrücklicher Bestätigung; Einträge daran verlieren
+  sonst ihre Zuordnung.
+- **In der Planung (`haus-soll.json`) wird zusammengelegt, geteilt, verschoben** – mit
+  neuen ids und der Umbenennungstabelle `roomMap` (nur in der Soll-Datei):
+
+  ```jsonc
+  "roomMap": {
+    "kg-heizung": "kg-technik",     // Heizung und Öllager werden der Technikraum
+    "kg-oellager": "kg-technik",
+    "eg-bad": "eg-bad",             // jede Ist-id kommt vor, unveränderte zeigen auf sich selbst
+    …
+  }
+  ```
+
+  Jede Raum-id aus `haus-ist.json` steht genau einmal links, rechts steht eine id aus den
+  Räumen von `haus-soll.json`. Darüber zeigt die App alte Einträge unter dem neuen Raum.
+- Ein geplanter Raum darf noch **keine Fläche** haben (`"rects": []`): er erscheint dann in
+  Auswahllisten und der Suche, aber noch nicht im 3D und in den Plänen.
 - `note` bei einem Raum ist frei, meist steht dort die im Plan gestempelte Fläche.
 
 ### Konfidenz `tag`

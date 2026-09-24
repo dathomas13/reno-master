@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
 import { activeRelease, MODEL_EVENT } from '@/data/models';
-import { VARIANTS, type ReleaseInfo, type Variant } from '@/data/modelRelease';
+import { compareVersions, VARIANTS, type ReleaseInfo, type Variant } from '@/data/modelRelease';
 import { readRelease } from '@/data/modelStore';
-import { publishedState } from '@/data/modelSync';
-import { publishStartModel } from '@/data/modelExchange';
+import { publishedState, type PublishedState } from '@/data/modelSync';
+import { publishStartModel, startVersion } from '@/data/modelExchange';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { ModelExchange } from './ModelExchange';
 
@@ -14,8 +14,8 @@ interface Row {
   variant: Variant;
   release: ReleaseInfo | null;
   cachedAt: string | null;
-  /** does the database have a model for it: undefined while that is not known yet */
-  published: boolean | undefined;
+  /** what the database has for it: undefined while that is not known yet */
+  published: PublishedState | undefined;
 }
 
 /**
@@ -64,7 +64,11 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
     }
   }
 
-  const missing = rows.filter((row) => row.published === false);
+  // offered while the database has nothing, or only an older model without its house
+  // file (published the old way) - never over a model someone published from the app
+  const missing = rows.filter(({ variant: item, published }) => published !== undefined
+    && (!published.exists
+      || (!published.hasSource && compareVersions(startVersion(item), published.version ?? '0') > 0)));
 
   return (
     <section className="card p-4">
@@ -92,7 +96,7 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
       {signedIn && missing.length > 0 && (
         <div className="card p-3 mt-3 text-sm border-l-4 border-l-warn">
           <p>
-            In der Datenbank fehlt noch das Modell für {missing.map((row) => VARIANT_LABEL[row.variant]).join(' und ')}.
+            In der Datenbank fehlt noch das aktuelle Modell für {missing.map((row) => VARIANT_LABEL[row.variant]).join(' und ')}.
             Einmal übernehmen – danach ist die Datenbank die einzige Quelle.
           </p>
           <div className="flex flex-wrap gap-2 mt-2">
@@ -104,7 +108,9 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
                 onClick={() => void moveIntoDatabase(row.variant)}
                 disabled={moving !== null}
               >
-                {moving === row.variant ? 'Wird übernommen…' : `${VARIANT_LABEL[row.variant]}: Startstand übernehmen`}
+                {moving === row.variant
+                  ? 'Wird übernommen…'
+                  : `${VARIANT_LABEL[row.variant]}: Startstand v${startVersion(row.variant)} übernehmen`}
               </button>
             ))}
           </div>

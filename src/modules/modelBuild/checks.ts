@@ -132,6 +132,17 @@ export function checkSource(src: HouseSource): CheckResult {
     }
   }
 
+  if (src.roomMap) {
+    if (src.variant !== 'soll') errors.push('roomMap gehört nur in die Soll-Datei (haus-soll.json).');
+    const ids = new Set(src.rooms.map((room) => room.id));
+    for (const [from, to] of Object.entries(src.roomMap)) {
+      if (!ids.has(to)) errors.push(`roomMap: ${from} zeigt auf ${to}, den es in dieser Datei nicht gibt.`);
+    }
+  }
+  for (const room of src.rooms) {
+    if (room.rects.length === 0) warnings.push(`${roomLabel(room)} hat noch keine Fläche und erscheint nicht im 3D und in den Plänen.`);
+  }
+
   const g = src.gaube;
   if (!(g.x0 < g.x1)) errors.push('gaube: x0 muss kleiner als x1 sein.');
   if (!(src.garage.x[0] < src.garage.x[1] && src.garage.y[0] < src.garage.y[1])) {
@@ -154,7 +165,9 @@ export function buildRooms(src: HouseSource, generatedAt: string): BuiltRooms {
       name: room.name,
       floor: room.floor,
       rects: room.rects.map((r) => [...r]),
-      areaM2: pyRound(room.rects.reduce((sum, [x0, y0, x1, y1]) => sum + (x1 - x0) * (y1 - y0), 0) / 1e6, 2),
+      ...(room.rects.length > 0
+        ? { areaM2: pyRound(room.rects.reduce((sum, [x0, y0, x1, y1]) => sum + (x1 - x0) * (y1 - y0), 0) / 1e6, 2) }
+        : {}),
     })),
   };
 }

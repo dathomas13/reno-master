@@ -158,13 +158,23 @@ export async function syncAllModels(): Promise<SyncResult[]> {
 /** true once the listener has heard from the database, per variant: null = nothing published */
 const heard = new Map<Variant, boolean>();
 
+export interface PublishedState {
+  /** the database has a model document for the variant */
+  exists: boolean;
+  version?: string;
+  /** the document carries its house file - one published before 0.49 does not */
+  hasSource: boolean;
+}
+
 /**
- * Whether the database has a model for the variant: true or false once the listener has
- * answered from the server, undefined before that (offline, or not signed in yet).
+ * What the database has for the variant, once the listener has answered from the server;
+ * undefined before that (offline, or not signed in yet).
  */
-export function publishedState(variant: Variant): boolean | undefined {
+export function publishedState(variant: Variant): PublishedState | undefined {
   if (!heard.get(variant)) return undefined;
-  return (announced.get(variant) ?? null) !== null;
+  const release = announced.get(variant) ?? null;
+  if (!release) return { exists: false, hasSource: false };
+  return { exists: true, version: release.version, hasSource: Boolean(release.sourceJson || release.sourceUrl) };
 }
 
 /**

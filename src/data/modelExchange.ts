@@ -8,9 +8,10 @@
  * tools/model/PLAN-MODELL-WORKFLOW.md.
  */
 import anleitung from '../../tools/model/ANLEITUNG-EXTERN.md?raw';
-// The model v0.25 as it stood when it left the repository - for the one-time move into
-// the database (publishStartModel). Remove, together with that function, once both
-// variants are published.
+// The model as it stood when it left the repository (Ist v0.27, Soll v0.24, room names
+// and the Ist -> Soll mapping of 0.48.7) - for the one-time move into the database
+// (publishStartModel). Remove, together with that function, once both are published.
+// It doubles as the frozen test data in tools/model/testdata.
 import startIst from '../../tools/model/testdata/haus-ist.json?raw';
 import startSoll from '../../tools/model/testdata/haus-soll.json?raw';
 import { ZipWriter } from '@/lib/zip';
@@ -174,10 +175,16 @@ export async function publishImport(result: Extract<ImportResult, { ok: true }>)
   await syncAllModels();
 }
 
+/** the version the start model of a variant would be published as */
+export function startVersion(variant: Variant): string {
+  const parsed = parseSource(variant === 'ist' ? startIst : startSoll);
+  return parsed.ok ? parsed.source.version : '0';
+}
+
 /**
  * Moves the model into the database once: publishes the house file the model had when it
- * still shipped with the app (v0.25), built on this device like any import. Only offered
- * while the database has no model for the variant.
+ * still shipped with the app, built on this device like any import. Only offered while
+ * the database has no model for the variant, or only an older one without house file.
  */
 export async function publishStartModel(variant: Variant): Promise<string> {
   const text = variant === 'ist' ? startIst : startSoll;

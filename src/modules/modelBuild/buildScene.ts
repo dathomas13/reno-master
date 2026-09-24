@@ -1,8 +1,8 @@
 /**
- * Builds the viewer scene (the format of public/models/<variant>.json) from a house file.
+ * Builds the viewer scene (the scene format, README-MODELL.md section 6) from a house file.
  *
  * Port of build() in tools/model/build_scene_lite.py. The Python version stays the
- * reference: sceneParity.test.ts builds public/models/haus-ist.json here and compares the
+ * reference: modelBuild.test.ts builds tools/model/testdata/haus-ist.json here and compares the
  * result with the committed ist.json, which Python produced.
  */
 import { pyRound } from './pyRound';

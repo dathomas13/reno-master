@@ -37,7 +37,8 @@ export interface BuiltRoom {
   name: string;
   floor: 'KG' | 'EG' | 'OG' | 'GAR';
   rects: number[][];
-  areaM2: number;
+  /** missing for a room without rectangles yet, as build_rooms.py writes it */
+  areaM2?: number;
 }
 
 export interface BuiltRooms {

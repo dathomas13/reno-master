@@ -26,7 +26,7 @@ es in der App: Einstellungen → 3D-Modelle → „Modell exportieren“ / „Mo
 die App baut Szene, Räume und Pläne selbst (`src/modules/modelBuild`, Punkt für Punkt
 gleich wie Python). Die Python-Werkzeuge arbeiten auf einem Ordner mit Hausdateien
 (`RENO_HAUS_DIR`, z. B. ein entpackter App-Export; Standard sind die eingefrorenen
-Testdaten v0.25 in `tools/model/testdata`, gegen die CI und Unit-Tests beide Builder
+Testdaten in `tools/model/testdata` (Ist v0.27, Soll v0.24), gegen die CI und Unit-Tests beide Builder
 halten):
 
 ```bash
@@ -139,9 +139,14 @@ Steht:
   Kamera startet dieses Gerät neu – nicht benutzen.
 - **Das Modell liegt nur noch in Firestore** (ab 0.51.0): nicht mehr im Repo, nicht mehr
   im App-Bündel, keine Ansicht ohne Anmeldung. Beim Umzug bietet Einstellungen →
-  3D-Modelle einmalig „Startstand übernehmen“ (v0.25 aus `tools/model/testdata`), solange
-  die Datenbank für eine Variante noch kein Modell hat; danach können Knopf und
-  `publishStartModel` weg.
+  3D-Modelle einmalig „Startstand übernehmen“ (Ist v0.27, Soll v0.24 aus
+  `tools/model/testdata`), solange die Datenbank für eine Variante kein Modell hat oder nur
+  ein älteres ohne Hausdatei; danach können Knopf und `publishStartModel` weg.
+- **Parallele Sitzungsbranches zusammenführen, bevor gepusht wird.** Seite und APK nehmen
+  den letzten Push, gleich aus welchem Branch: 0.49–0.51 kamen aus einem Branch, der die
+  Raumnamen-Arbeit (0.48.3–0.48.7) eines anderen nicht kannte, und haben sie live
+  überschrieben (behoben in 0.52.0). Vor dem ersten Push in einer Sitzung
+  `git branch -r` und die letzten Releases prüfen.
 - **Das Modell lässt sich ohne Chat bearbeiten** (09/2026): Hausdatei als einzige Quelle,
   Export als ZIP (Anleitung, `haus-ist.json`, `haus-soll.json`, DXF-Grundrisse), Import
   mit Prüfung, Änderungsbericht, Vorschau im 3D und Veröffentlichen über Firestore. Die
@@ -187,7 +192,11 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   übersteht Absturz, Reload und Neustart, `readDebugLog('<bereich>')` liest zurück. Für
   Vorgänge, die die App mitreißen können, `beginSession`/`endSession` – der nächste Start
   vermerkt dann im Protokoll, dass der vorige nie zu Ende kam.
-- Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
+- Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen –
+  ändert sich ein Raum wirklich (Zusammenlegung, Teilung, Verschiebung), bekommt er eine neue
+  id in der Soll-Hausdatei (`haus-soll.json`) plus einen Eintrag in deren Umbenennungstabelle
+  `roomMap`, der die alte id auf die neue zeigen lässt. Details und die Einstellung Bestand/Planung dazu in
+  `tools/model/README-MODELL.md`.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
 - **Zu jedem Release ein Eintrag in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`),
   darunter **ein bis drei Stichpunkte, je ein bis zwei Zeilen**. Das ist der Text im

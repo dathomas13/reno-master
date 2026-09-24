@@ -11,7 +11,7 @@ import { parseSource, type HouseSource } from '../source';
 import { nextVersion, prepareImport } from '../index';
 import { buildPlanSvg, PLAN_FLOORS, pyFixed } from '../plansSvg';
 
-// Frozen test data (v0.25) written by the Python scripts - the model in use lives in
+// Frozen test data (Ist v0.27, Soll v0.24) written by the Python scripts - the model in use lives in
 // Firestore. Both runners (vitest, tools/verify) start in the repository root.
 const TESTDATA = join(process.cwd(), 'tools', 'model', 'testdata');
 const read = (file: string) => readFileSync(join(TESTDATA, file), 'utf8');
@@ -53,7 +53,7 @@ describe('the house file', () => {
   it('builds the same scene as tools/model/build_scene_lite.py', () => {
     const { source } = istSource();
     const reference = JSON.parse(read('ist.json'));
-    const scene = buildScene(source, { version: '0.25', note: '', generatedAt: '2026-09-24' });
+    const scene = buildScene(source, { version: source.version, note: '', generatedAt: '2026-09-24' });
     expect(scene.prims.length).toBe(reference.prims.length);
     for (let i = 0; i < reference.prims.length; i += 1) {
       const mine = scene.prims[i];
@@ -171,7 +171,7 @@ describe('prepareImport', () => {
     const base = { ...source, version: '0.30' };
     const result = prepareImport({ text: read('haus-ist.json'), base, version: '0.31', today: '2026-09-24' });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.warnings[0]).toMatch('beruht auf v0.25');
+    if (result.ok) expect(result.warnings[0]).toMatch('beruht auf v0.27');
   });
 });
 
@@ -239,5 +239,30 @@ describe('pyFixed', () => {
     // 12.995 is really 12.99499… in binary, so Python says 12.99
     expect(pyFixed(12.995, 2)).toBe('12.99');
     expect(pyFixed(12.345, 1)).toBe('12.3');
+  });
+});
+
+describe('the Soll house file', () => {
+  it('carries planned rooms without geometry and the Ist -> Soll mapping', () => {
+    const parsed = parseSource(read('haus-soll.json'));
+    if (!parsed.ok) throw new Error(parsed.errors.join('\n'));
+    const technik = parsed.source.rooms.find((room) => room.id === 'kg-technik');
+    expect(technik?.rects).toEqual([]);
+    expect(parsed.source.roomMap?.['kg-heizung']).toBe('kg-technik');
+    const checked = checkSource(parsed.source);
+    expect(checked.errors).toEqual([]);
+    expect(checked.warnings.join('\n')).toMatch('kg-technik');
+    // no area for a room without rectangles, as build_rooms.py writes it
+    const rooms = buildRooms(parsed.source, '');
+    expect(rooms.rooms.find((room) => room.id === 'kg-technik')?.areaM2).toBeUndefined();
+    expect(JSON.parse(read('rooms-soll.json')).rooms).toEqual(rooms.rooms);
+  });
+
+  it('refuses a mapping onto a room that does not exist', () => {
+    const doc = JSON.parse(read('haus-soll.json'));
+    doc.roomMap['kg-heizung'] = 'kg-gibtsnicht';
+    const parsed = parseSource(JSON.stringify(doc));
+    if (!parsed.ok) throw new Error('parse failed');
+    expect(checkSource(parsed.source).errors.join('\n')).toMatch('kg-gibtsnicht');
   });
 });

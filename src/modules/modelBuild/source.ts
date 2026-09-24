@@ -104,6 +104,11 @@ export interface HouseSource {
   balkon: { x0: number; x1: number; y0: number; y1: number; tag: Tag };
   garage: { x: [number, number]; y: [number, number]; z0: number; hFront: number; hBack: number };
   rooms: SourceRoom[];
+  /**
+   * Soll only: every Ist room id -> the Soll room id it becomes (merges point several
+   * old ids at one new one). Read forward only, see src/data/roomNaming.ts.
+   */
+  roomMap?: Record<string, string>;
 }
 
 export type ParseResult =
@@ -327,14 +332,27 @@ export function parseSource(text: string): ParseResult {
     else if (roomIds.has(r.id)) errors.push(`${where}: id kommt doppelt vor.`);
     roomIds.add(String(r.id));
     if (typeof r.name !== 'string' || !r.name) errors.push(`${where}: name fehlt.`);
+    // no rectangles is allowed: a planned room whose walls are not drawn yet still
+    // collects entries, it is just not drawn in 3D and in the plans
     const rects = list(r.rects, `${where}.rects`).map((x, k) => rect(x, `${where}.rects[${k}]`));
-    if (rects.length === 0) errors.push(`${where}: mindestens ein Rechteck nötig.`);
     const room: SourceRoom = {
       id: String(r.id ?? ''), name: String(r.name ?? ''), floor: floor(r.floor, where), rects,
     };
     if (typeof r.note === 'string') room.note = r.note;
     return room;
   });
+
+  let roomMap: Record<string, string> | undefined;
+  if (raw.roomMap !== undefined) {
+    if (!isObj(raw.roomMap)) errors.push('roomMap: Objekt { "ist-id": "soll-id" } erwartet.');
+    else {
+      roomMap = {};
+      for (const [from, to] of Object.entries(raw.roomMap)) {
+        if (typeof to !== 'string' || !to) errors.push(`roomMap.${from}: Ziel-id erwartet.`);
+        else roomMap[from] = to;
+      }
+    }
+  }
 
   if (errors.length > 0) return { ok: false, errors };
   const source: HouseSource = {
@@ -354,6 +372,7 @@ export function parseSource(text: string): ParseResult {
     balkon,
     garage,
     rooms,
+    ...(roomMap ? { roomMap } : {}),
   };
   return { ok: true, source, raw };
 }

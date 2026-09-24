@@ -8,7 +8,7 @@
  * and says so. A model imported but not yet published can be shown as a preview.
  */
 import type { RoomDoc, SceneDoc, Room } from '@/modules/viewer3d/houseScene';
-import { VARIANTS, type ReleaseInfo, type Variant } from './modelRelease';
+import { VARIANTS, type ReleaseInfo, type RoomMapDoc, type Variant } from './modelRelease';
 import {
   buildPlanSvg,
   buildRooms,
@@ -185,12 +185,21 @@ export async function loadPlanSvg(plan: Pick<ModelPlan, 'variant' | 'floor'>): P
   return buildPlanSvg(source, buildRooms(source, ''), plan.floor, version);
 }
 
-/** flat room list of both variants, for pickers and for showing a name by id */
-export async function loadAllRooms(): Promise<Room[]> {
-  const [ist, soll] = await Promise.all([loadRooms('ist'), loadRooms('soll')]);
-  const byId = new Map<string, Room>();
-  for (const room of [...ist.rooms, ...soll.rooms]) if (!byId.has(room.id)) byId.set(room.id, room);
-  return [...byId.values()];
+/**
+ * The Ist -> Soll room mapping, for RoomsContext. It is part of the Soll house file
+ * (field roomMap), so it travels with every published Soll model and a preview carries
+ * its own. Missing or unreadable falls back to an empty mapping: every id then resolves
+ * to itself - see roomNaming.ts.
+ */
+export async function loadRoomMap(): Promise<RoomMapDoc> {
+  const empty: RoomMapDoc = { from: 'ist', to: 'soll', map: {} };
+  let source: HouseSource | null = previews.get('soll')?.source ?? null;
+  if (!source) {
+    const stored = await loadSource('soll');
+    const parsed = stored ? parseSource(stored.text) : null;
+    source = parsed?.ok ? parsed.source : null;
+  }
+  return source?.roomMap ? { ...empty, map: source.roomMap } : empty;
 }
 
 export const FLOOR_ORDER = ['KG', 'EG', 'OG', 'DACH', 'GAR'];

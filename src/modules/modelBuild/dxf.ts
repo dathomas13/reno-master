@@ -58,7 +58,7 @@ export function buildDxf(src: HouseSource): string {
         rect(layer, alongX(w) ? [o.from, w.y0, o.to, w.y1] : [w.x0, o.from, w.x1, o.to]);
       }
     }
-    for (const room of src.rooms.filter((r) => r.floor === floor)) {
+    for (const room of src.rooms.filter((r) => r.floor === floor && r.rects.length > 0)) {
       for (const r of room.rects) rect(`${floor}_RAUM`, r);
       const [x0, y0, x1, y1] = room.rects[0];
       const area = room.rects.reduce((s, [a, b, c, d]) => s + (c - a) * (d - b), 0) / 1e6;

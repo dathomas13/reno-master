@@ -8,9 +8,15 @@ Checks performed (all mm):
   * rooms of the same floor must not overlap each other
   * a room must lie inside the building envelope (garage excluded). The envelope comes
     from the model as ENVELOPE, because the loggia wall panels project south of y = 0.
+  * a room without rectangles (geometry not surveyed yet) is reported separately, not
+    as a problem - it is expected for a Soll room that has no wall geometry yet.
+
+Also checks the Ist -> Soll mapping ("roomMap" in haus-soll.json): every Ist room id
+appears exactly once, and every id it points to exists in the Soll room table. A Soll
+room with no entry pointing to it is fine - that is a new room.
 
 Usage:
-    python3 tools/model/build_rooms.py                 # both variants
+    python3 tools/model/build_rooms.py                 # both variants + the mapping
     python3 tools/model/build_rooms.py --variant ist
 """
 from __future__ import annotations
@@ -74,13 +80,15 @@ def build(variant: str) -> dict:
     rooms = rooms_mod.ROOMS
 
     problems: list[str] = []
+    pending: list[str] = []   # rooms without geometry yet - not a problem, just noted
     seen: set[str] = set()
     for rid, name, floor, rects in rooms:
         if rid in seen:
             problems.append(f"duplicate room id {rid}")
         seen.add(rid)
         if not rects:
-            problems.append(f"{rid}: no rectangles")
+            pending.append(rid)
+            continue
         for x0, y0, x1, y1 in rects:
             if x1 <= x0 or y1 <= y0:
                 problems.append(f"{rid}: empty rectangle {(x0, y0, x1, y1)}")
@@ -109,13 +117,10 @@ def build(variant: str) -> dict:
 
     out_rooms = []
     for rid, name, floor, rects in rooms:
-        out_rooms.append({
-            "id": rid,
-            "name": name,
-            "floor": floor,
-            "rects": [list(r) for r in rects],
-            "areaM2": round(sum((x1 - x0) * (y1 - y0) for x0, y0, x1, y1 in rects) / 1e6, 2),
-        })
+        entry = {"id": rid, "name": name, "floor": floor, "rects": [list(r) for r in rects]}
+        if rects:
+            entry["areaM2"] = round(sum((x1 - x0) * (y1 - y0) for x0, y0, x1, y1 in rects) / 1e6, 2)
+        out_rooms.append(entry)
 
     doc = {
         "variant": variant,
@@ -132,7 +137,48 @@ def build(variant: str) -> dict:
             print("  " + p)
     else:
         print(f"--- {variant}: alle Räume konsistent ---")
+    if pending:
+        print(f"--- {variant}: noch keine Geometrie ---")
+        for rid in pending:
+            print("  " + rid)
     return doc
+
+
+def build_map() -> dict | None:
+    """Checks the Ist -> Soll room mapping ("roomMap" in haus-soll.json) against both
+    room tables: every Ist id appears once, every target exists in the Soll rooms.
+    Returns the mapping, or None when a house file cannot be read.
+    """
+    try:
+        ist = importlib.import_module("rooms_ist")
+        soll = importlib.import_module("rooms_soll")
+        mapping = importlib.import_module("haus_model_soll").SOURCE.get("roomMap") or {}
+    except (ModuleNotFoundError, FileNotFoundError, SystemExit) as exc:
+        print(f"room-map: skipped ({exc})")
+        return None
+
+    ist_ids = {rid for rid, *_ in ist.ROOMS}
+    soll_ids = {rid for rid, *_ in soll.ROOMS}
+
+    problems: list[str] = []
+    missing = ist_ids - mapping.keys()
+    if missing:
+        problems.append(f"fehlt in roomMap: {', '.join(sorted(missing))}")
+    extra = mapping.keys() - ist_ids
+    if extra:
+        problems.append(f"roomMap kennt keinen Ist-Raum mit dieser id: {', '.join(sorted(extra))}")
+    unknown_targets = {v for v in mapping.values() if v not in soll_ids}
+    if unknown_targets:
+        problems.append(f"Ziel existiert nicht in den Soll-Räumen: {', '.join(sorted(unknown_targets))}")
+
+    if problems:
+        print(f"--- room-map: {len(problems)} Hinweise ---")
+        for p in problems:
+            print("  " + p)
+    else:
+        print("--- room-map: vollständig ---")
+
+    return {"from": "ist", "to": "soll", "map": dict(sorted(mapping.items()))}
 
 
 def scene_date(variant: str) -> str:
@@ -161,8 +207,11 @@ def main() -> int:
         out = MODELS / f"rooms-{variant}.json"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        total = sum(r["areaM2"] for r in doc["rooms"])
+        total = sum(r.get("areaM2", 0) for r in doc["rooms"])
         print(f"{out}: {len(doc['rooms'])} Räume, {total:.0f} m² gesamt")
+
+    if args.variant == "both":
+        build_map()   # checks only - the mapping lives in haus-soll.json ("roomMap")
     return 0
 
 

@@ -39,7 +39,7 @@ Die App rechnet beim Laden um: three.js-Punkt = `(x, z, −y) / 1000`. Norden is
 | Datei | Rolle |
 |---|---|
 | `haus-ist.json`, `haus-soll.json` (aus dem App-Export) | **Die Hausdateien** für Bestand und Zielzustand: Wände mit ihren Öffnungen, Treppen, Dach- und Gaubenmaße, Balkon, Garage, Räume, Konfidenz-Tags A/B/C. |
-| `testdata/` | **Eingefrorene Testdaten** (Stand v0.25): Hausdateien plus die daraus von Python erzeugten Szenen, Räume und Pläne. Die Unit-Tests der App und die CI halten beide Builder daran fest. Das ist nicht das Modell in Gebrauch. |
+| `testdata/` | **Eingefrorene Testdaten** (Stand Ist v0.27 / Soll v0.24, zugleich der Startstand für die Datenbank): Hausdateien plus die daraus von Python erzeugten Szenen, Räume und Pläne. Die Unit-Tests der App und die CI halten beide Builder daran fest. Das ist nicht das Modell in Gebrauch. |
 | `hausdatei.py` | Liest eine Hausdatei aus `RENO_HAUS_DIR` (Standard: `testdata/`) und stellt sie den Skripten unter den alten Namen bereit (`WALLS`, `OPENINGS`, `HOUSE_W`, `roof_z_under` …). `--format <variante>` schreibt die Datei im kanonischen Layout neu. |
 | `haus_model.py`, `haus_model_soll.py`, `rooms_ist.py`, `rooms_soll.py` | Dünne Hüllen um `hausdatei.py`, damit alle älteren Skripte unverändert laufen. **Hier nichts eintragen.** |
 | `build_scene_lite.py` | Baut `<variante>.json` neben der Hausdatei, nur mit der Standardbibliothek. Dasselbe tut die App mit `src/modules/modelBuild` – Punkt für Punkt gleich, ein Unit-Test hält das fest. |
@@ -101,7 +101,7 @@ gleicher oder kleinerer Version rührt sie nicht an. Vor dem Ablegen prüft sie 
 bleibt in Betrieb.
 
 **Einmalig beim Umzug (0.51.0):** Solange die Datenbank für eine Variante noch kein Modell
-hat, bietet die App unter 3D-Modelle „Startstand übernehmen“ an – das ist der Stand v0.25,
+hat, bietet die App unter 3D-Modelle „Startstand übernehmen“ an – das ist Ist v0.27 / Soll v0.24,
 der bis dahin mit der App ausgeliefert wurde (`testdata/haus-*.json`). Sind beide
 Varianten übernommen, können der Knopf und `publishStartModel` in
 `src/data/modelExchange.ts` entfallen.
@@ -138,7 +138,37 @@ Räume `rooms-<variante>.json` (Feld `rooms`)
 `id` ist der Schlüssel, mit dem Tagebucheinträge, Fotos, Kosten und Aufgaben verknüpft sind.
 **Eine einmal vergebene id niemals umbenennen**, solange der Raum derselbe bleibt – sonst
 verlieren bestehende Einträge ihre Zuordnung. Ein Raum darf aus mehreren Rechtecken bestehen
-(L-Form, Kamin in der Ecke).
+(L-Form, Kamin in der Ecke). `rects` darf auch leer sein: ein Soll-Raum ohne Aufmaß taucht
+dann in Auswahl, Listen und Suche auf, wird aber erst gezeichnet, sobald die Wände feststehen.
+
+### 6.1 Wenn sich ein Raum durch die Sanierung wirklich ändert
+
+Legen sich zwei Räume zusammen, teilt sich einer, oder entsteht ein neuer – die id bleibt
+trotzdem unangetastet. Stattdessen: der veränderte Raum bekommt in `haus-soll.json` eine
+**neue** id, und die Umbenennungstabelle `roomMap` in derselben Datei zeigt die alte id
+auf die neue.
+
+```jsonc
+// haus-soll.json
+"rooms": [ …, {"id": "kg-technik", "name": "Technikraum", "floor": "KG", "rects": []}, … ],
+"roomMap": {
+  "kg-heizung":  "kg-technik",
+  "kg-oellager": "kg-technik",
+  …                                 // jede Ist-id kommt vor, auch unveränderte auf sich selbst
+}
+```
+
+`roomMap` ist **vollständig** (jede Raum-id aus `haus-ist.json` kommt genau einmal vor,
+auch ein unveränderter Raum auf sich selbst) und **einspaltig** (ein Ziel je Eintrag; bei
+einer Teilung zeigt die alte id auf den Raum, der am ehesten ihr Nachfolger ist). Die App
+lehnt beim Import ein Ziel ab, das es in der Soll-Datei nicht gibt; `build_rooms.py`
+meldet zusätzlich fehlende Ist-ids.
+
+Die App liest die Zuordnung nur vorwärts: ein alter Tagebucheintrag unter „Heizung“ oder
+„Öllager“ erscheint in der Einstellung „Planung“ unter „Technikraum“; ein neuer Eintrag
+unter „Technikraum“ muss nicht umgekehrt unter „Öllager“ auffindbar sein. Details und die
+Einstellung Bestand/Planung stehen in `src/data/roomNaming.ts` und in `PLAN.md`,
+Abschnitt 9.4.
 
 ## 7. Verifikation ohne Installation
 

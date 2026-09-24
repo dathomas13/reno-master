@@ -23,7 +23,7 @@ export default function PhotosPage() {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary);
   const { data: costs } = useCollection<Cost>(COL.costs);
   const { data: phases } = useCollection<Phase>(COL.phases);
-  const { name: roomName } = useRooms();
+  const { shortLabel: roomLabel, idsFor } = useRooms();
   const [open, setOpen] = useState<number | null>(null);
   const [grouping, setGrouping] = useState<Grouping>('phase');
 
@@ -32,9 +32,9 @@ export default function PhotosPage() {
   const source = useMemo<PhotoSource>(() => ({ photos, entries, costs }), [photos, entries, costs]);
 
   const visible = useMemo(() => {
-    const rows = roomFilter ? photosForRoom(roomFilter, source) : sortByDate(photos, source);
+    const rows = roomFilter ? photosForRoom(idsFor(roomFilter), source) : sortByDate(photos, source);
     return rows.filter((photo) => photo.kind === 'photo');
-  }, [roomFilter, photos, source]);
+  }, [roomFilter, idsFor, photos, source]);
 
   const phaseById = useMemo(() => new Map(phases.map((phase) => [phase.id, phase])), [phases]);
   const entryById = useMemo(() => new Map(entries.map((entry) => [entry.id, entry])), [entries]);
@@ -61,7 +61,7 @@ export default function PhotosPage() {
 
   const lightboxPhotos = useMemo(() => groups.flatMap((group) => group.photos), [groups]);
 
-  const title = roomFilter ? roomName(roomFilter) : 'Fotos';
+  const title = roomFilter ? roomLabel(roomFilter) : 'Fotos';
 
   return (
     <>
@@ -74,7 +74,7 @@ export default function PhotosPage() {
       {roomFilter && (
         <div className="flex gap-2 overflow-x-auto p-3 no-scrollbar">
           <button type="button" className="chip chip-on shrink-0" onClick={() => setParams({}, { replace: true })}>
-            {roomName(roomFilter)} ×
+            {roomLabel(roomFilter)} ×
           </button>
         </div>
       )}

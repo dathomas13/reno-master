@@ -72,9 +72,9 @@ export function prepareImport(input: ImportInput): ImportResult {
   }
 
   const checked = checkSource(source);
-  const warnings = [...checked.warnings];
-  // a free end that was already there is not news; report only new ones
-  const known = new Set(input.base ? freeWallEnds(input.base) : []);
+  // a warning that was already true of the model in use is not news; report only new ones
+  const known = new Set(input.base ? [...checkSource(input.base).warnings, ...freeWallEnds(input.base)] : []);
+  const warnings = checked.warnings.filter((line) => !known.has(line));
   warnings.push(...freeWallEnds(source).filter((line) => !known.has(line)));
   if (checked.errors.length > 0) {
     return { ok: false, errors: checked.errors, warnings, variant: source.variant };
