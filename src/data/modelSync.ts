@@ -123,6 +123,7 @@ export async function syncModel(variant: Variant): Promise<SyncResult | null> {
       scene,
       rooms,
       source,
+      generation: best.generation ?? 0,
       cachedAt: new Date().toISOString(),
     };
     await writeRelease(entry);
@@ -157,6 +158,11 @@ export async function syncAllModels(): Promise<SyncResult[]> {
 
 /** true once the listener has heard from the database, per variant: null = nothing published */
 const heard = new Map<Variant, boolean>();
+
+/** the generation of the published model, 0 when nothing is known */
+export function publishedGeneration(variant: Variant): number {
+  return announced.get(variant)?.generation ?? 0;
+}
 
 export interface PublishedState {
   /** the database has a model document for the variant */
@@ -224,6 +230,8 @@ export interface PublishInput {
   roomsJson: string | null;
   /** the house file the scene was built from; published along so every device can export it */
   sourceJson?: string | null;
+  /** see ReleaseInfo.generation - the caller passes the current one, or the next for a fresh start */
+  generation?: number;
   note?: string;
 }
 
@@ -255,7 +263,10 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
 
   const generatedAt = meta?.generatedAt ?? new Date().toISOString().slice(0, 10);
   const note = input.note?.trim() || meta?.note || '';
-  const doc = releaseToDoc(input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson, sourceJson);
+  const generation = input.generation ?? 0;
+  const doc = releaseToDoc(
+    input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson, sourceJson, generation,
+  );
   await saveDoc<BaseDoc & ReleaseDoc>(COL.meta, {
     id: docId(input.variant),
     ...doc,
@@ -266,7 +277,7 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
 
   const info: ReleaseInfo = {
     variant: input.variant, version, updatedAt: generatedAt, note, bytes: input.sceneJson.length,
-    source: 'firestore',
+    source: 'firestore', generation,
   };
   announced.set(input.variant, {
     ...info,

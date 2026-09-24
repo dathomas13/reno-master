@@ -25,13 +25,14 @@ import {
   PLAN_FLOORS,
   parseSource,
   prepareImport,
+  sollCopyOfIst,
   type HouseSource,
   type ImportResult,
 } from '@/modules/modelBuild';
 import { compareVersions, VARIANTS, type Variant } from './modelRelease';
 import { readRelease } from './modelStore';
 import { activeRelease, clearPreview, loadSource, setPreview } from './models';
-import { publishModel, syncAllModels, syncModel } from './modelSync';
+import { publishedGeneration, publishModel, syncAllModels, syncModel } from './modelSync';
 import type { RoomDoc, SceneDoc } from '@/modules/viewer3d/houseScene';
 
 const VARIANT_LABEL: Record<Variant, string> = { ist: 'Bestand', soll: 'Zielzustand' };
@@ -137,14 +138,16 @@ export async function prepareModelImport(fileName: string, text: string): Promis
   const known: string[] = [];
   if (variant) {
     await syncModel(variant).catch(() => null);
-    const [source, active, cached] = await Promise.all([loadSource(variant), activeRelease(variant), readRelease(variant)]);
+    const [source, active] = await Promise.all([loadSource(variant), activeRelease(variant)]);
+    // only versions of the current generation count: after a fresh start at 0.0 the next
+    // import is 0.1, not one above the numbers of the model that was replaced
+    const generation = await currentGeneration(variant);
     if (source) {
       const parsed = parseSource(source.text);
       if (parsed.ok) base = parsed.source;
-      known.push(source.version);
     }
-    if (active) known.push(active.version);
-    if (cached) known.push(cached.version);
+    if (active && (active.generation ?? 0) === generation) known.push(active.version);
+    if (source && (active?.generation ?? 0) === generation) known.push(source.version);
   }
   const highest = known.reduce((best, version) => (compareVersions(version, best) > 0 ? version : best), '0');
   const result = prepareImport({ text, base, version: nextVersion(highest), today: today() });
@@ -162,14 +165,29 @@ export function previewImport(result: Extract<ImportResult, { ok: true }>): void
   });
 }
 
-/** publishes a built model to every device, with its house file */
-export async function publishImport(result: Extract<ImportResult, { ok: true }>): Promise<void> {
+/** the generation in force for a variant: the published one, or what this device has */
+async function currentGeneration(variant: Variant): Promise<number> {
+  const cached = await readRelease(variant);
+  return Math.max(publishedGeneration(variant), cached?.generation ?? 0);
+}
+
+/**
+ * Publishes a built model to every device, with its house file. It keeps the current
+ * generation; `freshStart` opens the next one, so a model numbered 0.0 again replaces
+ * whatever higher version the devices have.
+ */
+export async function publishImport(
+  result: Extract<ImportResult, { ok: true }>,
+  freshStart = false,
+): Promise<void> {
+  const generation = (await currentGeneration(result.variant)) + (freshStart ? 1 : 0);
   await publishModel({
     variant: result.variant,
     sceneJson: JSON.stringify(result.scene),
     roomsJson: JSON.stringify(result.rooms),
     sourceJson: result.sourceText,
     note: result.note,
+    generation,
   });
   clearPreview(result.variant);
   await syncAllModels();
@@ -194,4 +212,20 @@ export async function publishStartModel(variant: Variant): Promise<string> {
   if (!result.ok) throw new Error(result.errors.join(' '));
   await publishImport(result);
   return result.version;
+}
+
+/**
+ * Starts the target state over: the Soll becomes an exact copy of the Ist in use, as
+ * version 0.0 of a new generation, so every device replaces its Soll whatever number it
+ * had. The rooms are the Ist rooms, and the Ist -> Soll mapping points every room at
+ * itself - Planung then names everything like Bestand until the Soll is planned again.
+ */
+export async function resetSollToIst(): Promise<void> {
+  await syncModel('ist').catch(() => null);
+  const ist = await loadSource('ist');
+  if (!ist) throw new Error('Auf diesem Gerät ist kein Bestand mit Hausdatei – erst den Bestand laden.');
+  const text = sollCopyOfIst(ist.text, `Neubeginn: Kopie des Bestands v${ist.version}`);
+  const result = prepareImport({ text, base: null, version: '0.0', today: today() });
+  if (!result.ok) throw new Error(result.errors.join(' '));
+  await publishImport(result, true);
 }

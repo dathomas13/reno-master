@@ -46,6 +46,21 @@ export interface ReleaseInfo {
    */
   sourceJson?: string;
   sourceUrl?: string;
+  /**
+   * Counts fresh starts. Versions only ever go up - except when a variant is started over
+   * (the Soll reset to the Ist, numbered 0.0 again). The new start carries the next
+   * generation, and a higher generation wins whatever its version says. Missing = 0.
+   */
+  generation?: number;
+}
+
+/** > 0 when a is the newer release: generation first, then version */
+export function compareReleases(
+  a: { version: string; generation?: number },
+  b: { version: string; generation?: number },
+): number {
+  const byGeneration = (a.generation ?? 0) - (b.generation ?? 0);
+  return byGeneration !== 0 ? byGeneration : compareVersions(a.version, b.version);
 }
 
 /**
@@ -92,7 +107,7 @@ export function pickRelease(candidates: (ReleaseInfo | null | undefined)[]): Rel
       best = candidate;
       continue;
     }
-    const diff = compareVersions(candidate.version, best.version);
+    const diff = compareReleases(candidate, best);
     if (diff > 0) best = candidate;
     else if (diff === 0
       && SOURCE_ORDER.indexOf(candidate.source) < SOURCE_ORDER.indexOf(best.source)) best = candidate;
@@ -208,6 +223,8 @@ export interface ReleaseDoc {
   // null, not undefined: the document is merged, so clearing a key has to be written
   sceneUrl?: string | null;
   roomsUrl?: string | null;
+  /** see ReleaseInfo.generation */
+  generation?: number;
 }
 
 /** Reads a meta document into a release, or null when it carries no usable version. */
@@ -226,6 +243,7 @@ export function releaseFromDoc(variant: Variant, doc: ReleaseDoc | null): Releas
     sourceJson: typeof doc.source === 'string' ? doc.source : undefined,
     sceneUrl: typeof doc.sceneUrl === 'string' ? doc.sceneUrl : undefined,
     roomsUrl: typeof doc.roomsUrl === 'string' ? doc.roomsUrl : undefined,
+    generation: Number.isInteger(doc.generation) ? doc.generation : 0,
   };
 }
 
@@ -238,6 +256,7 @@ export function releaseToDoc(
   sceneJson: string,
   roomsJson: string | null,
   sourceJson: string | null = null,
+  generation = 0,
 ): ReleaseDoc {
   return {
     variant,
@@ -252,6 +271,9 @@ export function releaseToDoc(
     // the same for the house file: a scene uploaded without one must not keep the old one,
     // or the export would hand out a source that does not match the model
     source: sourceJson,
+    // written every time: the document is merged, and a release without it must not
+    // inherit the generation of whatever was there before
+    generation,
   };
 }
 

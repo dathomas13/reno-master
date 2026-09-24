@@ -198,6 +198,9 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   `roomMap`, der die alte id auf die neue zeigen lässt. Details und die Einstellung Bestand/Planung dazu in
   `tools/model/README-MODELL.md`.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
+  Kleiner werden darf sie nur mit einem Neubeginn – höhere `generation` im Modell-Dokument
+  (`compareReleases` in `src/data/modelRelease.ts`, Knopf „Zielzustand auf Bestand
+  zurücksetzen“).
 - **Zu jedem Release ein Eintrag in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`),
   darunter **ein bis drei Stichpunkte, je ein bis zwei Zeilen**. Das ist der Text im
   Update-Banner: was sich für den Benutzer ändert, sonst nichts. Keine Erklärungen, keine

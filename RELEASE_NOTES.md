@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.53.0 – Zielzustand neu beginnen
+
+- Einstellungen → 3D-Modelle → „Zielzustand auf Bestand zurücksetzen (v0.0)“ macht den
+  Zielzustand zu einer Kopie des aktuellen Bestands – alle Geräte übernehmen ihn.
+
 ## 0.52.0 – Raumnamen und Planung wieder da, Startstand aktualisiert
 
 - Die aufgeräumten Raumnamen, der Umschalter Bestand/Planung unter Einstellungen → Räume

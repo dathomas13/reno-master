@@ -8,7 +8,7 @@ import { diffSources } from '../diff';
 import { buildDxf } from '../dxf';
 import { formatSource } from '../format';
 import { parseSource, type HouseSource } from '../source';
-import { nextVersion, prepareImport } from '../index';
+import { nextVersion, prepareImport, sollCopyOfIst } from '../index';
 import { buildPlanSvg, PLAN_FLOORS, pyFixed } from '../plansSvg';
 
 // Frozen test data (Ist v0.27, Soll v0.24) written by the Python scripts - the model in use lives in
@@ -264,5 +264,21 @@ describe('the Soll house file', () => {
     const parsed = parseSource(JSON.stringify(doc));
     if (!parsed.ok) throw new Error('parse failed');
     expect(checkSource(parsed.source).errors.join('\n')).toMatch('kg-gibtsnicht');
+  });
+});
+
+describe('sollCopyOfIst', () => {
+  it('turns the Ist into a Soll 0.0 with every room mapped to itself', () => {
+    const text = sollCopyOfIst(read('haus-ist.json'), 'Neubeginn');
+    const result = prepareImport({ text, base: null, version: '0.0', today: '2026-09-25' });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.variant).toBe('soll');
+    expect(result.version).toBe('0.0');
+    expect(result.source.roomMap?.['kg-heizung']).toBe('kg-heizung');
+    const ist = parseSource(read('haus-ist.json'));
+    if (!ist.ok) throw new Error('parse failed');
+    expect(result.source.walls).toEqual(ist.source.walls);
+    expect(result.source.rooms).toEqual(ist.source.rooms);
   });
 });

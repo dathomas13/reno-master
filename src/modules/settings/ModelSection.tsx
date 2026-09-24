@@ -4,7 +4,7 @@ import { activeRelease, MODEL_EVENT } from '@/data/models';
 import { compareVersions, VARIANTS, type ReleaseInfo, type Variant } from '@/data/modelRelease';
 import { readRelease } from '@/data/modelStore';
 import { publishedState, type PublishedState } from '@/data/modelSync';
-import { publishStartModel, startVersion } from '@/data/modelExchange';
+import { publishStartModel, resetSollToIst, startVersion } from '@/data/modelExchange';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { ModelExchange } from './ModelExchange';
 
@@ -31,6 +31,7 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState<Variant | null>(null);
+  const [resetting, setResetting] = useState(false);
   const [defaultVariant, setDefaultVariant] = useState<Variant>(() => loadSettings().defaultModelVariant);
 
   const refresh = useCallback(async () => {
@@ -66,6 +67,28 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
 
   // offered while the database has nothing, or only an older model without its house
   // file (published the old way) - never over a model someone published from the app
+  async function resetSoll() {
+    const ist = rows.find((row) => row.variant === 'ist')?.release?.version ?? '?';
+    const ok = window.confirm(
+      `Den Zielzustand durch eine Kopie des Bestands v${ist} ersetzen, als Version 0.0?\n\n`
+      + 'Die bisherige Planung (Wände und Räume im Zielzustand) wird dabei ersetzt. '
+      + 'Wer sie behalten will, exportiert sie vorher.',
+    );
+    if (!ok) return;
+    setResetting(true);
+    setMessage(null);
+    setError(null);
+    try {
+      await resetSollToIst();
+      setMessage('Der Zielzustand ist jetzt eine Kopie des Bestands, Version 0.0. Die anderen Geräte übernehmen ihn beim nächsten Sync.');
+      await refresh();
+    } catch (problem) {
+      setError(problem instanceof Error ? problem.message : 'Das Zurücksetzen ist fehlgeschlagen.');
+    } finally {
+      setResetting(false);
+    }
+  }
+
   const missing = rows.filter(({ variant: item, published }) => published !== undefined
     && (!published.exists
       || (!published.hasSource && compareVersions(startVersion(item), published.version ?? '0') > 0)));
@@ -132,6 +155,24 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
       </Field>
 
       <ModelExchange signedIn={signedIn} />
+
+      {signedIn && (
+        <div className="mt-4 border-t border-line/60 pt-3">
+          <h3 className="font-medium text-sm">Zielzustand neu beginnen</h3>
+          <p className="text-xs text-muted mt-1">
+            Setzt den Zielzustand auf eine Kopie des aktuellen Bestands zurück, als Version 0.0.
+            Alle Geräte übernehmen das, obwohl die Nummer kleiner ist als vorher.
+          </p>
+          <button
+            type="button"
+            className="btn mt-2"
+            onClick={() => void resetSoll()}
+            disabled={resetting || moving !== null}
+          >
+            {resetting ? 'Wird zurückgesetzt…' : 'Zielzustand auf Bestand zurücksetzen (v0.0)'}
+          </button>
+        </div>
+      )}
 
       {message && <p className="text-sm mt-3">{message}</p>}
       {error && <p className="text-sm text-bad mt-3">{error}</p>}

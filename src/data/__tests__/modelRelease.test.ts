@@ -3,6 +3,7 @@ import {
   compareVersions,
   fitsInDocument,
   isNewer,
+  compareReleases,
   pickRelease,
   planSync,
   releaseFromDoc,
@@ -240,5 +241,28 @@ describe('planSync', () => {
 
   it('has nothing to do when no release is reachable', () => {
     expect(planSync([null, undefined])).toBeNull();
+  });
+});
+
+describe('generations', () => {
+  it('lets a fresh start at 0.0 win over any version of the generation before', () => {
+    expect(compareReleases({ version: '0.0', generation: 1 }, { version: '0.24' })).toBeGreaterThan(0);
+    const plan = planSync([
+      { ...release('0.24', 'cache') },
+      { ...release('0.0', 'firestore'), generation: 1 },
+    ]);
+    expect(plan?.action).toBe('download');
+    expect(plan?.release.version).toBe('0.0');
+  });
+
+  it('compares versions as before within one generation', () => {
+    expect(compareReleases({ version: '0.1', generation: 1 }, { version: '0.0', generation: 1 })).toBeGreaterThan(0);
+  });
+
+  it('writes the generation into the document and reads it back', () => {
+    const doc = releaseToDoc('soll', '0.0', '', '2026-09-25', '{"prims":[]}', null, null, 1);
+    expect(doc.generation).toBe(1);
+    expect(releaseFromDoc('soll', doc)?.generation).toBe(1);
+    expect(releaseFromDoc('soll', { version: '0.2', scene: '{}' })?.generation).toBe(0);
   });
 });

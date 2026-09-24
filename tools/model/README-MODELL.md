@@ -100,6 +100,13 @@ gleicher oder kleinerer Version rührt sie nicht an. Vor dem Ablegen prüft sie 
 (`validateScene`); ein beschädigtes Dokument wird abgelehnt und das bisherige Modell
 bleibt in Betrieb.
 
+**Neubeginn (Generation):** Versionen steigen nur. Um eine Variante neu zu beginnen, etwa
+den Zielzustand als Kopie des Bestands mit Version 0.0 („Zielzustand auf Bestand
+zurücksetzen“ in den Einstellungen), trägt das Dokument eine höhere `generation`. Die
+Geräte vergleichen erst die Generation, dann die Version (`compareReleases` in
+`modelRelease.ts`); jede weitere Veröffentlichung behält die Generation und zählt von 0.0
+aus weiter.
+
 **Einmalig beim Umzug (0.51.0):** Solange die Datenbank für eine Variante noch kein Modell
 hat, bietet die App unter 3D-Modelle „Startstand übernehmen“ an – das ist Ist v0.27 / Soll v0.24,
 der bis dahin mit der App ausgeliefert wurde (`testdata/haus-*.json`). Sind beide
