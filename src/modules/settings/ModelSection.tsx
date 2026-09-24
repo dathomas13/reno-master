@@ -82,7 +82,7 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
         Gilt für die ganze App: welches 3D-Modell sich öffnet und welche Räume Tagebuch, Kosten,
         Aufgaben, Notizen und Fotos anbieten – im Bestand z. B. Heizung und Öllager, im
         Zielzustand den Technikraum. Alte Einträge bleiben dabei auffindbar; die Suche findet
-        Räume unter allen Namen.
+        Räume unter allen Namen. Der Umschalter im 3D-Viewer wechselt nur die Ansicht.
       </p>
 
       <ModelExchange signedIn={signedIn} />

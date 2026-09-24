@@ -21,7 +21,7 @@ import { activeRelease, clearPreview, loadRoomMap, loadRooms, loadScene, NO_MODE
 import { resolveInVariant } from '@/data/roomNaming';
 import type { ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
-import { loadSettings, saveSettings } from '@/lib/settings';
+import { loadSettings } from '@/lib/settings';
 import { Spinner } from '@/components/Fields';
 
 export default function ViewerPage() {
@@ -300,9 +300,10 @@ export default function ViewerPage() {
     });
   }
 
+  // only this view: the Bestand/Zielzustand setting (which also names the rooms in all
+  // forms) stays as it is - it is changed in the settings, nowhere else
   function switchVariant(next: Variant) {
     setVariant(next);
-    saveSettings({ defaultModelVariant: next });
     const nextParams = new URLSearchParams(params);
     nextParams.set('variant', next);
     setParams(nextParams, { replace: true });
