@@ -1,7 +1,9 @@
-import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   buildExportArchive,
+  pendingImports,
+  setPendingImports,
   prepareModelImport,
   previewImport,
   publishImport,
@@ -30,7 +32,17 @@ export function ModelExchange({ signedIn }: { signedIn: boolean }) {
   const [busy, setBusy] = useState<'export' | 'import' | 'publish' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [imports, setImports] = useState<PreparedImport[]>([]);
+  // survives the trip to the 3D preview and back, see pendingImports
+  const [imports, setImports] = useState<PreparedImport[]>(pendingImports);
+  const location = useLocation();
+  const section = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setPendingImports(imports), [imports]);
+
+  // back from the preview: straight to the import that is waiting
+  useEffect(() => {
+    if (location.hash === '#import') section.current?.scrollIntoView({ block: 'start' });
+  }, [location.hash]);
   const [confirmed, setConfirmed] = useState<Record<string, boolean>>({});
 
   async function runExport() {
@@ -103,7 +115,7 @@ export function ModelExchange({ signedIn }: { signedIn: boolean }) {
   }
 
   return (
-    <div className="mt-4 border-t border-line/60 pt-3">
+    <div ref={section} id="import" className="mt-4 border-t border-line/60 pt-3">
       <h3 className="font-medium text-sm">Modell bearbeiten</h3>
       <p className="text-xs text-muted mt-1">
         „Exportieren“ gibt ein ZIP mit Anleitung, Hausdateien und Grundrissen (DXF). Damit lässt sich

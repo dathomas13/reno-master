@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.54.1 – Aus der 3D-Vorschau zurück zum Import
+
+- „Zurück zum Import“ in der 3D-Vorschau führt direkt zum wartenden Import in den
+  Einstellungen – dort lässt er sich veröffentlichen oder verwerfen, ohne neu zu importieren.
+
 ## 0.54.0 – Zielzustand mit neuer Nummerierung
 
 - Der Zielzustand zählt neu ab 0.0; ältere Stände heißen jetzt 0.0.23 und 0.0.24.

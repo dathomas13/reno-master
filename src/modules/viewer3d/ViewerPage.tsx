@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import {
   buildHouse,
@@ -26,6 +26,7 @@ import { Spinner } from '@/components/Fields';
 
 export default function ViewerPage() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const houseRef = useRef<HouseScene | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
@@ -336,8 +337,16 @@ export default function ViewerPage() {
           {preview && (
             <span className="text-[11px] text-bg bg-warn rounded px-2 py-1 pointer-events-auto flex items-center gap-2">
               Vorschau v{preview.version} · nicht veröffentlicht
-              <button type="button" className="underline" onClick={() => clearPreview(variant)}>
-                beenden
+              <button
+                type="button"
+                className="underline"
+                onClick={() => {
+                  clearPreview(variant);
+                  // the import is still waiting in the settings - publish or discard it there
+                  navigate('/einstellungen#import');
+                }}
+              >
+                zurück zum Import
               </button>
             </span>
           )}

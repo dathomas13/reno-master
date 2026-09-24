@@ -109,6 +109,21 @@ export interface PreparedImport {
   unchanged: boolean;
 }
 
+/**
+ * The imports waiting for a decision. Kept here, not in the settings screen: looking at
+ * one in the 3D view leaves that screen, and coming back must not mean importing again.
+ * In memory only - a reload of the app drops them, like the preview itself.
+ */
+let pending: PreparedImport[] = [];
+
+export function pendingImports(): PreparedImport[] {
+  return pending;
+}
+
+export function setPendingImports(next: PreparedImport[]): void {
+  pending = next;
+}
+
 function variantOf(text: string): Variant | null {
   try {
     const variant = (JSON.parse(text.replace(/^\uFEFF/, '')) as { variant?: unknown }).variant;
