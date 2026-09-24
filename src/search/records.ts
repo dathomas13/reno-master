@@ -264,7 +264,7 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       body: log.text,
       meta: [person, log.channel ?? '', ...dateWords(log.at.slice(0, 10))].filter(Boolean),
       date: log.at.slice(0, 10),
-      to: `/kontakte?kontakt=${log.contactId}`,
+      to: `/gespraeche?eintrag=${log.id}`,
     });
   }
 

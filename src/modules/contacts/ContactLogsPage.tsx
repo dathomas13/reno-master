@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState } from '@/components/Fields';
 import { useCollection } from '@/data/hooks';
@@ -19,6 +20,23 @@ export default function ContactLogsPage() {
   const { data: contacts } = useCollection<Contact>(COL.contacts);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<ContactLog | null>(null);
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get('eintrag');
+
+  // a search result links straight to one entry: open it as soon as it is loaded
+  useEffect(() => {
+    if (!wanted) return;
+    const log = logs.find((item) => item.id === wanted);
+    if (log) setOpen(log);
+  }, [wanted, logs]);
+
+  function close() {
+    setOpen(null);
+    if (!wanted) return;
+    const next = new URLSearchParams(params);
+    next.delete('eintrag');
+    setParams(next, { replace: true });
+  }
 
   const contactName = useMemo(() => new Map(contacts.map((contact) => [contact.id, contact.name])), [contacts]);
 
@@ -81,14 +99,14 @@ export default function ContactLogsPage() {
         <ContactLogEditor
           log={open}
           contacts={contacts}
-          onClose={() => setOpen(null)}
+          onClose={close}
           onSave={async (log) => {
             await saveContactLog(log);
-            setOpen(null);
+            close();
           }}
           onDelete={async (log) => {
             await deleteContactLog(log.id);
-            setOpen(null);
+            close();
           }}
         />
       )}

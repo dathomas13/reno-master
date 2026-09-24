@@ -344,7 +344,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - TopBar: Titel, Sync-Badge, kontextabhängige Aktion (z. B. "+").
 - **Sheets werden per Portal an `document.body` gehängt.** `backdrop-blur` (wie `filter` und `transform`) macht ein Element zum Bezugsrahmen für `position: fixed` darin – TopBar und Bottom-Navigation haben es. Ein Sheet, das im Baum darunter steht, misst sich sonst an einer 56 px hohen Kopfzeile und erscheint am Telefon verschoben und unlesbar.
 - Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/gespraeche` (alle Gesprächsprotokolle über alle Kontakte, aus "Mehr" erreichbar), `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
-- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
+- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/gespraeche?eintrag=<id>` (öffnet den Gesprächseintrag), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
@@ -447,12 +447,12 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.
   Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
   Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, aus "Mehr" erreichbar) zeigt alle Einträge über
-  alle Kontakte, neueste zuerst, mit Suchfeld; Tippen öffnet den zugehörigen Kontakt.
+  alle Kontakte, neueste zuerst, mit Suchfeld und bis zu dreizeiliger Vorschau (Zeilenumbrüche zu
+  Leerzeichen gefaltet); Tippen öffnet den Eintrag selbst (`ContactLogEditor` mit „Kontakt“-Feld),
+  ebenso ein Suchtreffer über `?eintrag=<id>`.
   **Kein Löschen in Kaskade**: löscht man einen Kontakt, bleiben seine Einträge stehen (eigene Collection,
   keine Firestore-Kaskade). Unter `/gespraeche` zeigt so ein verwaister Eintrag "Kontakt gelöscht" statt
-  eines Namens; Tippen öffnet ihn direkt dort (`ContactLogEditor`, jetzt mit `contacts`-Prop exportiert)
-  statt zum – nicht mehr vorhandenen – Kontakt zu verlinken, mit einem zusätzlichen "Kontakt"-Feld, um ihn
-  einem anderen zuzuordnen.
+  eines Namens; über das "Kontakt"-Feld im Editor lässt er sich einem anderen zuordnen.
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.

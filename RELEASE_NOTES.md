@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.48.7 – Suche öffnet Gespräche direkt
+
+- Ein Gespräch in den Suchergebnissen öffnet jetzt den Eintrag selbst statt des Kontakts.
+
 ## 0.48.6 – Gespräche: Eintrag öffnet sich direkt
 
 - Ein Tipp auf einen Eintrag unter „Gespräche“ öffnet jetzt das Gespräch selbst statt des Kontakts.

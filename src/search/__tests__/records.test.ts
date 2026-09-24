@@ -81,14 +81,14 @@ describe('buildRecords', () => {
     expect(ids).toContain('room:og-bad');
     expect(records.find((record) => record.id === 'task:a1')?.to).toBe('/aufgaben?aufgabe=a1');
     expect(records.find((record) => record.id === 'contact:k1')?.to).toBe('/kontakte?kontakt=k1');
-    expect(records.find((record) => record.id === 'contactLog:g1')?.to).toBe('/kontakte?kontakt=k1');
+    expect(records.find((record) => record.id === 'contactLog:g1')?.to).toBe('/gespraeche?eintrag=g1');
   });
 
   it('finds a contact by a role added through the extensible picker', () => {
     expect(search(index, 'sanitär').map((hit) => hit.record.id)).toContain('contact:k1');
   });
 
-  it('finds a Gesprächsprotokoll entry by its text and links back to the contact', () => {
+  it('finds a Gesprächsprotokoll entry by its text', () => {
     expect(search(index, 'estrich vorbei').map((hit) => hit.record.id)).toContain('contactLog:g1');
   });
 
