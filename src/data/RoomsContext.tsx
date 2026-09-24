@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { loadRooms, loadRoomMap, sortRooms } from './models';
 import { MODEL_EVENT } from './modelSync';
-import { buildRoomNaming, disambiguatedNames, type RoomNamingView } from './roomNaming';
+import { buildRoomNaming, disambiguatedNames, roomsWithLinkedNames, type RoomNamingView } from './roomNaming';
 import { loadSettings, SETTINGS_EVENT, type LocalSettings } from '@/lib/settings';
 import { LAYER_LABEL, type Room } from '@/modules/viewer3d/houseScene';
 
@@ -26,6 +26,8 @@ interface RoomsValue {
   writeId(id: string): string;
   /** the counterpart name(s) of a room - a merged predecessor's name, or the other side of a rename */
   aliases(id: string): string[];
+  /** the rooms of both tables with every name they are linked to - for the search */
+  searchRooms: (Room & { aliases: string[] })[];
 }
 
 const noView: RoomNamingView<Room> = {
@@ -49,6 +51,7 @@ const RoomsContext = createContext<RoomsValue>({
   matches: (roomIds, filterId) => roomIds.includes(filterId),
   writeId: (id) => id,
   aliases: () => [],
+  searchRooms: [],
 });
 
 export function RoomsProvider({ children }: { children: ReactNode }) {
@@ -118,6 +121,7 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
       matches: view.matches,
       writeId: view.writeId,
       aliases: view.aliases,
+      searchRooms: roomsWithLinkedNames(ist, soll, map, naming),
     };
   }, [ist, soll, map, naming]);
 

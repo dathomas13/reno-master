@@ -127,6 +127,47 @@ export function buildRoomNaming<R extends RoomLike>(
 }
 
 /**
+ * Every room of both tables, each with the names it is linked to through the mapping,
+ * whichever naming is active - for the search, which should find a room and the entries
+ * filed under it by any of its names: "Heizung", "Öllager" and "Technikraum" all find
+ * the Heizung and Öllager entries, and each of the three rooms itself. An id in both
+ * tables appears once, with the name of the active naming first.
+ */
+export function roomsWithLinkedNames<R extends RoomLike>(
+  ist: R[],
+  soll: R[],
+  map: Record<string, string>,
+  naming: RoomNaming,
+): (R & { aliases: string[] })[] {
+  const byId = new Map<string, R>();
+  for (const room of naming === 'bestand' ? [...ist, ...soll] : [...soll, ...ist]) {
+    if (!byId.has(room.id)) byId.set(room.id, room);
+  }
+  const istById = new Map(ist.map((room) => [room.id, room]));
+  const sollById = new Map(soll.map((room) => [room.id, room]));
+  // undirected links: an Ist room and the Soll room it becomes, and every other Ist room
+  // becoming the same one (so "Öllager" is linked to "Technikraum", not to "Heizung")
+  const linked = new Map<string, Set<string>>();
+  const link = (a: string, b: string) => {
+    if (a === b) return;
+    linked.set(a, (linked.get(a) ?? new Set()).add(b));
+    linked.set(b, (linked.get(b) ?? new Set()).add(a));
+  };
+  for (const room of ist) link(room.id, map[room.id] ?? room.id);
+  return [...byId.values()].map((room) => {
+    const names = new Set<string>();
+    for (const other of linked.get(room.id) ?? []) {
+      const name = (sollById.get(other) ?? istById.get(other))?.name;
+      if (name) names.add(name);
+    }
+    // the same id can carry a different name in the other table
+    for (const same of [istById.get(room.id), sollById.get(room.id)]) if (same) names.add(same.name);
+    names.delete(room.name);
+    return { ...room, aliases: [...names] };
+  });
+}
+
+/**
  * A room name, with its floor appended only when another room in the SAME list shares
  * the exact name - "Wohnzimmer (Keller)" next to a plain "Wohnzimmer" in the Erdgeschoss,
  * but never "Wäscheboden (Obergeschoss)" when nothing else is called that. Computed once

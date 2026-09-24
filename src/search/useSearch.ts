@@ -38,19 +38,21 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   const phases = useCollection<Phase>(COL.phases);
   const plans = useCollection<Plan>(COL.plans);
   const photos = useCollection<Photo>(COL.photos);
-  const { rooms, aliases } = useRooms();
+  // both room tables, each room with all its linked names: the search finds "Heizung",
+  // "Öllager" and "Technikraum" whichever naming is set (roomsWithLinkedNames)
+  const { searchRooms } = useRooms();
 
   const roomsForSearch = useMemo<RoomLike[]>(
     () =>
-      rooms.map((room) => ({
+      searchRooms.map((room) => ({
         id: room.id,
         name: room.name,
         floor: room.floor,
         floorLabel: LAYER_LABEL[room.floor as Layer] ?? room.floor,
         areaM2: room.areaM2,
-        aliases: aliases(room.id),
+        aliases: room.aliases,
       })),
-    [rooms, aliases],
+    [searchRooms],
   );
 
   const records = useMemo(

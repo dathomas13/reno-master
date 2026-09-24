@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildRoomNaming, disambiguatedNames, resolveInVariant, type RoomLike } from '@/data/roomNaming';
+import { buildRoomNaming, disambiguatedNames, resolveInVariant, roomsWithLinkedNames, type RoomLike } from '@/data/roomNaming';
 
 function room(id: string, name: string, floor = 'KG'): RoomLike {
   return { id, name, floor, areaM2: 10 };
@@ -182,5 +182,33 @@ describe('buildRoomNaming - degrades gracefully without a mapping', () => {
     expect(view.roomFor('kg-heizung')?.id).toBe('kg-heizung');
     expect(view.idsFor('kg-heizung')).toEqual(['kg-heizung']);
     expect(view.matches(['kg-heizung'], 'kg-heizung')).toBe(true);
+  });
+});
+
+describe('roomsWithLinkedNames', () => {
+  const ist = [
+    { id: 'kg-heizung', name: 'Heizung', floor: 'KG' },
+    { id: 'kg-oellager', name: 'Öllager', floor: 'KG' },
+    { id: 'eg-bad', name: 'Bad', floor: 'EG' },
+  ];
+  const soll = [
+    { id: 'kg-technik', name: 'Technikraum', floor: 'KG' },
+    { id: 'eg-bad', name: 'Bad', floor: 'EG' },
+  ];
+  const map = { 'kg-heizung': 'kg-technik', 'kg-oellager': 'kg-technik', 'eg-bad': 'eg-bad' };
+
+  it('lists the rooms of both tables once, whichever naming is set', () => {
+    for (const naming of ['bestand', 'planung'] as const) {
+      const ids = roomsWithLinkedNames(ist, soll, map, naming).map((room) => room.id).sort();
+      expect(ids).toEqual(['eg-bad', 'kg-heizung', 'kg-oellager', 'kg-technik']);
+    }
+  });
+
+  it('links a merged room to each of its predecessors, and each predecessor to it', () => {
+    const rooms = roomsWithLinkedNames(ist, soll, map, 'planung');
+    const byId = new Map(rooms.map((room) => [room.id, room]));
+    expect([...(byId.get('kg-technik')?.aliases ?? [])].sort()).toEqual(['Heizung', 'Öllager']);
+    expect(byId.get('kg-heizung')?.aliases).toEqual(['Technikraum']);
+    expect(byId.get('eg-bad')?.aliases).toEqual([]);
   });
 });
