@@ -21,6 +21,7 @@ import {
   releaseToDoc,
   validateRooms,
   validateScene,
+  legacySollVersion,
   VARIANTS,
   type ReleaseDoc,
   type ReleaseInfo,
@@ -28,6 +29,7 @@ import {
 } from './modelRelease';
 import { cachedInfo, readRelease, writeRelease, type CachedRelease } from './modelStore';
 import { invalidateModel, MODEL_EVENT } from './models';
+import { formatSource } from '@/modules/modelBuild';
 
 export { MODEL_EVENT } from './models';
 
@@ -123,7 +125,6 @@ export async function syncModel(variant: Variant): Promise<SyncResult | null> {
       scene,
       rooms,
       source,
-      generation: best.generation ?? 0,
       cachedAt: new Date().toISOString(),
     };
     await writeRelease(entry);
@@ -156,31 +157,39 @@ export async function syncAllModels(): Promise<SyncResult[]> {
   return results;
 }
 
-/** true once the listener has heard from the database, per variant: null = nothing published */
-const heard = new Map<Variant, boolean>();
-
-/** the generation of the published model, 0 when nothing is known */
-export function publishedGeneration(variant: Variant): number {
-  return announced.get(variant)?.generation ?? 0;
-}
-
-export interface PublishedState {
-  /** the database has a model document for the variant */
-  exists: boolean;
-  version?: string;
-  /** the document carries its house file - one published before 0.49 does not */
-  hasSource: boolean;
-}
+const RENUMBERED_KEY = 'reno:soll-renumbered';
 
 /**
- * What the database has for the variant, once the listener has answered from the server;
- * undefined before that (offline, or not signed in yet).
+ * Once per device: gives a stored old Soll its new number (legacySollVersion), in the
+ * record and in its house file, so the new Soll 0.1 counts as newer and the next import
+ * counts on from the right place. Every failure leaves the model as it was.
  */
-export function publishedState(variant: Variant): PublishedState | undefined {
-  if (!heard.get(variant)) return undefined;
-  const release = announced.get(variant) ?? null;
-  if (!release) return { exists: false, hasSource: false };
-  return { exists: true, version: release.version, hasSource: Boolean(release.sourceJson || release.sourceUrl) };
+export async function renumberLegacySoll(): Promise<void> {
+  try {
+    if (localStorage.getItem(RENUMBERED_KEY)) return;
+  } catch {
+    return;
+  }
+  try {
+    const cached = await readRelease('soll');
+    const renamed = cached ? legacySollVersion(cached.version) : null;
+    if (cached && renamed) {
+      let source = cached.source ?? null;
+      if (source) {
+        try {
+          source = formatSource({ ...(JSON.parse(source) as Record<string, unknown>), version: renamed });
+        } catch {
+          source = null;
+        }
+      }
+      const scene = { ...cached.scene, meta: { ...cached.scene.meta, version: renamed } };
+      await writeRelease({ ...cached, version: renamed, scene, source });
+      invalidateModel('soll');
+    }
+    localStorage.setItem(RENUMBERED_KEY, new Date().toISOString());
+  } catch {
+    // try again on the next start
+  }
 }
 
 /**
@@ -200,23 +209,14 @@ export function startModelSync(onResult?: (result: SyncResult) => void): () => v
   const unsubscribes = VARIANTS.map((variant) => watchDoc<ReleaseDoc>(
     COL.meta,
     docId(variant),
-    (row, fromServer) => {
+    (row) => {
       announced.set(variant, releaseFromDoc(variant, row));
-      if (fromServer && !heard.get(variant)) {
-        heard.set(variant, true);
-        // the settings screen offers the start model once it knows the database has none
-        try {
-          window.dispatchEvent(new CustomEvent(MODEL_EVENT, { detail: { variant } }));
-        } catch {
-          // no window (tests)
-        }
-      }
       run();
     },
     () => undefined, // offline or not allowed: the device keeps what it has
-    { serverState: true },
   ));
-  run(); // whatever is already stored, announce nothing but settle the state
+  // the renumbering first, or an old Soll 0.24 would still count as newer than 0.1
+  void renumberLegacySoll().then(run);
 
   return () => {
     stopped = true;
@@ -230,8 +230,6 @@ export interface PublishInput {
   roomsJson: string | null;
   /** the house file the scene was built from; published along so every device can export it */
   sourceJson?: string | null;
-  /** see ReleaseInfo.generation - the caller passes the current one, or the next for a fresh start */
-  generation?: number;
   note?: string;
 }
 
@@ -263,10 +261,7 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
 
   const generatedAt = meta?.generatedAt ?? new Date().toISOString().slice(0, 10);
   const note = input.note?.trim() || meta?.note || '';
-  const generation = input.generation ?? 0;
-  const doc = releaseToDoc(
-    input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson, sourceJson, generation,
-  );
+  const doc = releaseToDoc(input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson, sourceJson);
   await saveDoc<BaseDoc & ReleaseDoc>(COL.meta, {
     id: docId(input.variant),
     ...doc,
@@ -277,7 +272,7 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
 
   const info: ReleaseInfo = {
     variant: input.variant, version, updatedAt: generatedAt, note, bytes: input.sceneJson.length,
-    source: 'firestore', generation,
+    source: 'firestore',
   };
   announced.set(input.variant, {
     ...info,

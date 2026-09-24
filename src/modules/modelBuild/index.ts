@@ -49,16 +49,6 @@ export type ImportResult =
     basedOn: string;
   };
 
-/**
- * The Soll as an exact copy of an Ist house file, as version 0.0: same walls and rooms,
- * and a mapping that points every Ist room at itself. Text in, text out.
- */
-export function sollCopyOfIst(istText: string, note: string): string {
-  const raw = JSON.parse(istText) as Record<string, unknown> & { rooms?: { id: string }[] };
-  const roomMap = Object.fromEntries((raw.rooms ?? []).map((room) => [room.id, room.id]));
-  return formatSource({ ...raw, variant: 'soll', version: '0.0', note, roomMap });
-}
-
 /** The next version after the highest known one: 0.25 -> 0.26, 0.99 -> 0.100, 0 -> 0.1. */
 export function nextVersion(highest: string): string {
   const parts = String(highest || '0').split('.');

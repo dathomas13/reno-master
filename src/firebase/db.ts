@@ -87,25 +87,15 @@ export function watchCollection<T>(
   );
 }
 
-/**
- * Listens to one document. `fromServer` tells an answer of the server from one out of the
- * local cache - "does not exist" from an empty cache means nothing. Pass
- * `serverState: true` to get called again when the server confirms unchanged data.
- */
 export function watchDoc<T>(
   collectionName: string,
   id: string,
-  onData: (row: T | null, fromServer: boolean) => void,
+  onData: (row: T | null) => void,
   onError?: (error: Error) => void,
-  options: { serverState?: boolean } = {},
 ): () => void {
   return onSnapshot(
     doc(db, collectionName, id),
-    { includeMetadataChanges: options.serverState === true },
-    (snapshot) => onData(
-      snapshot.exists() ? ({ ...(snapshot.data() as T), id: snapshot.id }) : null,
-      !snapshot.metadata.fromCache,
-    ),
+    (snapshot) => onData(snapshot.exists() ? ({ ...(snapshot.data() as T), id: snapshot.id }) : null),
     (error) => onError?.(error),
   );
 }

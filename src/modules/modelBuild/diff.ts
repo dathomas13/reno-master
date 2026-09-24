@@ -75,7 +75,18 @@ export function diffSources(base: HouseSource | null, next: HouseSource): Source
     if (before.floor !== r.floor) changes.push(`Raum ${r.id}: Geschoss ${before.floor} → ${r.floor}`);
     if (!same(before.rects, r.rects)) changes.push(`Raum ${r.id} „${r.name}“: Fläche ${m2(before)} → ${m2(r)} m²`);
   }
-  const removedRoomIds = base.rooms.filter((r) => !newRooms.has(r.id)).map((r) => r.id);
+  // in the Soll a room that the mapping sends to another one is merged, not lost: its
+  // entries show up under the new room (see src/data/roomNaming.ts)
+  const mergedInto = (id: string) => {
+    const target = next.roomMap?.[id];
+    return target && target !== id && newRooms.has(target) ? target : null;
+  };
+  const gone = base.rooms.filter((r) => !newRooms.has(r.id));
+  for (const r of gone) {
+    const target = mergedInto(r.id);
+    if (target) changes.push(`Raum ${r.id} „${r.name}“ geht in ${target} „${newRooms.get(target)?.name ?? ''}“ auf`);
+  }
+  const removedRoomIds = gone.filter((r) => !mergedInto(r.id)).map((r) => r.id);
   for (const id of removedRoomIds) changes.push(`Raum entfernt: ${id} „${oldRooms.get(id)?.name ?? ''}“`);
 
   const sections: [keyof HouseSource, string][] = [

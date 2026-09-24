@@ -82,7 +82,6 @@ export async function activeRelease(variant: Variant): Promise<ReleaseInfo | nul
     note: cached.note,
     source: 'cache',
     origin: cached.origin,
-    generation: cached.generation ?? 0,
   };
 }
 

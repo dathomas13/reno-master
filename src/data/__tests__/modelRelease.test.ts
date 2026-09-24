@@ -3,7 +3,7 @@ import {
   compareVersions,
   fitsInDocument,
   isNewer,
-  compareReleases,
+  legacySollVersion,
   pickRelease,
   planSync,
   releaseFromDoc,
@@ -244,25 +244,18 @@ describe('planSync', () => {
   });
 });
 
-describe('generations', () => {
-  it('lets a fresh start at 0.0 win over any version of the generation before', () => {
-    expect(compareReleases({ version: '0.0', generation: 1 }, { version: '0.24' })).toBeGreaterThan(0);
-    const plan = planSync([
-      { ...release('0.24', 'cache') },
-      { ...release('0.0', 'firestore'), generation: 1 },
-    ]);
-    expect(plan?.action).toBe('download');
-    expect(plan?.release.version).toBe('0.0');
+describe('legacySollVersion', () => {
+  it('moves the old Soll numbers below the new ones', () => {
+    expect(legacySollVersion('0.24')).toBe('0.0.24');
+    expect(legacySollVersion('0.23')).toBe('0.0.23');
+    expect(isNewer('0.1', '0.0.24')).toBe(true);
+    expect(isNewer('0.0.24', '0.0')).toBe(true);
   });
 
-  it('compares versions as before within one generation', () => {
-    expect(compareReleases({ version: '0.1', generation: 1 }, { version: '0.0', generation: 1 })).toBeGreaterThan(0);
-  });
-
-  it('writes the generation into the document and reads it back', () => {
-    const doc = releaseToDoc('soll', '0.0', '', '2026-09-25', '{"prims":[]}', null, null, 1);
-    expect(doc.generation).toBe(1);
-    expect(releaseFromDoc('soll', doc)?.generation).toBe(1);
-    expect(releaseFromDoc('soll', { version: '0.2', scene: '{}' })?.generation).toBe(0);
+  it('leaves the fresh start, the new numbers and anything else alone', () => {
+    expect(legacySollVersion('0.0')).toBeNull();
+    expect(legacySollVersion('0.1')).toBeNull();
+    expect(legacySollVersion('0.0.24')).toBeNull();
+    expect(legacySollVersion('1.2')).toBeNull();
   });
 });

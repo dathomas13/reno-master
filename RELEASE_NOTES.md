@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.54.0 – Zielzustand mit neuer Nummerierung
+
+- Der Zielzustand zählt neu ab 0.0; ältere Stände heißen jetzt 0.0.23 und 0.0.24.
+- Der Knopf „Zielzustand auf Bestand zurücksetzen“ und „Startstand übernehmen“ sind wieder
+  weg – beide Modelle liegen in der Datenbank.
+
 ## 0.53.0 – Zielzustand neu beginnen
 
 - Einstellungen → 3D-Modelle → „Zielzustand auf Bestand zurücksetzen (v0.0)“ macht den

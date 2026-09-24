@@ -8,12 +8,6 @@
  * tools/model/PLAN-MODELL-WORKFLOW.md.
  */
 import anleitung from '../../tools/model/ANLEITUNG-EXTERN.md?raw';
-// The model as it stood when it left the repository (Ist v0.27, Soll v0.24, room names
-// and the Ist -> Soll mapping of 0.48.7) - for the one-time move into the database
-// (publishStartModel). Remove, together with that function, once both are published.
-// It doubles as the frozen test data in tools/model/testdata.
-import startIst from '../../tools/model/testdata/haus-ist.json?raw';
-import startSoll from '../../tools/model/testdata/haus-soll.json?raw';
 import { ZipWriter } from '@/lib/zip';
 import { looksLikeZip, readZip } from '@/lib/unzip';
 import { today } from '@/lib/date';
@@ -25,14 +19,12 @@ import {
   PLAN_FLOORS,
   parseSource,
   prepareImport,
-  sollCopyOfIst,
   type HouseSource,
   type ImportResult,
 } from '@/modules/modelBuild';
 import { compareVersions, VARIANTS, type Variant } from './modelRelease';
-import { readRelease } from './modelStore';
 import { activeRelease, clearPreview, loadSource, setPreview } from './models';
-import { publishedGeneration, publishModel, syncAllModels, syncModel } from './modelSync';
+import { publishModel, syncAllModels, syncModel } from './modelSync';
 import type { RoomDoc, SceneDoc } from '@/modules/viewer3d/houseScene';
 
 const VARIANT_LABEL: Record<Variant, string> = { ist: 'Bestand', soll: 'Zielzustand' };
@@ -139,15 +131,12 @@ export async function prepareModelImport(fileName: string, text: string): Promis
   if (variant) {
     await syncModel(variant).catch(() => null);
     const [source, active] = await Promise.all([loadSource(variant), activeRelease(variant)]);
-    // only versions of the current generation count: after a fresh start at 0.0 the next
-    // import is 0.1, not one above the numbers of the model that was replaced
-    const generation = await currentGeneration(variant);
     if (source) {
       const parsed = parseSource(source.text);
       if (parsed.ok) base = parsed.source;
+      known.push(source.version);
     }
-    if (active && (active.generation ?? 0) === generation) known.push(active.version);
-    if (source && (active?.generation ?? 0) === generation) known.push(source.version);
+    if (active) known.push(active.version);
   }
   const highest = known.reduce((best, version) => (compareVersions(version, best) > 0 ? version : best), '0');
   const result = prepareImport({ text, base, version: nextVersion(highest), today: today() });
@@ -165,67 +154,15 @@ export function previewImport(result: Extract<ImportResult, { ok: true }>): void
   });
 }
 
-/** the generation in force for a variant: the published one, or what this device has */
-async function currentGeneration(variant: Variant): Promise<number> {
-  const cached = await readRelease(variant);
-  return Math.max(publishedGeneration(variant), cached?.generation ?? 0);
-}
-
-/**
- * Publishes a built model to every device, with its house file. It keeps the current
- * generation; `freshStart` opens the next one, so a model numbered 0.0 again replaces
- * whatever higher version the devices have.
- */
-export async function publishImport(
-  result: Extract<ImportResult, { ok: true }>,
-  freshStart = false,
-): Promise<void> {
-  const generation = (await currentGeneration(result.variant)) + (freshStart ? 1 : 0);
+/** publishes a built model to every device, with its house file */
+export async function publishImport(result: Extract<ImportResult, { ok: true }>): Promise<void> {
   await publishModel({
     variant: result.variant,
     sceneJson: JSON.stringify(result.scene),
     roomsJson: JSON.stringify(result.rooms),
     sourceJson: result.sourceText,
     note: result.note,
-    generation,
   });
   clearPreview(result.variant);
   await syncAllModels();
-}
-
-/** the version the start model of a variant would be published as */
-export function startVersion(variant: Variant): string {
-  const parsed = parseSource(variant === 'ist' ? startIst : startSoll);
-  return parsed.ok ? parsed.source.version : '0';
-}
-
-/**
- * Moves the model into the database once: publishes the house file the model had when it
- * still shipped with the app, built on this device like any import. Only offered while
- * the database has no model for the variant, or only an older one without house file.
- */
-export async function publishStartModel(variant: Variant): Promise<string> {
-  const text = variant === 'ist' ? startIst : startSoll;
-  const parsed = parseSource(text);
-  if (!parsed.ok) throw new Error(parsed.errors.join(' '));
-  const result = prepareImport({ text, base: null, version: parsed.source.version, today: today() });
-  if (!result.ok) throw new Error(result.errors.join(' '));
-  await publishImport(result);
-  return result.version;
-}
-
-/**
- * Starts the target state over: the Soll becomes an exact copy of the Ist in use, as
- * version 0.0 of a new generation, so every device replaces its Soll whatever number it
- * had. The rooms are the Ist rooms, and the Ist -> Soll mapping points every room at
- * itself - Planung then names everything like Bestand until the Soll is planned again.
- */
-export async function resetSollToIst(): Promise<void> {
-  await syncModel('ist').catch(() => null);
-  const ist = await loadSource('ist');
-  if (!ist) throw new Error('Auf diesem Gerät ist kein Bestand mit Hausdatei – erst den Bestand laden.');
-  const text = sollCopyOfIst(ist.text, `Neubeginn: Kopie des Bestands v${ist.version}`);
-  const result = prepareImport({ text, base: null, version: '0.0', today: today() });
-  if (!result.ok) throw new Error(result.errors.join(' '));
-  await publishImport(result, true);
 }

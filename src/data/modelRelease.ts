@@ -46,21 +46,6 @@ export interface ReleaseInfo {
    */
   sourceJson?: string;
   sourceUrl?: string;
-  /**
-   * Counts fresh starts. Versions only ever go up - except when a variant is started over
-   * (the Soll reset to the Ist, numbered 0.0 again). The new start carries the next
-   * generation, and a higher generation wins whatever its version says. Missing = 0.
-   */
-  generation?: number;
-}
-
-/** > 0 when a is the newer release: generation first, then version */
-export function compareReleases(
-  a: { version: string; generation?: number },
-  b: { version: string; generation?: number },
-): number {
-  const byGeneration = (a.generation ?? 0) - (b.generation ?? 0);
-  return byGeneration !== 0 ? byGeneration : compareVersions(a.version, b.version);
 }
 
 /**
@@ -89,6 +74,20 @@ export function compareVersions(a: string, b: string): number {
   return 0;
 }
 
+/**
+ * The new number of an old Soll version. Until 09/2026 the Soll was only a copy of the Ist
+ * and its numbers ran up to 0.24; the real Soll starts over at 0.0 and 0.1. So that a
+ * device holding an old copy takes the new model, the old numbers move below the new
+ * ones: 0.23 -> 0.0.23, 0.24 -> 0.0.24 (0.0.23 sorts after 0.0 and before 0.1). Returns
+ * null for a version that is not an old one. 0.0 and 0.1 are left alone: 0.0 is the fresh
+ * start, and 0.1 is the first number of the new Soll.
+ */
+export function legacySollVersion(version: string): string | null {
+  const match = /^0\.(\d+)$/.exec(version);
+  if (!match || Number(match[1]) < 2) return null;
+  return `0.0.${Number(match[1])}`;
+}
+
 export function isNewer(candidate: string, current: string): boolean {
   return compareVersions(candidate, current) > 0;
 }
@@ -107,7 +106,7 @@ export function pickRelease(candidates: (ReleaseInfo | null | undefined)[]): Rel
       best = candidate;
       continue;
     }
-    const diff = compareReleases(candidate, best);
+    const diff = compareVersions(candidate.version, best.version);
     if (diff > 0) best = candidate;
     else if (diff === 0
       && SOURCE_ORDER.indexOf(candidate.source) < SOURCE_ORDER.indexOf(best.source)) best = candidate;
@@ -223,8 +222,6 @@ export interface ReleaseDoc {
   // null, not undefined: the document is merged, so clearing a key has to be written
   sceneUrl?: string | null;
   roomsUrl?: string | null;
-  /** see ReleaseInfo.generation */
-  generation?: number;
 }
 
 /** Reads a meta document into a release, or null when it carries no usable version. */
@@ -243,7 +240,6 @@ export function releaseFromDoc(variant: Variant, doc: ReleaseDoc | null): Releas
     sourceJson: typeof doc.source === 'string' ? doc.source : undefined,
     sceneUrl: typeof doc.sceneUrl === 'string' ? doc.sceneUrl : undefined,
     roomsUrl: typeof doc.roomsUrl === 'string' ? doc.roomsUrl : undefined,
-    generation: Number.isInteger(doc.generation) ? doc.generation : 0,
   };
 }
 
@@ -256,7 +252,6 @@ export function releaseToDoc(
   sceneJson: string,
   roomsJson: string | null,
   sourceJson: string | null = null,
-  generation = 0,
 ): ReleaseDoc {
   return {
     variant,
@@ -271,9 +266,6 @@ export function releaseToDoc(
     // the same for the house file: a scene uploaded without one must not keep the old one,
     // or the export would hand out a source that does not match the model
     source: sourceJson,
-    // written every time: the document is merged, and a release without it must not
-    // inherit the generation of whatever was there before
-    generation,
   };
 }
 

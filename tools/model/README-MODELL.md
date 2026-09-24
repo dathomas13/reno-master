@@ -39,7 +39,7 @@ Die App rechnet beim Laden um: three.js-Punkt = `(x, z, −y) / 1000`. Norden is
 | Datei | Rolle |
 |---|---|
 | `haus-ist.json`, `haus-soll.json` (aus dem App-Export) | **Die Hausdateien** für Bestand und Zielzustand: Wände mit ihren Öffnungen, Treppen, Dach- und Gaubenmaße, Balkon, Garage, Räume, Konfidenz-Tags A/B/C. |
-| `testdata/` | **Eingefrorene Testdaten** (Stand Ist v0.27 / Soll v0.24, zugleich der Startstand für die Datenbank): Hausdateien plus die daraus von Python erzeugten Szenen, Räume und Pläne. Die Unit-Tests der App und die CI halten beide Builder daran fest. Das ist nicht das Modell in Gebrauch. |
+| `testdata/` | **Eingefrorene Testdaten** (Stand Ist v0.27 / Soll 0.0.24): Hausdateien plus die daraus von Python erzeugten Szenen, Räume und Pläne. Die Unit-Tests der App und die CI halten beide Builder daran fest. Das ist nicht das Modell in Gebrauch. |
 | `hausdatei.py` | Liest eine Hausdatei aus `RENO_HAUS_DIR` (Standard: `testdata/`) und stellt sie den Skripten unter den alten Namen bereit (`WALLS`, `OPENINGS`, `HOUSE_W`, `roof_z_under` …). `--format <variante>` schreibt die Datei im kanonischen Layout neu. |
 | `haus_model.py`, `haus_model_soll.py`, `rooms_ist.py`, `rooms_soll.py` | Dünne Hüllen um `hausdatei.py`, damit alle älteren Skripte unverändert laufen. **Hier nichts eintragen.** |
 | `build_scene_lite.py` | Baut `<variante>.json` neben der Hausdatei, nur mit der Standardbibliothek. Dasselbe tut die App mit `src/modules/modelBuild` – Punkt für Punkt gleich, ein Unit-Test hält das fest. |
@@ -100,18 +100,14 @@ gleicher oder kleinerer Version rührt sie nicht an. Vor dem Ablegen prüft sie 
 (`validateScene`); ein beschädigtes Dokument wird abgelehnt und das bisherige Modell
 bleibt in Betrieb.
 
-**Neubeginn (Generation):** Versionen steigen nur. Um eine Variante neu zu beginnen, etwa
-den Zielzustand als Kopie des Bestands mit Version 0.0 („Zielzustand auf Bestand
-zurücksetzen“ in den Einstellungen), trägt das Dokument eine höhere `generation`. Die
-Geräte vergleichen erst die Generation, dann die Version (`compareReleases` in
-`modelRelease.ts`); jede weitere Veröffentlichung behält die Generation und zählt von 0.0
-aus weiter.
+**Soll-Nummern:** Bis 09/2026 war der Zielzustand nur eine Kopie des Bestands mit
+Nummern bis 0.24. Der eigentliche Zielzustand beginnt bei 0.0 (Kopie des Bestands v0.27)
+und 0.1 (Technikraum). Damit Geräte mit einer alten Kopie ihn übernehmen, heißen die alten
+Nummern jetzt 0.0.23 und 0.0.24 (`legacySollVersion` in `modelRelease.ts`, einmal je
+Gerät umbenannt in `renumberLegacySoll`, `modelSync.ts`). 0.0.x liegt zwischen 0.0 und 0.1.
 
-**Einmalig beim Umzug (0.51.0):** Solange die Datenbank für eine Variante noch kein Modell
-hat, bietet die App unter 3D-Modelle „Startstand übernehmen“ an – das ist Ist v0.27 / Soll v0.24,
-der bis dahin mit der App ausgeliefert wurde (`testdata/haus-*.json`). Sind beide
-Varianten übernommen, können der Knopf und `publishStartModel` in
-`src/data/modelExchange.ts` entfallen.
+Der Umzug in die Datenbank ist abgeschlossen (Ist v0.27, Soll 0.0); die Einmal-Knöpfe
+dafür sind wieder ausgebaut.
 
 ## 6. Format der erzeugten Dateien
 

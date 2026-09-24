@@ -26,7 +26,7 @@ es in der App: Einstellungen → 3D-Modelle → „Modell exportieren“ / „Mo
 die App baut Szene, Räume und Pläne selbst (`src/modules/modelBuild`, Punkt für Punkt
 gleich wie Python). Die Python-Werkzeuge arbeiten auf einem Ordner mit Hausdateien
 (`RENO_HAUS_DIR`, z. B. ein entpackter App-Export; Standard sind die eingefrorenen
-Testdaten in `tools/model/testdata` (Ist v0.27, Soll v0.24), gegen die CI und Unit-Tests beide Builder
+Testdaten in `tools/model/testdata` (Ist v0.27, Soll 0.0.24 mit Technikraum ohne Fläche), gegen die CI und Unit-Tests beide Builder
 halten):
 
 ```bash
@@ -138,10 +138,10 @@ Steht:
   Zweiter, unabhängiger Befund: ein `ImageReader` mit `ImageFormat.PRIVATE` an einer laufenden
   Kamera startet dieses Gerät neu – nicht benutzen.
 - **Das Modell liegt nur noch in Firestore** (ab 0.51.0): nicht mehr im Repo, nicht mehr
-  im App-Bündel, keine Ansicht ohne Anmeldung. Beim Umzug bietet Einstellungen →
-  3D-Modelle einmalig „Startstand übernehmen“ (Ist v0.27, Soll v0.24 aus
-  `tools/model/testdata`), solange die Datenbank für eine Variante kein Modell hat oder nur
-  ein älteres ohne Hausdatei; danach können Knopf und `publishStartModel` weg.
+  im App-Bündel, keine Ansicht ohne Anmeldung. Umzug abgeschlossen (Ist v0.27, Soll 0.0 =
+  Kopie des Bestands, dann 0.1 mit Technikraum); die Einmal-Knöpfe sind wieder ausgebaut.
+  Alte Soll-Nummern (bis 0.24, nur Kopien des Bestands) heißen jetzt 0.0.x, siehe
+  `legacySollVersion`.
 - **Parallele Sitzungsbranches zusammenführen, bevor gepusht wird.** Seite und APK nehmen
   den letzten Push, gleich aus welchem Branch: 0.49–0.51 kamen aus einem Branch, der die
   Raumnamen-Arbeit (0.48.3–0.48.7) eines anderen nicht kannte, und haben sie live
@@ -198,9 +198,8 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   `roomMap`, der die alte id auf die neue zeigen lässt. Details und die Einstellung Bestand/Planung dazu in
   `tools/model/README-MODELL.md`.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
-  Kleiner werden darf sie nur mit einem Neubeginn – höhere `generation` im Modell-Dokument
-  (`compareReleases` in `src/data/modelRelease.ts`, Knopf „Zielzustand auf Bestand
-  zurücksetzen“).
+  Sie darf nicht kleiner werden; die einzige Ausnahme (alte Soll-Nummern 0.23/0.24 →
+  0.0.23/0.0.24) ist in `legacySollVersion` erledigt.
 - **Zu jedem Release ein Eintrag in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`),
   darunter **ein bis drei Stichpunkte, je ein bis zwei Zeilen**. Das ist der Text im
   Update-Banner: was sich für den Benutzer ändert, sonst nichts. Keine Erklärungen, keine

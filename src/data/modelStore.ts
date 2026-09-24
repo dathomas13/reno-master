@@ -28,8 +28,6 @@ export interface CachedRelease {
   rooms: RoomDoc | null;
   /** the house file (reno-haus/1) the scene was built from, as text; missing for older releases */
   source?: string | null;
-  /** see ReleaseInfo.generation; missing = 0 */
-  generation?: number;
   /** when this device downloaded it, ISO */
   cachedAt: string;
 }
@@ -83,6 +81,5 @@ export function cachedInfo(entry: CachedRelease | null): ReleaseInfo | null {
     updatedAt: entry.updatedAt,
     note: entry.note,
     source: 'cache',
-    generation: entry.generation ?? 0,
   };
 }
