@@ -5,6 +5,10 @@ Die App **Reno Master** liest ausschließlich die erzeugten JSON-Dateien unter `
 und die SVG-Pläne unter `public/plans/`. Wer diese Dateien korrekt erzeugt, kann das Modell
 mit jedem Werkzeug bauen – die bestehende Python-Datenbasis ist nur der aktuelle Weg.
 
+> **Umbau geplant:** Eine einzige Hausdatei (JSON) soll die Quelle werden, gebaut wird dann
+> in der App, mit Export/Import-Knopf. Plan: [`PLAN-MODELL-WORKFLOW.md`](PLAN-MODELL-WORKFLOW.md),
+> Anleitung für externe Werkzeuge: [`ANLEITUNG-EXTERN.md`](ANLEITUNG-EXTERN.md).
+
 ## 1. Koordinatensystem (alles in Millimetern)
 
 | Achse | Nullpunkt | Richtung |
