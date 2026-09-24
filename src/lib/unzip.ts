@@ -25,7 +25,14 @@ async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
   if (typeof DecompressionStream !== 'function') {
     throw new Error('Dieses Gerät kann gepackte ZIP-Dateien nicht öffnen. Bitte die JSON-Datei einzeln wählen.');
   }
-  const stream = new Blob([data as unknown as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  // a plain ReadableStream, not Blob.stream(): that one is missing in some environments
+  const source = new ReadableStream({
+    start(controller) {
+      controller.enqueue(data);
+      controller.close();
+    },
+  });
+  const stream = source.pipeThrough(new DecompressionStream('deflate-raw'));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 

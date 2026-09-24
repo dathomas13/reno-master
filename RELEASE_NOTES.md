@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.49.2 – 3D-Modell exportieren und importieren in der Webansicht
+
+- Export und Import des 3D-Modells sind jetzt auch in der Webansicht da; 0.49.1 kam dort
+  nicht an.
+
 ## 0.49.1 – 3D-Modell exportieren und importieren auch auf der Website
 
 - Export und Import des 3D-Modells gibt es jetzt auch in der Webansicht, nicht nur in der App.
