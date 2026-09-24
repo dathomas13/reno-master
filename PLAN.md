@@ -34,8 +34,8 @@ three.js-Viewer `Haus_3D.html`, Stand v0.22).
 | Nutzer | **Thomas + Sarah**, Login per **E-Mail/Passwort** (Konten werden von Thomas in der Firebase-Konsole angelegt; Registrierung in der App deaktiviert). Allowlist per E-Mail in den Security Rules. Bei Einträgen wird `createdBy` gespeichert. |
 | Fotos | **Verkleinerte Kopie (max. 1600 px lange Kante, JPEG q≈0,82) + Thumbnail (320 px)** nach Firebase Storage. Original bleibt in der Galerie. Zusätzlich werden **Originaldateiname, Aufnahmezeit (EXIF), Dateigröße** und – in der APK – die **MediaStore-URI** gespeichert, damit das Original schnell wiedergefunden werden kann. |
 | Beleg-Auslesen (OCR) | **Drei Engines hinter einem Interface.** Default: **Google ML Kit Text Recognition on-device** (nur in der APK) + heuristischer Parser. Optional **Gemini** oder **Claude**, jeweils aktiv, sobald in den Einstellungen ein API-Key dafür liegt. `auto` geht die feste Reihenfolge ML Kit → Gemini → Claude durch. Ohne Key und ohne APK: manuelle Eingabe. |
-| Datenschutz | Repo public. Ins Repo: Code, 3D-Modell-JSON, generierte Grundriss-SVGs, Nordansicht-Foto. **Nicht ins Repo:** Original-Baupläne (PDF), Fotos, Belege, Kontakte, Tagebuchtexte, Service-Account-Keys → alles nur in Firebase hinter Login. |
-| 3D-Modelle Ist/Soll | Liegen als JSON im Repo (`public/models/`), werden mit dem App-Build ausgeliefert und vom Service Worker vorgecacht – das ist die Untergrenze, die offline ab dem ersten Start da ist. **Die Version ist vom App-Build gelöst:** die App nimmt die höchste Fassung, die sie erreicht (gebündelt, Website-Manifest, oder ein in `meta/model-<variante>` veröffentlichtes Modell), legt sie in IndexedDB und behält sie offline. Austausch also per `git push` **oder** ohne Deploy über "Modell veröffentlichen" in den Einstellungen. Vollständig dokumentiert für den "Modell-Agenten" (Abschnitt 9). |
+| Datenschutz | Repo public. Ins Repo: Code, Nordansicht-Foto, eingefrorene Modell-Testdaten (`tools/model/testdata`). **Das 3D-Modell in Gebrauch liegt seit 0.51.0 nur in Firestore.** **Nicht ins Repo:** Original-Baupläne (PDF), Fotos, Belege, Kontakte, Tagebuchtexte, Service-Account-Keys → alles nur in Firebase hinter Login. |
+| 3D-Modelle Ist/Soll | **Seit 0.51.0 nur in Firestore** (`meta/model-ist`, `meta/model-soll`: Szene, Räume und Hausdatei in einem Dokument). Jedes angemeldete Gerät hört darauf, übernimmt eine höhere Version sofort und behält sie in IndexedDB – offline ab dem ersten erfolgreichen Sync. Veröffentlicht wird in der App über "Modell importieren" (baut auf dem Gerät). Nicht mehr im Repo, nicht mehr im App-Bündel, keine Ansicht ohne Anmeldung. Vollständig dokumentiert in `tools/model/README-MODELL.md`. |
 | Neue 2D-Pläne | **Aus dem Modell generierte SVG-Grundrisse** (pro Geschoss × Variante Ist/Soll) + freier **Upload** (PDF/PNG/JPG) für Original-Baupläne und sonstige Pläne. Die Original-PDFs lädt Thomas selbst in der App hoch. |
 | Zusatzfeatures v1 | **Aufgaben/To-do**, **Kontakte/Handwerker**, **Raum-Verknüpfung im 3D-Modell** (Tagebuch, Fotos, Kosten, Aufgaben können Räumen zugeordnet werden; Tippen auf einen Raum zeigt alles dazu). |
 | Erinnerung | Ja, **Uhrzeit in den Einstellungen konfigurierbar, Default 20:00**, nur wenn für heute noch kein Eintrag existiert. PWA: Web-Push via FCM (Cloud Function). APK: zusätzlich lokale Benachrichtigung. |
@@ -275,7 +275,7 @@ interface Plan {
   pages?: number; bytes?: number; order: number; notes?: string;
 }
 ```
-Die gebündelten SVGs werden beim Seed als `source:'bundled'` eingetragen (bzw. rein clientseitig aus `public/plans/index.json` gelesen – Entscheidung: **`public/plans/index.json`**, kein Firestore nötig für bundled). Seit 0.50.0 liefert `public/plans/index.json` nur noch die Liste; den Inhalt zeichnet die App mit `loadPlanSvg` aus der Hausdatei des Modells in Gebrauch (`src/modules/modelBuild/plansSvg.ts`), die gebündelte SVG ist nur Rückfall.
+Die gebündelten SVGs werden beim Seed als `source:'bundled'` eingetragen (bzw. rein clientseitig aus `public/plans/index.json` gelesen – Entscheidung: **`public/plans/index.json`**, kein Firestore nötig für bundled). Seit 0.51.0 gibt es keine gebündelten Plandateien mehr: die Liste kommt aus `modelPlans()`, den Inhalt zeichnet die App mit `loadPlanSvg` aus der Hausdatei des Modells in Gebrauch (`src/modules/modelBuild/plansSvg.ts`).
 
 ### 5.9 `users/{uid}`
 ```ts
@@ -507,9 +507,12 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 ## 9. 3D-Modell-Pipeline und Übergabe an den Modell-Agenten
 
 > **Seit 09/2026 überholt, was die Quelle angeht:** Die Datenbasis ist nicht mehr
-> `haus_model.py`/`rooms_ist.py`, sondern die Hausdatei `public/models/haus-<variante>.json`
-> (Format `reno-haus/1`). Die Python-Module lesen sie nur noch ein, die App baut die Szene
-> selbst (`src/modules/modelBuild`) und bietet Export/Import in den Einstellungen.
+> `haus_model.py`/`rooms_ist.py`, sondern die Hausdatei (Format `reno-haus/1`), und seit
+> 0.51.0 liegt das Modell **nur noch in Firestore** (`meta/model-<variante>`) – nicht im
+> Repo, nicht im App-Bündel, nicht ohne Anmeldung sichtbar. Die App baut die Szene selbst
+> (`src/modules/modelBuild`) und bietet Export/Import in den Einstellungen; die Python-
+> Werkzeuge arbeiten auf exportierten Hausdateien, eingefrorene Testdaten liegen in
+> `tools/model/testdata`.
 > Maßgeblich: `tools/model/README-MODELL.md`, `tools/model/ANLEITUNG-EXTERN.md`,
 > `tools/model/PLAN-MODELL-WORKFLOW.md`. Das Szenenformat (9.2) ist unverändert.
 

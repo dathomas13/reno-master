@@ -17,11 +17,10 @@ import {
 import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitControls';
 import { lastViewerState, rememberViewerState, type ViewerState } from './viewerState';
 import { RoomPanel } from './RoomPanel';
-import { activeRelease, clearPreview, loadRooms, loadScene, previewOf, type Variant } from '@/data/models';
-import { SOURCE_LABEL, type ReleaseInfo } from '@/data/modelRelease';
+import { activeRelease, clearPreview, loadRooms, loadScene, NO_MODEL_MESSAGE, previewOf, type Variant } from '@/data/models';
+import type { ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings, saveSettings } from '@/lib/settings';
-import { isAuthenticated } from '@/firebase/auth';
 import { Spinner } from '@/components/Fields';
 
 export default function ViewerPage() {
@@ -259,8 +258,8 @@ export default function ViewerPage() {
       } catch (cause) {
         if (!disposed) {
           setError(
-            cause instanceof Error && cause.message.includes('404')
-              ? 'Modell noch nicht heruntergeladen – die App einmal mit Internet öffnen.'
+            cause instanceof Error && cause.message === NO_MODEL_MESSAGE
+              ? NO_MODEL_MESSAGE
               : 'Das Modell konnte nicht geladen werden.',
           );
           setLoading(false);
@@ -308,13 +307,9 @@ export default function ViewerPage() {
   // an imported model that is looked at before it is published; reloadKey follows it
   const preview = previewOf(variant);
 
-  // signed in there is a bottom navigation below and nothing above; in the preview it is
-  // the other way round, a banner on top and the full width of the screen below
-  const signedIn = isAuthenticated();
-  const bottomOffset = signedIn
-    ? 'bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-2'
-    : 'bottom-[max(0.5rem,env(safe-area-inset-bottom))]';
-  const containerHeight = signedIn ? 'h-[100dvh] md:h-screen' : 'h-[calc(100dvh-2.25rem)]';
+  // the bottom navigation takes the lowest 64 pixels on the phone
+  const bottomOffset = 'bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-2';
+  const containerHeight = 'h-[100dvh] md:h-screen';
 
   return (
     <div className={`relative ${containerHeight} overflow-hidden`}>
@@ -346,7 +341,6 @@ export default function ViewerPage() {
           {release && !preview && (
             <span className="text-[11px] text-muted bg-bg/70 rounded px-2 py-1">
               v{release.version} · {release.updatedAt}
-              {release.source !== 'bundled' && ` · ${SOURCE_LABEL[release.origin ?? release.source]}`}
             </span>
           )}
         </div>

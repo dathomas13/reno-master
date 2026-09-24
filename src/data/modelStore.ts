@@ -4,7 +4,8 @@
  * One record per variant in IndexedDB, holding the parsed scene and room list. The viewer
  * reads from here, which is what makes a model that arrived over the network available
  * offline afterwards. An older record is simply overwritten - the app never needs the
- * previous model, and the bundled files are always there as a floor.
+ * previous model. This is the only copy on the device: without it there is no model
+ * until the database has been reached once.
  *
  * Every access is guarded: in a private window IndexedDB can be missing or throw, and a
  * model that cannot be cached must still be shown.

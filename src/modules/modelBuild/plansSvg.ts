@@ -68,8 +68,9 @@ export function buildPlanSvg(
   src: HouseSource,
   rooms: BuiltRooms,
   floor: PlanFloor,
-  version: string,
+  rawVersion: string,
 ): string {
+  const version = escape(rawVersion, true);
   const variant = src.variant;
   const W = src.params.houseW;
   const D = src.params.houseD;
@@ -97,8 +98,11 @@ export function buildPlanSvg(
   add('<g id="rooms">');
   for (const room of rooms.rooms) {
     if (room.floor !== floor) continue;
-    add(`<g class="room-group" data-room-id="${room.id}">`);
-    for (const [x0, y0, x1, y1] of room.rects) rect(x0, y0, x1, y1, 'room', ` data-room-id="${room.id}"`);
+    // ids and names come from a house file someone else may have written - the SVG goes
+    // into the page as markup, so every text is escaped (a plain id stays unchanged)
+    const id = escape(room.id, true);
+    add(`<g class="room-group" data-room-id="${id}">`);
+    for (const [x0, y0, x1, y1] of room.rects) rect(x0, y0, x1, y1, 'room', ` data-room-id="${id}"`);
     const area = (r: number[]) => (r[2] - r[0]) * (r[3] - r[1]);
     const big = room.rects.reduce((best, r) => (area(r) > area(best) ? r : best));
     const bw = big[2] - big[0];

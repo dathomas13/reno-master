@@ -11,8 +11,10 @@ import { parseSource, type HouseSource } from '../source';
 import { nextVersion, prepareImport } from '../index';
 import { buildPlanSvg, PLAN_FLOORS, pyFixed } from '../plansSvg';
 
-// both runners (vitest, tools/verify) start in the repository root
-const read = (file: string) => readFileSync(join(process.cwd(), 'public', 'models', file), 'utf8');
+// Frozen test data (v0.25) written by the Python scripts - the model in use lives in
+// Firestore. Both runners (vitest, tools/verify) start in the repository root.
+const TESTDATA = join(process.cwd(), 'tools', 'model', 'testdata');
+const read = (file: string) => readFileSync(join(TESTDATA, file), 'utf8');
 
 function istSource(): { text: string; source: HouseSource } {
   const text = read('haus-ist.json');
@@ -203,14 +205,13 @@ describe('buildDxf', () => {
 
 describe('buildPlanSvg', () => {
   it('draws the same plans as tools/model/build_plans_svg.py, byte for byte', () => {
-    const manifest = JSON.parse(read('manifest.json'));
     for (const variant of ['ist', 'soll'] as const) {
       const parsed = parseSource(read(`haus-${variant}.json`));
       if (!parsed.ok) throw new Error(parsed.errors.join('\n'));
       const rooms = buildRooms(parsed.source, '');
       for (const floor of PLAN_FLOORS) {
-        const committed = readFileSync(join(process.cwd(), 'public', 'plans', `${variant}-${floor}.svg`), 'utf8');
-        const mine = buildPlanSvg(parsed.source, rooms, floor, manifest[variant].version);
+        const committed = read(join('plans', `${variant}-${floor}.svg`));
+        const mine = buildPlanSvg(parsed.source, rooms, floor, parsed.source.version);
         expect(`${variant}-${floor} ${mine === committed}`).toBe(`${variant}-${floor} true`);
       }
     }

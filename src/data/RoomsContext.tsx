@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { loadAllRooms, sortRooms } from './models';
+import { loadAllRooms, MODEL_EVENT, sortRooms } from './models';
 import type { Room } from '@/modules/viewer3d/houseScene';
 
 interface RoomsValue {
@@ -21,11 +21,18 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
-    void loadAllRooms().then((loaded) => {
-      if (active) setRooms(sortRooms(loaded));
-    });
+    const load = () => {
+      void loadAllRooms().then((loaded) => {
+        if (active) setRooms(sortRooms(loaded));
+      });
+    };
+    load();
+    // the model comes from the database, so on a fresh device the rooms arrive a moment
+    // after the start - and with every model published later
+    window.addEventListener(MODEL_EVENT, load);
     return () => {
       active = false;
+      window.removeEventListener(MODEL_EVENT, load);
     };
   }, []);
 

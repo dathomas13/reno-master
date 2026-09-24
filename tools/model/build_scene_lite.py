@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Build public/models/<variant>.json from the house file without any CAD dependency.
+"""Build <variant>.json from the house file without any CAD dependency.
 
-The house file is public/models/haus-<variant>.json (read through haus_model.py); the app
-builds the same scene from it in src/modules/modelBuild/buildScene.ts.
+The house file is haus-<variant>.json in RENO_HAUS_DIR (see hausdatei.py), the scene is
+written next to it. The app builds the same scene in src/modules/modelBuild/buildScene.ts.
 
 Same output as build_scene.py, which needs CadQuery/OCP (~150 MB) because the print and
 STEP exports need watertight solids. The viewer only needs triangles, so this script uses
@@ -30,6 +30,7 @@ import importlib
 import json
 import math
 import pathlib
+import sys
 
 EPS = 1e-6
 
@@ -43,7 +44,8 @@ GRID = 0.1       # a vertex nearer than this to an end of an edge is never inser
 #                  would collapse into a degenerate triangle
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-MODELS = REPO / "public" / "models"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from hausdatei import DATA as MODELS  # noqa: E402
 
 # --------------------------------------------------------------------------- bands
 # band = (a0, a1, lo0, lo1, hi0, hi1): over a in [a0, a1] the region spans b from the

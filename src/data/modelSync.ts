@@ -1,19 +1,18 @@
 /**
- * Keeps the newest 3D model on the device, independent of the app build.
+ * Keeps the newest 3D model on the device.
  *
- * Three channels, described in modelRelease.ts. This module reaches them, picks the
- * highest version and stores its payload in IndexedDB, so the viewer reads the new model
- * on the next open and keeps it offline afterwards. Nothing here ever leaves the app
- * without a model: every step falls back to what is already there.
+ * The one place a model comes from is the Firestore document meta/model-<variant>
+ * (modelRelease.ts). This module listens to it, and when it carries a newer version than
+ * the device has, checks the payload and stores it in IndexedDB - so the viewer reads the
+ * new model at once and keeps it offline afterwards. A broken or truncated document never
+ * replaces a working model.
  *
- * Publishing works the other way round - publishModel writes a scene into the meta
- * collection, and the other device picks it up through its Firestore listener without any
- * deploy at all.
+ * Publishing works the other way round: publishModel writes a model into the document and
+ * every other signed-in device picks it up through its listener, without any deploy.
  */
 import { saveDoc, watchDoc } from '@/firebase/db';
 import type { RoomDoc, SceneDoc } from '@/modules/viewer3d/houseScene';
 import { COL, type BaseDoc } from './types';
-import { publishedFileUrl } from './appVersion';
 import {
   fitsInDocument,
   pickRelease,
@@ -28,7 +27,7 @@ import {
   type Variant,
 } from './modelRelease';
 import { cachedInfo, readRelease, writeRelease, type CachedRelease } from './modelStore';
-import { bundledRelease, invalidateModel, MODEL_EVENT } from './models';
+import { invalidateModel, MODEL_EVENT } from './models';
 
 export { MODEL_EVENT } from './models';
 
@@ -37,45 +36,6 @@ const announced = new Map<Variant, ReleaseInfo | null>();
 
 function docId(variant: Variant): string {
   return `model-${variant}`;
-}
-
-/**
- * What the published site offers. Only this channel needs the network, and it is the one
- * that lets a git push reach an installed APK, whose bundled files never change.
- */
-export async function siteRelease(variant: Variant): Promise<ReleaseInfo | null> {
-  try {
-    // the timestamp is what gets past the service worker's precache, see src/sw.ts
-    const url = `${publishedFileUrl('models/manifest.json')}?t=${Date.now()}`;
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) return null;
-    const manifest = (await response.json()) as Record<string, {
-      file?: string; rooms?: string | null; source?: string | null; version?: string; updatedAt?: string;
-      note?: string; bytes?: number;
-    }>;
-    const entry = manifest[variant];
-    if (!entry?.version) return null;
-    return {
-      variant,
-      version: entry.version,
-      updatedAt: entry.updatedAt ?? '',
-      note: entry.note ?? '',
-      bytes: entry.bytes,
-      source: 'site',
-      // the version rides along in the query: the service worker caches per address, so a
-      // new version can never be answered with the body of the old one
-      sceneUrl: `${publishedFileUrl(`models/${entry.file ?? `${variant}.json`}`)}?v=${entry.version}`,
-      roomsUrl: entry.rooms
-        ? `${publishedFileUrl(`models/${entry.rooms}`)}?v=${entry.version}`
-        : undefined,
-      sourceUrl: entry.source
-        ? `${publishedFileUrl(`models/${entry.source}`)}?v=${entry.version}`
-        : undefined,
-    };
-  } catch {
-    // offline, or the site is not reachable - then the device keeps what it has
-    return null;
-  }
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -140,17 +100,12 @@ export interface SyncResult {
 }
 
 /**
- * Brings one variant up to date: picks the newest reachable release and, when it is not
- * already on the device, stores its payload.
+ * Brings one variant up to date: when the published document carries a newer version
+ * than the device, stores its payload.
  */
-export async function syncModel(variant: Variant, checkSite = true): Promise<SyncResult | null> {
+export async function syncModel(variant: Variant): Promise<SyncResult | null> {
   const cached = await readRelease(variant);
-  const candidates: (ReleaseInfo | null)[] = [
-    cachedInfo(cached),
-    announced.get(variant) ?? null,
-    await bundledRelease(variant),
-  ];
-  if (checkSite && navigator.onLine !== false) candidates.push(await siteRelease(variant));
+  const candidates: (ReleaseInfo | null)[] = [cachedInfo(cached), announced.get(variant) ?? null];
 
   const plan = planSync(candidates);
   if (!plan) return null;
@@ -184,68 +139,72 @@ export async function syncModel(variant: Variant, checkSite = true): Promise<Syn
     return result;
   } catch (error) {
     // keep serving the model we have and say why the new one was refused
-    const fallback = pickRelease([cachedInfo(cached), await bundledRelease(variant)]);
+    const fallback = pickRelease([cachedInfo(cached)]);
     const problem = error instanceof Error ? error.message : 'Das Modell konnte nicht geladen werden.';
     return fallback ? { variant, active: fallback, changed: false, problem } : null;
   }
 }
 
-/** Checks both variants once; used by the button in the settings screen. */
-export async function syncAllModels(checkSite = true): Promise<SyncResult[]> {
+/** Checks both variants once against the last published documents. */
+export async function syncAllModels(): Promise<SyncResult[]> {
   const results: SyncResult[] = [];
   for (const variant of VARIANTS) {
-    const result = await syncModel(variant, checkSite);
+    const result = await syncModel(variant);
     if (result) results.push(result);
   }
   return results;
 }
 
+/** true once the listener has heard from the database, per variant: null = nothing published */
+const heard = new Map<Variant, boolean>();
+
 /**
- * Starts the background sync: listens for a published release, and re-checks the site
- * when the device comes online or the app becomes visible again.
+ * Whether the database has a model for the variant: true or false once the listener has
+ * answered from the server, undefined before that (offline, or not signed in yet).
  */
-export function startModelSync(options: {
-  /** listen for published releases; needs an account, the other channels do not */
-  watchPublished?: boolean;
-  onResult?: (result: SyncResult) => void;
-} = {}): () => void {
-  const { watchPublished = false, onResult } = options;
+export function publishedState(variant: Variant): boolean | undefined {
+  if (!heard.get(variant)) return undefined;
+  return (announced.get(variant) ?? null) !== null;
+}
+
+/**
+ * Starts the sync for a signed-in user: listens to the published documents and stores
+ * every newer model the moment it arrives.
+ */
+export function startModelSync(onResult?: (result: SyncResult) => void): () => void {
   let stopped = false;
 
-  const run = (checkSite: boolean) => {
-    void syncAllModels(checkSite).then((results) => {
+  const run = () => {
+    void syncAllModels().then((results) => {
       if (stopped) return;
       for (const result of results) if (result.changed || result.problem) onResult?.(result);
     });
   };
 
-  const unsubscribes = watchPublished
-    ? VARIANTS.map((variant) => watchDoc<ReleaseDoc>(
-      COL.meta,
-      docId(variant),
-      (row) => {
-        announced.set(variant, releaseFromDoc(variant, row));
-        run(false);          // the document is already here, no need to ask the site
-      },
-      () => undefined,       // nothing published yet - the other channels carry on
-    ))
-    : [];
-
-  const onOnline = () => run(true);
-  const onVisible = () => {
-    if (document.visibilityState === 'visible') run(true);
-  };
-  window.addEventListener('online', onOnline);
-  document.addEventListener('visibilitychange', onVisible);
-  const timer = window.setInterval(onOnline, 30 * 60 * 1000);
-  run(true);
+  const unsubscribes = VARIANTS.map((variant) => watchDoc<ReleaseDoc>(
+    COL.meta,
+    docId(variant),
+    (row, fromServer) => {
+      announced.set(variant, releaseFromDoc(variant, row));
+      if (fromServer && !heard.get(variant)) {
+        heard.set(variant, true);
+        // the settings screen offers the start model once it knows the database has none
+        try {
+          window.dispatchEvent(new CustomEvent(MODEL_EVENT, { detail: { variant } }));
+        } catch {
+          // no window (tests)
+        }
+      }
+      run();
+    },
+    () => undefined, // offline or not allowed: the device keeps what it has
+    { serverState: true },
+  ));
+  run(); // whatever is already stored, announce nothing but settle the state
 
   return () => {
     stopped = true;
     for (const unsubscribe of unsubscribes) unsubscribe();
-    window.removeEventListener('online', onOnline);
-    document.removeEventListener('visibilitychange', onVisible);
-    window.clearInterval(timer);
   };
 }
 

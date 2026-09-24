@@ -1,16 +1,13 @@
 /**
  * What a model release is, and which of several is the newest.
  *
- * The 3D model used to be part of the app build: a new model meant a new bundle, and for
- * the APK a new install. A release decouples the two. The app knows three sources and
- * always uses the highest version it can reach:
+ * The model is not part of the app build and not in the repository. Its one true home is
+ * a document in the Firestore meta collection (meta/model-<variant>), written by
+ * "Modell importieren" in the settings. Every signed-in device listens to it and keeps
+ * the newest model in IndexedDB, which is what makes it available offline:
  *
- *   bundled   the files in public/models that shipped with this build - the floor, always
- *             there, works offline from the first start
- *   site      models/manifest.json on the published site - a git push is enough, no app
- *             update, which is what the APK needs
- *   firestore a document in the meta collection - no deploy at all, and it syncs itself
- *             offline through the Firestore cache
+ *   firestore the published document - the only place a model comes from
+ *   cache     what this device already stored from it
  *
  * Kept free of imports so the logic can be tested without a browser, Firestore or three.
  */
@@ -20,18 +17,11 @@ export type Variant = 'ist' | 'soll';
 export const VARIANTS: Variant[] = ['ist', 'soll'];
 
 /** where a release came from; also the tie breaker when two carry the same version */
-export type ReleaseSource = 'cache' | 'firestore' | 'site' | 'bundled';
+export type ReleaseSource = 'cache' | 'firestore';
 
-// at an equal version the cheapest source wins: already decoded on the device, then the
-// local file, then the Firestore cache, and only last the network
-const SOURCE_ORDER: ReleaseSource[] = ['cache', 'bundled', 'firestore', 'site'];
+// at an equal version what is already decoded on the device wins
+const SOURCE_ORDER: ReleaseSource[] = ['cache', 'firestore'];
 
-export const SOURCE_LABEL: Record<ReleaseSource, string> = {
-  cache: 'Gerät',
-  firestore: 'Sync',
-  site: 'Website',
-  bundled: 'App',
-};
 
 export interface ReleaseInfo {
   variant: Variant;
@@ -127,8 +117,7 @@ export type SyncPlan =
 export function planSync(candidates: (ReleaseInfo | null | undefined)[]): SyncPlan | null {
   const best = pickRelease(candidates);
   if (!best) return null;
-  const local = best.source === 'cache' || best.source === 'bundled';
-  return { action: local ? 'keep' : 'download', release: best };
+  return { action: best.source === 'cache' ? 'keep' : 'download', release: best };
 }
 
 const LAYERS = new Set(['KG', 'EG', 'OG', 'DACH', 'GAR']);

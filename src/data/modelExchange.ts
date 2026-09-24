@@ -8,6 +8,11 @@
  * tools/model/PLAN-MODELL-WORKFLOW.md.
  */
 import anleitung from '../../tools/model/ANLEITUNG-EXTERN.md?raw';
+// The model v0.25 as it stood when it left the repository - for the one-time move into
+// the database (publishStartModel). Remove, together with that function, once both
+// variants are published.
+import startIst from '../../tools/model/testdata/haus-ist.json?raw';
+import startSoll from '../../tools/model/testdata/haus-soll.json?raw';
 import { ZipWriter } from '@/lib/zip';
 import { looksLikeZip, readZip } from '@/lib/unzip';
 import { today } from '@/lib/date';
@@ -50,13 +55,8 @@ export async function buildExportArchive(now = new Date()): Promise<ExportArchiv
   for (const variant of VARIANTS) {
     const source = await loadSource(variant);
     if (!source) {
-      notes.push(`${VARIANT_LABEL[variant]}: keine Hausdatei gefunden.`);
+      notes.push(`${VARIANT_LABEL[variant]}: auf diesem Gerät ist kein Modell mit Hausdatei.`);
       continue;
-    }
-    if (!source.matches) {
-      const active = await activeRelease(variant);
-      notes.push(`${VARIANT_LABEL[variant]}: das Modell v${active?.version ?? '?'} wurde ohne Hausdatei veröffentlicht. `
-        + `Im Export steht die Hausdatei v${source.version}.`);
     }
     versions.push(`${VARIANT_LABEL[variant]} v${source.version}`);
     files.push([`haus-${variant}.json`, source.text]);
@@ -135,7 +135,7 @@ export async function prepareModelImport(fileName: string, text: string): Promis
   let base: HouseSource | null = null;
   const known: string[] = [];
   if (variant) {
-    await syncModel(variant, true).catch(() => null);
+    await syncModel(variant).catch(() => null);
     const [source, active, cached] = await Promise.all([loadSource(variant), activeRelease(variant), readRelease(variant)]);
     if (source) {
       const parsed = parseSource(source.text);
@@ -171,5 +171,20 @@ export async function publishImport(result: Extract<ImportResult, { ok: true }>)
     note: result.note,
   });
   clearPreview(result.variant);
-  await syncAllModels(false);
+  await syncAllModels();
+}
+
+/**
+ * Moves the model into the database once: publishes the house file the model had when it
+ * still shipped with the app (v0.25), built on this device like any import. Only offered
+ * while the database has no model for the variant.
+ */
+export async function publishStartModel(variant: Variant): Promise<string> {
+  const text = variant === 'ist' ? startIst : startSoll;
+  const parsed = parseSource(text);
+  if (!parsed.ok) throw new Error(parsed.errors.join(' '));
+  const result = prepareImport({ text, base: null, version: parsed.source.version, today: today() });
+  if (!result.ok) throw new Error(result.errors.join(' '));
+  await publishImport(result);
+  return result.version;
 }

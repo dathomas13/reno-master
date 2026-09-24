@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
@@ -6,7 +6,7 @@ import { Field, EmptyState } from '@/components/Fields';
 import { useCollection } from '@/data/hooks';
 import { COL, type Plan } from '@/data/types';
 import { savePlan, deletePlan } from '@/data/repos';
-import { loadBundledPlans, type BundledPlan } from '@/data/models';
+import { modelPlans } from '@/data/models';
 import { pickFiles } from '@/platform/photos';
 import { enqueue } from '@/offline/outbox';
 import { newId } from '@/lib/ids';
@@ -22,7 +22,8 @@ const GROUP_LABEL: Record<string, string> = {
 
 export default function PlansPage() {
   const { data: uploaded } = useCollection<Plan>(COL.plans);
-  const [bundled, setBundled] = useState<BundledPlan[]>([]);
+  // generated from the model in use; loadPlanSvg draws them when one is opened
+  const [bundled] = useState(modelPlans);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [draft, setDraft] = useState<{ title: string; variant: Plan['variant']; floor: string; file: File | null }>({
     title: '',
@@ -31,10 +32,6 @@ export default function PlansPage() {
     file: null,
   });
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    void loadBundledPlans().then((result) => setBundled(result.plans));
-  }, []);
 
   const all: Plan[] = [
     ...bundled.map((plan) => ({

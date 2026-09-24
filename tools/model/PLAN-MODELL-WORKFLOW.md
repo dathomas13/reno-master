@@ -4,6 +4,13 @@ Stand 24.09.2026. Bewertung des heutigen Ablaufs und der Umbauplan. Die Anleitun
 externe Werkzeug (KI oder Mensch) steht getrennt in [`ANLEITUNG-EXTERN.md`](ANLEITUNG-EXTERN.md).
 Sie liegt auch in jedem Export-ZIP.
 
+**Seit App 0.51.0 liegt das Modell nur noch in der Datenbank** (Firestore,
+`meta/model-<variante>`), nicht mehr im Repo und nicht mehr in der App. Die Kanäle
+„gebündelt“ und „Website“ sind entfallen, ebenso die Ansicht ohne Anmeldung. Die
+früheren Dateien unter `public/models` und `public/plans` stehen als eingefrorene
+Testdaten in `tools/model/testdata/`. Stufe 5 (Rückweg ins Repo) hat sich damit erledigt.
+Was unten über gebündelte Dateien und `git push` steht, ist Geschichte.
+
 **Stand der Umsetzung (App 0.50.0):** Stufen 0 bis 3 sind fertig, von Stufe 4 der
 DXF-Export. Offen sind der DXF-Import, Stufe 5 als Werkzeug (heute nur als Regel in
 `README-MODELL.md`, Abschnitt 5) und Stufe 6.

@@ -56,29 +56,19 @@ describe('compareVersions', () => {
 
 describe('pickRelease', () => {
   it('takes the highest version, wherever it comes from', () => {
-    const picked = pickRelease([release('0.23', 'cache'), release('0.24', 'site'), release('0.22', 'bundled')]);
+    const picked = pickRelease([release('0.23', 'cache'), release('0.24', 'firestore')]);
     expect(picked?.version).toBe('0.24');
-    expect(picked?.source).toBe('site');
-  });
-
-  it('prefers what is already on the device when the versions are equal', () => {
-    // otherwise every start would download the same model again
-    const picked = pickRelease([release('0.23', 'site'), release('0.23', 'cache')]);
-    expect(picked?.source).toBe('cache');
-  });
-
-  it('prefers the sync channel over the site at equal version', () => {
-    const picked = pickRelease([release('0.23', 'site'), release('0.23', 'firestore')]);
     expect(picked?.source).toBe('firestore');
   });
 
-  it('prefers the bundled file over any download at equal version', () => {
-    const picked = pickRelease([release('0.23', 'site'), release('0.23', 'firestore'), release('0.23', 'bundled')]);
-    expect(picked?.source).toBe('bundled');
+  it('prefers what is already on the device when the versions are equal', () => {
+    // otherwise every start would decode the same model again
+    const picked = pickRelease([release('0.23', 'firestore'), release('0.23', 'cache')]);
+    expect(picked?.source).toBe('cache');
   });
 
   it('ignores empty candidates and versionless entries', () => {
-    const picked = pickRelease([null, undefined, { ...release('', 'site') }, release('0.1', 'bundled')]);
+    const picked = pickRelease([null, undefined, { ...release('', 'firestore') }, release('0.1', 'cache')]);
     expect(picked?.version).toBe('0.1');
   });
 
@@ -209,31 +199,19 @@ describe('fitsInDocument', () => {
 
 describe('planSync', () => {
   it('fetches nothing when the newest release is already on the device', () => {
-    const plan = planSync([release('0.23', 'cache'), release('0.23', 'site')]);
+    const plan = planSync([release('0.23', 'cache'), release('0.23', 'firestore')]);
     expect(plan?.action).toBe('keep');
     expect(plan?.release.source).toBe('cache');
   });
 
-  it('fetches nothing when the app itself carries the newest model', () => {
-    const plan = planSync([release('0.23', 'bundled'), release('0.22', 'site')]);
-    expect(plan?.action).toBe('keep');
-  });
-
-  it('downloads a newer model from the site', () => {
-    const plan = planSync([release('0.23', 'cache'), release('0.24', 'site')]);
-    expect(plan?.action).toBe('download');
-    expect(plan?.release.version).toBe('0.24');
-  });
-
-  it('downloads a newer published model', () => {
-    const plan = planSync([release('0.23', 'bundled'), release('0.24', 'firestore')]);
+  it('stores a newer published model', () => {
+    const plan = planSync([release('0.23', 'cache'), release('0.24', 'firestore')]);
     expect(plan?.action).toBe('download');
     expect(plan?.release.source).toBe('firestore');
   });
 
-  it('never steps back to an older model on the site', () => {
-    // the site can lag behind a model published straight from a phone
-    const plan = planSync([release('0.25', 'cache'), release('0.24', 'site')]);
+  it('never steps back to an older published model', () => {
+    const plan = planSync([release('0.25', 'cache'), release('0.24', 'firestore')]);
     expect(plan?.action).toBe('keep');
     expect(plan?.release.version).toBe('0.25');
   });

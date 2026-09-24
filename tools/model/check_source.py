@@ -3,8 +3,9 @@
 
     python3 tools/model/check_source.py
 
-public/models/<variant>.json must be the scene build_scene_lite.py builds from
-public/models/haus-<variant>.json, part by part and vertex by vertex. The app's own
+<variant>.json must be the scene build_scene_lite.py builds from haus-<variant>.json,
+part by part and vertex by vertex - in RENO_HAUS_DIR, by default the frozen test data in
+tools/model/testdata (see hausdatei.py). The app's own
 builder (src/modules/modelBuild) is held to the same scene by its unit test, so the two
 builders cannot drift apart unnoticed. Exits non-zero on the first mismatch.
 """
@@ -16,8 +17,8 @@ import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-MODELS = HERE.parents[1] / "public" / "models"
 sys.path.insert(0, str(HERE))
+from hausdatei import DATA as MODELS  # noqa: E402
 
 import build_scene_lite  # noqa: E402
 

@@ -1,10 +1,17 @@
-"""Reads the house file (public/models/haus-<variant>.json) - the one source of the model.
+"""Reads a house file (haus-<variant>.json, format reno-haus/1) for the Python scripts.
 
-Format reno-haus/1, documented for humans and other tools in ANLEITUNG-EXTERN.md. The app
-builds the 3D scene, the rooms and the plans from the same file (src/modules/modelBuild),
-so this module only has to hand the data to the existing Python scripts under the names
-they have always used: haus_model.py and haus_model_soll.py are thin wrappers around
-load(), rooms_ist.py and rooms_soll.py around rooms().
+The model itself lives in Firestore - the app is the only place it is kept, and
+"Modell exportieren" hands out its house files (ANLEITUNG-EXTERN.md). The scripts in this
+folder work on a directory of such files:
+
+    RENO_HAUS_DIR   the directory with haus-ist.json / haus-soll.json, e.g. an unpacked
+                    app export. Scenes, rooms and plans are written next to them.
+                    Default: tools/model/testdata - a frozen copy (v0.25) that the unit
+                    tests of the app and the CI hold both builders against. It is test
+                    data, not the model in use.
+
+haus_model.py and haus_model_soll.py are thin wrappers around load(), rooms_ist.py and
+rooms_soll.py around rooms(), so every older script keeps its names.
 
     python3 tools/model/hausdatei.py --format ist    # rewrite the file in canonical layout
 
@@ -15,17 +22,19 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-MODELS = HERE.parents[1] / "public" / "models"
+DATA = pathlib.Path(os.environ.get("RENO_HAUS_DIR") or HERE / "testdata").resolve()
+PLANS = DATA / "plans"
 FORMAT = "reno-haus/1"
 LINE = 140
 
 
 def path_of(variant: str) -> pathlib.Path:
-    return MODELS / f"haus-{variant}.json"
+    return DATA / f"haus-{variant}.json"
 
 
 def read(variant: str) -> dict:

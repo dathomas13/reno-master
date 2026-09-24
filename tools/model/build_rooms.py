@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build public/models/rooms-<variant>.json from the room tables and sanity-check them.
+"""Build rooms-<variant>.json (next to the house file) and sanity-check the rooms.
 
 Checks performed (all mm):
   * a room must not be crossed by a wall of the same floor (overlap area > TOL_AREA).
@@ -23,9 +23,8 @@ import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-REPO = HERE.parents[1]
-MODELS = REPO / "public" / "models"
 sys.path.insert(0, str(HERE))
+from hausdatei import DATA as MODELS  # noqa: E402
 
 TOL = 2                 # mm - rooms may touch wall faces
 TOL_AREA = 0.02         # m² - ignore slivers below this
@@ -163,7 +162,7 @@ def main() -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
         total = sum(r["areaM2"] for r in doc["rooms"])
-        print(f"{out.relative_to(REPO)}: {len(doc['rooms'])} Räume, {total:.0f} m² gesamt")
+        print(f"{out}: {len(doc['rooms'])} Räume, {total:.0f} m² gesamt")
     return 0
 
 

@@ -10,7 +10,6 @@ import { startModelSync } from '@/data/modelSync';
 import { useDiaryReminder } from '@/data/useReminder';
 import { useTaskReminders } from '@/data/useTaskReminders';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { PreviewBanner } from '@/components/PreviewBanner';
 import LoginPage from '@/modules/auth/LoginPage';
 import HomePage from '@/modules/home/HomePage';
 import DiaryListPage from '@/modules/diary/DiaryListPage';
@@ -35,52 +34,20 @@ function Protected() {
   const { user, ready } = useAuth();
 
   useEffect(() => (user ? startOutboxWorker() : undefined), [user]);
-  // Runs without an account too: the site channel needs no database, and the 3D preview
-  // should show the published model, not the one this build happens to carry. Only the
-  // listener for a released model waits for the login.
-  useEffect(() => startModelSync({ watchPublished: !!user }), [user]);
+  // The model lives in the database, so the sync needs an account: it listens to the
+  // published documents and keeps the newest model on the device for offline use.
+  useEffect(() => (user ? startModelSync() : undefined), [user]);
   // the evening reminder: planned on the device, so it also fires with no connection
   useDiaryReminder();
   useTaskReminders(!!user);
 
   if (!ready) return <Spinner label="Wird geladen…" />;
 
-  // Without an account the model and the generated plans are still worth showing: they
-  // ship with the app and need no database. Everything that touches real data does not.
   if (!user) {
     return (
-      <RoomsProvider>
-        <Routes>
-          <Route
-            path="/3d"
-            element={
-              <>
-                <PreviewBanner />
-                <ViewerPage />
-              </>
-            }
-          />
-          <Route
-            path="/plaene"
-            element={
-              <>
-                <PreviewBanner />
-                <PlansPage />
-              </>
-            }
-          />
-          <Route
-            path="/plaene/:id"
-            element={
-              <>
-                <PreviewBanner />
-                <PlanViewPage />
-              </>
-            }
-          />
-          <Route path="*" element={<LoginPage />} />
-        </Routes>
-      </RoomsProvider>
+      <Routes>
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
     );
   }
 

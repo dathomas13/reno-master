@@ -1,5 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { signIn, friendlyAuthError } from '@/firebase/auth';
 import { isFirebaseConfigured } from '@/firebase/app';
 
@@ -64,18 +63,6 @@ export default function LoginPage() {
           {busy ? 'Anmelden…' : 'Anmelden'}
         </button>
       </form>
-
-      <div className="mt-10 pt-6 border-t border-line">
-        <p className="text-muted text-xs mb-3">Ohne Anmeldung ansehen:</p>
-        <div className="flex gap-2">
-          <Link to="/3d" className="btn flex-1">
-            3D-Modell
-          </Link>
-          <Link to="/plaene" className="btn flex-1">
-            Grundrisse
-          </Link>
-        </div>
-      </div>
 
       <p className="text-muted text-xs mt-8 leading-relaxed">
         Die Anmeldung wird gespeichert. Danach läuft die App auch ohne Netz weiter.

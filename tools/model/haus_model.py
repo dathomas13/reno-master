@@ -1,7 +1,8 @@
 """Haus Tirschenreuth - Bestand (Ist). Alle Maße in mm.
 
-Die Daten stehen seit 09/2026 in public/models/haus-ist.json (Format reno-haus/1, siehe
-ANLEITUNG-EXTERN.md); dort wird geändert, nicht hier. Dieses Modul stellt sie den Skripten
+Die Daten stehen in einer Hausdatei haus-ist.json (Format reno-haus/1, siehe
+ANLEITUNG-EXTERN.md), gelesen aus RENO_HAUS_DIR (siehe hausdatei.py); dort wird geändert,
+nicht hier. Dieses Modul stellt sie den Skripten
 unter den gewohnten Namen bereit (WALLS, OPENINGS, HOUSE_W, roof_z_under, ...).
 
 Koordinaten: x = 0 Außenkante Westwand, nach Osten; y = 0 Außenkante Südwand, nach Norden;

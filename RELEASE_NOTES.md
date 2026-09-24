@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.51.0 – Das 3D-Modell kommt nur noch aus der Datenbank
+
+- Einmalig: Einstellungen → 3D-Modelle → „Startstand übernehmen“ tippen, falls angeboten –
+  danach haben alle angemeldeten Geräte dasselbe Modell, auch offline.
+- 3D-Modell und Grundrisse gibt es nur noch nach der Anmeldung.
+
 ## 0.50.0 – Grundrisse folgen dem importierten Modell
 
 - Die 2D-Grundrisse zeigen ein in der App importiertes Modell sofort, auch schon in der
