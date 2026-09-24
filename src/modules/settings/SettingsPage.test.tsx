@@ -102,17 +102,5 @@ describe('settings disclosure', () => {
 
     expect(patchDoc).toHaveBeenCalledWith('users', 'user-1', { reminderTime: '18:30' });
   });
-
-  it('defaults room naming to Bestand and persists a switch to Planung', async () => {
-    await openSettings();
-
-    const naming = screen.getByRole('combobox', { name: 'Raumbezeichnungen' });
-    expect(naming).toHaveValue('bestand');
-
-    fireEvent.change(naming, { target: { value: 'planung' } });
-
-    expect(naming).toHaveValue('planung');
-    expect(JSON.parse(localStorage.getItem('reno.settings')!).roomNaming).toBe('planung');
-  });
 });
 

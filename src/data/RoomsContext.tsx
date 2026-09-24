@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { loadRooms, loadRoomMap, sortRooms } from './models';
 import { MODEL_EVENT } from './modelSync';
-import { buildRoomNaming, disambiguatedNames, roomsWithLinkedNames, type RoomNamingView } from './roomNaming';
-import { loadSettings, SETTINGS_EVENT, type LocalSettings } from '@/lib/settings';
+import { buildRoomNaming, disambiguatedNames, roomsWithLinkedNames, type RoomNaming, type RoomNamingView } from './roomNaming';
+import { loadSettings, roomNamingOf, SETTINGS_EVENT, type LocalSettings } from '@/lib/settings';
 import { LAYER_LABEL, type Room } from '@/modules/viewer3d/houseScene';
 
 interface RoomsValue {
@@ -17,7 +17,7 @@ interface RoomsValue {
    * floor in its own line) */
   shortLabel(id: string): string;
   shortLabels(ids: string[]): string[];
-  naming: LocalSettings['roomNaming'];
+  naming: RoomNaming;
   /** every stored id that counts towards the room a given id resolves to */
   idsFor(id: string): string[];
   /** true when any of a set of stored ids belongs to the room `filterId` resolves to */
@@ -58,7 +58,7 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
   const [ist, setIst] = useState<Room[]>([]);
   const [soll, setSoll] = useState<Room[]>([]);
   const [map, setMap] = useState<Record<string, string>>({});
-  const [naming, setNaming] = useState<LocalSettings['roomNaming']>(() => loadSettings().roomNaming);
+  const [naming, setNaming] = useState<RoomNaming>(() => roomNamingOf(loadSettings()));
 
   useEffect(() => {
     let active = true;
@@ -84,13 +84,13 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // roomNaming is a device setting, changed on the settings screen while this provider
+  // the naming follows the Bestand/Zielzustand switch, a device setting changed on the settings screen while this provider
   // stays mounted for the rest of the app (App.tsx wraps the whole route tree in it) -
   // without this it would take a reload to see the switch take effect.
   useEffect(() => {
     function onSettingsChange(event: Event) {
       const detail = (event as CustomEvent<LocalSettings>).detail;
-      if (detail) setNaming(detail.roomNaming);
+      if (detail) setNaming(roomNamingOf(detail));
     }
     window.addEventListener(SETTINGS_EVENT, onSettingsChange);
     return () => window.removeEventListener(SETTINGS_EVENT, onSettingsChange);

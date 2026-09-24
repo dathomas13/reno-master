@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.55.0 – Ein Schalter für Bestand und Zielzustand
+
+- Einstellungen → 3D-Modelle → „Bestand oder Zielzustand“ gilt jetzt für die ganze App:
+  3D-Modell und die Raumauswahl in Tagebuch, Kosten, Aufgaben, Notizen und Fotos.
+- Der zweite Schalter unter „Räume“ ist weg.
+
 ## 0.54.2 – Suche findet Räume unter allen Namen
 
 - Die Suche findet Räume und ihre Einträge jetzt unter Bestands- und Planungsnamen,

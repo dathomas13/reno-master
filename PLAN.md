@@ -609,10 +609,12 @@ Einträge seiner Vorgänger ein, wird im 3D und im Grundriss aber erst gezeichne
 die Wände feststehen. So kann die Soll-Namensliste und die Zuordnung stehen, bevor das
 Soll-Aufmaß da ist.
 
-**Bestand/Planung** (Einstellungen → Räume, gerätelokal, `src/data/roomNaming.ts`):
-wirkt auf Tagebuch, Kosten, Aufgaben, Notizen, Fotos, die Suche und die Raum-Auswahl in
-Formularen – **nicht** auf 3D und Pläne, die immer die Namen ihrer eigenen Modellvariante
-zeigen. In Stellung Planung zeigt eine gespeicherte Ist-id den Namen des Soll-Raums, auf
+**Bestand/Planung** (seit 0.55.0 derselbe Schalter wie das 3D-Modell: Einstellungen →
+3D-Modelle → „Bestand oder Zielzustand“, gerätelokal `defaultModelVariant`, übersetzt von
+`roomNamingOf` in `src/lib/settings.ts`; Logik in `src/data/roomNaming.ts`): wirkt auf
+Tagebuch, Kosten, Aufgaben, Notizen, Fotos und die Raum-Auswahl in Formularen. 3D und
+Pläne zeigen immer die Namen ihrer eigenen Modellvariante. Die Suche findet Räume und
+Einträge unter allen verknüpften Namen, unabhängig vom Schalter (`roomsWithLinkedNames`). In Stellung Planung zeigt eine gespeicherte Ist-id den Namen des Soll-Raums, auf
 den sie zeigt, und ein Filter oder eine Raum-Kachel fasst den Soll-Raum und alle Ist-Räume
 zusammen, die auf ihn zeigen (`kg-technik` findet also `kg-heizung`- und
 `kg-oellager`-Einträge). Ein neuer Eintrag speichert die id der Ansicht, in der er angelegt

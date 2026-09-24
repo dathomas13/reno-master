@@ -9,11 +9,14 @@ export interface LocalSettings {
   /** free text, not a list: which Gemini models exist changes faster than this app */
   geminiModel: string;
   ocrEngine: 'auto' | 'mlkit' | 'claude' | 'gemini' | 'off';
+  /**
+   * Bestand oder Zielzustand - der eine Schalter für die ganze App: welches 3D-Modell
+   * sich öffnet, und welche Räume Tagebuch, Kosten, Aufgaben, Notizen und Fotos zur
+   * Auswahl anbieten (Bestand: Heizung, Öllager; Zielzustand: Technikraum). Früher gab
+   * es dafür einen zweiten Schalter "roomNaming"; zwei Schalter für eine Frage haben
+   * nur verwirrt.
+   */
   defaultModelVariant: 'ist' | 'soll';
-  /** ob Tagebuch, Kosten, Aufgaben, Notizen, Fotos und Suche die Bestands- oder die
-   * Planungsnamen der Räume zeigen; wirkt nicht auf 3D und Pläne, die zeigen immer die
-   * Namen ihrer eigenen Modellvariante */
-  roomNaming: 'bestand' | 'planung';
   /**
    * Upload the untouched photo next to the 1600 px copy. Off by default because it
    * costs roughly ten times the storage; on for the pictures that have to stay
@@ -41,7 +44,6 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   geminiModel: 'gemini-2.5-flash',
   ocrEngine: 'auto',
   defaultModelVariant: 'ist',
-  roomNaming: 'bestand',
   keepOriginals: false,
   useCustomCamera: false,
   cameraDeviceId: '',
@@ -64,6 +66,11 @@ export function loadSettings(): LocalSettings {
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
+}
+
+/** which room names the forms offer - follows the one Bestand/Zielzustand switch */
+export function roomNamingOf(settings: Pick<LocalSettings, 'defaultModelVariant'>): 'bestand' | 'planung' {
+  return settings.defaultModelVariant === 'soll' ? 'planung' : 'bestand';
 }
 
 /** fired after every saveSettings() call, so a persistently mounted context (RoomsContext

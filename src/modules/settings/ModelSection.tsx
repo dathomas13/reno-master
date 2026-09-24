@@ -65,7 +65,7 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
         </tbody>
       </table>
 
-      <Field label="Standardvariante">
+      <Field label="Bestand oder Zielzustand">
         <select
           className="field"
           value={defaultVariant}
@@ -78,6 +78,12 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
           {VARIANTS.map((item) => <option key={item} value={item}>{VARIANT_LABEL[item]}</option>)}
         </select>
       </Field>
+      <p className="text-xs text-muted -mt-1 mb-3">
+        Gilt für die ganze App: welches 3D-Modell sich öffnet und welche Räume Tagebuch, Kosten,
+        Aufgaben, Notizen und Fotos anbieten – im Bestand z. B. Heizung und Öllager, im
+        Zielzustand den Technikraum. Alte Einträge bleiben dabei auffindbar; die Suche findet
+        Räume unter allen Namen.
+      </p>
 
       <ModelExchange signedIn={signedIn} />
 
