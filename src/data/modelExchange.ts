@@ -108,7 +108,7 @@ export interface PreparedImport {
 
 function variantOf(text: string): Variant | null {
   try {
-    const variant = (JSON.parse(text.replace(/^﻿/, '')) as { variant?: unknown }).variant;
+    const variant = (JSON.parse(text.replace(/^\uFEFF/, '')) as { variant?: unknown }).variant;
     return variant === 'ist' || variant === 'soll' ? variant : null;
   } catch {
     return null;

@@ -137,7 +137,7 @@ function isObj(v: unknown): v is Obj {
 export function parseSource(text: string): ParseResult {
   let raw: unknown;
   try {
-    raw = JSON.parse(text.replace(/^﻿/, ''));
+    raw = JSON.parse(text.replace(/^\uFEFF/, ''));
   } catch (error) {
     const detail = error instanceof Error ? error.message : '';
     return { ok: false, errors: [`Die Datei ist kein gültiges JSON. ${detail}`.trim()] };
