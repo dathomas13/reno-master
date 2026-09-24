@@ -18,6 +18,8 @@ export type { Variant };
 export interface ModelInfo {
   file: string;
   rooms: string | null;
+  /** the house file the scene was built from (haus-<variant>.json) */
+  source?: string | null;
   version: string;
   updatedAt: string;
   note: string;
@@ -27,6 +29,46 @@ export interface ModelInfo {
 export type ModelManifest = Record<Variant, ModelInfo>;
 
 const base = import.meta.env.BASE_URL || '/';
+
+/** fired on window when the model of a variant changed, so open screens can reload it */
+export const MODEL_EVENT = 'reno:model';
+
+/**
+ * A model built from an imported house file, shown before it is published.
+ *
+ * Held in memory only: it is a look before a decision, and a reload of the app is a
+ * perfectly good way to get rid of it. loadScene and loadRooms hand it out instead of
+ * the model in use while it is set.
+ */
+export interface PreviewModel {
+  version: string;
+  scene: SceneDoc;
+  rooms: RoomDoc;
+}
+
+const previews = new Map<Variant, PreviewModel>();
+
+function announce(variant: Variant): void {
+  try {
+    window.dispatchEvent(new CustomEvent(MODEL_EVENT, { detail: { variant } }));
+  } catch {
+    // no window (tests)
+  }
+}
+
+export function setPreview(variant: Variant, preview: PreviewModel): void {
+  previews.set(variant, preview);
+  announce(variant);
+}
+
+export function clearPreview(variant: Variant): void {
+  if (!previews.delete(variant)) return;
+  announce(variant);
+}
+
+export function previewOf(variant: Variant): PreviewModel | null {
+  return previews.get(variant) ?? null;
+}
 const sceneCache = new Map<Variant, Promise<SceneDoc>>();
 const roomCache = new Map<Variant, Promise<RoomDoc>>();
 let manifestCache: Promise<ModelManifest> | null = null;
@@ -57,6 +99,7 @@ export async function bundledRelease(variant: Variant): Promise<ReleaseInfo | nu
       source: 'bundled',
       sceneUrl: `${base}models/${entry.file}`,
       roomsUrl: entry.rooms ? `${base}models/${entry.rooms}` : undefined,
+      sourceUrl: entry.source ? `${base}models/${entry.source}` : undefined,
     };
   } catch {
     return null;
@@ -89,6 +132,8 @@ export function invalidateModel(variant: Variant): void {
 }
 
 export function loadScene(variant: Variant): Promise<SceneDoc> {
+  const preview = previews.get(variant);
+  if (preview) return Promise.resolve(preview.scene);
   let promise = sceneCache.get(variant);
   if (!promise) {
     promise = (async () => {
@@ -106,6 +151,8 @@ export function loadScene(variant: Variant): Promise<SceneDoc> {
 }
 
 export function loadRooms(variant: Variant): Promise<RoomDoc> {
+  const preview = previews.get(variant);
+  if (preview) return Promise.resolve(preview.rooms);
   let promise = roomCache.get(variant);
   if (!promise) {
     promise = (async () => {
@@ -119,6 +166,32 @@ export function loadRooms(variant: Variant): Promise<RoomDoc> {
     roomCache.set(variant, promise);
   }
   return promise;
+}
+
+/**
+ * The house file (reno-haus/1) of the model in use, as text, with the version it says.
+ *
+ * A release published with its house file carries it along; the bundled files have
+ * public/models/haus-<variant>.json. A release published as a bare scene (the old way)
+ * has none - then the bundled house file is returned and `matches` is false, so the
+ * export can say that it is older than the model on screen.
+ */
+export async function loadSource(variant: Variant): Promise<{ text: string; version: string; matches: boolean } | null> {
+  const [cached, bundled] = await Promise.all([readRelease(variant), bundledRelease(variant)]);
+  const cachedInUse = Boolean(cached?.version && (!bundled || !isNewer(bundled.version, cached.version)));
+  if (cachedInUse && cached?.source) {
+    return { text: cached.source, version: cached.version, matches: true };
+  }
+  try {
+    const response = await fetch(`${base}models/haus-${variant}.json`, { cache: 'no-cache' });
+    if (!response.ok) return null;
+    const text = await response.text();
+    const version = String((JSON.parse(text) as { version?: unknown }).version ?? '');
+    const active = cachedInUse ? cached?.version : bundled?.version;
+    return { text, version, matches: version === active };
+  } catch {
+    return null;
+  }
 }
 
 export interface BundledPlan {

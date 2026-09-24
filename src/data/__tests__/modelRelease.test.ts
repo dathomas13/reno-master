@@ -184,6 +184,13 @@ describe('releaseToDoc', () => {
     expect(info?.version).toBe('0.24');
     expect(info?.roomsJson).toBe('{"rooms":[]}');
   });
+
+  it('carries the house file along, and clears it for a bare scene', () => {
+    const withSource = releaseToDoc('ist', '0.26', '', '2026-09-24', '{"prims":[]}', null, '{"format":"reno-haus/1"}');
+    expect(releaseFromDoc('ist', withSource)?.sourceJson).toBe('{"format":"reno-haus/1"}');
+    // merged document: a scene published without a house file must not keep the old one
+    expect(releaseToDoc('ist', '0.27', '', '2026-09-24', '{"prims":[]}', null).source).toBeNull();
+  });
 });
 
 describe('fitsInDocument', () => {
@@ -193,6 +200,10 @@ describe('fitsInDocument', () => {
 
   it('stops a model that would be refused by Firestore', () => {
     expect(fitsInDocument('x'.repeat(990_000), null)).toBe(false);
+  });
+
+  it('counts the house file too', () => {
+    expect(fitsInDocument('x'.repeat(500_000), null, 'z'.repeat(490_000))).toBe(false);
   });
 });
 

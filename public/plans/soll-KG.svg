@@ -99,11 +99,11 @@
 <g id="openings">
 <rect class="window" x="1365" y="11415" width="5510" height="400"/>
 <rect class="window" x="9545" y="11415" width="2010" height="400"/>
+<rect class="door" x="0" y="4935" width="400" height="1260"/>
 <rect class="window" x="1740" y="0" width="800" height="365"/>
 <rect class="window" x="6210" y="0" width="800" height="365"/>
 <rect class="window" x="12595" y="4995" width="400" height="1250"/>
 <rect class="window" x="12630" y="2060" width="365" height="680"/>
-<rect class="door" x="0" y="4935" width="400" height="1260"/>
 <rect class="door" x="6500" y="6685" width="1010" height="270"/>
 <rect class="door" x="3800" y="4205" width="800" height="245"/>
 <rect class="door" x="4745" y="5505" width="270" height="1010"/>

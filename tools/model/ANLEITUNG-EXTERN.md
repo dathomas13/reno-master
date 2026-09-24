@@ -4,8 +4,7 @@ Diese Datei liegt in jedem Modell-Export der App **Reno Master**. Sie richtet si
 den, der das Modell außerhalb der App ändert: eine KI (Claude, ChatGPT, Gemini …), ein
 Skript oder einen Menschen mit Texteditor. Wer sie gelesen hat, braucht nichts anderes.
 
-> Format `reno-haus/1`. Entwurf vom 24.09.2026. Die App liest es, sobald Stufe 2 aus
-> `tools/model/PLAN-MODELL-WORKFLOW.md` umgesetzt ist.
+> Format `reno-haus/1`, Stand 24.09.2026.
 
 ## Kurz gesagt
 
@@ -13,9 +12,10 @@ Skript oder einen Menschen mit Texteditor. Wer sie gelesen hat, braucht nichts a
    (Zielzustand nach der Sanierung). Alle anderen Dateien im ZIP sind Ansichten.
 2. Zurück kommt **die vollständige Datei**: gültiges JSON, ohne Kommentare, gleicher
    Dateiname.
-3. In der App: Einstellungen → 3D-Modelle → **Modell importieren** → Datei wählen. Die App
-   prüft, baut das 3D-Modell, die Räume und die Pläne und zeigt einen Bericht und eine
-   Vorschau. Veröffentlicht wird erst danach.
+3. In der App: Einstellungen → 3D-Modelle → **Modell importieren** → Datei wählen (die
+   JSON allein oder das ganze ZIP). Die App prüft sie, baut das 3D-Modell und die Räume
+   und zeigt, was sich ändert. „Im 3D ansehen“ zeigt das Ergebnis vorab.
+   **Veröffentlicht wird erst auf einen zweiten Tipp**, dann haben es alle Geräte.
 
 ## Was im Export steckt
 
@@ -24,8 +24,7 @@ Skript oder einen Menschen mit Texteditor. Wer sie gelesen hat, braucht nichts a
 | `ANLEITUNG.md` | diese Anleitung | nein |
 | `haus-ist.json` | **Quelle Bestand**: Wände, Öffnungen, Treppen, Räume, Grundmaße | **ja, wenn geändert** |
 | `haus-soll.json` | **Quelle Zielzustand**, am Anfang eine Kopie von Ist | **ja, wenn geändert** |
-| `grundriss-ist.dxf`, `grundriss-soll.dxf` | Grundrisse aller Geschosse für CAD. Ursprung und Einheit wie unten. | nein |
-| `grundriss-ist-KG.svg`, `-EG.svg`, `-OG.svg` … | dieselben Grundrisse als Bild, für KIs ohne DXF | nein |
+| `grundriss-ist.dxf`, `grundriss-soll.dxf` | Grundrisse aller Geschosse für CAD, aus der Hausdatei erzeugt. Ursprung und Einheit wie unten. | nein |
 
 Das berechnete 3D-Netz ist nicht im Export. Die App erzeugt es aus der Hausdatei.
 
@@ -47,7 +46,10 @@ Geschosse: `KG` (Boden −2750), `EG` (Boden 0), `OG` (Boden 2750, Wände oben b
 Dachschräge geschnitten), `GAR` (Boden −1360). Geschosshöhe 2750, Decke 140.
 
 Das DXF im Export verwendet genau dieses System (Einheit mm, `$INSUNITS = 4`). Ein neues
-Aufmaß, das auf diesem DXF gezeichnet ist, lässt sich also direkt ablesen.
+Aufmaß, das auf diesem DXF gezeichnet ist, lässt sich also direkt ablesen. Alle Geschosse
+liegen übereinander und werden über Layer getrennt: `EG_WAND_A` (Wände nach Konfidenz
+A/B/C), `EG_FENSTER`, `EG_TUER`, `EG_DURCHGANG`, `EG_RAUM` und `EG_RAUMTEXT` (Name, id,
+Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
 
 ## Aufbau der Hausdatei
 
@@ -57,6 +59,7 @@ Aufmaß, das auf diesem DXF gezeichnet ist, lässt sich also direkt ablesen.
   "variant": "ist",                      // "ist" | "soll" - nicht ändern
   "version": "0.25",                     // Stand des Exports - NICHT ändern, die App vergibt die nächste
   "note": "",                            // HIER kurz eintragen, was sich geändert hat (erscheint in der App)
+  "info": ["…"],                         // Herkunft der Maße (Aufmaß, Pläne) - Lesestoff, optional
 
   "params": {                            // Grundmaße, selten zu ändern
     "houseW": 12995, "houseD": 11815,    // Außenmaße
@@ -70,7 +73,7 @@ Aufmaß, das auf diesem DXF gezeichnet ist, lässt sich also direkt ablesen.
 
   "walls": [
     {
-      "id": "eg-aussen-sued",            // stabil; neue Wände: frei wählen, eindeutig, klein-mit-bindestrichen
+      "id": "eg-aussenwand-sued",        // stabil; neue Wände: frei wählen, eindeutig, klein-mit-bindestrichen
       "floor": "EG",                     // KG | EG | OG | GAR
       "name": "Außenwand Süd",           // Anzeigename im 3D-Modell
       "x0": 0, "y0": 0, "x1": 8505, "y1": 400,   // Grundriss-Rechteck, x0<x1, y0<y1
@@ -147,8 +150,10 @@ Aufmaß, das auf diesem DXF gezeichnet ist, lässt sich also direkt ablesen.
 - **Die `id` eines Raums niemals ändern oder wiederverwenden.** An ihr hängen Tagebuch,
   Fotos, Kosten und Aufgaben. Umbenennen geht über `name`. Neuer Raum: neue id nach dem
   Muster `<geschoss>-<name>` (`eg-hwr`). Fällt ein Raum weg, weil zwei Räume
-  zusammengelegt werden: die id des größeren behalten, die andere entfernen. Die App fragt
-  dann, wohin die Einträge des entfernten Raums wandern.
+  zusammengelegt werden: die id des größeren behalten, die andere entfernen. Die App nennt
+  entfernte ids beim Import und veröffentlicht erst, wenn das ausdrücklich bestätigt ist.
+  Einträge an einem entfernten Raum verlieren ihre Zuordnung.
+- `note` bei einem Raum ist frei, meist steht dort die im Plan gestempelte Fläche.
 
 ### Konfidenz `tag`
 
@@ -205,7 +210,21 @@ auf `A`. Wände, die sich nicht zuordnen lassen, in `note` aufzählen statt rate
 - [ ] Nichts geändert, worum nicht gebeten wurde.
 
 Auch wenn etwas übersehen wird: Die App prüft alles davon beim Import noch einmal und
-veröffentlicht nichts mit Fehlern.
+veröffentlicht nichts mit Fehlern. Fehler nennen die Stelle so, dass man sie in der Datei
+findet, zum Beispiel `Wand eg-flur-bad-14-5 (walls[12]), Öffnung 1: y 9855–10615 liegt nicht
+in der Wand`.
+
+## Was die App daraus macht
+
+- Die **Versionsnummer** vergibt die App: die höchste bekannte plus eins in der letzten
+  Stelle (0.25 → 0.26). Deshalb bleibt `version` in der Datei, wie sie war. Die App liest
+  daran ab, auf welchem Stand die Änderung beruht, und warnt, wenn inzwischen ein neuerer
+  in Gebrauch ist.
+- Beim Veröffentlichen wandern 3D-Modell, Raumliste **und die Hausdatei selbst** zu allen
+  Geräten. Der nächste Export gibt also genau diesen Stand heraus.
+- Geprüft wird: Aufbau und Datentypen, Öffnungen in ihrer Wand, Räume innerhalb des Hauses,
+  nicht von Wänden durchschnitten, ohne Überlappung. Nur als Hinweis kommen neue freie
+  Wandenden und Öffnungen, die höher sind als das Geschoss.
 
 ## Prompt-Vorlage für eine externe KI
 

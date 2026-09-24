@@ -497,7 +497,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Konto (E-Mail, Abmelden), Anzeigename.
 - Erinnerung: an/aus, Uhrzeit (Default 20:00), „Benachrichtigungen erlauben“, „Testbenachrichtigung“; darunter die nächste fällige Erinnerung im Klartext („Nächste Erinnerung: morgen um 20:00.“) und der Hinweis, ob das Gerät sie selbst stellt (App) oder nur die offene Seite (Browser).
 - Beleg-Auslesen: Verfahren (Automatisch = ML Kit → Gemini → Claude, oder eines davon erzwingen, oder aus), darunter je ein Block für Gemini und Claude mit API-Key (Passwortfeld, nur lokal) und Modell. Beide Schlüssel liegen ausschließlich im localStorage des Geräts.
-- Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen", und – angemeldet – "Modell veröffentlichen": erzeugte `ist.json`/`rooms-ist.json` auswählen, Version und Datum kommen aus `meta` der Datei selbst.
+- Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen". Darunter `ModelExchange`: "Modell exportieren" (ZIP mit Anleitung, Hausdateien, DXF – im Browser als Download, in der App über den Teilen-Dialog) und "Modell importieren" (Hausdatei oder ZIP → prüfen, bauen, Änderungsbericht, "Im 3D ansehen" als Vorschau, angemeldet "Als vX veröffentlichen"; entfallende Raum-ids müssen bestätigt werden). Der alte Upload einer fertigen Szene steht als "Fertige Szene hochladen (erweitert)" darunter.
 - Listen: Personen (Anwesend), Kosten-Kategorien, Aufgaben-Bereiche, Kontakt-Rollen – hinzufügen/umbenennen.
 - Offline: belegter Speicher (StorageManager.estimate), ausstehende Uploads, "Alle Thumbnails jetzt laden", "Cache leeren".
 - App-Version (Git-SHA + Build-Datum), "Nach Update suchen".
@@ -505,6 +505,13 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 ---
 
 ## 9. 3D-Modell-Pipeline und Übergabe an den Modell-Agenten
+
+> **Seit 09/2026 überholt, was die Quelle angeht:** Die Datenbasis ist nicht mehr
+> `haus_model.py`/`rooms_ist.py`, sondern die Hausdatei `public/models/haus-<variante>.json`
+> (Format `reno-haus/1`). Die Python-Module lesen sie nur noch ein, die App baut die Szene
+> selbst (`src/modules/modelBuild`) und bietet Export/Import in den Einstellungen.
+> Maßgeblich: `tools/model/README-MODELL.md`, `tools/model/ANLEITUNG-EXTERN.md`,
+> `tools/model/PLAN-MODELL-WORKFLOW.md`. Das Szenenformat (9.2) ist unverändert.
 
 ### 9.1 Ablage im Repo
 `tools/model/` erhält die komplette Toolchain aus der ZIP (Python): `haus_model.py` (**Datenbasis Ist**), `build_scene.py`,

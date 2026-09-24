@@ -25,6 +25,8 @@ export interface CachedRelease {
   origin: ReleaseSource;
   scene: SceneDoc;
   rooms: RoomDoc | null;
+  /** the house file (reno-haus/1) the scene was built from, as text; missing for older releases */
+  source?: string | null;
   /** when this device downloaded it, ISO */
   cachedAt: string;
 }

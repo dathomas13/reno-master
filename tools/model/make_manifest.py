@@ -22,9 +22,12 @@ def main() -> int:
             continue
         meta = json.loads(path.read_text(encoding="utf-8")).get("meta", {})
         rooms = MODELS / f"rooms-{variant}.json"
+        source = MODELS / f"haus-{variant}.json"
         manifest[variant] = {
             "file": path.name,
             "rooms": rooms.name if rooms.exists() else None,
+            # the house file the scene was built from - the app exports it for editing
+            "source": source.name if source.exists() else None,
             "version": meta.get("version", "0"),
             "updatedAt": meta.get("generatedAt", ""),
             "note": meta.get("note", ""),

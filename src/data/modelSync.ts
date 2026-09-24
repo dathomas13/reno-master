@@ -28,10 +28,9 @@ import {
   type Variant,
 } from './modelRelease';
 import { cachedInfo, readRelease, writeRelease, type CachedRelease } from './modelStore';
-import { bundledRelease, invalidateModel } from './models';
+import { bundledRelease, invalidateModel, MODEL_EVENT } from './models';
 
-/** fired on window when a newer model was stored, so open screens can reload it */
-export const MODEL_EVENT = 'reno:model';
+export { MODEL_EVENT } from './models';
 
 /** the last release each variant was announced with over Firestore */
 const announced = new Map<Variant, ReleaseInfo | null>();
@@ -51,7 +50,8 @@ export async function siteRelease(variant: Variant): Promise<ReleaseInfo | null>
     const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) return null;
     const manifest = (await response.json()) as Record<string, {
-      file?: string; rooms?: string | null; version?: string; updatedAt?: string; note?: string; bytes?: number;
+      file?: string; rooms?: string | null; source?: string | null; version?: string; updatedAt?: string;
+      note?: string; bytes?: number;
     }>;
     const entry = manifest[variant];
     if (!entry?.version) return null;
@@ -67,6 +67,9 @@ export async function siteRelease(variant: Variant): Promise<ReleaseInfo | null>
       sceneUrl: `${publishedFileUrl(`models/${entry.file ?? `${variant}.json`}`)}?v=${entry.version}`,
       roomsUrl: entry.rooms
         ? `${publishedFileUrl(`models/${entry.rooms}`)}?v=${entry.version}`
+        : undefined,
+      sourceUrl: entry.source
+        ? `${publishedFileUrl(`models/${entry.source}`)}?v=${entry.version}`
         : undefined,
     };
   } catch {
@@ -87,7 +90,27 @@ async function fetchJson(url: string): Promise<unknown> {
  * Throws with a German message when the model is unusable, so a truncated download or a
  * half written document is refused before it replaces a working model.
  */
-async function payloadOf(info: ReleaseInfo): Promise<{ scene: SceneDoc; rooms: RoomDoc | null }> {
+/**
+ * The house file of a release, when it has one that fits: it has to be a reno-haus/1
+ * file of the same version, or it would describe a different model than the scene.
+ * Anything else counts as missing - the scene is what matters, the source is a bonus.
+ */
+async function sourceOf(info: ReleaseInfo): Promise<string | null> {
+  try {
+    let text = info.sourceJson ?? null;
+    if (text === null && info.sourceUrl) {
+      const response = await fetch(info.sourceUrl, { cache: 'no-store' });
+      text = response.ok ? await response.text() : null;
+    }
+    if (text === null) return null;
+    const doc = JSON.parse(text) as { format?: unknown; version?: unknown };
+    return doc.format === 'reno-haus/1' && doc.version === info.version ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+async function payloadOf(info: ReleaseInfo): Promise<{ scene: SceneDoc; rooms: RoomDoc | null; source: string | null }> {
   const sceneRaw = info.sceneJson
     ? (JSON.parse(info.sceneJson) as unknown)
     : await fetchJson(info.sceneUrl ?? '');
@@ -103,7 +126,7 @@ async function payloadOf(info: ReleaseInfo): Promise<{ scene: SceneDoc; rooms: R
     // a broken room list must not cost us the model - the scene is the important part
     if (!roomProblem) rooms = roomsRaw as RoomDoc;
   }
-  return { scene: sceneRaw as SceneDoc, rooms };
+  return { scene: sceneRaw as SceneDoc, rooms, source: await sourceOf(info) };
 }
 
 export interface SyncResult {
@@ -135,7 +158,7 @@ export async function syncModel(variant: Variant, checkSite = true): Promise<Syn
   if (plan.action === 'keep') return { variant, active: best, changed: false };
 
   try {
-    const { scene, rooms } = await payloadOf(best);
+    const { scene, rooms, source } = await payloadOf(best);
     const entry: CachedRelease = {
       variant,
       version: best.version,
@@ -144,6 +167,7 @@ export async function syncModel(variant: Variant, checkSite = true): Promise<Syn
       origin: best.source,
       scene,
       rooms,
+      source,
       cachedAt: new Date().toISOString(),
     };
     await writeRelease(entry);
@@ -229,6 +253,8 @@ export interface PublishInput {
   variant: Variant;
   sceneJson: string;
   roomsJson: string | null;
+  /** the house file the scene was built from; published along so every device can export it */
+  sourceJson?: string | null;
   note?: string;
 }
 
@@ -253,13 +279,14 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
     const roomProblem = validateRooms(JSON.parse(input.roomsJson) as unknown);
     if (roomProblem) throw new Error(roomProblem);
   }
-  if (!fitsInDocument(input.sceneJson, input.roomsJson)) {
+  const sourceJson = input.sourceJson ?? null;
+  if (!fitsInDocument(input.sceneJson, input.roomsJson, sourceJson)) {
     throw new Error('Das Modell ist zu groß für ein Firestore-Dokument. Bitte über eine Adresse veröffentlichen.');
   }
 
   const generatedAt = meta?.generatedAt ?? new Date().toISOString().slice(0, 10);
   const note = input.note?.trim() || meta?.note || '';
-  const doc = releaseToDoc(input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson);
+  const doc = releaseToDoc(input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson, sourceJson);
   await saveDoc<BaseDoc & ReleaseDoc>(COL.meta, {
     id: docId(input.variant),
     ...doc,
@@ -272,6 +299,11 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
     variant: input.variant, version, updatedAt: generatedAt, note, bytes: input.sceneJson.length,
     source: 'firestore',
   };
-  announced.set(input.variant, { ...info, sceneJson: input.sceneJson, roomsJson: input.roomsJson ?? undefined });
+  announced.set(input.variant, {
+    ...info,
+    sceneJson: input.sceneJson,
+    roomsJson: input.roomsJson ?? undefined,
+    sourceJson: sourceJson ?? undefined,
+  });
   return info;
 }

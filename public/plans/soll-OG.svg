@@ -85,16 +85,16 @@
 <rect class="wall" x="9000" y="4250" width="1625" height="510" fill="var(--wall-a)" data-wall="Kamin"/>
 </g>
 <g id="openings">
+<rect class="door" x="0" y="6075" width="400" height="2010"/>
+<rect class="door" x="0" y="3825" width="400" height="2010"/>
+<rect class="window" x="12595" y="6075" width="400" height="1135"/>
+<rect class="window" x="12595" y="4700" width="400" height="1135"/>
 <rect class="door" x="4840" y="6075" width="175" height="885"/>
 <rect class="door" x="4840" y="4915" width="175" height="885"/>
 <rect class="door" x="9235" y="6075" width="135" height="885"/>
 <rect class="door" x="9235" y="4990" width="135" height="885"/>
 <rect class="door" x="6140" y="7110" width="885" height="160"/>
 <rect class="door" x="7185" y="4860" width="760" height="120"/>
-<rect class="door" x="0" y="6075" width="400" height="2010"/>
-<rect class="door" x="0" y="3825" width="400" height="2010"/>
-<rect class="window" x="12595" y="6075" width="400" height="1135"/>
-<rect class="window" x="12595" y="4700" width="400" height="1135"/>
 </g>
 <g id="stairs">
 </g>

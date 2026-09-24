@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Build public/models/<variant>.json from haus_model.py without any CAD dependency.
+"""Build public/models/<variant>.json from the house file without any CAD dependency.
+
+The house file is public/models/haus-<variant>.json (read through haus_model.py); the app
+builds the same scene from it in src/modules/modelBuild/buildScene.ts.
 
 Same output as build_scene.py, which needs CadQuery/OCP (~150 MB) because the print and
 STEP exports need watertight solids. The viewer only needs triangles, so this script uses
@@ -457,8 +460,10 @@ def build(m, variant: str, version: str, note: str) -> dict:
             for d in done:
                 s = solid_sub(s, d)                   # remove overlaps at crossings
             th = min(w["x1"] - w["x0"], w["y1"] - w["y0"])
-            add(floor, w["name"], "wall", w["tag"], s,
-                tragend=(th >= 240 and not w["name"].startswith("Kamin")))
+            tragend = w.get("tragend")
+            if tragend is None:
+                tragend = th >= 240 and not w["name"].startswith("Kamin")
+            add(floor, w["name"], "wall", w["tag"], s, tragend=tragend)
             done.append(s)
             for name, kind, tag, p in panels(w, z0):
                 add(floor, name, kind, tag, p)
@@ -547,7 +552,8 @@ def build(m, variant: str, version: str, note: str) -> dict:
         s = wall_solid(w, m.GAR_Z0, m.garage_roof_z((w["y0"] + w["y1"]) / 2))
         for d in done:
             s = solid_sub(s, d)
-        add("GAR", w["name"], "wall", w["tag"], s, tragend=True)
+        add("GAR", w["name"], "wall", w["tag"], s,
+            tragend=True if w.get("tragend") is None else w["tragend"])
         done.append(s)
         for name, kind, tag, p in panels(w, m.GAR_Z0):
             add("GAR", name, kind, tag, p)
@@ -570,13 +576,16 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--variant", choices=("ist", "soll"), default="ist")
-    ap.add_argument("--version", required=True, help="model version, always increase it")
-    ap.add_argument("--note", default="", help="short note shown in the app")
+    ap.add_argument("--version", help="model version, always increase it "
+                    "(default: the version in the house file)")
+    ap.add_argument("--note", help="short note shown in the app (default: from the house file)")
     ap.add_argument("--out", help=f"output file (default {MODELS}/<variant>.json)")
     args = ap.parse_args()
 
     m = importlib.import_module("haus_model" if args.variant == "ist" else "haus_model_soll")
-    scene = build(m, args.variant, args.version, args.note)
+    version = args.version or m.SOURCE["version"]
+    note = m.SOURCE.get("note", "") if args.note is None else args.note
+    scene = build(m, args.variant, version, note)
     out = pathlib.Path(args.out) if args.out else MODELS / f"{args.variant}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(scene, separators=(",", ":")))

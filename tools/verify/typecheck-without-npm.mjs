@@ -85,6 +85,14 @@ function exportsOf(file) {
 }
 
 function resolve(fromFile, specifier) {
+  // Vite's ?raw / ?url suffixes load a file as text or address - no module to check
+  const query = specifier.indexOf('?');
+  const plain = query >= 0 ? specifier.slice(0, query) : specifier;
+  if (plain !== specifier) {
+    const target = plain.startsWith('@/') ? path.join(repo, 'src', plain.slice(2))
+      : plain.startsWith('.') ? path.resolve(path.dirname(fromFile), plain) : null;
+    return target === null || fs.existsSync(target) ? null : undefined;
+  }
   let base;
   if (specifier.startsWith('@/')) base = path.join(repo, 'src', specifier.slice(2));
   else if (specifier.startsWith('.')) base = path.resolve(path.dirname(fromFile), specifier);

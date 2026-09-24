@@ -17,7 +17,7 @@ import {
 import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitControls';
 import { lastViewerState, rememberViewerState, type ViewerState } from './viewerState';
 import { RoomPanel } from './RoomPanel';
-import { activeRelease, loadRooms, loadScene, type Variant } from '@/data/models';
+import { activeRelease, clearPreview, loadRooms, loadScene, previewOf, type Variant } from '@/data/models';
 import { SOURCE_LABEL, type ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings, saveSettings } from '@/lib/settings';
@@ -305,6 +305,9 @@ export default function ViewerPage() {
     setParams(nextParams, { replace: true });
   }
 
+  // an imported model that is looked at before it is published; reloadKey follows it
+  const preview = previewOf(variant);
+
   // signed in there is a bottom navigation below and nothing above; in the preview it is
   // the other way round, a banner on top and the full width of the screen below
   const signedIn = isAuthenticated();
@@ -332,7 +335,15 @@ export default function ViewerPage() {
               </button>
             ))}
           </div>
-          {release && (
+          {preview && (
+            <span className="text-[11px] text-bg bg-warn rounded px-2 py-1 pointer-events-auto flex items-center gap-2">
+              Vorschau v{preview.version} · nicht veröffentlicht
+              <button type="button" className="underline" onClick={() => clearPreview(variant)}>
+                beenden
+              </button>
+            </span>
+          )}
+          {release && !preview && (
             <span className="text-[11px] text-muted bg-bg/70 rounded px-2 py-1">
               v{release.version} · {release.updatedAt}
               {release.source !== 'bundled' && ` · ${SOURCE_LABEL[release.origin ?? release.source]}`}

@@ -19,15 +19,24 @@ npm run e2e            # Playwright, baut und startet die App selbst
 npm run build          # Produktionsbuild nach dist/
 ```
 
-Modell und Pläne neu erzeugen (Python, nur Standardbibliothek):
+Das Modell hat **eine Quelle: die Hausdatei** `public/models/haus-<variante>.json`
+(Format `reno-haus/1`, `tools/model/ANLEITUNG-EXTERN.md`). Der Benutzer ändert sie ohne
+Repo über Einstellungen → 3D-Modelle → „Modell exportieren“/„Modell importieren“; die App
+baut dann selbst (`src/modules/modelBuild`, Punkt für Punkt gleich wie Python). Im Repo
+(Python, nur Standardbibliothek):
 
 ```bash
-python3 tools/model/build_scene_lite.py --variant ist --version 0.25   # 3D-Szene
+python3 tools/model/hausdatei.py --format ist         # Hausdatei ins kanonische Layout
+python3 tools/model/build_scene_lite.py --variant ist # 3D-Szene, Version aus der Hausdatei
 python3 tools/model/build_rooms.py
 python3 tools/model/build_plans_svg.py
 python3 tools/model/make_manifest.py
+python3 tools/model/check_source.py                   # Szenen passen zu den Hausdateien (CI)
 python3 tools/model/check_scene.py public/models/ist.json --against <alte Fassung>
 ```
+
+**Vor einer Modelländerung im Repo zuerst den App-Export holen** – in der App kann seitdem
+eine höhere Fassung veröffentlicht worden sein, die das Repo nicht kennt.
 
 `build_scene.py` baut dieselbe Szene aus Volumenkörpern, braucht aber CadQuery (~150 MB).
 Das ist nur für STL (`build_print.py`) und STEP/FreeCAD (`build_cad.py`) nötig – der Viewer
@@ -62,8 +71,9 @@ Fassung, die es erreicht – gebündelt, aus dem Manifest der veröffentlichten 
 aus `meta/model-<variante>` in Firestore – prüft sie und legt sie in IndexedDB
 (`src/data/modelStore.ts`). Der Viewer liest über `loadScene`, also offline aus dem Cache.
 Die Entscheidungslogik steht testbar in `src/data/modelRelease.ts`. Veröffentlichen geht
-per `git push` oder ohne Deploy über Einstellungen → 3D-Modelle → „Modell veröffentlichen“
-(Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5).
+per `git push` oder ohne Deploy über „Modell importieren“ (`src/data/modelExchange.ts`);
+jede Veröffentlichung trägt ihre Hausdatei mit, damit der Export immer den Stand in
+Gebrauch herausgibt (Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5).
 
 ## Stand (16.09.2026)
 
@@ -122,6 +132,11 @@ Steht:
   wer weitermachen will, hängt ihn in `PhotoAttach.openCamera` wieder ein.
   Zweiter, unabhängiger Befund: ein `ImageReader` mit `ImageFormat.PRIVATE` an einer laufenden
   Kamera startet dieses Gerät neu – nicht benutzen.
+- **Das Modell lässt sich ohne Chat bearbeiten** (09/2026): Hausdatei als einzige Quelle,
+  Export als ZIP (Anleitung, `haus-ist.json`, `haus-soll.json`, DXF-Grundrisse), Import
+  mit Prüfung, Änderungsbericht, Vorschau im 3D und Veröffentlichen über Firestore. Offen
+  laut `tools/model/PLAN-MODELL-WORKFLOW.md`: 2D-Pläne aus der Quelle (Stufe 3),
+  DXF-Import, Änderung per Sprache in der App (Stufe 6).
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

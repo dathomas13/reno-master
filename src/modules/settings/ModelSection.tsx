@@ -6,6 +6,7 @@ import { SOURCE_LABEL, VARIANTS, type ReleaseInfo, type Variant } from '@/data/m
 import { readRelease } from '@/data/modelStore';
 import { publishModel, syncAllModels } from '@/data/modelSync';
 import { loadSettings, saveSettings } from '@/lib/settings';
+import { ModelExchange } from './ModelExchange';
 
 const VARIANT_LABEL: Record<Variant, string> = { ist: 'Bestand', soll: 'Zielzustand' };
 
@@ -20,8 +21,9 @@ interface Row {
  *
  * A model is no longer part of the app build: the app uses the highest version it can
  * reach and keeps it on the device, so a new model needs neither a new bundle nor a new
- * APK. This section shows which version is in effect and lets a generated file be
- * published to the other device without any deploy at all.
+ * APK. This section shows which version is in effect. ModelExchange below exports the
+ * house file for editing elsewhere and builds and publishes an edited one - no deploy,
+ * no Python. Uploading a finished scene is kept as an advanced fallback.
  */
 export function ModelSection({ signedIn }: { signedIn: boolean }) {
   const [rows, setRows] = useState<Row[]>([]);
@@ -141,13 +143,15 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
         {checking ? 'Wird geprüft…' : 'Nach neuem Modell suchen'}
       </button>
 
+      <ModelExchange signedIn={signedIn} />
+
       {signedIn && (
         <details className="mt-3">
-          <summary className="text-sm cursor-pointer">Modell veröffentlichen</summary>
+          <summary className="text-sm cursor-pointer">Fertige Szene hochladen (erweitert)</summary>
           <p className="text-xs text-muted mt-2">
-            Erzeugt mit <code>tools/model/build_scene_lite.py</code>. Ohne neuen App-Build: die Datei
-            wandert in die Datenbank, das andere Gerät holt sie beim nächsten Sync. Version und Datum
-            kommen aus der Datei selbst.
+            Nur für Szenen, die außerhalb gebaut wurden (<code>tools/model/build_scene_lite.py</code>).
+            Der übliche Weg ist „Modell importieren“ oben. Version und Datum kommen aus der Datei selbst.
+            Eine so hochgeladene Szene hat keine Hausdatei – der Export gibt dann die ältere heraus.
           </p>
           <Field label="Variante">
             <select className="field" value={variant} onChange={(e) => setVariant(e.target.value as Variant)}>

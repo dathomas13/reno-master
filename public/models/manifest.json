@@ -2,6 +2,7 @@
   "ist": {
     "file": "ist.json",
     "rooms": "rooms-ist.json",
+    "source": "haus-ist.json",
     "version": "0.25",
     "updatedAt": "2026-09-17",
     "note": "KG- und OG-Aufmaß 09/2026 (Fertigmaße)",
@@ -10,6 +11,7 @@
   "soll": {
     "file": "soll.json",
     "rooms": "rooms-soll.json",
+    "source": "haus-soll.json",
     "version": "0.0",
     "updatedAt": "2026-09-17",
     "note": "Platzhalter – identisch mit Ist, bis das Soll-Modell gebaut ist",

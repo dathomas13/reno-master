@@ -49,6 +49,13 @@ export interface ReleaseInfo {
   /** payload carried inline, as JSON text - how the Firestore document ships a model */
   sceneJson?: string;
   roomsJson?: string;
+  /**
+   * The house file the scene was built from (format reno-haus/1), as text or address.
+   * Travels with every release so the export always hands out the source of the model
+   * in use, whichever channel it came through.
+   */
+  sourceJson?: string;
+  sourceUrl?: string;
 }
 
 /**
@@ -188,6 +195,8 @@ export interface ReleaseDoc {
   bytes?: number;
   scene?: string;
   rooms?: string | null;
+  /** the house file the scene was built from; null for a scene published on its own */
+  source?: string | null;
   // null, not undefined: the document is merged, so clearing a key has to be written
   sceneUrl?: string | null;
   roomsUrl?: string | null;
@@ -206,6 +215,7 @@ export function releaseFromDoc(variant: Variant, doc: ReleaseDoc | null): Releas
     source: 'firestore',
     sceneJson: typeof doc.scene === 'string' ? doc.scene : undefined,
     roomsJson: typeof doc.rooms === 'string' ? doc.rooms : undefined,
+    sourceJson: typeof doc.source === 'string' ? doc.source : undefined,
     sceneUrl: typeof doc.sceneUrl === 'string' ? doc.sceneUrl : undefined,
     roomsUrl: typeof doc.roomsUrl === 'string' ? doc.roomsUrl : undefined,
   };
@@ -219,6 +229,7 @@ export function releaseToDoc(
   generatedAt: string,
   sceneJson: string,
   roomsJson: string | null,
+  sourceJson: string | null = null,
 ): ReleaseDoc {
   return {
     variant,
@@ -230,6 +241,9 @@ export function releaseToDoc(
     // written even when empty: the document is merged, so leaving the key out would keep
     // the room list of the previous release
     rooms: roomsJson ?? null,
+    // the same for the house file: a scene uploaded without one must not keep the old one,
+    // or the export would hand out a source that does not match the model
+    source: sourceJson,
   };
 }
 
@@ -242,6 +256,6 @@ export function releaseToDoc(
  */
 export const DOC_LIMIT_BYTES = 1_000_000;
 
-export function fitsInDocument(sceneJson: string, roomsJson: string | null): boolean {
-  return sceneJson.length + (roomsJson?.length ?? 0) < DOC_LIMIT_BYTES - 20_000;
+export function fitsInDocument(sceneJson: string, roomsJson: string | null, sourceJson: string | null = null): boolean {
+  return sceneJson.length + (roomsJson?.length ?? 0) + (sourceJson?.length ?? 0) < DOC_LIMIT_BYTES - 20_000;
 }

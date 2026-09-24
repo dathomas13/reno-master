@@ -8,6 +8,13 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.49.0 – 3D-Modell exportieren und importieren
+
+- Einstellungen → 3D-Modelle: „Modell exportieren“ gibt ein ZIP mit Anleitung, Hausdateien
+  und DXF-Grundrissen, zum Bearbeiten in einer anderen KI, einem Editor oder CAD.
+- „Modell importieren“ nimmt die geänderte Datei zurück, prüft sie, baut das Modell auf dem
+  Gerät und zeigt die Änderungen und eine Vorschau im 3D, bevor es veröffentlicht wird.
+
 ## 0.48.2 – Gespräche: verwaiste Einträge lassen sich wieder öffnen
 
 - Wurde ein Kontakt gelöscht, ließen sich seine Gesprächseinträge unter „Gespräche“ nicht
