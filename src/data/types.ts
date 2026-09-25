@@ -209,7 +209,7 @@ export interface Lists {
 export interface Plan extends BaseDoc {
   title: string;
   floor?: Floor | 'GESAMT';
-  variant: 'original' | 'ist' | 'soll';
+  variant: 'original' | 'ist' | 'aktuell' | 'soll';
   kind: 'svg' | 'pdf' | 'image';
   source: 'bundled' | 'upload';
   /** bundled: path relative to the app base; upload: Firebase Storage path */

@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Generate 2D floor plans as SVG from the model data base.
 
-One file per floor and variant, e.g. public/plans/ist-EG.svg. The SVG uses the model
+One file per floor and variant, e.g. plans/ist-EG.svg next to the house file (see
+hausdatei.py for the directory). The app draws the same SVG in
+src/modules/modelBuild/plansSvg.ts. The SVG uses the model
 coordinate system in mm (y flipped so north is up) and carries data-room-id on every
 room area, so the app can make rooms tappable in the plan just like in the 3D view.
 
@@ -14,7 +16,6 @@ open passages light. Add class="light" on the root <svg> for the print/light ver
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import importlib
 import json
 import pathlib
@@ -22,14 +23,14 @@ import sys
 from xml.sax.saxutils import escape
 
 HERE = pathlib.Path(__file__).resolve().parent
-REPO = HERE.parents[1]
-PLANS = REPO / "public" / "plans"
 sys.path.insert(0, str(HERE))
+import hausdatei  # noqa: E402
+from hausdatei import DATA, PLANS  # noqa: E402
 
 MARGIN = 1100                      # mm left/right/top of the building
 MARGIN_BOTTOM = 2100               # mm below (dimension chain + scale bar)
 FLOOR_LABEL = {"KG": "Kellergeschoss", "EG": "Erdgeschoss", "OG": "Obergeschoss"}
-VARIANT_LABEL = {"ist": "Bestand", "soll": "Zielzustand"}
+VARIANT_LABEL = {"ist": "Bestand", "aktuell": "Aktuell", "soll": "Plan"}
 TAG_FILL = {"A": "var(--wall-a)", "B": "var(--wall-b)", "C": "var(--wall-c)"}
 
 STYLE = """
@@ -89,6 +90,8 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
     for room in rooms_doc["rooms"]:
         if room["floor"] != floor:
             continue
+        if not room["rects"]:
+            continue   # noch keine Geometrie (Soll-Raum ohne Aufmaß) - nichts zu zeichnen
         add(f'<g class="room-group" data-room-id="{room["id"]}">')
         for x0, y0, x1, y1 in room["rects"]:
             rect(x0, y0, x1, y1, "room", f' data-room-id="{room["id"]}"')
@@ -203,49 +206,27 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--variant", choices=["ist", "soll", "both"], default="both")
+    ap.add_argument("--variant", choices=[*hausdatei.VARIANTS, "both"], default="both",
+                    help="both = every variant with a house file")
     ap.add_argument("--floors", default="KG,EG,OG")
     args = ap.parse_args()
 
-    variants = ["ist", "soll"] if args.variant == "both" else [args.variant]
+    variants = hausdatei.present() if args.variant == "both" else [args.variant]
     floors = [f.strip() for f in args.floors.split(",") if f.strip()]
     PLANS.mkdir(parents=True, exist_ok=True)
-    manifest_path = REPO / "public" / "models" / "manifest.json"
-    manifest = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
-
-    index = []
     for variant in variants:
-        model = importlib.import_module("haus_model" if variant == "ist" else "haus_model_soll")
-        rooms_path = REPO / "public" / "models" / f"rooms-{variant}.json"
+        model = hausdatei.module(variant)
+        rooms_path = DATA / f"rooms-{variant}.json"
         if not rooms_path.exists():
             print(f"{variant}: rooms-{variant}.json missing - run build_rooms.py first")
             continue
         rooms_doc = json.loads(rooms_path.read_text(encoding="utf-8"))
-        version = str(manifest.get(variant, {}).get("version", "0"))
+        version = str(model.SOURCE["version"])
         for floor in floors:
             svg = build_floor(model, rooms_doc, variant, floor, version)
             out = PLANS / f"{variant}-{floor}.svg"
             out.write_text(svg, encoding="utf-8")
-            index.append({
-                "id": f"{variant}-{floor}",
-                "title": f"{FLOOR_LABEL[floor]} – {VARIANT_LABEL[variant]}",
-                "floor": floor,
-                "variant": variant,
-                "kind": "svg",
-                "source": "bundled",
-                "path": f"plans/{variant}-{floor}.svg",
-                "order": (0 if variant == "ist" else 1) * 10 + ["KG", "EG", "OG"].index(floor),
-            })
-            print(f"{out.relative_to(REPO)}: {out.stat().st_size // 1024} KB")
-
-    # the newest model date out of the manifest, not today's: the CI guard rebuilds this
-    # file and compares it with the committed one, so it must not depend on the clock
-    dates = [str(entry.get("updatedAt", "")) for entry in manifest.values()]
-    generated_at = max([d for d in dates if d], default=dt.date.today().isoformat())
-    (PLANS / "index.json").write_text(
-        json.dumps({"generatedAt": generated_at, "plans": index},
-                   ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"public/plans/index.json: {len(index)} Pläne")
+            print(f"{out}: {out.stat().st_size // 1024} KB")
     return 0
 
 

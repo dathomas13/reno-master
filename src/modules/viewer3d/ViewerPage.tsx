@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import {
   buildHouse,
@@ -17,22 +17,23 @@ import {
 import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitControls';
 import { lastViewerState, rememberViewerState, type ViewerState } from './viewerState';
 import { RoomPanel } from './RoomPanel';
-import { activeRelease, loadRooms, loadScene, type Variant } from '@/data/models';
-import { SOURCE_LABEL, type ReleaseInfo } from '@/data/modelRelease';
+import { activeRelease, clearPreview, loadRoomMap, loadRooms, loadScene, NO_MODEL_MESSAGE, previewOf, type Variant } from '@/data/models';
+import { resolveInVariant } from '@/data/roomNaming';
+import { VARIANT_LABEL, VARIANTS, type ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
-import { loadSettings, saveSettings } from '@/lib/settings';
-import { isAuthenticated } from '@/firebase/auth';
+import { loadSettings } from '@/lib/settings';
 import { Spinner } from '@/components/Fields';
 
 export default function ViewerPage() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const houseRef = useRef<HouseScene | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const renderRef = useRef<(() => void) | null>(null);
 
   const initialVariant = (params.get('variant') as Variant) ?? loadSettings().defaultModelVariant;
-  const [variant, setVariant] = useState<Variant>(initialVariant === 'soll' ? 'soll' : 'ist');
+  const [variant, setVariant] = useState<Variant>(VARIANTS.includes(initialVariant) ? initialVariant : 'ist');
   // how the screen looked when it was last left; null on the very first visit
   const [saved] = useState(() => lastViewerState());
   const [release, setRelease] = useState<ReleaseInfo | null>(null);
@@ -200,7 +201,7 @@ export default function ViewerPage() {
 
     void (async () => {
       try {
-        const [doc, rooms] = await Promise.all([loadScene(variant), loadRooms(variant)]);
+        const [doc, rooms, roomMap] = await Promise.all([loadScene(variant), loadRooms(variant), loadRoomMap()]);
         if (disposed) return;
         const house = buildHouse(THREE, scene, doc, { rooms });
         houseRef.current = house;
@@ -235,9 +236,12 @@ export default function ViewerPage() {
 
         // a link with ?raum= means "show me this room": it sets the floor view and wins
         // over whatever was kept. Without it the room whose panel was open comes back.
+        // The id may come from the other variant's naming (Soll id opened here on Ist,
+        // or vice versa) - resolveInVariant finds this variant's own room for it.
         const wanted = params.get('raum');
         if (wanted) {
-          const found = rooms.rooms.find((item) => item.id === wanted);
+          // Aktuell has the Bestand's room ids, so it resolves like the Bestand
+          const found = resolveInVariant(wanted, variant === 'soll' ? 'soll' : 'ist', rooms.rooms, roomMap.map);
           if (found) {
             const label = `${found.floor}-Grundriss`;
             const preset2 = VIEW_PRESETS.find((item) => item.label === label);
@@ -246,7 +250,7 @@ export default function ViewerPage() {
             setRoom(found);
           }
         } else if (keptView?.roomId) {
-          const found = rooms.rooms.find((item) => item.id === keptView.roomId);
+          const found = resolveInVariant(keptView.roomId, variant === 'soll' ? 'soll' : 'ist', rooms.rooms, roomMap.map);
           if (found) {
             house.highlightRoom(found.id);
             setRoom(found);
@@ -259,8 +263,8 @@ export default function ViewerPage() {
       } catch (cause) {
         if (!disposed) {
           setError(
-            cause instanceof Error && cause.message.includes('404')
-              ? 'Modell noch nicht heruntergeladen – die App einmal mit Internet öffnen.'
+            cause instanceof Error && cause.message === NO_MODEL_MESSAGE
+              ? NO_MODEL_MESSAGE
               : 'Das Modell konnte nicht geladen werden.',
           );
           setLoading(false);
@@ -297,21 +301,21 @@ export default function ViewerPage() {
     });
   }
 
+  // only this view: the Bestand/Plan setting (which also names the rooms in all
+  // forms) stays as it is - it is changed in the settings, nowhere else
   function switchVariant(next: Variant) {
     setVariant(next);
-    saveSettings({ defaultModelVariant: next });
     const nextParams = new URLSearchParams(params);
     nextParams.set('variant', next);
     setParams(nextParams, { replace: true });
   }
 
-  // signed in there is a bottom navigation below and nothing above; in the preview it is
-  // the other way round, a banner on top and the full width of the screen below
-  const signedIn = isAuthenticated();
-  const bottomOffset = signedIn
-    ? 'bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-2'
-    : 'bottom-[max(0.5rem,env(safe-area-inset-bottom))]';
-  const containerHeight = signedIn ? 'h-[100dvh] md:h-screen' : 'h-[calc(100dvh-2.25rem)]';
+  // an imported model that is looked at before it is published; reloadKey follows it
+  const preview = previewOf(variant);
+
+  // the bottom navigation takes the lowest 64 pixels on the phone
+  const bottomOffset = 'bottom-[calc(64px+env(safe-area-inset-bottom))] md:bottom-2';
+  const containerHeight = 'h-[100dvh] md:h-screen';
 
   return (
     <div className={`relative ${containerHeight} overflow-hidden`}>
@@ -321,21 +325,36 @@ export default function ViewerPage() {
       <div className="absolute top-0 inset-x-0 p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pointer-events-none">
         <div className="flex items-center gap-2">
           <div className="flex rounded-xl overflow-hidden border border-line pointer-events-auto">
-            {(['ist', 'soll'] as Variant[]).map((item) => (
+            {VARIANTS.map((item) => (
               <button
                 key={item}
                 type="button"
-                className={`px-4 py-2 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
+                className={`px-3 py-2 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
                 onClick={() => switchVariant(item)}
               >
-                {item === 'ist' ? 'Bestand' : 'Zielzustand'}
+                {VARIANT_LABEL[item]}
               </button>
             ))}
           </div>
-          {release && (
+          {preview && (
+            <span className="text-[11px] text-bg bg-warn rounded px-2 py-1 pointer-events-auto flex items-center gap-2">
+              Vorschau v{preview.version} · nicht veröffentlicht
+              <button
+                type="button"
+                className="underline"
+                onClick={() => {
+                  clearPreview(variant);
+                  // the import is still waiting in the settings - publish or discard it there
+                  navigate('/einstellungen#import');
+                }}
+              >
+                zurück zum Import
+              </button>
+            </span>
+          )}
+          {release && !preview && (
             <span className="text-[11px] text-muted bg-bg/70 rounded px-2 py-1">
               v{release.version} · {release.updatedAt}
-              {release.source !== 'bundled' && ` · ${SOURCE_LABEL[release.origin ?? release.source]}`}
             </span>
           )}
         </div>

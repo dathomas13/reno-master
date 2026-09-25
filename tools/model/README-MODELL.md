@@ -1,9 +1,14 @@
 # Das 3D-Modell pflegen
 
 Diese Anleitung richtet sich an den Agenten (oder Menschen), der das Hausmodell ändert.
-Die App **Reno Master** liest ausschließlich die erzeugten JSON-Dateien unter `public/models/`
-und die SVG-Pläne unter `public/plans/`. Wer diese Dateien korrekt erzeugt, kann das Modell
-mit jedem Werkzeug bauen – die bestehende Python-Datenbasis ist nur der aktuelle Weg.
+
+> **Das Modell liegt nur in der Datenbank** (Firestore, `meta/model-ist` = Bestand,
+> `meta/model-aktuell` = Stand der Arbeiten, `meta/model-soll` = Plan) – nicht im Repo und nicht in der App. Gepflegt wird es in der App:
+> Einstellungen → 3D-Modelle → „Modell exportieren“ gibt die Hausdateien (Format
+> `reno-haus/1`, [`ANLEITUNG-EXTERN.md`](ANLEITUNG-EXTERN.md)), „Modell importieren“ nimmt
+> sie geändert zurück, baut Szene, Räume und Pläne auf dem Gerät und veröffentlicht sie.
+> Die Werkzeuge hier im Ordner arbeiten auf solchen exportierten Hausdateien.
+> Hintergrund: [`PLAN-MODELL-WORKFLOW.md`](PLAN-MODELL-WORKFLOW.md).
 
 ## 1. Koordinatensystem (alles in Millimetern)
 
@@ -17,7 +22,7 @@ Haus 12995 × 11815 (Aufmaß 09/2026, Fertigmaß). KG-Rohboden −2750, OG-Rohbo
 Decken 140, Kniestock 650, Dach 36°, First UK Sparren ≈ +7401. Garage westlich
 (x −8000 … −1510), Balkon x −1300 … 0. Südlichster Punkt ist **y = −125**: die beiden
 Wandscheiben neben der Loggia springen 12,5 cm nach Süden vor (`Y_VOR`). `ENVELOPE` in
-`haus_model.py` nennt die Hülle, die `build_rooms.py` prüft.
+`haus_model.py` nennt die Hülle (aus `params.yVor`), die `build_rooms.py` prüft.
 
 **Maßstand je Geschoss.** Das EG ist aufgemessen (Thomas, 09/2026, DXF
 „Grundriss_EG_Bestand_Fertigmasse“) und steht in **Fertigmaßen inklusive Putz**:
@@ -33,43 +38,39 @@ Die App rechnet beim Laden um: three.js-Punkt = `(x, z, −y) / 1000`. Norden is
 
 | Datei | Rolle |
 |---|---|
-| `haus_model.py` | **Datenbasis Bestand (Ist).** Wände `W(...)`, Öffnungen `O(...)`, Treppen, Dach, Gaube, Balkon, Konfidenz-Tags A/B/C. Nur hier wird der Bestand geändert. |
-| `haus_model_soll.py` | **Datenbasis Zielzustand (Soll).** Startet als `from haus_model import *`. Hier die Wände/Öffnungen überschreiben, die sich durch die Sanierung ändern. |
-| `rooms_ist.py` / `rooms_soll.py` | Raumliste je Variante (Rechtecke, Innenkanten). |
-| `build_scene_lite.py` | **Der übliche Weg.** Baut `public/models/<variante>.json` direkt aus der Datenbasis, nur mit der Standardbibliothek. |
+| `haus-ist.json`, `haus-soll.json` (aus dem App-Export) | **Die Hausdateien** für Bestand und Zielzustand: Wände mit ihren Öffnungen, Treppen, Dach- und Gaubenmaße, Balkon, Garage, Räume, Konfidenz-Tags A/B/C. |
+| `testdata/` | **Eingefrorene Testdaten** (Stand Ist v0.27 / Soll 0.0.24): Hausdateien plus die daraus von Python erzeugten Szenen, Räume und Pläne. Die Unit-Tests der App und die CI halten beide Builder daran fest. Das ist nicht das Modell in Gebrauch. |
+| `hausdatei.py` | Liest eine Hausdatei aus `RENO_HAUS_DIR` (Standard: `testdata/`) und stellt sie den Skripten unter den alten Namen bereit (`WALLS`, `OPENINGS`, `HOUSE_W`, `roof_z_under` …). `--format <variante>` schreibt die Datei im kanonischen Layout neu. |
+| `haus_model.py`, `haus_model_soll.py`, `rooms_ist.py`, `rooms_soll.py` | Dünne Hüllen um `hausdatei.py`, damit alle älteren Skripte unverändert laufen. **Hier nichts eintragen.** |
+| `build_scene_lite.py` | Baut `<variante>.json` neben der Hausdatei, nur mit der Standardbibliothek. Dasselbe tut die App mit `src/modules/modelBuild` – Punkt für Punkt gleich, ein Unit-Test hält das fest. |
+| `check_source.py` | Prüft, dass die Szenen im Datenordner genau das sind, was die Hausdateien ergeben (läuft in der CI auf `testdata/`). |
 | `build_scene.py` | Dasselbe aus echten Volumenkörpern. **Braucht CadQuery/OCP (~150 MB)** – nötig für STEP/STL, nicht für den Viewer. |
 | `extract_scene_from_html.py` | Fallback: zieht die Szene aus einer bereits gebauten `Haus_3D.html`. |
 | `check_scene.py` | Prüft eine erzeugte Szene (Schema, geschlossene Hüllen, Orientierung) und vergleicht sie mit `--against` gegen eine Referenz. |
-| `build_rooms.py` | Erzeugt `public/models/rooms-<variante>.json` **und prüft** die Räume gegen die Wände. |
-| `build_plans_svg.py` | Erzeugt die 2D-Grundrisse `public/plans/<variante>-<geschoss>.svg` und `index.json`. |
-| `make_manifest.py` | Schreibt `public/models/manifest.json` (Versionen, Datum, Notiz) – die App zeigt das an. |
-| `check_walls.py` | Konsistenzprüfung: freie Wandenden, Räume, Öffnungen innerhalb der Wand. |
-| `build_all.sh` | Alles der Reihe nach. |
-| `Wandtabelle.md`, `README_Uebergabe.md` | Ursprüngliche Übergabe-Doku (Rohbau 1967). **Für das EG überholt** – dort gilt das Aufmaß in `haus_model.py`. |
+| `build_rooms.py` | Erzeugt `rooms-<variante>.json` **und prüft** die Räume gegen die Wände. |
+| `build_plans_svg.py` | Erzeugt die 2D-Grundrisse `plans/<variante>-<geschoss>.svg` (die App zeichnet dieselben selbst). |
+| `check_walls.py` | Konsistenzprüfung: freie Wandenden, Räume, Öffnungen innerhalb der Wand (braucht numpy). |
+| `Wandtabelle.md`, `README_Uebergabe.md` | Ursprüngliche Übergabe-Doku (Rohbau 1967). **Überholt** – es gilt die Hausdatei. |
 
 ## 3. Bestand (Ist) ändern
 
+**Der übliche Weg, ohne Repo:** in der App „Modell exportieren“, die Hausdatei extern ändern
+(KI, Editor, siehe `ANLEITUNG-EXTERN.md`), „Modell importieren“, prüfen, veröffentlichen.
+
+**Mit den Python-Werkzeugen** (Kontrolle, STEP/STL, Arbeit im Chat):
+
 ```bash
-cd tools/model
-# 1. Geometrie anpassen
-$EDITOR haus_model.py
-# 2. prüfen - es darf kein "FREIES ENDE" und kein "AUSSERHALB" gemeldet werden
-#    (braucht numpy; ohne numpy übernimmt check_scene.py in Schritt 4 die Prüfung)
-python3 check_walls.py | grep -i "AUSSERHALB\|FREIES"
-# 3. Szene bauen - ohne Abhängigkeiten, das ist der übliche Weg:
-python3 build_scene_lite.py --variant ist --version 0.25 --note "Kurznotiz"
-#    Alternativen: build_scene.py (mit CadQuery) oder, aus einer gebauten Viewer-HTML,
-#    extract_scene_from_html.py --html Haus_3D.html --variant ist --version 0.25
-# 4. Szene gegen die vorige Fassung prüfen (Exitcode != 0 = Problem)
-python3 check_scene.py ../../public/models/ist.json --against /pfad/zur/alten/ist.json
-# 4. Räume und Pläne neu bauen, Manifest schreiben
-python3 build_rooms.py --variant ist
-python3 build_plans_svg.py --variant ist
-python3 make_manifest.py
+# App-Export entpacken, z. B. nach ~/modell
+export RENO_HAUS_DIR=~/modell
+$EDITOR ~/modell/haus-ist.json
+python3 tools/model/hausdatei.py --format ist          # kanonisches Layout
+python3 tools/model/build_rooms.py --variant ist        # meldet Räume, die eine Wand schneidet
+python3 tools/model/build_scene_lite.py --variant ist   # Szene zum Prüfen/Vergleichen
+python3 tools/model/build_plans_svg.py --variant ist
 ```
 
-Version in Schritt 3 **immer erhöhen** (`--version`). Die App zeigt sie an und erkennt daran,
-dass ein neues Modell vorliegt.
+Zurück in die App geht nur die Hausdatei, über „Modell importieren“. Die Version vergibt die
+App dort selbst; `version` in der Datei bleibt, wie sie exportiert wurde.
 
 `build_scene_lite.py` und `build_scene.py` beschreiben denselben Körper: gleiche 132 Bauteile,
 gleiches Volumen, in fünf Blickrichtungen kein Pixel Unterschied. Der Unterschied liegt nur in
@@ -80,57 +81,37 @@ Viewer nicht.
 
 ## 4. Zielzustand (Soll) ändern
 
-Genauso, aber in `haus_model_soll.py` und `rooms_soll.py`, mit `--variant soll`
-(`build_scene_lite.py` lädt dann `haus_model_soll` statt `haus_model`).
-`haus_model.py` bleibt unangetastet: es ist die abgeglichene Aufnahme des Bestands.
-
-Beispiel – eine Wand im Soll entfernen und eine neue setzen:
-
-```python
-from haus_model import *            # Bestand übernehmen
-
-WALLS[:] = [w for w in WALLS if not (w["floor"] == "EG" and w["name"] == "Gard|WC 115")]
-W("EG", "Neue Trennwand Bad 115", 9045, 7035, 9160, 8705, "C")
-```
+Genauso, aber in `haus-soll.json` und mit `--variant soll`. Die Ist-Datei
+bleibt unangetastet: sie ist die abgeglichene Aufnahme des Bestands. Eine Wand fällt weg,
+indem ihr Objekt aus `walls` gelöscht wird. Eine neue Wand bekommt eine neue, eindeutige
+`id`.
 
 ## 5. Veröffentlichen
 
-Die Modellversion hängt **nicht** am App-Build. Die App nimmt immer die höchste Fassung,
-die sie erreicht, legt sie in IndexedDB und behält sie offline. Drei Kanäle, gleichwertig
-nach Version verglichen (Details in `src/data/modelRelease.ts`):
+Es gibt genau einen Weg: **„Modell importieren“ → „Als vX veröffentlichen“** in der App
+(angemeldet). Die App baut Szene und Räume auf dem Gerät und legt Szene, Räume **und
+Hausdatei** in `meta/model-<variante>` (~95 + 5 + 30 KB, Grenze 1 MiB pro Dokument). Jedes
+angemeldete Gerät hört auf dieses Dokument, übernimmt eine höhere Version sofort und
+behält sie in IndexedDB – offline, ohne Deploy, ohne App-Update (`src/data/modelSync.ts`,
+Logik in `src/data/modelRelease.ts`).
 
-| Kanal | Wie er gefüllt wird | Wer ihn braucht |
-|---|---|---|
-| `bundled` | `public/models/` im Repo, mit dem Build ausgeliefert | die Untergrenze: offline ab dem ersten Start |
-| `site` | derselbe `git push`, gelesen aus `models/manifest.json` der **veröffentlichten** Seite | die APK, deren gebündelte Dateien sich nie ändern, und die Web-App, die sonst erst nach einer angenommenen App-Aktualisierung das neue Modell sähe |
-| `firestore` | Einstellungen → 3D-Modelle → „Modell veröffentlichen“ | ein neues Modell **ohne jeden Deploy**; das andere Gerät holt es beim nächsten Sync |
+Die Version vergibt die App (höchste bekannte + 1 in der letzten Stelle). Ein Modell mit
+gleicher oder kleinerer Version rührt sie nicht an. Vor dem Ablegen prüft sie die Szene
+(`validateScene`); ein beschädigtes Dokument wird abgelehnt und das bisherige Modell
+bleibt in Betrieb.
 
-**Weg A – über das Repo** (wie bisher, wirkt auf Web und APK):
+**Soll-Nummern:** Bis 09/2026 war der Zielzustand nur eine Kopie des Bestands mit
+Nummern bis 0.24. Der eigentliche Zielzustand beginnt bei 0.0 (Kopie des Bestands v0.27)
+und 0.1 (Technikraum). Damit Geräte mit einer alten Kopie ihn übernehmen, heißen die alten
+Nummern jetzt 0.0.23 und 0.0.24 (`legacySollVersion` in `modelRelease.ts`, einmal je
+Gerät umbenannt in `renumberLegacySoll`, `modelSync.ts`). 0.0.x liegt zwischen 0.0 und 0.1.
 
-```bash
-git add public/models public/plans tools/model
-git commit -m "model: EG Wand versetzt, v0.25"
-git push
-```
-
-GitHub Actions baut und deployt. Danach genügt es, die App einmal online zu öffnen: sie
-holt das neue Modell in den Offline-Cache. Ein App-Update ist dafür nicht nötig.
-
-**Weg B – ohne Deploy**, direkt aus der App: Einstellungen → 3D-Modelle → „Modell
-veröffentlichen“, Variante wählen, die erzeugte `ist.json` (und optional
-`rooms-ist.json`) auswählen. Version und Datum liest die App aus `meta` der Datei – es
-gibt also keine zweite Stelle, die man nachziehen müsste. Das Modell landet in
-`meta/model-ist` in Firestore (~95 KB pro Szene, Grenze 1 MiB pro Dokument) und ist auf
-dem anderen Gerät beim nächsten Sync da, auch wenn dort eine ältere App läuft.
-
-In beiden Fällen: **Version immer erhöhen.** Die App vergleicht zahlenweise (`0.10` ist
-neuer als `0.9`) und rührt ein Modell mit gleicher oder kleinerer Version nicht an. Vor
-dem Ablegen prüft sie die Szene (`validateScene`); eine abgeschnittene Datei wird
-abgelehnt und das bisherige Modell bleibt in Betrieb.
+Der Umzug in die Datenbank ist abgeschlossen (Ist v0.27, Soll 0.0); die Einmal-Knöpfe
+dafür sind wieder ausgebaut.
 
 ## 6. Format der erzeugten Dateien
 
-`public/models/<variante>.json`
+Szene `<variante>.json` (in der Datenbank als Text im Feld `scene`)
 
 ```jsonc
 {
@@ -149,7 +130,7 @@ abgelehnt und das bisherige Modell bleibt in Betrieb.
 }
 ```
 
-`public/models/rooms-<variante>.json`
+Räume `rooms-<variante>.json` (Feld `rooms`)
 
 ```jsonc
 { "variant": "ist", "generatedAt": "2026-09-14",
@@ -160,7 +141,37 @@ abgelehnt und das bisherige Modell bleibt in Betrieb.
 `id` ist der Schlüssel, mit dem Tagebucheinträge, Fotos, Kosten und Aufgaben verknüpft sind.
 **Eine einmal vergebene id niemals umbenennen**, solange der Raum derselbe bleibt – sonst
 verlieren bestehende Einträge ihre Zuordnung. Ein Raum darf aus mehreren Rechtecken bestehen
-(L-Form, Kamin in der Ecke).
+(L-Form, Kamin in der Ecke). `rects` darf auch leer sein: ein Soll-Raum ohne Aufmaß taucht
+dann in Auswahl, Listen und Suche auf, wird aber erst gezeichnet, sobald die Wände feststehen.
+
+### 6.1 Wenn sich ein Raum durch die Sanierung wirklich ändert
+
+Legen sich zwei Räume zusammen, teilt sich einer, oder entsteht ein neuer – die id bleibt
+trotzdem unangetastet. Stattdessen: der veränderte Raum bekommt in `haus-soll.json` eine
+**neue** id, und die Umbenennungstabelle `roomMap` in derselben Datei zeigt die alte id
+auf die neue.
+
+```jsonc
+// haus-soll.json
+"rooms": [ …, {"id": "kg-technik", "name": "Technikraum", "floor": "KG", "rects": []}, … ],
+"roomMap": {
+  "kg-heizung":  "kg-technik",
+  "kg-oellager": "kg-technik",
+  …                                 // jede Ist-id kommt vor, auch unveränderte auf sich selbst
+}
+```
+
+`roomMap` ist **vollständig** (jede Raum-id aus `haus-ist.json` kommt genau einmal vor,
+auch ein unveränderter Raum auf sich selbst) und **einspaltig** (ein Ziel je Eintrag; bei
+einer Teilung zeigt die alte id auf den Raum, der am ehesten ihr Nachfolger ist). Die App
+lehnt beim Import ein Ziel ab, das es in der Soll-Datei nicht gibt; `build_rooms.py`
+meldet zusätzlich fehlende Ist-ids.
+
+Die App liest die Zuordnung nur vorwärts: ein alter Tagebucheintrag unter „Heizung“ oder
+„Öllager“ erscheint in der Einstellung „Planung“ unter „Technikraum“; ein neuer Eintrag
+unter „Technikraum“ muss nicht umgekehrt unter „Öllager“ auffindbar sein. Details und die
+Einstellung Bestand/Planung stehen in `src/data/roomNaming.ts` und in `PLAN.md`,
+Abschnitt 9.4.
 
 ## 7. Verifikation ohne Installation
 

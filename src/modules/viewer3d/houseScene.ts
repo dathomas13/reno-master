@@ -49,9 +49,10 @@ export interface Room {
   id: string;
   name: string;
   floor: Layer;
-  /** axis aligned rectangles [x0, y0, x1, y1] in mm */
+  /** axis aligned rectangles [x0, y0, x1, y1] in mm - empty when not surveyed yet */
   rects: number[][];
-  areaM2: number;
+  /** missing when `rects` is empty: a room without geometry has no area */
+  areaM2?: number;
 }
 
 export interface RoomDoc {

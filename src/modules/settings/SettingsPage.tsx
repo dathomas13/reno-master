@@ -299,6 +299,7 @@ export default function SettingsPage() {
 
         <ModelSection signedIn={!!user} />
 
+
         <section className="card p-4">
           <h2 className="font-semibold mb-3">Offline</h2>
           <p className="text-sm text-muted">Belegter Speicher: {storage || 'unbekannt'}</p>

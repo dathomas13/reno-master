@@ -47,34 +47,41 @@ const source: PhotoSource = {
     photo({ id: 'p1', entryId: 'd1', takenAt: '2026-09-13T10:00:00' }),
     photo({ id: 'p2', entryId: 'd2', takenAt: '2026-09-09T08:00:00' }),
     photo({ id: 'p3', costId: 'c1', kind: 'receipt' }),
-    photo({ id: 'p4', roomIds: ['og.bad'] }),
+    photo({ id: 'p4', roomIds: ['og-bad'] }),
     photo({ id: 'p5' }),
   ],
   entries: [
-    entry({ id: 'd1', date: '2026-09-13', roomIds: ['og.bad'] }),
-    entry({ id: 'd2', date: '2026-09-09', roomIds: ['eg.kueche'] }),
+    entry({ id: 'd1', date: '2026-09-13', roomIds: ['og-bad'] }),
+    entry({ id: 'd2', date: '2026-09-09', roomIds: ['eg-kueche'] }),
   ],
-  costs: [cost({ id: 'c1', date: '2026-09-11', roomIds: ['og.bad'] })],
+  costs: [cost({ id: 'c1', date: '2026-09-11', roomIds: ['og-bad'] })],
 };
 
 describe('photosForRoom', () => {
   it('finds the photos of the entries and receipts linked to the room', () => {
-    expect(photosForRoom('og.bad', source).map((item) => item.id)).toEqual(['p1', 'p3', 'p4']);
+    expect(photosForRoom(['og-bad'], source).map((item) => item.id)).toEqual(['p1', 'p3', 'p4']);
   });
 
   it('keeps the rooms apart', () => {
-    expect(photosForRoom('eg.kueche', source).map((item) => item.id)).toEqual(['p2']);
+    expect(photosForRoom(['eg-kueche'], source).map((item) => item.id)).toEqual(['p2']);
   });
 
   it('is empty for a room nothing points at', () => {
-    expect(photosForRoom('kg.heizung', source)).toEqual([]);
+    expect(photosForRoom(['kg-heizung'], source)).toEqual([]);
   });
 
   it('answers the same question for a single photo', () => {
-    expect(belongsToRoom(source.photos[0]!, 'og.bad', source)).toBe(true);
-    expect(belongsToRoom(source.photos[1]!, 'og.bad', source)).toBe(false);
+    expect(belongsToRoom(source.photos[0]!, ['og-bad'], source)).toBe(true);
+    expect(belongsToRoom(source.photos[1]!, ['og-bad'], source)).toBe(false);
     // a photo that carries the room itself counts, whatever it hangs on
-    expect(belongsToRoom(source.photos[3]!, 'og.bad', source)).toBe(true);
+    expect(belongsToRoom(source.photos[3]!, ['og-bad'], source)).toBe(true);
+  });
+
+  it('aggregates several stored ids at once - a merged room finds its predecessors', () => {
+    // Heizung and Öllager merged into Technikraum: filed under either old id, a photo
+    // must show up when the room panel asks for both ids together
+    expect(photosForRoom(['kg-heizung', 'kg-oellager'], source).map((item) => item.id)).toEqual([]);
+    expect(belongsToRoom(source.photos[0]!, ['does-not-exist', 'og-bad'], source)).toBe(true);
   });
 });
 

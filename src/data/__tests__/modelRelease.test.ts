@@ -3,10 +3,12 @@ import {
   compareVersions,
   fitsInDocument,
   isNewer,
+  legacySollVersion,
   pickRelease,
   planSync,
   releaseFromDoc,
   releaseToDoc,
+  validateRoomMap,
   validateRooms,
   validateScene,
   type ReleaseInfo,
@@ -56,29 +58,19 @@ describe('compareVersions', () => {
 
 describe('pickRelease', () => {
   it('takes the highest version, wherever it comes from', () => {
-    const picked = pickRelease([release('0.23', 'cache'), release('0.24', 'site'), release('0.22', 'bundled')]);
+    const picked = pickRelease([release('0.23', 'cache'), release('0.24', 'firestore')]);
     expect(picked?.version).toBe('0.24');
-    expect(picked?.source).toBe('site');
-  });
-
-  it('prefers what is already on the device when the versions are equal', () => {
-    // otherwise every start would download the same model again
-    const picked = pickRelease([release('0.23', 'site'), release('0.23', 'cache')]);
-    expect(picked?.source).toBe('cache');
-  });
-
-  it('prefers the sync channel over the site at equal version', () => {
-    const picked = pickRelease([release('0.23', 'site'), release('0.23', 'firestore')]);
     expect(picked?.source).toBe('firestore');
   });
 
-  it('prefers the bundled file over any download at equal version', () => {
-    const picked = pickRelease([release('0.23', 'site'), release('0.23', 'firestore'), release('0.23', 'bundled')]);
-    expect(picked?.source).toBe('bundled');
+  it('prefers what is already on the device when the versions are equal', () => {
+    // otherwise every start would decode the same model again
+    const picked = pickRelease([release('0.23', 'firestore'), release('0.23', 'cache')]);
+    expect(picked?.source).toBe('cache');
   });
 
   it('ignores empty candidates and versionless entries', () => {
-    const picked = pickRelease([null, undefined, { ...release('', 'site') }, release('0.1', 'bundled')]);
+    const picked = pickRelease([null, undefined, { ...release('', 'firestore') }, release('0.1', 'cache')]);
     expect(picked?.version).toBe('0.1');
   });
 
@@ -137,6 +129,27 @@ describe('validateRooms', () => {
     expect(validateRooms({})).not.toBeNull();
     expect(validateRooms(null)).not.toBeNull();
   });
+
+  it('accepts a room without rectangles - not surveyed yet, not an error', () => {
+    expect(validateRooms({ rooms: [{ id: 'kg-technik', name: 'Technikraum', rects: [] }] })).toBeNull();
+  });
+});
+
+describe('validateRoomMap', () => {
+  it('accepts a sound mapping, including an empty one', () => {
+    expect(validateRoomMap({ map: {} })).toBeNull();
+    expect(validateRoomMap({ map: { 'kg-heizung': 'kg-technik' } })).toBeNull();
+  });
+
+  it('rejects a missing or malformed map', () => {
+    expect(validateRoomMap({})).not.toBeNull();
+    expect(validateRoomMap(null)).not.toBeNull();
+    expect(validateRoomMap({ map: [] })).not.toBeNull();
+  });
+
+  it('rejects an entry without a target', () => {
+    expect(validateRoomMap({ map: { 'kg-heizung': '' } })).not.toBeNull();
+  });
 });
 
 describe('releaseFromDoc', () => {
@@ -184,6 +197,13 @@ describe('releaseToDoc', () => {
     expect(info?.version).toBe('0.24');
     expect(info?.roomsJson).toBe('{"rooms":[]}');
   });
+
+  it('carries the house file along, and clears it for a bare scene', () => {
+    const withSource = releaseToDoc('ist', '0.26', '', '2026-09-24', '{"prims":[]}', null, '{"format":"reno-haus/1"}');
+    expect(releaseFromDoc('ist', withSource)?.sourceJson).toBe('{"format":"reno-haus/1"}');
+    // merged document: a scene published without a house file must not keep the old one
+    expect(releaseToDoc('ist', '0.27', '', '2026-09-24', '{"prims":[]}', null).source).toBeNull();
+  });
 });
 
 describe('fitsInDocument', () => {
@@ -194,40 +214,48 @@ describe('fitsInDocument', () => {
   it('stops a model that would be refused by Firestore', () => {
     expect(fitsInDocument('x'.repeat(990_000), null)).toBe(false);
   });
+
+  it('counts the house file too', () => {
+    expect(fitsInDocument('x'.repeat(500_000), null, 'z'.repeat(490_000))).toBe(false);
+  });
 });
 
 describe('planSync', () => {
   it('fetches nothing when the newest release is already on the device', () => {
-    const plan = planSync([release('0.23', 'cache'), release('0.23', 'site')]);
+    const plan = planSync([release('0.23', 'cache'), release('0.23', 'firestore')]);
     expect(plan?.action).toBe('keep');
     expect(plan?.release.source).toBe('cache');
   });
 
-  it('fetches nothing when the app itself carries the newest model', () => {
-    const plan = planSync([release('0.23', 'bundled'), release('0.22', 'site')]);
-    expect(plan?.action).toBe('keep');
-  });
-
-  it('downloads a newer model from the site', () => {
-    const plan = planSync([release('0.23', 'cache'), release('0.24', 'site')]);
-    expect(plan?.action).toBe('download');
-    expect(plan?.release.version).toBe('0.24');
-  });
-
-  it('downloads a newer published model', () => {
-    const plan = planSync([release('0.23', 'bundled'), release('0.24', 'firestore')]);
+  it('stores a newer published model', () => {
+    const plan = planSync([release('0.23', 'cache'), release('0.24', 'firestore')]);
     expect(plan?.action).toBe('download');
     expect(plan?.release.source).toBe('firestore');
   });
 
-  it('never steps back to an older model on the site', () => {
-    // the site can lag behind a model published straight from a phone
-    const plan = planSync([release('0.25', 'cache'), release('0.24', 'site')]);
+  it('never steps back to an older published model', () => {
+    const plan = planSync([release('0.25', 'cache'), release('0.24', 'firestore')]);
     expect(plan?.action).toBe('keep');
     expect(plan?.release.version).toBe('0.25');
   });
 
   it('has nothing to do when no release is reachable', () => {
     expect(planSync([null, undefined])).toBeNull();
+  });
+});
+
+describe('legacySollVersion', () => {
+  it('moves the old Soll numbers below the new ones', () => {
+    expect(legacySollVersion('0.24')).toBe('0.0.24');
+    expect(legacySollVersion('0.23')).toBe('0.0.23');
+    expect(isNewer('0.1', '0.0.24')).toBe(true);
+    expect(isNewer('0.0.24', '0.0')).toBe(true);
+  });
+
+  it('leaves the fresh start, the new numbers and anything else alone', () => {
+    expect(legacySollVersion('0.0')).toBeNull();
+    expect(legacySollVersion('0.1')).toBeNull();
+    expect(legacySollVersion('0.0.24')).toBeNull();
+    expect(legacySollVersion('1.2')).toBeNull();
   });
 });

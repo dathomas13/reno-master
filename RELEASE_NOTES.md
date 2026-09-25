@@ -8,6 +8,106 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.56.0 – Drittes Modell „Aktuell“, Zielzustand heißt jetzt „Plan“
+
+- Neben Bestand und Plan gibt es das Modell „Aktuell“ für den Stand der Arbeiten – im
+  3D-Viewer und bei den Grundrissen, zum Herzeigen.
+- „Zielzustand“ heißt überall „Plan“.
+
+## 0.55.1 – 3D-Umschalter wechselt nur die Ansicht
+
+- Bestand/Zielzustand im 3D-Viewer schaltet nur die Ansicht um; die Einstellung für die
+  Raumnamen in den Formularen bleibt, wie sie ist.
+
+## 0.55.0 – Ein Schalter für Bestand und Zielzustand
+
+- Einstellungen → 3D-Modelle → „Bestand oder Zielzustand“ gilt jetzt für die ganze App:
+  3D-Modell und die Raumauswahl in Tagebuch, Kosten, Aufgaben, Notizen und Fotos.
+- Der zweite Schalter unter „Räume“ ist weg.
+
+## 0.54.2 – Suche findet Räume unter allen Namen
+
+- Die Suche findet Räume und ihre Einträge jetzt unter Bestands- und Planungsnamen,
+  z. B. „Heizung“, „Öllager“ und „Technikraum“ – egal, was unter Räume eingestellt ist.
+
+## 0.54.1 – Aus der 3D-Vorschau zurück zum Import
+
+- „Zurück zum Import“ in der 3D-Vorschau führt direkt zum wartenden Import in den
+  Einstellungen – dort lässt er sich veröffentlichen oder verwerfen, ohne neu zu importieren.
+
+## 0.54.0 – Zielzustand mit neuer Nummerierung
+
+- Der Zielzustand zählt neu ab 0.0; ältere Stände heißen jetzt 0.0.23 und 0.0.24.
+- Der Knopf „Zielzustand auf Bestand zurücksetzen“ und „Startstand übernehmen“ sind wieder
+  weg – beide Modelle liegen in der Datenbank.
+
+## 0.53.0 – Zielzustand neu beginnen
+
+- Einstellungen → 3D-Modelle → „Zielzustand auf Bestand zurücksetzen (v0.0)“ macht den
+  Zielzustand zu einer Kopie des aktuellen Bestands – alle Geräte übernehmen ihn.
+
+## 0.52.0 – Raumnamen und Planung wieder da, Startstand aktualisiert
+
+- Die aufgeräumten Raumnamen, der Umschalter Bestand/Planung unter Einstellungen → Räume
+  und die Verbesserungen bei Gesprächen und Suche sind wieder in der App.
+- „Startstand übernehmen“ bringt jetzt diesen aktuellen Stand in die Datenbank.
+
+## 0.51.0 – Das 3D-Modell kommt nur noch aus der Datenbank
+
+- Einmalig: Einstellungen → 3D-Modelle → „Startstand übernehmen“ tippen, falls angeboten –
+  danach haben alle angemeldeten Geräte dasselbe Modell, auch offline.
+- 3D-Modell und Grundrisse gibt es nur noch nach der Anmeldung.
+
+## 0.50.0 – Grundrisse folgen dem importierten Modell
+
+- Die 2D-Grundrisse zeigen ein in der App importiertes Modell sofort, auch schon in der
+  Vorschau – nicht erst nach dem nächsten Update.
+- Das Modell-Export-ZIP enthält jetzt auch die Grundrisse als Bilder.
+
+## 0.49.2 – 3D-Modell exportieren und importieren in der Webansicht
+
+- Export und Import des 3D-Modells sind jetzt auch in der Webansicht da; 0.49.1 kam dort
+  nicht an.
+
+## 0.49.1 – 3D-Modell exportieren und importieren auch auf der Website
+
+- Export und Import des 3D-Modells gibt es jetzt auch in der Webansicht, nicht nur in der App.
+
+## 0.49.0 – 3D-Modell exportieren und importieren
+
+- Einstellungen → 3D-Modelle: „Modell exportieren“ gibt ein ZIP mit Anleitung, Hausdateien
+  und DXF-Grundrissen, zum Bearbeiten in einer anderen KI, einem Editor oder CAD.
+- „Modell importieren“ nimmt die geänderte Datei zurück, prüft sie, baut das Modell auf dem
+  Gerät und zeigt die Änderungen und eine Vorschau im 3D, bevor es veröffentlicht wird.
+
+## 0.48.7 – Suche öffnet Gespräche direkt
+
+- Ein Gespräch in den Suchergebnissen öffnet jetzt den Eintrag selbst statt des Kontakts.
+
+## 0.48.6 – Gespräche: Eintrag öffnet sich direkt
+
+- Ein Tipp auf einen Eintrag unter „Gespräche“ öffnet jetzt das Gespräch selbst statt des Kontakts.
+- Die Vorschau zeigt bis zu drei Zeilen Text, auch wenn nach dem ersten Wort ein Absatz folgt.
+
+## 0.48.5 – Raumnamen auch ohne Neustart aktuell
+
+- Blieb die App offen, während ein neues Modell ankam, zeigten Tagebuch, Kosten,
+  Aufgaben, Notizen und Fotos trotzdem noch die alten Raumnamen – nur das 3D-Modell war
+  aktuell. Jetzt ziehen alle Bildschirme gleichzeitig nach.
+
+## 0.48.4 – Neue Raumnamen kommen jetzt auch bei dir an
+
+- Geräte, die die App schon vorher offen hatten, zeigten trotz Update weiter die alten
+  Raumnamen (z. B. „WE2“). Das ist jetzt behoben, ohne dass du etwas tun musst.
+
+## 0.48.3 – Raumnamen aufgeräumt
+
+- Namen wie „Essküche (WE2)“ heißen jetzt schlicht „Essküche“; beide Treppenhäuser
+  heißen „Treppenhaus“, unterschieden durch das Geschoss.
+- Neu in Einstellungen → Räume: Umschalter zwischen „Bestand“ und „Planung“. Werden
+  Räume beim Umbau zusammengelegt oder umbenannt (z. B. Heizung und Öllager zu
+  Technikraum), bleiben alte Einträge unter dem neuen Namen auffindbar.
+
 ## 0.48.2 – Gespräche: verwaiste Einträge lassen sich wieder öffnen
 
 - Wurde ein Kontakt gelöscht, ließen sich seine Gesprächseinträge unter „Gespräche“ nicht

@@ -1,9 +1,7 @@
-"""Target state (Soll) geometry - starts as an exact copy of the existing building.
+"""Zielzustand (Soll) - die Daten stehen in haus-soll.json in RENO_HAUS_DIR (hausdatei.py).
 
-To design the renovated layout, copy the WALLS / OPENINGS entries you want to change
-from haus_model.py into this file and modify them here. Never edit haus_model.py for
-the target state - it is the surveyed record of the building as it stands.
-
-See tools/model/README-MODELL.md, section "Soll-Modell ändern".
+Geändert wird dort (oder in der App über Export/Import), nicht hier. Siehe haus_model.py.
 """
-from haus_model import *  # noqa: F401,F403
+from hausdatei import load as _load
+
+globals().update(_load("soll"))

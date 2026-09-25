@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Check a generated viewer scene, and optionally compare it against a reference.
 
-    python3 tools/model/check_scene.py public/models/ist.json
-    python3 tools/model/check_scene.py new.json --against public/models/ist.json
+    python3 tools/model/check_scene.py tools/model/testdata/ist.json
+    python3 tools/model/check_scene.py new.json --against tools/model/testdata/ist.json
 
 Standard library only, so it runs in a sandbox without npm or a CAD stack. Exits non-zero
 when a check fails, which makes it usable before a commit or in a workflow.

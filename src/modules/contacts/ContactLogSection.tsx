@@ -26,7 +26,7 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
                     {formatDateTime(log.at)}
                     {log.channel ? ` · ${log.channel}` : ''}
                   </span>
-                  <span className="block truncate">{log.text.split('\n')[0] || '(kein Text)'}</span>
+                  <span className="block line-clamp-3">{logPreview(log.text)}</span>
                 </span>
               </button>
             </li>
@@ -54,6 +54,15 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
   );
 }
 
+/**
+ * list preview of a log's text: line breaks folded into spaces, so a note that starts with
+ * a single word and then a new paragraph does not shrink to that one word; the list clamps
+ * it to a few lines
+ */
+export function logPreview(text: string): string {
+  return text.replace(/\s+/g, ' ').trim() || '(kein Text)';
+}
+
 function toDateTimeInput(value: string): string {
   return value.slice(0, 16);
 }
@@ -63,10 +72,10 @@ function fromDateTimeInput(value: string): string {
 }
 
 /**
- * `contacts` is only passed when a log's own contact is gone (`ContactLogsPage`, after the
- * contact behind it was deleted) - then the sheet shows a "Kontakt" field to pick a new home
- * for the entry instead of leaving it orphaned. Editing from inside a contact's own sheet
- * (`ContactLogSection` above) never passes it: the contact there is fixed by context.
+ * `contacts` is passed from the cross-contact list (`ContactLogsPage`) - then the sheet shows
+ * a "Kontakt" field, which also gives an entry whose contact was deleted a new home instead
+ * of leaving it orphaned. Editing from inside a contact's own sheet (`ContactLogSection`
+ * above) never passes it: the contact there is fixed by context.
  */
 export function ContactLogEditor({
   log,

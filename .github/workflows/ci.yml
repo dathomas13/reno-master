@@ -28,7 +28,9 @@ jobs:
         with:
           python-version: '3.11'
       # the generated model files must match the data base they come from
+      # the committed scenes must be exactly what the house files produce
+      - run: python3 tools/model/check_source.py
       - run: python3 tools/model/build_rooms.py
       - run: python3 tools/model/build_plans_svg.py
-      - run: python3 tools/model/make_manifest.py
-      - run: git diff --exit-code public/models public/plans
+      # the frozen test data both builders are held against must be what Python makes
+      - run: git diff --exit-code tools/model/testdata

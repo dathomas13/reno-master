@@ -23,18 +23,18 @@ function titleOf(text: string): string {
 export default function NotesPage() {
   const [params, setParams] = useSearchParams();
   const { data: notes } = useCollection<Note>(COL.notes);
-  const { name: roomName } = useRooms();
+  const { shortLabel: roomLabel, shortLabels, matches, writeId } = useRooms();
   const [editing, setEditing] = useState<Note | null>(null);
 
   const roomFilter = params.get('raum');
   const wanted = params.get('notiz');
 
   const visible = useMemo(() => {
-    const rows = roomFilter ? notes.filter((note) => note.roomIds.includes(roomFilter)) : notes;
+    const rows = roomFilter ? notes.filter((note) => matches(note.roomIds, roomFilter)) : notes;
     return [...rows].sort(
       (a, b) => Number(b.pinned) - Number(a.pinned) || b.at.localeCompare(a.at),
     );
-  }, [notes, roomFilter]);
+  }, [notes, roomFilter, matches]);
 
   // a search result links straight to one note: open its sheet as soon as it is loaded
   useEffect(() => {
@@ -58,14 +58,14 @@ export default function NotesPage() {
         <button
           type="button"
           className="btn btn-primary"
-          onClick={() => setEditing(emptyNote(roomFilter ? [roomFilter] : []))}
+          onClick={() => setEditing(emptyNote(roomFilter ? [writeId(roomFilter)] : []))}
         >
           + Neue Notiz
         </button>
         {roomFilter && (
           <div className="flex flex-wrap gap-2">
             <button type="button" className="chip chip-on" onClick={() => setParams(new URLSearchParams())}>
-              {roomName(roomFilter)} ×
+              {roomLabel(roomFilter)} ×
             </button>
           </div>
         )}
@@ -85,7 +85,7 @@ export default function NotesPage() {
               </span>
               <span className="block text-xs text-muted truncate">
                 {formatWhen(note.at)}
-                {note.roomIds.length > 0 && ` · ${note.roomIds.map((id) => roomName(id)).join(', ')}`}
+                {note.roomIds.length > 0 && ` · ${shortLabels(note.roomIds).join(', ')}`}
               </span>
             </button>
           </li>

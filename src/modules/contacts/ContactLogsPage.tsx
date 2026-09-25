@@ -1,26 +1,42 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState } from '@/components/Fields';
 import { useCollection } from '@/data/hooks';
 import { COL, type Contact, type ContactLog } from '@/data/types';
 import { saveContactLog, deleteContactLog } from '@/data/repos';
 import { formatDateTime } from '@/lib/date';
-import { ContactLogEditor } from './ContactLogSection';
+import { ContactLogEditor, logPreview } from './ContactLogSection';
 
 /**
  * All Gesprächsprotokoll entries in one place, across every contact - the per-contact list
- * (`ContactLogSection`) only shows one contact's own. Tapping an entry opens that contact,
- * where the entry itself lives and can be edited. Deleting a contact does not delete its
- * log entries (nothing here cascades that), so an entry can outlive its contact - tapping
- * such an orphaned entry opens it right here instead, with a "Kontakt" field to give it a
- * new home rather than leaving it stuck.
+ * (`ContactLogSection`) only shows one contact's own. Tapping an entry opens the entry
+ * itself right here, not its contact. The editor carries a "Kontakt" field, so an entry can
+ * be moved to another contact - which is also how an orphaned entry (deleting a contact
+ * does not delete its log entries) gets a new home rather than staying stuck.
  */
 export default function ContactLogsPage() {
   const { data: logs } = useCollection<ContactLog>(COL.contactLogs);
   const { data: contacts } = useCollection<Contact>(COL.contacts);
   const [search, setSearch] = useState('');
-  const [reassigning, setReassigning] = useState<ContactLog | null>(null);
+  const [open, setOpen] = useState<ContactLog | null>(null);
+  const [params, setParams] = useSearchParams();
+  const wanted = params.get('eintrag');
+
+  // a search result links straight to one entry: open it as soon as it is loaded
+  useEffect(() => {
+    if (!wanted) return;
+    const log = logs.find((item) => item.id === wanted);
+    if (log) setOpen(log);
+  }, [wanted, logs]);
+
+  function close() {
+    setOpen(null);
+    if (!wanted) return;
+    const next = new URLSearchParams(params);
+    next.delete('eintrag');
+    setParams(next, { replace: true });
+  }
 
   const contactName = useMemo(() => new Map(contacts.map((contact) => [contact.id, contact.name])), [contacts]);
 
@@ -61,49 +77,36 @@ export default function ContactLogsPage() {
       <ul>
         {filtered.map((log) => {
           const orphaned = !contactName.has(log.contactId);
-          const body = (
-            <>
-              <span className={`block truncate font-medium ${orphaned ? 'text-bad' : ''}`}>
-                {contactName.get(log.contactId) ?? 'Kontakt gelöscht'}
-              </span>
-              <span className="block text-xs text-muted truncate">
-                {[formatDateTime(log.at), log.channel].filter(Boolean).join(' · ')}
-              </span>
-              <span className="block text-xs text-muted truncate">{log.text.split('\n')[0] || '(kein Text)'}</span>
-            </>
-          );
           return (
-            <li key={log.id} className="list-row">
-              {orphaned ? (
-                <button
-                  type="button"
-                  className="flex-1 min-w-0 text-left"
-                  onClick={() => setReassigning(log)}
-                >
-                  {body}
-                </button>
-              ) : (
-                <Link to={`/kontakte?kontakt=${log.contactId}`} className="flex-1 min-w-0 text-left">
-                  {body}
-                </Link>
-              )}
+            <li key={log.id}>
+              <button type="button" className="list-row w-full text-left" onClick={() => setOpen(log)}>
+                <span className="flex-1 min-w-0">
+                  <span className={`block truncate font-medium ${orphaned ? 'text-bad' : ''}`}>
+                    {contactName.get(log.contactId) ?? 'Kontakt gelöscht'}
+                  </span>
+                  <span className="block text-xs text-muted truncate">
+                    {[formatDateTime(log.at), log.channel].filter(Boolean).join(' · ')}
+                  </span>
+                  <span className="block text-xs text-muted line-clamp-3">{logPreview(log.text)}</span>
+                </span>
+              </button>
             </li>
           );
         })}
       </ul>
 
-      {reassigning && (
+      {open && (
         <ContactLogEditor
-          log={reassigning}
+          log={open}
           contacts={contacts}
-          onClose={() => setReassigning(null)}
+          onClose={close}
           onSave={async (log) => {
             await saveContactLog(log);
-            setReassigning(null);
+            close();
           }}
           onDelete={async (log) => {
             await deleteContactLog(log.id);
-            setReassigning(null);
+            close();
           }}
         />
       )}

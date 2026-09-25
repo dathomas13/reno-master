@@ -1,85 +1,88 @@
 /**
- * Loads the model the app should show.
+ * Hands out the model the app should show.
  *
- * Two layers: the files in public/models that shipped with this build, and the newest
- * release this device downloaded (src/modelStore). The higher version wins, so a model
- * published after the build is used without an app update, and the bundled files remain
- * the floor that always works - also on a fresh install with no network.
- *
- * Fetching a newer release is the job of modelSync; this module only decides what is
- * currently in effect and hands it out.
+ * The model is neither in the app build nor in the repository: it lives in Firestore
+ * (meta/model-<variant>), and modelSync stores the newest published release on this
+ * device (modelStore, IndexedDB). Everything here reads that stored release - so the
+ * model works offline once it has been synced, and a device that never synced has none
+ * and says so. A model imported but not yet published can be shown as a preview.
  */
 import type { RoomDoc, SceneDoc, Room } from '@/modules/viewer3d/houseScene';
-import { isNewer, type ReleaseInfo, type Variant } from './modelRelease';
+import { VARIANTS, type ReleaseInfo, type RoomMapDoc, type Variant } from './modelRelease';
+import {
+  buildPlanSvg,
+  buildRooms,
+  FLOOR_LABEL,
+  parseSource,
+  PLAN_FLOORS,
+  VARIANT_LABEL,
+  type HouseSource,
+  type PlanFloor,
+} from '@/modules/modelBuild';
 import { readRelease } from './modelStore';
 
 export type { Variant };
 
-export interface ModelInfo {
-  file: string;
-  rooms: string | null;
-  version: string;
-  updatedAt: string;
-  note: string;
-  bytes?: number;
-}
+/** shown when a device has no model yet */
+export const NO_MODEL_MESSAGE = 'Auf diesem Gerät ist noch kein Modell. Einmal angemeldet und online öffnen – '
+  + 'es kommt aus der Datenbank und bleibt danach auch offline da.';
 
-export type ModelManifest = Record<Variant, ModelInfo>;
-
-const base = import.meta.env.BASE_URL || '/';
-const sceneCache = new Map<Variant, Promise<SceneDoc>>();
-const roomCache = new Map<Variant, Promise<RoomDoc>>();
-let manifestCache: Promise<ModelManifest> | null = null;
-
-async function fetchJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${base}${path}`, { cache: 'no-cache' });
-  if (!response.ok) throw new Error(`${path}: ${response.status}`);
-  return (await response.json()) as T;
-}
-
-/** the manifest of the bundled files - what this build was published with */
-export function loadManifest(): Promise<ModelManifest> {
-  manifestCache ??= fetchJson<ModelManifest>('models/manifest.json');
-  return manifestCache;
-}
-
-/** the bundled files as a release candidate */
-export async function bundledRelease(variant: Variant): Promise<ReleaseInfo | null> {
-  try {
-    const entry = (await loadManifest())[variant];
-    if (!entry?.version) return null;
-    return {
-      variant,
-      version: entry.version,
-      updatedAt: entry.updatedAt ?? '',
-      note: entry.note ?? '',
-      bytes: entry.bytes,
-      source: 'bundled',
-      sceneUrl: `${base}models/${entry.file}`,
-      roomsUrl: entry.rooms ? `${base}models/${entry.rooms}` : undefined,
-    };
-  } catch {
-    return null;
-  }
-}
+/** fired on window when the model of a variant changed, so open screens can reload it */
+export const MODEL_EVENT = 'reno:model';
 
 /**
- * The release in effect for a variant: the downloaded one when it is newer than the
- * bundled files, otherwise the bundled one.
+ * A model built from an imported house file, shown before it is published.
+ *
+ * Held in memory only: it is a look before a decision, and a reload of the app is a
+ * perfectly good way to get rid of it. loadScene and loadRooms hand it out instead of
+ * the model in use while it is set.
  */
-export async function activeRelease(variant: Variant): Promise<ReleaseInfo | null> {
-  const [cached, bundled] = await Promise.all([readRelease(variant), bundledRelease(variant)]);
-  if (cached?.version && (!bundled || !isNewer(bundled.version, cached.version))) {
-    return {
-      variant,
-      version: cached.version,
-      updatedAt: cached.updatedAt,
-      note: cached.note,
-      source: 'cache',
-      origin: cached.origin,
-    };
+export interface PreviewModel {
+  version: string;
+  scene: SceneDoc;
+  rooms: RoomDoc;
+  /** the house file it was built from, so the 2D plans can show the preview as well */
+  source?: HouseSource;
+}
+
+const previews = new Map<Variant, PreviewModel>();
+
+function announce(variant: Variant): void {
+  try {
+    window.dispatchEvent(new CustomEvent(MODEL_EVENT, { detail: { variant } }));
+  } catch {
+    // no window (tests)
   }
-  return bundled;
+}
+
+export function setPreview(variant: Variant, preview: PreviewModel): void {
+  previews.set(variant, preview);
+  announce(variant);
+}
+
+export function clearPreview(variant: Variant): void {
+  if (!previews.delete(variant)) return;
+  announce(variant);
+}
+
+export function previewOf(variant: Variant): PreviewModel | null {
+  return previews.get(variant) ?? null;
+}
+const sceneCache = new Map<Variant, Promise<SceneDoc>>();
+const roomCache = new Map<Variant, Promise<RoomDoc>>();
+
+/** The release in effect for a variant: the one stored on this device, if any. */
+export async function activeRelease(variant: Variant): Promise<ReleaseInfo | null> {
+  const cached = await readRelease(variant);
+  if (!cached?.version) return null;
+  return {
+    variant,
+    version: cached.version,
+    updatedAt: cached.updatedAt,
+    note: cached.note,
+    source: 'cache',
+    origin: cached.origin,
+  };
 }
 
 /** forget what was loaded, so the next read picks up a release that just arrived */
@@ -89,42 +92,57 @@ export function invalidateModel(variant: Variant): void {
 }
 
 export function loadScene(variant: Variant): Promise<SceneDoc> {
+  const preview = previews.get(variant);
+  if (preview) return Promise.resolve(preview.scene);
   let promise = sceneCache.get(variant);
   if (!promise) {
     promise = (async () => {
-      const [cached, bundled] = await Promise.all([readRelease(variant), bundledRelease(variant)]);
-      if (cached?.scene && (!bundled || !isNewer(bundled.version, cached.version))) return cached.scene;
-      const doc = await fetchJson<SceneDoc>(`models/${variant}.json`);
-      if (!Array.isArray(doc.prims) || doc.prims.length === 0) {
-        throw new Error('Das Modell enthält keine Bauteile.');
-      }
-      return doc;
+      const cached = await readRelease(variant);
+      if (!cached?.scene?.prims?.length) throw new Error(NO_MODEL_MESSAGE);
+      return cached.scene;
     })();
+    // a failure must not stick: the model may arrive a second later
+    promise.catch(() => sceneCache.delete(variant));
     sceneCache.set(variant, promise);
   }
   return promise;
 }
 
 export function loadRooms(variant: Variant): Promise<RoomDoc> {
+  const preview = previews.get(variant);
+  if (preview) return Promise.resolve(preview.rooms);
   let promise = roomCache.get(variant);
   if (!promise) {
     promise = (async () => {
-      const [cached, bundled] = await Promise.all([readRelease(variant), bundledRelease(variant)]);
-      if (cached?.rooms && (!bundled || !isNewer(bundled.version, cached.version))) return cached.rooms;
-      // a release published without its room list falls back to the bundled rooms: the ids
-      // are what diary, photos and costs hang on, and losing them costs more than a rect
-      // that has moved by a few centimetres
-      return fetchJson<RoomDoc>(`models/rooms-${variant}.json`).catch(() => ({ variant, rooms: [] }));
+      const cached = await readRelease(variant);
+      if (cached?.rooms) return cached.rooms;
+      // no room list yet - the ids are rebuilt from the house file when there is one
+      if (cached?.source) {
+        const parsed = parseSource(cached.source);
+        if (parsed.ok) return buildRooms(parsed.source, cached.updatedAt) as RoomDoc;
+      }
+      return { variant, rooms: [] };
     })();
     roomCache.set(variant, promise);
   }
   return promise;
 }
 
-export interface BundledPlan {
+/**
+ * The house file (reno-haus/1) of the model in use, as text, with its version. Null when
+ * this device has no model, or the model was published without its house file.
+ */
+export async function loadSource(variant: Variant): Promise<{ text: string; version: string } | null> {
+  const cached = await readRelease(variant);
+  if (!cached?.source) return null;
+  return { text: cached.source, version: cached.version };
+}
+
+/** A floor plan generated from the model - one per variant and storey. */
+export interface ModelPlan {
   id: string;
   title: string;
-  floor: string;
+  floor: PlanFloor;
   variant: Variant;
   kind: 'svg';
   source: 'bundled';
@@ -132,16 +150,56 @@ export interface BundledPlan {
   order: number;
 }
 
-export function loadBundledPlans(): Promise<{ plans: BundledPlan[] }> {
-  return fetchJson<{ plans: BundledPlan[] }>('plans/index.json').catch(() => ({ plans: [] }));
+/** the generated plans; their content is drawn from the model by loadPlanSvg */
+export function modelPlans(): ModelPlan[] {
+  return VARIANTS.flatMap((variant, v) => PLAN_FLOORS.map((floor, f) => ({
+    id: `${variant}-${floor}`,
+    title: `${FLOOR_LABEL[floor]} – ${VARIANT_LABEL[variant]}`,
+    floor,
+    variant,
+    kind: 'svg' as const,
+    source: 'bundled' as const,
+    path: '',
+    order: v * 10 + f,
+  })));
 }
 
-/** flat room list of both variants, for pickers and for showing a name by id */
-export async function loadAllRooms(): Promise<Room[]> {
-  const [ist, soll] = await Promise.all([loadRooms('ist'), loadRooms('soll')]);
-  const byId = new Map<string, Room>();
-  for (const room of [...ist.rooms, ...soll.rooms]) if (!byId.has(room.id)) byId.set(room.id, room);
-  return [...byId.values()];
+/**
+ * The SVG of a generated floor plan, drawn on the device from the house file of the
+ * model in use, or of the preview while one is set (plansSvg.ts, the same output as
+ * build_plans_svg.py). Throws with a German message when there is nothing to draw from.
+ */
+export async function loadPlanSvg(plan: Pick<ModelPlan, 'variant' | 'floor'>): Promise<string> {
+  const preview = previews.get(plan.variant);
+  let source: HouseSource | null = preview?.source ?? null;
+  let version = preview?.version ?? '';
+  if (!preview) {
+    const active = await loadSource(plan.variant);
+    if (!active) throw new Error(NO_MODEL_MESSAGE);
+    const parsed = parseSource(active.text);
+    if (!parsed.ok) throw new Error('Die Hausdatei des Modells ist beschädigt.');
+    source = parsed.source;
+    version = active.version;
+  }
+  if (!source) throw new Error(NO_MODEL_MESSAGE);
+  return buildPlanSvg(source, buildRooms(source, ''), plan.floor, version);
+}
+
+/**
+ * The Ist -> Soll room mapping, for RoomsContext. It is part of the Soll house file
+ * (field roomMap), so it travels with every published Soll model and a preview carries
+ * its own. Missing or unreadable falls back to an empty mapping: every id then resolves
+ * to itself - see roomNaming.ts.
+ */
+export async function loadRoomMap(): Promise<RoomMapDoc> {
+  const empty: RoomMapDoc = { from: 'ist', to: 'soll', map: {} };
+  let source: HouseSource | null = previews.get('soll')?.source ?? null;
+  if (!source) {
+    const stored = await loadSource('soll');
+    const parsed = stored ? parseSource(stored.text) : null;
+    source = parsed?.ok ? parsed.source : null;
+  }
+  return source?.roomMap ? { ...empty, map: source.roomMap } : empty;
 }
 
 export const FLOOR_ORDER = ['KG', 'EG', 'OG', 'DACH', 'GAR'];

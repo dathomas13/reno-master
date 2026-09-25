@@ -48,7 +48,7 @@ export default function TasksPage() {
   const [params, setParams] = useSearchParams();
   const { data: tasks } = useCollection<Task>(COL.tasks);
   const { lists } = useLists();
-  const { name: roomName } = useRooms();
+  const { shortLabel: roomLabel, matches, writeId } = useRooms();
   const [filter, setFilter] = useState<'offen' | 'alle' | 'erledigt'>('offen');
   const [assignee, setAssignee] = useState<Assignee | null>(null);
   const [quick, setQuick] = useState('');
@@ -88,13 +88,13 @@ export default function TasksPage() {
 
   const visible = useMemo(() => {
     return viewTasks.filter((task) => {
-      if (roomFilter && !task.roomIds.includes(roomFilter)) return false;
+      if (roomFilter && !matches(task.roomIds, roomFilter)) return false;
       if (assignee && !task.assignees.includes(assignee) && !task.assignees.includes('Beide')) return false;
       if (filter === 'offen') return task.status !== 'Erledigt';
       if (filter === 'erledigt') return task.status === 'Erledigt';
       return true;
     });
-  }, [viewTasks, filter, assignee, roomFilter]);
+  }, [viewTasks, filter, assignee, roomFilter, matches]);
 
   const grouped = useMemo(() => {
     const map = new Map<DueBucket, Task[]>();
@@ -114,12 +114,12 @@ export default function TasksPage() {
     const title = quick.trim();
     if (!title) {
       // no text typed: open the editor for a new task instead of doing nothing
-      setEditing({ ...emptyTask(), roomIds: roomFilter ? [roomFilter] : [] });
+      setEditing({ ...emptyTask(), roomIds: roomFilter ? [writeId(roomFilter)] : [] });
       return;
     }
     setQuick('');
     // a task added while a room filter is active must land in that room, or it vanishes from view
-    await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [roomFilter] : [] });
+    await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [writeId(roomFilter)] : [] });
   }
 
   async function toggleDone(task: Task) {
@@ -181,7 +181,7 @@ export default function TasksPage() {
           ))}
           {roomFilter && (
             <button type="button" className="chip chip-on" onClick={() => setParams(new URLSearchParams())}>
-              {roomName(roomFilter)} ×
+              {roomLabel(roomFilter)} ×
             </button>
           )}
         </div>

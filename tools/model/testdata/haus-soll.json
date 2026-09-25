@@ -1,0 +1,298 @@
+{
+  "format": "reno-haus/1",
+  "variant": "soll",
+  "version": "0.0.24",
+  "note": "Soll-Räume mit Technikraum, Umbenennungstabelle Ist→Soll",
+  "loggiaParapets": [],
+  "info": [
+    "Haus Tirschenreuth - Geometriedatenbasis (alle Maße in mm)",
+    "",
+    "Koordinatensystem:",
+    "x = 0 an der westlichen Außenwand-Außenkante, positiv nach Osten (Richtung Bad/Öllager)",
+    "y = 0 an der südlichen Außenwand-Außenkante (Straßenseite), positiv nach Norden (Garten)",
+    "z = 0 = OK Rohdecke EG (±0.000 im Plan). KG-Rohfußboden = -2750, OG-Rohfußboden = +2750",
+    "",
+    "Quellen:",
+    "EG  = eigenes Aufmaß Thomas 09/2026, DXF \"Grundriss_EG_Bestand_Fertigmasse\".",
+    "**Fertigmaße inklusive Putz.** Jede Wandkante, jede Öffnung und die Treppen",
+    "stammen aus dieser Zeichnung; die Raumstempel darin stimmen mit rooms_ist.py",
+    "überein. Das Haus ist ~30 cm kürzer gebaut als 1967 geplant (12.995 statt",
+    "13.240); die Gebäudetiefe passt (11.815 statt 11.820).",
+    "KG  = eigenes Aufmaß Thomas 09/2026, DXF \"Grundriss_KG_Bestand_Fertigmasse\".",
+    "**Fertigmaße inklusive Putz**, außer Nordzeile und Heizung: die sind unverputzt,",
+    "dort steht das Rohmaß. Wandkanten und Öffnungen aus der Zeichnung.",
+    "OG  = eigenes Aufmaß Thomas 09/2026, DXF \"Grundriss_OG_Bestand_Fertigmasse\".",
+    "Aufgemessen sind Kind 1-3, HWR und Diele; Bad, Garderobe und Wäscheboden sind aus",
+    "Blatt 4 übernommen und im Plan mit * als noch zu prüfen markiert -> Tag B.",
+    "Die Abseitenwände gibt es nur bei HWR (vollständig) und Kind 1 (Raum dahinter zur",
+    "Seite offen); bei Kind 2 und Kind 3 wurden sie nie gebaut.",
+    "",
+    "Konfidenz-Tags: A = gemessen bzw. Maßkette direkt gelesen, B = abgeleitet, C = Annahme"
+  ],
+  "params": {"houseW": 12995, "houseD": 11815, "tOut": 400, "slab": 140, "storey": 2750, "kniestock": 650, "roofPitch": 36, "roofOverhang": 500, "roofT": 200, "ogCeil": 5340, "yVor": -125},
+  "walls": [
+    {
+      "id": "eg-aussenwand-sued", "floor": "EG", "name": "Außenwand Süd", "x0": 0, "y0": 0, "x1": 8505, "y1": 400, "tag": "A",
+      "openings": [{"kind": "window", "from": 1365, "to": 6875, "sill": 700, "height": 1385, "tag": "A", "note": "Wohnzimmer 5510 breit"}]
+    },
+    {
+      "id": "eg-aussenwand-nord", "floor": "EG", "name": "Außenwand Nord", "x0": 0, "y0": 11415, "x1": 12595, "y1": 11815, "tag": "A",
+      "openings": [
+        {"kind": "window", "from": 1335, "to": 3845, "sill": 900, "height": 1260, "tag": "A", "note": "Schlafzimmer 2510"},
+        {"kind": "window", "from": 5015, "to": 8245, "sill": 0, "height": 2135, "tag": "A", "note": "Diele: Glaselement 3230 (Aufbau/Teilung offen)"}
+      ]
+    },
+    {
+      "id": "eg-aussenwand-west", "floor": "EG", "name": "Außenwand West", "x0": 0, "y0": 0, "x1": 400, "y1": 11815, "tag": "A",
+      "openings": [
+        {"kind": "window", "from": 1625, "to": 3760, "sill": 900, "height": 1260, "tag": "A", "note": "Wohnzimmer 2135"},
+        {"kind": "door", "from": 5620, "to": 6880, "sill": 0, "height": 635, "tag": "A", "note": "Haustür, oberer Teil (Sturz +0.635; OK Podest -1.375)"}
+      ]
+    },
+    {
+      "id": "eg-aussenwand-ost", "floor": "EG", "name": "Außenwand Ost", "x0": 12595, "y0": -125, "x1": 12995, "y1": 11815, "tag": "A",
+      "openings": [
+        {"kind": "window", "from": 3115, "to": 5625, "sill": 900, "height": 1260, "tag": "A", "note": "Essküche 2510"},
+        {"kind": "window", "from": 9055, "to": 10315, "sill": 900, "height": 1260, "tag": "A", "note": "Bad 1260"}
+      ]
+    },
+    {
+      "id": "eg-tragwand-x-4745-diele-west", "floor": "EG", "name": "Tragwand x=4745 (Diele West)", "x0": 4745, "y0": 4860, "x1": 5015, "y1": 11415, "tag": "A",
+      "openings": [
+        {"kind": "door", "from": 5255, "to": 6265, "sill": 0, "height": 2010, "tag": "A", "note": "Treppenhaus|Diele y 5255–6265"},
+        {"kind": "door", "from": 10470, "to": 11355, "sill": 0, "height": 2010, "tag": "A", "note": "Diele|Schlafzimmer y 10470–11355"}
+      ]
+    },
+    {
+      "id": "eg-tragwand-x-8245-diele-ost", "floor": "EG", "name": "Tragwand x=8245 (Diele Ost)", "x0": 8245, "y0": -125, "x1": 8505, "y1": 11815, "tag": "A",
+      "openings": [
+        {"kind": "door", "from": 550, "to": 1560, "sill": 0, "height": 2135, "tag": "A", "note": "Wohnzimmer|Loggia y 550–1560"},
+        {"kind": "door", "from": 5915, "to": 6800, "sill": 0, "height": 2010, "tag": "A", "note": "Diele|Essküche y 5915–6800"},
+        {"kind": "passage", "from": 7055, "to": 8695, "sill": 0, "height": 2610, "tag": "A", "note": "Garderobe, offene Nische zur Diele"},
+        {"kind": "door", "from": 9575, "to": 10460, "sill": 0, "height": 2010, "tag": "A", "note": "Diele|Flur y 9575–10460"}
+      ]
+    },
+    {
+      "id": "eg-tragwand-y-4860-sued", "floor": "EG", "name": "Tragwand y=4860 (Süd)", "x0": 0, "y0": 4860, "x1": 8505, "y1": 5130, "tag": "A",
+      "openings": [{"kind": "door", "from": 5688, "to": 7573, "sill": 0, "height": 2010, "tag": "A", "note": "Wohnzimmer|Diele Doppeltür 1885"}]
+    },
+    {"id": "eg-tragwand-y-7365-nord", "floor": "EG", "name": "Tragwand y=7365 (Nord)", "x0": 0, "y0": 7365, "x1": 4745, "y1": 7635, "tag": "A"},
+    {
+      "id": "eg-esskueche-loggia-34", "floor": "EG", "name": "Essküche|Loggia 34", "x0": 8505, "y0": 2385, "x1": 12595, "y1": 2725, "tag": "A",
+      "openings": [{"kind": "door", "from": 10108, "to": 10993, "sill": 0, "height": 2135, "tag": "A", "note": "Essküche|Loggia x 10108–10993"}]
+    },
+    {
+      "id": "eg-esskueche-speis-13", "floor": "EG", "name": "Essküche|Speis 13", "x0": 8505, "y0": 6925, "x1": 12595, "y1": 7055, "tag": "A",
+      "openings": [{"kind": "door", "from": 11320, "to": 12080, "sill": 0, "height": 2010, "tag": "A", "note": "Essküche|Speis x 11320–12080"}]
+    },
+    {"id": "eg-gard-wc-13", "floor": "EG", "name": "Gard|WC 13", "x0": 8870, "y0": 7055, "x1": 9000, "y1": 8695, "tag": "A"},
+    {"id": "eg-wc-speis-12-5", "floor": "EG", "name": "WC|Speis 12,5", "x0": 10625, "y0": 7055, "x1": 10750, "y1": 8695, "tag": "A"},
+    {
+      "id": "eg-nebenraeume-nord-14-5", "floor": "EG", "name": "Nebenräume Nord 14,5", "x0": 8505, "y0": 8695, "x1": 12595, "y1": 8840, "tag": "A",
+      "openings": [{"kind": "door", "from": 9185, "to": 9945, "sill": 0, "height": 2010, "tag": "A", "note": "Flur|WC x 9185–9945"}]
+    },
+    {
+      "id": "eg-flur-bad-14-5", "floor": "EG", "name": "Flur|Bad 14,5", "x0": 9985, "y0": 8840, "x1": 10130, "y1": 11415, "tag": "A",
+      "openings": [{"kind": "door", "from": 9855, "to": 10615, "sill": 0, "height": 2010, "tag": "A", "note": "Flur|Bad y 9855–10615"}]
+    },
+    {"id": "eg-kamin-wc", "floor": "EG", "name": "Kamin WC", "x0": 9000, "y0": 7055, "x1": 10625, "y1": 7565, "tag": "C"},
+    {
+      "id": "kg-aussenwand-sued", "floor": "KG", "name": "Außenwand Süd", "x0": 400, "y0": 0, "x1": 12595, "y1": 400, "tag": "A",
+      "openings": [
+        {"kind": "window", "from": 1365, "to": 6875, "sill": 900, "height": 1260, "tag": "A", "note": "Fensterelement durchgehend,"},
+        {"kind": "window", "from": 9545, "to": 11555, "sill": 900, "height": 1260, "tag": "A", "note": "Schlafzimmer"}
+      ]
+    },
+    {
+      "id": "kg-aussenwand-west", "floor": "KG", "name": "Außenwand West", "x0": 0, "y0": 0, "x1": 400, "y1": 7610, "tag": "A",
+      "openings": [{"kind": "door", "from": 5620, "to": 6880, "sill": 1375, "height": 1235, "tag": "B", "note": "Haustür, unterer Teil"}]
+    },
+    {"id": "kg-aussenwand-west-roh", "floor": "KG", "name": "Außenwand West (roh)", "x0": 0, "y0": 7610, "x1": 365, "y1": 11815, "tag": "A"},
+    {
+      "id": "kg-aussenwand-nord", "floor": "KG", "name": "Außenwand Nord", "x0": 365, "y0": 11450, "x1": 12630, "y1": 11815, "tag": "A",
+      "openings": [
+        {"kind": "window", "from": 1740, "to": 2540, "sill": 1800, "height": 600, "tag": "A", "note": "Keller 1"},
+        {"kind": "window", "from": 6210, "to": 7010, "sill": 1800, "height": 600, "tag": "A", "note": "Keller 2"}
+      ]
+    },
+    {
+      "id": "kg-aussenwand-ost", "floor": "KG", "name": "Außenwand Ost", "x0": 12595, "y0": 0, "x1": 12995, "y1": 7140, "tag": "A",
+      "openings": [{"kind": "window", "from": 5570, "to": 6820, "sill": 900, "height": 1260, "tag": "A", "note": "Bad"}]
+    },
+    {
+      "id": "kg-aussenwand-ost-roh", "floor": "KG", "name": "Außenwand Ost (roh)", "x0": 12630, "y0": 7140, "x1": 12995, "y1": 11815, "tag": "A",
+      "openings": [{"kind": "window", "from": 9075, "to": 9755, "sill": 1800, "height": 600, "tag": "A", "note": "Öllager"}]
+    },
+    {
+      "id": "kg-tragwand-y-4860-sued", "floor": "KG", "name": "Tragwand y=4860 (Süd)", "x0": 400, "y0": 4860, "x1": 8505, "y1": 5130, "tag": "A",
+      "openings": [{"kind": "door", "from": 6500, "to": 7510, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {
+      "id": "kg-tragwand-y-7365-nord", "floor": "KG", "name": "Tragwand y=7365 (Nord)", "x0": 365, "y0": 7365, "x1": 8235, "y1": 7610, "tag": "A",
+      "openings": [{"kind": "door", "from": 3800, "to": 4600, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {"id": "kg-pfeiler-tragwand-nord", "floor": "KG", "name": "Pfeiler Tragwand Nord", "x0": 3640, "y0": 7365, "x1": 3800, "y1": 7610, "tag": "A", "note": "Pfeiler neben der Tür"},
+    {
+      "id": "kg-tragwand-x-4745-diele-west", "floor": "KG", "name": "Tragwand x=4745 (Diele West)", "x0": 4745, "y0": 5130, "x1": 5015, "y1": 7610, "tag": "A",
+      "openings": [{"kind": "door", "from": 5300, "to": 6310, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {
+      "id": "kg-tragwand-x-8235-diele-ost", "floor": "KG", "name": "Tragwand x=8235 (Diele Ost)", "x0": 8235, "y0": 400, "x1": 8505, "y1": 7020, "tag": "A",
+      "openings": [{"kind": "door", "from": 5800, "to": 6685, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {
+      "id": "kg-tragwand-x-8235-kellerflur-heizung", "floor": "KG", "name": "Tragwand x=8235 (Kellerflur|Heizung)", "x0": 8235, "y0": 7020, "x1": 8470, "y1": 8930, "tag": "A",
+      "openings": [{"kind": "door", "from": 7800, "to": 8600, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {"id": "kg-tragwand-x-4760-obst-keller-2", "floor": "KG", "name": "Tragwand x=4760 (Obst|Keller 2)", "x0": 4760, "y0": 8930, "x1": 5000, "y1": 11450, "tag": "A"},
+    {"id": "kg-tragwand-x-8220-keller-2-oellager", "floor": "KG", "name": "Tragwand x=8220 (Keller 2|Öllager)", "x0": 8220, "y0": 8930, "x1": 8470, "y1": 11450, "tag": "A"},
+    {
+      "id": "kg-schlafzimmer-nord-27", "floor": "KG", "name": "Schlafzimmer Nord 27", "x0": 8505, "y0": 4200, "x1": 12595, "y1": 4470, "tag": "A",
+      "openings": [{"kind": "door", "from": 9130, "to": 10015, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {
+      "id": "kg-esskueche-wohnzimmer-12-5", "floor": "KG", "name": "Essküche|Wohnzimmer 12,5", "x0": 2710, "y0": 400, "x1": 2835, "y1": 4860, "tag": "A",
+      "openings": [{"kind": "door", "from": 3600, "to": 4485, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {
+      "id": "kg-keller-1-kellerflur-14", "floor": "KG", "name": "Keller 1|Kellerflur 14", "x0": 3500, "y0": 7610, "x1": 3640, "y1": 11450, "tag": "A",
+      "openings": [{"kind": "door", "from": 7800, "to": 8600, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {
+      "id": "kg-nordzeile-sued-14", "floor": "KG", "name": "Nordzeile Süd 14", "x0": 3640, "y0": 8790, "x1": 12630, "y1": 8930, "tag": "A",
+      "openings": [
+        {"kind": "door", "from": 3805, "to": 4565, "sill": 0, "height": 2010, "tag": "A", "note": "Kellerflur|Obst"},
+        {"kind": "door", "from": 5300, "to": 6100, "sill": 0, "height": 2010, "tag": "A", "note": "Kellerflur|Keller 2"},
+        {"kind": "door", "from": 8845, "to": 9730, "sill": 0, "height": 2010, "tag": "A", "note": "Heizung|Öllager"}
+      ]
+    },
+    {
+      "id": "kg-flur-bad-15", "floor": "KG", "name": "Flur|Bad 15", "x0": 10105, "y0": 4470, "x1": 10255, "y1": 7020, "tag": "A",
+      "openings": [{"kind": "door", "from": 6100, "to": 6860, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {"id": "kg-flur-bad-heizung-12-west", "floor": "KG", "name": "Flur/Bad|Heizung 12 West", "x0": 8505, "y0": 7020, "x1": 9000, "y1": 7140, "tag": "A"},
+    {"id": "kg-flur-bad-heizung-12-ost", "floor": "KG", "name": "Flur/Bad|Heizung 12 Ost", "x0": 10625, "y0": 7020, "x1": 12630, "y1": 7140, "tag": "A"},
+    {"id": "kg-vorsatz-vor-kamin-3-5", "floor": "KG", "name": "Vorsatz vor Kamin 3,5", "x0": 9000, "y0": 7020, "x1": 10625, "y1": 7055, "tag": "A"},
+    {"id": "kg-kamin", "floor": "KG", "name": "Kamin", "x0": 9000, "y0": 7055, "x1": 10625, "y1": 7565, "tag": "A"},
+    {"id": "og-aussenwand-sued", "floor": "OG", "name": "Außenwand Süd", "x0": 400, "y0": 0, "x1": 4840, "y1": 400, "tag": "A"},
+    {"id": "og-aussenwand-sued-erker", "floor": "OG", "name": "Außenwand Süd (Erker)", "x0": 4840, "y0": 0, "x1": 9370, "y1": 365, "tag": "A"},
+    {"id": "og-aussenwand-sued-ost", "floor": "OG", "name": "Außenwand Süd (Ost)", "x0": 9370, "y0": 0, "x1": 12595, "y1": 400, "tag": "A"},
+    {"id": "og-aussenwand-nord", "floor": "OG", "name": "Außenwand Nord", "x0": 400, "y0": 11415, "x1": 12595, "y1": 11815, "tag": "A"},
+    {
+      "id": "og-aussenwand-west", "floor": "OG", "name": "Außenwand West", "x0": 0, "y0": 0, "x1": 400, "y1": 11815, "tag": "A",
+      "openings": [
+        {"kind": "door", "from": 3730, "to": 5740, "sill": 0, "height": 2135, "tag": "A", "note": "Balkontür Kind 2"},
+        {"kind": "door", "from": 5980, "to": 7990, "sill": 0, "height": 2135, "tag": "A", "note": "Balkontür Kind 1"}
+      ]
+    },
+    {
+      "id": "og-aussenwand-ost", "floor": "OG", "name": "Außenwand Ost", "x0": 12595, "y0": 0, "x1": 12995, "y1": 11815, "tag": "A",
+      "openings": [
+        {"kind": "window", "from": 4605, "to": 5740, "sill": 900, "height": 1300, "tag": "A", "note": "HWR (Höhe C)"},
+        {"kind": "window", "from": 5980, "to": 7115, "sill": 900, "height": 1300, "tag": "A", "note": "Wäscheboden (Höhe C)"}
+      ]
+    },
+    {
+      "id": "og-westspalte-mitte-17-5", "floor": "OG", "name": "Westspalte | Mitte 17,5", "x0": 4840, "y0": 365, "x1": 5015, "y1": 10570, "tag": "A",
+      "openings": [
+        {"kind": "door", "from": 4855, "to": 5740, "sill": 0, "height": 2010, "tag": "A", "note": "Diele|Kind 2"},
+        {"kind": "door", "from": 6015, "to": 6900, "sill": 0, "height": 2010, "tag": "A", "note": "Diele|Kind 1"}
+      ]
+    },
+    {
+      "id": "og-mitte-ostspalte-13-5", "floor": "OG", "name": "Mitte | Ostspalte 13,5", "x0": 9235, "y0": 365, "x1": 9370, "y1": 6955, "tag": "A",
+      "openings": [
+        {"kind": "door", "from": 4855, "to": 5740, "sill": 0, "height": 2010, "tag": "A", "note": "Diele|HWR"},
+        {"kind": "door", "from": 5940, "to": 6825, "sill": 0, "height": 2010, "tag": "A", "note": "Diele|Wäscheboden"}
+      ]
+    },
+    {"id": "og-kind-1-kind-2-12", "floor": "OG", "name": "Kind 1 | Kind 2 12", "x0": 400, "y0": 5800, "x1": 4840, "y1": 5920, "tag": "A"},
+    {"id": "og-hwr-waescheboden-12", "floor": "OG", "name": "HWR | Wäscheboden 12", "x0": 9370, "y0": 5800, "x1": 12595, "y1": 5920, "tag": "A"},
+    {
+      "id": "og-kind-3-nord-16", "floor": "OG", "name": "Kind 3 Nord 16", "x0": 5015, "y0": 4545, "x1": 9235, "y1": 4705, "tag": "A",
+      "openings": [{"kind": "door", "from": 6140, "to": 7025, "sill": 0, "height": 2010, "tag": "A"}]
+    },
+    {"id": "og-abseitenwand-hwr-12", "floor": "OG", "name": "Abseitenwand HWR 12", "x0": 9370, "y0": 1570, "x1": 12595, "y1": 1690, "tag": "A"},
+    {"id": "og-abseitenwand-kind-1-12", "floor": "OG", "name": "Abseitenwand Kind 1 12", "x0": 400, "y0": 10450, "x1": 6025, "y1": 10570, "tag": "A"},
+    {"id": "og-treppe-bad-12", "floor": "OG", "name": "Treppe | Bad 12", "x0": 6025, "y0": 6835, "x1": 6145, "y1": 10570, "tag": "A"},
+    {
+      "id": "og-diele-bad-12", "floor": "OG", "name": "Diele | Bad 12", "x0": 6945, "y0": 6835, "x1": 9370, "y1": 6955, "tag": "B",
+      "openings": [{"kind": "door", "from": 7185, "to": 7945, "sill": 0, "height": 2010, "tag": "B"}]
+    },
+    {"id": "og-g-bad-12", "floor": "OG", "name": "G | Bad 12", "x0": 6945, "y0": 6955, "x1": 7065, "y1": 7625, "tag": "B"},
+    {"id": "og-g-nord-12", "floor": "OG", "name": "G Nord 12", "x0": 6145, "y0": 7505, "x1": 7065, "y1": 7625, "tag": "B"},
+    {"id": "og-bad-nord-12", "floor": "OG", "name": "Bad Nord 12", "x0": 6145, "y0": 8575, "x1": 9000, "y1": 8695, "tag": "B"},
+    {"id": "og-bad-waescheboden-12", "floor": "OG", "name": "Bad | Wäscheboden 12", "x0": 8880, "y0": 6955, "x1": 9000, "y1": 8575, "tag": "B"},
+    {"id": "og-kamin", "floor": "OG", "name": "Kamin", "x0": 9000, "y0": 7055, "x1": 10625, "y1": 7565, "tag": "A"},
+    {
+      "id": "gar-garage-sued", "floor": "GAR", "name": "Garage Süd", "x0": -8000, "y0": 5100, "x1": -1510, "y1": 5340, "tag": "A",
+      "openings": [
+        {"kind": "door", "from": -7395, "to": -5095, "sill": 0, "height": 2100, "tag": "A", "note": "Tor 1"},
+        {"kind": "door", "from": -4730, "to": -2430, "sill": 0, "height": 2100, "tag": "A", "note": "Tor 2"}
+      ]
+    },
+    {"id": "gar-garage-nord", "floor": "GAR", "name": "Garage Nord", "x0": -8000, "y0": 11850, "x1": -1510, "y1": 12090, "tag": "A"},
+    {"id": "gar-garage-west", "floor": "GAR", "name": "Garage West", "x0": -8000, "y0": 5100, "x1": -7760, "y1": 12090, "tag": "A"},
+    {"id": "gar-garage-ost", "floor": "GAR", "name": "Garage Ost", "x0": -1750, "y0": 5100, "x1": -1510, "y1": 12090, "tag": "A"}
+  ],
+  "stairs": [
+    {"name": "Treppe KG→EG Lauf 1", "x0": 3615, "y0": 5130, "width": 1117.5, "steps": 8, "rise": 171.875, "run": 270, "z0": -2750, "direction": "-x", "tag": "A"},
+    {"name": "Treppe KG→EG Lauf 2", "x0": 1455, "y0": 6247.5, "width": 1117.5, "steps": 8, "rise": 171.875, "run": 270, "z0": -1375, "direction": "+x", "tag": "A"},
+    {"name": "Holztreppe EG→OG", "x0": 5015, "y0": 10470, "width": 1010, "steps": 14, "rise": 196.42857142857142, "run": 270, "z0": 0, "direction": "-y", "tag": "B"}
+  ],
+  "landings": [{"name": "Podest Treppe KG→EG (OK -1375)", "x0": 400, "y0": 5130, "x1": 1455, "y1": 7365, "z": -1375, "tag": "A"}],
+  "slabOpenings": {"EG": [0, 5130, 3615, 7365], "OG": [5015, 6690, 6025, 10050]},
+  "slabExtras": [{"floor": "EG", "name": "Loggia Boden (Vorsprung)", "tag": "A", "x0": 8245, "y0": -125, "x1": 12995, "y1": 0, "z0": -140}],
+  "gaube": {
+    "x0": 4840, "x1": 9370, "depth": 2250, "wallH": 2200, "tag": "B",
+    "windows": [[1010, 60], [1010, 60], [1010, 60], [1010, 60]],
+    "cheek": [175, 135]
+  },
+  "balkon": {"x0": -1300, "x1": 0, "y0": 3035, "y1": 8095, "tag": "A"},
+  "garage": {"x": [-8000, -1510], "y": [5100, 12090], "z0": -1360, "hFront": 2600, "hBack": 2300},
+  "rooms": [
+    {"id": "kg-esskueche", "name": "Essküche", "floor": "KG", "rects": [[400, 400, 2710, 4860]], "note": "10,30"},
+    {"id": "kg-wohnzimmer", "name": "Wohnzimmer", "floor": "KG", "rects": [[2835, 400, 8235, 4860]], "note": "24,08"},
+    {"id": "kg-schlafzimmer", "name": "Schlafzimmer", "floor": "KG", "rects": [[8505, 400, 12595, 4200]], "note": "15,54"},
+    {"id": "kg-flur", "name": "Flur", "floor": "KG", "rects": [[8505, 4470, 10105, 7020]], "note": "4,08"},
+    {"id": "kg-bad", "name": "Bad", "floor": "KG", "rects": [[10255, 4470, 12595, 7020]], "note": "5,97"},
+    {"id": "kg-technik", "name": "Technikraum", "floor": "KG", "rects": []},
+    {"id": "kg-treppenhaus", "name": "Treppenhaus", "floor": "KG", "rects": [[400, 5130, 4745, 7365]]},
+    {"id": "kg-diele", "name": "Diele", "floor": "KG", "rects": [[5015, 5130, 8235, 7365]], "note": "7,20"},
+    {"id": "kg-keller1", "name": "Keller 1", "floor": "KG", "rects": [[365, 7610, 3500, 11450]], "note": "12,04"},
+    {"id": "kg-kellerflur", "name": "Kellerflur", "floor": "KG", "rects": [[3640, 7610, 8235, 8790]]},
+    {"id": "kg-obst", "name": "Obstkeller", "floor": "KG", "rects": [[3640, 8930, 4760, 11450]]},
+    {"id": "kg-keller2", "name": "Keller 2", "floor": "KG", "rects": [[5000, 8930, 8220, 11450]], "note": "8,11"},
+    {"id": "eg-wohnzimmer", "name": "Wohnzimmer", "floor": "EG", "rects": [[400, 400, 8245, 4860]], "note": "7,845 × 4,460"},
+    {"id": "eg-loggia", "name": "Loggia", "floor": "EG", "rects": [[8525, -125, 12575, 2385]], "note": "4,050 × 2,510"},
+    {"id": "eg-esskueche", "name": "Essküche", "floor": "EG", "rects": [[8505, 2725, 12595, 6925]], "note": "4,090 × 4,200"},
+    {"id": "eg-garderobe", "name": "Garderobe", "floor": "EG", "rects": [[8245, 7055, 8870, 8695]], "note": "0,625 × 1,640"},
+    {"id": "eg-wc", "name": "WC", "floor": "EG", "rects": [[9000, 7565, 10625, 8695]], "note": "1,625 × 1,130 (Kamin südlich)"},
+    {"id": "eg-speise", "name": "Speisekammer", "floor": "EG", "rects": [[10750, 7055, 12595, 8695]], "note": "1,845 × 1,640"},
+    {"id": "eg-flur", "name": "Flur", "floor": "EG", "rects": [[8505, 8840, 9985, 11415]], "note": "1,480 × 2,575"},
+    {"id": "eg-bad", "name": "Bad", "floor": "EG", "rects": [[10130, 8840, 12595, 11415]], "note": "2,465 × 2,575"},
+    {"id": "eg-treppenhaus", "name": "Treppenhaus", "floor": "EG", "rects": [[400, 5130, 4745, 7365]], "note": "4,345 × 2,235"},
+    {"id": "eg-diele", "name": "Diele", "floor": "EG", "rects": [[5015, 5130, 8245, 11415]]},
+    {"id": "eg-zimmer-nw", "name": "Schlafzimmer", "floor": "EG", "rects": [[400, 7635, 4745, 11415]], "note": "4,345 × 3,780"},
+    {"id": "og-kind2", "name": "Kind 2", "floor": "OG", "rects": [[400, 400, 4840, 5800]], "note": "23,98"},
+    {"id": "og-kind1", "name": "Kind 1", "floor": "OG", "rects": [[400, 5920, 4840, 10450]], "note": "20,11"},
+    {"id": "og-kind3", "name": "Kind 3", "floor": "OG", "rects": [[5015, 675, 9235, 4545]], "note": "16,33"},
+    {"id": "og-diele", "name": "Diele", "floor": "OG", "rects": [[5015, 4705, 9235, 6835]]},
+    {"id": "og-treppe", "name": "Treppe", "floor": "OG", "rects": [[5015, 6835, 6025, 10450]]},
+    {"id": "og-g", "name": "Garderobe", "floor": "OG", "rects": [[6145, 6955, 6945, 7505]]},
+    {"id": "og-wc", "name": "Bad", "floor": "OG", "rects": [[7065, 6955, 8880, 8575], [6145, 7625, 7065, 8575]]},
+    {"id": "og-hwr", "name": "Hauswirtschaftsraum", "floor": "OG", "rects": [[9370, 1690, 12595, 5800]], "note": "13,25"},
+    {
+      "id": "og-waescheboden", "name": "Wäscheboden", "floor": "OG",
+      "rects": [
+        [9370, 5920, 12595, 6955],
+        [9000, 6955, 12595, 7055],
+        [10625, 7055, 12595, 7565],
+        [9000, 7565, 12595, 8695],
+        [6145, 8695, 12595, 11415]
+      ]
+    },
+    {"id": "gar-garage", "name": "Garage", "floor": "GAR", "rects": [[-7760, 5340, -1750, 11850]]}
+  ],
+  "roomMap": {"kg-esskueche": "kg-esskueche", "kg-wohnzimmer": "kg-wohnzimmer", "kg-schlafzimmer": "kg-schlafzimmer", "kg-flur": "kg-flur", "kg-bad": "kg-bad", "kg-heizung": "kg-technik", "kg-oellager": "kg-technik", "kg-treppenhaus": "kg-treppenhaus", "kg-diele": "kg-diele", "kg-keller1": "kg-keller1", "kg-kellerflur": "kg-kellerflur", "kg-obst": "kg-obst", "kg-keller2": "kg-keller2", "eg-wohnzimmer": "eg-wohnzimmer", "eg-loggia": "eg-loggia", "eg-esskueche": "eg-esskueche", "eg-garderobe": "eg-garderobe", "eg-wc": "eg-wc", "eg-speise": "eg-speise", "eg-flur": "eg-flur", "eg-bad": "eg-bad", "eg-treppenhaus": "eg-treppenhaus", "eg-diele": "eg-diele", "eg-zimmer-nw": "eg-zimmer-nw", "og-kind2": "og-kind2", "og-kind1": "og-kind1", "og-kind3": "og-kind3", "og-diele": "og-diele", "og-treppe": "og-treppe", "og-g": "og-g", "og-wc": "og-wc", "og-hwr": "og-hwr", "og-waescheboden": "og-waescheboden", "gar-garage": "gar-garage"}
+}

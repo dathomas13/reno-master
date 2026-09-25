@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract the embedded scene JSON from a generated Haus_3D.html into public/models/<variant>.json.
+"""Extract the embedded scene JSON from a generated Haus_3D.html into <variant>.json in RENO_HAUS_DIR (see hausdatei.py).
 
 This is the dependency-free fallback for `build_scene.py`, which needs CadQuery/OCP (~150 MB).
 Use it when you only want to publish an already generated viewer scene to the app.
@@ -18,7 +18,8 @@ import re
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
-MODELS = REPO / "public" / "models"
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from hausdatei import DATA as MODELS  # noqa: E402
 KINDS = {"wall", "slab", "roof", "glass", "door", "stair", "rail"}
 LAYERS = {"KG", "EG", "OG", "DACH", "GAR"}
 
@@ -84,7 +85,7 @@ def main() -> int:
     ap.add_argument("--variant", default="ist", choices=["ist", "soll"])
     ap.add_argument("--version", default="0.22", help="model version written into meta and manifest")
     ap.add_argument("--note", default="", help="short note shown in the app")
-    ap.add_argument("--out", default=None, help="output path (default public/models/<variant>.json)")
+    ap.add_argument("--out", default=None, help="output path (default <variant>.json in RENO_HAUS_DIR)")
     args = ap.parse_args()
 
     html_path = pathlib.Path(args.html)
@@ -119,7 +120,7 @@ def main() -> int:
     out.write_text(json.dumps(scene, separators=(",", ":")), encoding="utf-8")
 
     tris = sum(len(p["t"]) // 3 for p in scene["prims"])
-    print(f"{out.relative_to(REPO)}: {len(scene['prims'])} parts, {tris} triangles, {out.stat().st_size // 1024} KB")
+    print(f"{out}: {len(scene['prims'])} parts, {tris} triangles, {out.stat().st_size // 1024} KB")
     return 0
 
 

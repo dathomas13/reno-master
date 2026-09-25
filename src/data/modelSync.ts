@@ -1,19 +1,18 @@
 /**
- * Keeps the newest 3D model on the device, independent of the app build.
+ * Keeps the newest 3D model on the device.
  *
- * Three channels, described in modelRelease.ts. This module reaches them, picks the
- * highest version and stores its payload in IndexedDB, so the viewer reads the new model
- * on the next open and keeps it offline afterwards. Nothing here ever leaves the app
- * without a model: every step falls back to what is already there.
+ * The one place a model comes from is the Firestore document meta/model-<variant>
+ * (modelRelease.ts). This module listens to it, and when it carries a newer version than
+ * the device has, checks the payload and stores it in IndexedDB - so the viewer reads the
+ * new model at once and keeps it offline afterwards. A broken or truncated document never
+ * replaces a working model.
  *
- * Publishing works the other way round - publishModel writes a scene into the meta
- * collection, and the other device picks it up through its Firestore listener without any
- * deploy at all.
+ * Publishing works the other way round: publishModel writes a model into the document and
+ * every other signed-in device picks it up through its listener, without any deploy.
  */
 import { saveDoc, watchDoc } from '@/firebase/db';
 import type { RoomDoc, SceneDoc } from '@/modules/viewer3d/houseScene';
 import { COL, type BaseDoc } from './types';
-import { publishedFileUrl } from './appVersion';
 import {
   fitsInDocument,
   pickRelease,
@@ -22,57 +21,23 @@ import {
   releaseToDoc,
   validateRooms,
   validateScene,
+  legacySollVersion,
   VARIANTS,
   type ReleaseDoc,
   type ReleaseInfo,
   type Variant,
 } from './modelRelease';
 import { cachedInfo, readRelease, writeRelease, type CachedRelease } from './modelStore';
-import { bundledRelease, invalidateModel } from './models';
+import { invalidateModel, MODEL_EVENT } from './models';
+import { formatSource } from '@/modules/modelBuild';
 
-/** fired on window when a newer model was stored, so open screens can reload it */
-export const MODEL_EVENT = 'reno:model';
+export { MODEL_EVENT } from './models';
 
 /** the last release each variant was announced with over Firestore */
 const announced = new Map<Variant, ReleaseInfo | null>();
 
 function docId(variant: Variant): string {
   return `model-${variant}`;
-}
-
-/**
- * What the published site offers. Only this channel needs the network, and it is the one
- * that lets a git push reach an installed APK, whose bundled files never change.
- */
-export async function siteRelease(variant: Variant): Promise<ReleaseInfo | null> {
-  try {
-    // the timestamp is what gets past the service worker's precache, see src/sw.ts
-    const url = `${publishedFileUrl('models/manifest.json')}?t=${Date.now()}`;
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) return null;
-    const manifest = (await response.json()) as Record<string, {
-      file?: string; rooms?: string | null; version?: string; updatedAt?: string; note?: string; bytes?: number;
-    }>;
-    const entry = manifest[variant];
-    if (!entry?.version) return null;
-    return {
-      variant,
-      version: entry.version,
-      updatedAt: entry.updatedAt ?? '',
-      note: entry.note ?? '',
-      bytes: entry.bytes,
-      source: 'site',
-      // the version rides along in the query: the service worker caches per address, so a
-      // new version can never be answered with the body of the old one
-      sceneUrl: `${publishedFileUrl(`models/${entry.file ?? `${variant}.json`}`)}?v=${entry.version}`,
-      roomsUrl: entry.rooms
-        ? `${publishedFileUrl(`models/${entry.rooms}`)}?v=${entry.version}`
-        : undefined,
-    };
-  } catch {
-    // offline, or the site is not reachable - then the device keeps what it has
-    return null;
-  }
 }
 
 async function fetchJson(url: string): Promise<unknown> {
@@ -87,7 +52,27 @@ async function fetchJson(url: string): Promise<unknown> {
  * Throws with a German message when the model is unusable, so a truncated download or a
  * half written document is refused before it replaces a working model.
  */
-async function payloadOf(info: ReleaseInfo): Promise<{ scene: SceneDoc; rooms: RoomDoc | null }> {
+/**
+ * The house file of a release, when it has one that fits: it has to be a reno-haus/1
+ * file of the same version, or it would describe a different model than the scene.
+ * Anything else counts as missing - the scene is what matters, the source is a bonus.
+ */
+async function sourceOf(info: ReleaseInfo): Promise<string | null> {
+  try {
+    let text = info.sourceJson ?? null;
+    if (text === null && info.sourceUrl) {
+      const response = await fetch(info.sourceUrl, { cache: 'no-store' });
+      text = response.ok ? await response.text() : null;
+    }
+    if (text === null) return null;
+    const doc = JSON.parse(text) as { format?: unknown; version?: unknown };
+    return doc.format === 'reno-haus/1' && doc.version === info.version ? text : null;
+  } catch {
+    return null;
+  }
+}
+
+async function payloadOf(info: ReleaseInfo): Promise<{ scene: SceneDoc; rooms: RoomDoc | null; source: string | null }> {
   const sceneRaw = info.sceneJson
     ? (JSON.parse(info.sceneJson) as unknown)
     : await fetchJson(info.sceneUrl ?? '');
@@ -103,7 +88,7 @@ async function payloadOf(info: ReleaseInfo): Promise<{ scene: SceneDoc; rooms: R
     // a broken room list must not cost us the model - the scene is the important part
     if (!roomProblem) rooms = roomsRaw as RoomDoc;
   }
-  return { scene: sceneRaw as SceneDoc, rooms };
+  return { scene: sceneRaw as SceneDoc, rooms, source: await sourceOf(info) };
 }
 
 export interface SyncResult {
@@ -117,17 +102,12 @@ export interface SyncResult {
 }
 
 /**
- * Brings one variant up to date: picks the newest reachable release and, when it is not
- * already on the device, stores its payload.
+ * Brings one variant up to date: when the published document carries a newer version
+ * than the device, stores its payload.
  */
-export async function syncModel(variant: Variant, checkSite = true): Promise<SyncResult | null> {
+export async function syncModel(variant: Variant): Promise<SyncResult | null> {
   const cached = await readRelease(variant);
-  const candidates: (ReleaseInfo | null)[] = [
-    cachedInfo(cached),
-    announced.get(variant) ?? null,
-    await bundledRelease(variant),
-  ];
-  if (checkSite && navigator.onLine !== false) candidates.push(await siteRelease(variant));
+  const candidates: (ReleaseInfo | null)[] = [cachedInfo(cached), announced.get(variant) ?? null];
 
   const plan = planSync(candidates);
   if (!plan) return null;
@@ -135,7 +115,7 @@ export async function syncModel(variant: Variant, checkSite = true): Promise<Syn
   if (plan.action === 'keep') return { variant, active: best, changed: false };
 
   try {
-    const { scene, rooms } = await payloadOf(best);
+    const { scene, rooms, source } = await payloadOf(best);
     const entry: CachedRelease = {
       variant,
       version: best.version,
@@ -144,6 +124,7 @@ export async function syncModel(variant: Variant, checkSite = true): Promise<Syn
       origin: best.source,
       scene,
       rooms,
+      source,
       cachedAt: new Date().toISOString(),
     };
     await writeRelease(entry);
@@ -160,68 +141,86 @@ export async function syncModel(variant: Variant, checkSite = true): Promise<Syn
     return result;
   } catch (error) {
     // keep serving the model we have and say why the new one was refused
-    const fallback = pickRelease([cachedInfo(cached), await bundledRelease(variant)]);
+    const fallback = pickRelease([cachedInfo(cached)]);
     const problem = error instanceof Error ? error.message : 'Das Modell konnte nicht geladen werden.';
     return fallback ? { variant, active: fallback, changed: false, problem } : null;
   }
 }
 
-/** Checks both variants once; used by the button in the settings screen. */
-export async function syncAllModels(checkSite = true): Promise<SyncResult[]> {
+/** Checks both variants once against the last published documents. */
+export async function syncAllModels(): Promise<SyncResult[]> {
   const results: SyncResult[] = [];
   for (const variant of VARIANTS) {
-    const result = await syncModel(variant, checkSite);
+    const result = await syncModel(variant);
     if (result) results.push(result);
   }
   return results;
 }
 
+const RENUMBERED_KEY = 'reno:soll-renumbered';
+
 /**
- * Starts the background sync: listens for a published release, and re-checks the site
- * when the device comes online or the app becomes visible again.
+ * Once per device: gives a stored old Soll its new number (legacySollVersion), in the
+ * record and in its house file, so the new Soll 0.1 counts as newer and the next import
+ * counts on from the right place. Every failure leaves the model as it was.
  */
-export function startModelSync(options: {
-  /** listen for published releases; needs an account, the other channels do not */
-  watchPublished?: boolean;
-  onResult?: (result: SyncResult) => void;
-} = {}): () => void {
-  const { watchPublished = false, onResult } = options;
+export async function renumberLegacySoll(): Promise<void> {
+  try {
+    if (localStorage.getItem(RENUMBERED_KEY)) return;
+  } catch {
+    return;
+  }
+  try {
+    const cached = await readRelease('soll');
+    const renamed = cached ? legacySollVersion(cached.version) : null;
+    if (cached && renamed) {
+      let source = cached.source ?? null;
+      if (source) {
+        try {
+          source = formatSource({ ...(JSON.parse(source) as Record<string, unknown>), version: renamed });
+        } catch {
+          source = null;
+        }
+      }
+      const scene = { ...cached.scene, meta: { ...cached.scene.meta, version: renamed } };
+      await writeRelease({ ...cached, version: renamed, scene, source });
+      invalidateModel('soll');
+    }
+    localStorage.setItem(RENUMBERED_KEY, new Date().toISOString());
+  } catch {
+    // try again on the next start
+  }
+}
+
+/**
+ * Starts the sync for a signed-in user: listens to the published documents and stores
+ * every newer model the moment it arrives.
+ */
+export function startModelSync(onResult?: (result: SyncResult) => void): () => void {
   let stopped = false;
 
-  const run = (checkSite: boolean) => {
-    void syncAllModels(checkSite).then((results) => {
+  const run = () => {
+    void syncAllModels().then((results) => {
       if (stopped) return;
       for (const result of results) if (result.changed || result.problem) onResult?.(result);
     });
   };
 
-  const unsubscribes = watchPublished
-    ? VARIANTS.map((variant) => watchDoc<ReleaseDoc>(
-      COL.meta,
-      docId(variant),
-      (row) => {
-        announced.set(variant, releaseFromDoc(variant, row));
-        run(false);          // the document is already here, no need to ask the site
-      },
-      () => undefined,       // nothing published yet - the other channels carry on
-    ))
-    : [];
-
-  const onOnline = () => run(true);
-  const onVisible = () => {
-    if (document.visibilityState === 'visible') run(true);
-  };
-  window.addEventListener('online', onOnline);
-  document.addEventListener('visibilitychange', onVisible);
-  const timer = window.setInterval(onOnline, 30 * 60 * 1000);
-  run(true);
+  const unsubscribes = VARIANTS.map((variant) => watchDoc<ReleaseDoc>(
+    COL.meta,
+    docId(variant),
+    (row) => {
+      announced.set(variant, releaseFromDoc(variant, row));
+      run();
+    },
+    () => undefined, // offline or not allowed: the device keeps what it has
+  ));
+  // the renumbering first, or an old Soll 0.24 would still count as newer than 0.1
+  void renumberLegacySoll().then(run);
 
   return () => {
     stopped = true;
     for (const unsubscribe of unsubscribes) unsubscribe();
-    window.removeEventListener('online', onOnline);
-    document.removeEventListener('visibilitychange', onVisible);
-    window.clearInterval(timer);
   };
 }
 
@@ -229,6 +228,8 @@ export interface PublishInput {
   variant: Variant;
   sceneJson: string;
   roomsJson: string | null;
+  /** the house file the scene was built from; published along so every device can export it */
+  sourceJson?: string | null;
   note?: string;
 }
 
@@ -253,13 +254,14 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
     const roomProblem = validateRooms(JSON.parse(input.roomsJson) as unknown);
     if (roomProblem) throw new Error(roomProblem);
   }
-  if (!fitsInDocument(input.sceneJson, input.roomsJson)) {
+  const sourceJson = input.sourceJson ?? null;
+  if (!fitsInDocument(input.sceneJson, input.roomsJson, sourceJson)) {
     throw new Error('Das Modell ist zu groß für ein Firestore-Dokument. Bitte über eine Adresse veröffentlichen.');
   }
 
   const generatedAt = meta?.generatedAt ?? new Date().toISOString().slice(0, 10);
   const note = input.note?.trim() || meta?.note || '';
-  const doc = releaseToDoc(input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson);
+  const doc = releaseToDoc(input.variant, version, note, generatedAt, input.sceneJson, input.roomsJson, sourceJson);
   await saveDoc<BaseDoc & ReleaseDoc>(COL.meta, {
     id: docId(input.variant),
     ...doc,
@@ -272,6 +274,11 @@ export async function publishModel(input: PublishInput): Promise<ReleaseInfo> {
     variant: input.variant, version, updatedAt: generatedAt, note, bytes: input.sceneJson.length,
     source: 'firestore',
   };
-  announced.set(input.variant, { ...info, sceneJson: input.sceneJson, roomsJson: input.roomsJson ?? undefined });
+  announced.set(input.variant, {
+    ...info,
+    sceneJson: input.sceneJson,
+    roomsJson: input.roomsJson ?? undefined,
+    sourceJson: sourceJson ?? undefined,
+  });
   return info;
 }

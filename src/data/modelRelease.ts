@@ -1,37 +1,34 @@
 /**
  * What a model release is, and which of several is the newest.
  *
- * The 3D model used to be part of the app build: a new model meant a new bundle, and for
- * the APK a new install. A release decouples the two. The app knows three sources and
- * always uses the highest version it can reach:
+ * The model is not part of the app build and not in the repository. Its one true home is
+ * a document in the Firestore meta collection (meta/model-<variant>), written by
+ * "Modell importieren" in the settings. Every signed-in device listens to it and keeps
+ * the newest model in IndexedDB, which is what makes it available offline:
  *
- *   bundled   the files in public/models that shipped with this build - the floor, always
- *             there, works offline from the first start
- *   site      models/manifest.json on the published site - a git push is enough, no app
- *             update, which is what the APK needs
- *   firestore a document in the meta collection - no deploy at all, and it syncs itself
- *             offline through the Firestore cache
+ *   firestore the published document - the only place a model comes from
+ *   cache     what this device already stored from it
  *
  * Kept free of imports so the logic can be tested without a browser, Firestore or three.
  */
 
-export type Variant = 'ist' | 'soll';
+/**
+ * ist = Bestand (how the house was), aktuell = the current state of the works, soll = Plan
+ * (how it is meant to be). Aktuell is for showing only: forms link entries to Bestand or
+ * Plan rooms, never to Aktuell ones (see RoomsContext).
+ */
+export type Variant = 'ist' | 'aktuell' | 'soll';
 
-export const VARIANTS: Variant[] = ['ist', 'soll'];
+export const VARIANTS: Variant[] = ['ist', 'aktuell', 'soll'];
+
+export const VARIANT_LABEL: Record<Variant, string> = { ist: 'Bestand', aktuell: 'Aktuell', soll: 'Plan' };
 
 /** where a release came from; also the tie breaker when two carry the same version */
-export type ReleaseSource = 'cache' | 'firestore' | 'site' | 'bundled';
+export type ReleaseSource = 'cache' | 'firestore';
 
-// at an equal version the cheapest source wins: already decoded on the device, then the
-// local file, then the Firestore cache, and only last the network
-const SOURCE_ORDER: ReleaseSource[] = ['cache', 'bundled', 'firestore', 'site'];
+// at an equal version what is already decoded on the device wins
+const SOURCE_ORDER: ReleaseSource[] = ['cache', 'firestore'];
 
-export const SOURCE_LABEL: Record<ReleaseSource, string> = {
-  cache: 'Gerät',
-  firestore: 'Sync',
-  site: 'Website',
-  bundled: 'App',
-};
 
 export interface ReleaseInfo {
   variant: Variant;
@@ -49,6 +46,13 @@ export interface ReleaseInfo {
   /** payload carried inline, as JSON text - how the Firestore document ships a model */
   sceneJson?: string;
   roomsJson?: string;
+  /**
+   * The house file the scene was built from (format reno-haus/1), as text or address.
+   * Travels with every release so the export always hands out the source of the model
+   * in use, whichever channel it came through.
+   */
+  sourceJson?: string;
+  sourceUrl?: string;
 }
 
 /**
@@ -75,6 +79,20 @@ export function compareVersions(a: string, b: string): number {
     }
   }
   return 0;
+}
+
+/**
+ * The new number of an old Soll version. Until 09/2026 the Soll was only a copy of the Ist
+ * and its numbers ran up to 0.24; the real Soll starts over at 0.0 and 0.1. So that a
+ * device holding an old copy takes the new model, the old numbers move below the new
+ * ones: 0.23 -> 0.0.23, 0.24 -> 0.0.24 (0.0.23 sorts after 0.0 and before 0.1). Returns
+ * null for a version that is not an old one. 0.0 and 0.1 are left alone: 0.0 is the fresh
+ * start, and 0.1 is the first number of the new Soll.
+ */
+export function legacySollVersion(version: string): string | null {
+  const match = /^0\.(\d+)$/.exec(version);
+  if (!match || Number(match[1]) < 2) return null;
+  return `0.0.${Number(match[1])}`;
 }
 
 export function isNewer(candidate: string, current: string): boolean {
@@ -120,8 +138,7 @@ export type SyncPlan =
 export function planSync(candidates: (ReleaseInfo | null | undefined)[]): SyncPlan | null {
   const best = pickRelease(candidates);
   if (!best) return null;
-  const local = best.source === 'cache' || best.source === 'bundled';
-  return { action: local ? 'keep' : 'download', release: best };
+  return { action: best.source === 'cache' ? 'keep' : 'download', release: best };
 }
 
 const LAYERS = new Set(['KG', 'EG', 'OG', 'DACH', 'GAR']);
@@ -168,7 +185,26 @@ export function validateRooms(doc: unknown): string | null {
     const room = entry as { id?: unknown; name?: unknown; rects?: unknown };
     if (typeof room?.id !== 'string' || !room.id) return `Raum ${index} hat keine id.`;
     if (typeof room.name !== 'string') return `Raum ${index} hat keinen Namen.`;
+    // leer ist erlaubt: ein Soll-Raum ohne Aufmaß hat noch keine Flächen, siehe roomNaming.ts
     if (!Array.isArray(room.rects)) return `Raum ${index} hat keine Flächen.`;
+  }
+  return null;
+}
+
+/** the Ist -> Soll room mapping (roomMap of the Soll house file): every Ist id -> the Soll id it becomes */
+export interface RoomMapDoc {
+  from: Variant;
+  to: Variant;
+  map: Record<string, string>;
+}
+
+export function validateRoomMap(doc: unknown): string | null {
+  if (!doc || typeof doc !== 'object') return 'Die Raumzuordnung ist keine gültige JSON-Struktur.';
+  const map = (doc as { map?: unknown }).map;
+  if (!map || typeof map !== 'object' || Array.isArray(map)) return 'Die Raumzuordnung fehlt.';
+  for (const [id, target] of Object.entries(map as Record<string, unknown>)) {
+    if (!id) return 'Die Raumzuordnung enthält eine leere id.';
+    if (typeof target !== 'string' || !target) return `Die Raumzuordnung für ${id} hat kein Ziel.`;
   }
   return null;
 }
@@ -188,6 +224,8 @@ export interface ReleaseDoc {
   bytes?: number;
   scene?: string;
   rooms?: string | null;
+  /** the house file the scene was built from; null for a scene published on its own */
+  source?: string | null;
   // null, not undefined: the document is merged, so clearing a key has to be written
   sceneUrl?: string | null;
   roomsUrl?: string | null;
@@ -206,6 +244,7 @@ export function releaseFromDoc(variant: Variant, doc: ReleaseDoc | null): Releas
     source: 'firestore',
     sceneJson: typeof doc.scene === 'string' ? doc.scene : undefined,
     roomsJson: typeof doc.rooms === 'string' ? doc.rooms : undefined,
+    sourceJson: typeof doc.source === 'string' ? doc.source : undefined,
     sceneUrl: typeof doc.sceneUrl === 'string' ? doc.sceneUrl : undefined,
     roomsUrl: typeof doc.roomsUrl === 'string' ? doc.roomsUrl : undefined,
   };
@@ -219,6 +258,7 @@ export function releaseToDoc(
   generatedAt: string,
   sceneJson: string,
   roomsJson: string | null,
+  sourceJson: string | null = null,
 ): ReleaseDoc {
   return {
     variant,
@@ -230,6 +270,9 @@ export function releaseToDoc(
     // written even when empty: the document is merged, so leaving the key out would keep
     // the room list of the previous release
     rooms: roomsJson ?? null,
+    // the same for the house file: a scene uploaded without one must not keep the old one,
+    // or the export would hand out a source that does not match the model
+    source: sourceJson,
   };
 }
 
@@ -242,6 +285,6 @@ export function releaseToDoc(
  */
 export const DOC_LIMIT_BYTES = 1_000_000;
 
-export function fitsInDocument(sceneJson: string, roomsJson: string | null): boolean {
-  return sceneJson.length + (roomsJson?.length ?? 0) < DOC_LIMIT_BYTES - 20_000;
+export function fitsInDocument(sceneJson: string, roomsJson: string | null, sourceJson: string | null = null): boolean {
+  return sceneJson.length + (roomsJson?.length ?? 0) + (sourceJson?.length ?? 0) < DOC_LIMIT_BYTES - 20_000;
 }

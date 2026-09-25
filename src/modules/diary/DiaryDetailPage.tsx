@@ -19,7 +19,7 @@ export default function DiaryDetailPage() {
   const { data: photos } = useCollection<Photo>(COL.photos, id ? [where('entryId', '==', id)] : [], [id]);
   const { data: trades } = useCollection<Trade>(COL.trades);
   const { data: phases } = useCollection<Phase>(COL.phases);
-  const { names } = useRooms();
+  const { shortLabels } = useRooms();
   const [lightbox, setLightbox] = useState<number | null>(null);
 
   const ordered = useMemo(() => {
@@ -92,7 +92,7 @@ export default function DiaryDetailPage() {
           {entry.roomIds.length > 0 && (
             <div className="flex gap-2">
               <dt className="text-muted w-28">Räume</dt>
-              <dd>{names(entry.roomIds).join(', ')}</dd>
+              <dd>{shortLabels(entry.roomIds).join(', ')}</dd>
             </div>
           )}
           {tradeNames.length > 0 && (

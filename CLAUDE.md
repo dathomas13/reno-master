@@ -19,15 +19,28 @@ npm run e2e            # Playwright, baut und startet die App selbst
 npm run build          # Produktionsbuild nach dist/
 ```
 
-Modell und Pläne neu erzeugen (Python, nur Standardbibliothek):
+**Das 3D-Modell liegt nur in Firestore** (`meta/model-ist` Bestand, `meta/model-aktuell`
+Stand der Arbeiten – nur zum Anschauen, `meta/model-soll` Plan), nicht im
+Repo und nicht im App-Bündel. Quelle ist die Hausdatei (Format `reno-haus/1`,
+`tools/model/ANLEITUNG-EXTERN.md`), die mit jedem Modell im Dokument steht. Geändert wird
+es in der App: Einstellungen → 3D-Modelle → „Modell exportieren“ / „Modell importieren“;
+die App baut Szene, Räume und Pläne selbst (`src/modules/modelBuild`, Punkt für Punkt
+gleich wie Python). Die Python-Werkzeuge arbeiten auf einem Ordner mit Hausdateien
+(`RENO_HAUS_DIR`, z. B. ein entpackter App-Export; Standard sind die eingefrorenen
+Testdaten in `tools/model/testdata` (Ist v0.27, Soll 0.0.24 mit Technikraum ohne Fläche), gegen die CI und Unit-Tests beide Builder
+halten):
 
 ```bash
-python3 tools/model/build_scene_lite.py --variant ist --version 0.25   # 3D-Szene
+python3 tools/model/hausdatei.py --format ist         # Hausdatei ins kanonische Layout
+python3 tools/model/build_scene_lite.py --variant ist # 3D-Szene, Version aus der Hausdatei
 python3 tools/model/build_rooms.py
 python3 tools/model/build_plans_svg.py
-python3 tools/model/make_manifest.py
-python3 tools/model/check_scene.py public/models/ist.json --against <alte Fassung>
+python3 tools/model/check_source.py                   # Szenen passen zu den Hausdateien (CI)
+python3 tools/model/check_scene.py <neu>.json --against <alte Fassung>
 ```
+
+Eine Modelländerung aus dem Chat geht also so: App-Export anhängen lassen, Hausdatei
+ändern, prüfen, die geänderte Hausdatei zurückgeben – veröffentlicht wird in der App.
 
 `build_scene.py` baut dieselbe Szene aus Volumenkörpern, braucht aber CadQuery (~150 MB).
 Das ist nur für STL (`build_print.py`) und STEP/FreeCAD (`build_cad.py`) nötig – der Viewer
@@ -54,16 +67,19 @@ Firestore mit persistentem lokalem Cache ist die Datenbasis; Lesen läuft immer 
 Suche (`src/search`, Bildschirm `/suche`) baut aus denselben Abfragen einen eigenen Index -
 gefaltet wird beim Aufbau, nicht beim Tippen; Details in `PLAN.md`, Abschnitt 8.9. Dateien (Fotos,
 Belege, Pläne) liegen auf Cloudflare R2 hinter dem Worker in `worker/reno-files.js` und
-gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell und die 2D-Pläne sind generierte Dateien
-unter `public/models` und `public/plans`, erzeugt aus `tools/model`.
+gehen über die eigene Outbox in `src/offline/outbox.ts`. Das 3D-Modell steht in Firestore
+(`meta/model-<variante>`: Szene, Räume, Hausdatei); die 2D-Grundrisse zeichnet die App
+daraus selbst.
 
-**Die Modellversion hängt nicht am App-Build.** `src/data/modelSync.ts` nimmt die höchste
-Fassung, die es erreicht – gebündelt, aus dem Manifest der veröffentlichten Seite, oder
-aus `meta/model-<variante>` in Firestore – prüft sie und legt sie in IndexedDB
-(`src/data/modelStore.ts`). Der Viewer liest über `loadScene`, also offline aus dem Cache.
-Die Entscheidungslogik steht testbar in `src/data/modelRelease.ts`. Veröffentlichen geht
-per `git push` oder ohne Deploy über Einstellungen → 3D-Modelle → „Modell veröffentlichen“
-(Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5).
+**Die Modellversion hängt nicht am App-Build.** `src/data/modelSync.ts` hört (angemeldet)
+auf `meta/model-<variante>`, übernimmt eine höhere Version sofort, prüft sie und legt sie
+in IndexedDB (`src/data/modelStore.ts`). Der Viewer liest über `loadScene`, also offline
+aus diesem Speicher; ein Gerät, das die Datenbank nie erreicht hat, hat kein Modell und
+sagt das. Die Entscheidungslogik steht testbar in `src/data/modelRelease.ts`.
+Veröffentlicht wird nur über „Modell importieren“ (`src/data/modelExchange.ts`); jede
+Veröffentlichung trägt ihre Hausdatei mit, damit der Export immer den Stand in Gebrauch
+herausgibt (Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5). Ohne Anmeldung
+zeigt die App nur die Anmeldeseite.
 
 ## Stand (16.09.2026)
 
@@ -122,6 +138,23 @@ Steht:
   wer weitermachen will, hängt ihn in `PhotoAttach.openCamera` wieder ein.
   Zweiter, unabhängiger Befund: ein `ImageReader` mit `ImageFormat.PRIVATE` an einer laufenden
   Kamera startet dieses Gerät neu – nicht benutzen.
+- **Das Modell liegt nur noch in Firestore** (ab 0.51.0): nicht mehr im Repo, nicht mehr
+  im App-Bündel, keine Ansicht ohne Anmeldung. Umzug abgeschlossen (Ist v0.27, Soll 0.0 =
+  Kopie des Bestands, dann 0.1 mit Technikraum); die Einmal-Knöpfe sind wieder ausgebaut.
+  Alte Soll-Nummern (bis 0.24, nur Kopien des Bestands) heißen jetzt 0.0.x, siehe
+  `legacySollVersion`.
+- **Parallele Sitzungsbranches zusammenführen, bevor gepusht wird.** Seite und APK nehmen
+  den letzten Push, gleich aus welchem Branch: 0.49–0.51 kamen aus einem Branch, der die
+  Raumnamen-Arbeit (0.48.3–0.48.7) eines anderen nicht kannte, und haben sie live
+  überschrieben (behoben in 0.52.0). Vor dem ersten Push in einer Sitzung
+  `git branch -r` und die letzten Releases prüfen.
+- **Das Modell lässt sich ohne Chat bearbeiten** (09/2026): Hausdatei als einzige Quelle,
+  Export als ZIP (Anleitung, `haus-ist.json`, `haus-soll.json`, DXF-Grundrisse), Import
+  mit Prüfung, Änderungsbericht, Vorschau im 3D und Veröffentlichen über Firestore. Die
+  2D-Pläne zeichnet die App ebenfalls aus der Hausdatei (`modelBuild/plansSvg.ts`, byte-gleich
+  zu `build_plans_svg.py`), sie folgen einem Import also sofort. Der Plan dazu ist
+  abgeschlossen; DXF-Import und Änderung per Sprache in der App sind bewusst verworfen
+  (`tools/model/PLAN-MODELL-WORKFLOW.md`).
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
@@ -161,8 +194,14 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   übersteht Absturz, Reload und Neustart, `readDebugLog('<bereich>')` liest zurück. Für
   Vorgänge, die die App mitreißen können, `beginSession`/`endSession` – der nächste Start
   vermerkt dann im Protokoll, dass der vorige nie zu Ende kam.
-- Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen.
+- Räume werden über ihre `id` verknüpft (`roomIds`). Eine vergebene Raum-id nie umbenennen –
+  ändert sich ein Raum wirklich (Zusammenlegung, Teilung, Verschiebung), bekommt er eine neue
+  id in der Soll-Hausdatei (`haus-soll.json`) plus einen Eintrag in deren Umbenennungstabelle
+  `roomMap`, der die alte id auf die neue zeigen lässt. Details und die Einstellung Bestand/Planung dazu in
+  `tools/model/README-MODELL.md`.
 - Eine Modellversion nie wiederverwenden: die App vergleicht sie und ignoriert Gleiches.
+  Sie darf nicht kleiner werden; die einzige Ausnahme (alte Soll-Nummern 0.23/0.24 →
+  0.0.23/0.0.24) ist in `legacySollVersion` erledigt.
 - **Zu jedem Release ein Eintrag in `RELEASE_NOTES.md`** (`## <Version> – <Schlagzeile>`),
   darunter **ein bis drei Stichpunkte, je ein bis zwei Zeilen**. Das ist der Text im
   Update-Banner: was sich für den Benutzer ändert, sonst nichts. Keine Erklärungen, keine
