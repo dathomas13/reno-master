@@ -266,3 +266,17 @@ describe('the Soll house file', () => {
     expect(checkSource(parsed.source).errors.join('\n')).toMatch('kg-gibtsnicht');
   });
 });
+
+describe('the Aktuell variant', () => {
+  it('is a house file like the others and builds', () => {
+    const doc = JSON.parse(read('haus-ist.json'));
+    const text = JSON.stringify({ ...doc, variant: 'aktuell', version: '0.0' });
+    const result = prepareImport({ text, base: null, version: '0.0', today: '2026-09-25' });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.variant).toBe('aktuell');
+      expect(result.scene.meta.version).toBe('0.0');
+      expect(buildPlanSvg(result.source, result.rooms, 'EG', '0.0')).toMatch('Aktuell · Modell v0.0');
+    }
+  });
+});

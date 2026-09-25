@@ -12,9 +12,16 @@
  * Kept free of imports so the logic can be tested without a browser, Firestore or three.
  */
 
-export type Variant = 'ist' | 'soll';
+/**
+ * ist = Bestand (how the house was), aktuell = the current state of the works, soll = Plan
+ * (how it is meant to be). Aktuell is for showing only: forms link entries to Bestand or
+ * Plan rooms, never to Aktuell ones (see RoomsContext).
+ */
+export type Variant = 'ist' | 'aktuell' | 'soll';
 
-export const VARIANTS: Variant[] = ['ist', 'soll'];
+export const VARIANTS: Variant[] = ['ist', 'aktuell', 'soll'];
+
+export const VARIANT_LABEL: Record<Variant, string> = { ist: 'Bestand', aktuell: 'Aktuell', soll: 'Plan' };
 
 /** where a release came from; also the tie breaker when two carry the same version */
 export type ReleaseSource = 'cache' | 'firestore';

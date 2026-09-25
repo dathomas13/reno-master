@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
 import { activeRelease, MODEL_EVENT } from '@/data/models';
-import { VARIANTS, type ReleaseInfo, type Variant } from '@/data/modelRelease';
+import { VARIANT_LABEL, VARIANTS, type ReleaseInfo, type Variant } from '@/data/modelRelease';
 import { readRelease } from '@/data/modelStore';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { ModelExchange } from './ModelExchange';
 
-const VARIANT_LABEL: Record<Variant, string> = { ist: 'Bestand', soll: 'Zielzustand' };
 
 interface Row {
   variant: Variant;
@@ -65,23 +64,23 @@ export function ModelSection({ signedIn }: { signedIn: boolean }) {
         </tbody>
       </table>
 
-      <Field label="Bestand oder Zielzustand">
+      <Field label="Bestand oder Plan">
         <select
           className="field"
           value={defaultVariant}
           onChange={(event) => {
-            const next = event.target.value as Variant;
+            const next = event.target.value as 'ist' | 'soll';
             setDefaultVariant(next);
             saveSettings({ defaultModelVariant: next });
           }}
         >
-          {VARIANTS.map((item) => <option key={item} value={item}>{VARIANT_LABEL[item]}</option>)}
+          {(['ist', 'soll'] as const).map((item) => <option key={item} value={item}>{VARIANT_LABEL[item]}</option>)}
         </select>
       </Field>
       <p className="text-xs text-muted -mt-1 mb-3">
         Gilt für die ganze App: welches 3D-Modell sich öffnet und welche Räume Tagebuch, Kosten,
         Aufgaben, Notizen und Fotos anbieten – im Bestand z. B. Heizung und Öllager, im
-        Zielzustand den Technikraum. Alte Einträge bleiben dabei auffindbar; die Suche findet
+        Plan den Technikraum. Alte Einträge bleiben dabei auffindbar; die Suche findet
         Räume unter allen Namen. Der Umschalter im 3D-Viewer wechselt nur die Ansicht.
       </p>
 

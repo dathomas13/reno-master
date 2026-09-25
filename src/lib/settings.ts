@@ -10,9 +10,10 @@ export interface LocalSettings {
   geminiModel: string;
   ocrEngine: 'auto' | 'mlkit' | 'claude' | 'gemini' | 'off';
   /**
-   * Bestand oder Zielzustand - der eine Schalter für die ganze App: welches 3D-Modell
-   * sich öffnet, und welche Räume Tagebuch, Kosten, Aufgaben, Notizen und Fotos zur
-   * Auswahl anbieten (Bestand: Heizung, Öllager; Zielzustand: Technikraum). Früher gab
+   * Bestand oder Plan - der eine Schalter für die ganze App: welches 3D-Modell sich
+   * öffnet, und welche Räume Tagebuch, Kosten, Aufgaben, Notizen und Fotos zur Auswahl
+   * anbieten (Bestand: Heizung, Öllager; Plan: Technikraum). Aktuell ist nur zum
+   * Anschauen da und hier keine Wahl. Früher gab
    * es dafür einen zweiten Schalter "roomNaming"; zwei Schalter für eine Frage haben
    * nur verwirrt.
    */
@@ -68,7 +69,7 @@ export function loadSettings(): LocalSettings {
   }
 }
 
-/** which room names the forms offer - follows the one Bestand/Zielzustand switch */
+/** which room names the forms offer - follows the one Bestand/Plan switch */
 export function roomNamingOf(settings: Pick<LocalSettings, 'defaultModelVariant'>): 'bestand' | 'planung' {
   return settings.defaultModelVariant === 'soll' ? 'planung' : 'bestand';
 }

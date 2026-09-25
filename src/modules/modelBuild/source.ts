@@ -10,6 +10,10 @@
 
 export const SOURCE_FORMAT = 'reno-haus/1';
 
+/** Bestand, the current state of the works, Plan */
+export type HouseVariant = 'ist' | 'aktuell' | 'soll';
+export const HOUSE_VARIANTS: HouseVariant[] = ['ist', 'aktuell', 'soll'];
+
 export type Floor = 'KG' | 'EG' | 'OG' | 'GAR';
 export type Tag = 'A' | 'B' | 'C';
 export type OpeningKind = 'window' | 'door' | 'passage';
@@ -86,7 +90,7 @@ export interface HouseParams {
 
 export interface HouseSource {
   format: typeof SOURCE_FORMAT;
-  variant: 'ist' | 'soll';
+  variant: HouseVariant;
   version: string;
   note: string;
   info?: string[];
@@ -155,7 +159,7 @@ export function parseSource(text: string): ParseResult {
       errors: [`Das ist keine Hausdatei (format ist ${JSON.stringify(raw.format)}, erwartet "${SOURCE_FORMAT}").`],
     };
   }
-  if (raw.variant !== 'ist' && raw.variant !== 'soll') errors.push('variant muss "ist" oder "soll" sein.');
+  if (!HOUSE_VARIANTS.includes(raw.variant as HouseVariant)) errors.push('variant muss "ist", "aktuell" oder "soll" sein.');
   if (typeof raw.version !== 'string') errors.push('version fehlt.');
 
   const num = (v: unknown, where: string): number => {
@@ -357,7 +361,7 @@ export function parseSource(text: string): ParseResult {
   if (errors.length > 0) return { ok: false, errors };
   const source: HouseSource = {
     format: SOURCE_FORMAT,
-    variant: raw.variant as 'ist' | 'soll',
+    variant: raw.variant as HouseVariant,
     version: String(raw.version),
     note: typeof raw.note === 'string' ? raw.note : '',
     ...(Array.isArray(raw.info) ? { info: raw.info.map(String) } : {}),

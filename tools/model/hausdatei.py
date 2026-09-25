@@ -30,6 +30,8 @@ HERE = pathlib.Path(__file__).resolve().parent
 DATA = pathlib.Path(os.environ.get("RENO_HAUS_DIR") or HERE / "testdata").resolve()
 PLANS = DATA / "plans"
 FORMAT = "reno-haus/1"
+# Bestand, the current state of the works, Plan
+VARIANTS = ("ist", "aktuell", "soll")
 LINE = 140
 
 
@@ -135,6 +137,17 @@ def load(variant: str) -> dict:
     ns.update(tan_roof=tan_roof, roof_z_under=roof_z_under, wall_height=wall_height,
               og_wall_profile=og_wall_profile, garage_roof_z=garage_roof_z)
     return ns
+
+
+def present() -> list:
+    """The variants that have a house file in DATA, in order."""
+    return [v for v in VARIANTS if path_of(v).exists()]
+
+
+def module(variant: str):
+    """The house file as an object with the names haus_model.py provides - any variant."""
+    import types
+    return types.SimpleNamespace(**load(variant))
 
 
 def rooms(variant: str) -> list:

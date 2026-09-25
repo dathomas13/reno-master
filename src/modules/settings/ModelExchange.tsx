@@ -11,10 +11,10 @@ import {
   type PreparedImport,
 } from '@/data/modelExchange';
 import { clearPreview } from '@/data/models';
+import { VARIANT_LABEL } from '@/data/modelRelease';
 import type { ImportResult } from '@/modules/modelBuild';
 import { handOverFile } from '@/platform/shareFile';
 
-const VARIANT_LABEL = { ist: 'Bestand', soll: 'Zielzustand' } as const;
 const SHOWN_CHANGES = 12;
 
 type Built = Extract<ImportResult, { ok: true }>;

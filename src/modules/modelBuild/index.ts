@@ -9,14 +9,14 @@ import { buildScene } from './buildScene';
 import { buildRooms, checkSource, freeWallEnds } from './checks';
 import { diffSources } from './diff';
 import { formatSource } from './format';
-import { parseSource, type HouseSource } from './source';
+import { parseSource, type HouseSource, type HouseVariant } from './source';
 import type { BuiltRooms, BuiltScene } from './types';
 
 export { buildDxf } from './dxf';
 export { buildRooms } from './checks';
 export { buildPlanSvg, FLOOR_LABEL, PLAN_FLOORS, VARIANT_LABEL, type PlanFloor } from './plansSvg';
 export { formatSource } from './format';
-export { parseSource, SOURCE_FORMAT, type HouseSource } from './source';
+export { parseSource, SOURCE_FORMAT, type HouseSource, type HouseVariant } from './source';
 export type { BuiltRooms, BuiltScene } from './types';
 
 export interface ImportInput {
@@ -31,10 +31,10 @@ export interface ImportInput {
 }
 
 export type ImportResult =
-  | { ok: false; errors: string[]; warnings: string[]; variant?: 'ist' | 'soll' }
+  | { ok: false; errors: string[]; warnings: string[]; variant?: HouseVariant }
   | {
     ok: true;
-    variant: 'ist' | 'soll';
+    variant: HouseVariant;
     version: string;
     note: string;
     /** the file as it will be stored and exported again, version filled in */

@@ -8,8 +8,9 @@ Skript oder einen Menschen mit Texteditor. Wer sie gelesen hat, braucht nichts a
 
 ## Kurz gesagt
 
-1. Geändert wird **nur `haus-ist.json`** (Bestand) oder **`haus-soll.json`**
-   (Zielzustand nach der Sanierung). Alle anderen Dateien im ZIP sind Ansichten.
+1. Geändert wird **nur eine der Hausdateien**: `haus-ist.json` (Bestand, wie das Haus
+   war), `haus-aktuell.json` (Aktuell, der Stand der Arbeiten) oder `haus-soll.json`
+   (Plan, wie es werden soll). Alle anderen Dateien im ZIP sind Ansichten.
 2. Zurück kommt **die vollständige Datei**: gültiges JSON, ohne Kommentare, gleicher
    Dateiname.
 3. In der App: Einstellungen → 3D-Modelle → **Modell importieren** → Datei wählen (die
@@ -23,7 +24,8 @@ Skript oder einen Menschen mit Texteditor. Wer sie gelesen hat, braucht nichts a
 |---|---|---|
 | `ANLEITUNG.md` | diese Anleitung | nein |
 | `haus-ist.json` | **Quelle Bestand**: Wände, Öffnungen, Treppen, Räume, Grundmaße | **ja, wenn geändert** |
-| `haus-soll.json` | **Quelle Zielzustand**, am Anfang eine Kopie von Ist | **ja, wenn geändert** |
+| `haus-aktuell.json` | **Quelle Aktuell** – der Stand der Arbeiten, zum Herzeigen | **ja, wenn geändert** |
+| `haus-soll.json` | **Quelle Plan** – der Zielzustand nach der Sanierung | **ja, wenn geändert** |
 | `grundriss-ist.dxf`, `grundriss-soll.dxf` | Grundrisse aller Geschosse für CAD, aus der Hausdatei erzeugt. Ursprung und Einheit wie unten. | nein |
 | `grundriss-ist-KG.svg`, `-EG.svg`, `-OG.svg` (ebenso `soll`) | dieselben Grundrisse als Bild mit Raumnamen und Flächen, für KIs und Menschen ohne CAD | nein |
 
@@ -57,7 +59,7 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
 ```jsonc
 {
   "format": "reno-haus/1",
-  "variant": "ist",                      // "ist" | "soll" - nicht ändern
+  "variant": "ist",                      // "ist" | "aktuell" | "soll" - nicht ändern
   "version": "0.25",                     // Stand des Exports - NICHT ändern, die App vergibt die nächste
   "note": "",                            // HIER kurz eintragen, was sich geändert hat (erscheint in der App)
   "info": ["…"],                         // Herkunft der Maße (Aufmaß, Pläne) - Lesestoff, optional
@@ -186,13 +188,16 @@ Garagendach, Balkongeländer und die Materialien baut die App selbst. Sie lassen
 das Programm geändert werden. Das gehört in einen Chat mit Repo-Zugriff, nicht in die
 Hausdatei.
 
-## Ist oder Soll?
+## Bestand, Aktuell oder Plan?
 
-- **`haus-ist.json` ist das Aufmaß des Bestands.** Nur ändern, wenn das Haus anders
-  gemessen wurde oder ein Umbau schon passiert ist.
-- **`haus-soll.json` ist die Planung.** Wände wegnehmen, versetzen, Türen verschieben,
-  Räume neu aufteilen: alles hier. Beim ersten Mal ist es eine Kopie von Ist. Also Kopie
-  nehmen und ändern.
+- **`haus-ist.json` ist der Bestand** – das Haus, wie es vor der Sanierung war. Nur
+  ändern, wenn es anders gemessen wurde.
+- **`haus-aktuell.json` ist der Stand der Arbeiten.** Was schon abgerissen oder neu gebaut
+  ist, wird hier nachgezogen. Nur zum Anschauen: Tagebuch und Kosten verknüpfen ihre
+  Einträge mit Räumen aus Bestand oder Plan, nicht mit Aktuell. Die Raum-ids übernimmt
+  man deshalb aus dem Bestand (bzw. dem Plan, wo schon umgebaut ist). Keine `roomMap`.
+- **`haus-soll.json` ist der Plan.** Wände wegnehmen, versetzen, Türen verschieben,
+  Räume neu aufteilen: alles hier, mit `roomMap` für zusammengelegte Räume.
 
 ## Typische Aufgaben
 

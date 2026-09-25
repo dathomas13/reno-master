@@ -84,7 +84,7 @@ export function RoomsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // the naming follows the Bestand/Zielzustand switch, a device setting changed on the settings screen while this provider
+  // the naming follows the Bestand/Plan switch, a device setting changed on the settings screen while this provider
   // stays mounted for the rest of the app (App.tsx wraps the whole route tree in it) -
   // without this it would take a reload to see the switch take effect.
   useEffect(() => {

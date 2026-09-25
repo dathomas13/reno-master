@@ -17,7 +17,8 @@ import { isAuthenticated } from '@/firebase/auth';
 const GROUP_LABEL: Record<string, string> = {
   original: 'Originalpläne 1967',
   ist: 'Bestand (aus dem Modell)',
-  soll: 'Zielzustand',
+  aktuell: 'Aktuell (aus dem Modell)',
+  soll: 'Plan (aus dem Modell)',
 };
 
 export default function PlansPage() {
@@ -47,7 +48,7 @@ export default function PlansPage() {
     ...uploaded,
   ];
 
-  const groups = ['original', 'ist', 'soll'] as const;
+  const groups = ['original', 'ist', 'aktuell', 'soll'] as const;
 
   async function upload() {
     if (!draft.file) return;
@@ -168,7 +169,8 @@ export default function PlansPage() {
             >
               <option value="original">Originalplan 1967</option>
               <option value="ist">Bestand</option>
-              <option value="soll">Zielzustand</option>
+              <option value="aktuell">Aktuell</option>
+              <option value="soll">Plan</option>
             </select>
           </Field>
           <Field label="Geschoss">

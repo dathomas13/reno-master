@@ -24,12 +24,13 @@ from xml.sax.saxutils import escape
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import hausdatei  # noqa: E402
 from hausdatei import DATA, PLANS  # noqa: E402
 
 MARGIN = 1100                      # mm left/right/top of the building
 MARGIN_BOTTOM = 2100               # mm below (dimension chain + scale bar)
 FLOOR_LABEL = {"KG": "Kellergeschoss", "EG": "Erdgeschoss", "OG": "Obergeschoss"}
-VARIANT_LABEL = {"ist": "Bestand", "soll": "Zielzustand"}
+VARIANT_LABEL = {"ist": "Bestand", "aktuell": "Aktuell", "soll": "Plan"}
 TAG_FILL = {"A": "var(--wall-a)", "B": "var(--wall-b)", "C": "var(--wall-c)"}
 
 STYLE = """
@@ -205,15 +206,16 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--variant", choices=["ist", "soll", "both"], default="both")
+    ap.add_argument("--variant", choices=[*hausdatei.VARIANTS, "both"], default="both",
+                    help="both = every variant with a house file")
     ap.add_argument("--floors", default="KG,EG,OG")
     args = ap.parse_args()
 
-    variants = ["ist", "soll"] if args.variant == "both" else [args.variant]
+    variants = hausdatei.present() if args.variant == "both" else [args.variant]
     floors = [f.strip() for f in args.floors.split(",") if f.strip()]
     PLANS.mkdir(parents=True, exist_ok=True)
     for variant in variants:
-        model = importlib.import_module("haus_model" if variant == "ist" else "haus_model_soll")
+        model = hausdatei.module(variant)
         rooms_path = DATA / f"rooms-{variant}.json"
         if not rooms_path.exists():
             print(f"{variant}: rooms-{variant}.json missing - run build_rooms.py first")

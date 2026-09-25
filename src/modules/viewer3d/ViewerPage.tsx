@@ -19,7 +19,7 @@ import { lastViewerState, rememberViewerState, type ViewerState } from './viewer
 import { RoomPanel } from './RoomPanel';
 import { activeRelease, clearPreview, loadRoomMap, loadRooms, loadScene, NO_MODEL_MESSAGE, previewOf, type Variant } from '@/data/models';
 import { resolveInVariant } from '@/data/roomNaming';
-import type { ReleaseInfo } from '@/data/modelRelease';
+import { VARIANT_LABEL, VARIANTS, type ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings } from '@/lib/settings';
 import { Spinner } from '@/components/Fields';
@@ -33,7 +33,7 @@ export default function ViewerPage() {
   const renderRef = useRef<(() => void) | null>(null);
 
   const initialVariant = (params.get('variant') as Variant) ?? loadSettings().defaultModelVariant;
-  const [variant, setVariant] = useState<Variant>(initialVariant === 'soll' ? 'soll' : 'ist');
+  const [variant, setVariant] = useState<Variant>(VARIANTS.includes(initialVariant) ? initialVariant : 'ist');
   // how the screen looked when it was last left; null on the very first visit
   const [saved] = useState(() => lastViewerState());
   const [release, setRelease] = useState<ReleaseInfo | null>(null);
@@ -240,7 +240,8 @@ export default function ViewerPage() {
         // or vice versa) - resolveInVariant finds this variant's own room for it.
         const wanted = params.get('raum');
         if (wanted) {
-          const found = resolveInVariant(wanted, variant, rooms.rooms, roomMap.map);
+          // Aktuell has the Bestand's room ids, so it resolves like the Bestand
+          const found = resolveInVariant(wanted, variant === 'soll' ? 'soll' : 'ist', rooms.rooms, roomMap.map);
           if (found) {
             const label = `${found.floor}-Grundriss`;
             const preset2 = VIEW_PRESETS.find((item) => item.label === label);
@@ -249,7 +250,7 @@ export default function ViewerPage() {
             setRoom(found);
           }
         } else if (keptView?.roomId) {
-          const found = resolveInVariant(keptView.roomId, variant, rooms.rooms, roomMap.map);
+          const found = resolveInVariant(keptView.roomId, variant === 'soll' ? 'soll' : 'ist', rooms.rooms, roomMap.map);
           if (found) {
             house.highlightRoom(found.id);
             setRoom(found);
@@ -300,7 +301,7 @@ export default function ViewerPage() {
     });
   }
 
-  // only this view: the Bestand/Zielzustand setting (which also names the rooms in all
+  // only this view: the Bestand/Plan setting (which also names the rooms in all
   // forms) stays as it is - it is changed in the settings, nowhere else
   function switchVariant(next: Variant) {
     setVariant(next);
@@ -324,14 +325,14 @@ export default function ViewerPage() {
       <div className="absolute top-0 inset-x-0 p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pointer-events-none">
         <div className="flex items-center gap-2">
           <div className="flex rounded-xl overflow-hidden border border-line pointer-events-auto">
-            {(['ist', 'soll'] as Variant[]).map((item) => (
+            {VARIANTS.map((item) => (
               <button
                 key={item}
                 type="button"
-                className={`px-4 py-2 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
+                className={`px-3 py-2 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
                 onClick={() => switchVariant(item)}
               >
-                {item === 'ist' ? 'Bestand' : 'Zielzustand'}
+                {VARIANT_LABEL[item]}
               </button>
             ))}
           </div>

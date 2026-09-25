@@ -22,12 +22,11 @@ import {
   type HouseSource,
   type ImportResult,
 } from '@/modules/modelBuild';
-import { compareVersions, VARIANTS, type Variant } from './modelRelease';
+import { compareVersions, VARIANT_LABEL, VARIANTS, type Variant } from './modelRelease';
 import { activeRelease, clearPreview, loadSource, setPreview } from './models';
 import { publishModel, syncAllModels, syncModel } from './modelSync';
 import type { RoomDoc, SceneDoc } from '@/modules/viewer3d/houseScene';
 
-const VARIANT_LABEL: Record<Variant, string> = { ist: 'Bestand', soll: 'Zielzustand' };
 
 export interface ExportArchive {
   name: string;
@@ -124,10 +123,19 @@ export function setPendingImports(next: PreparedImport[]): void {
   pending = next;
 }
 
+function fileVersion(text: string): string | null {
+  try {
+    const version = (JSON.parse(text.replace(/^\uFEFF/, '')) as { version?: unknown }).version;
+    return typeof version === 'string' && /^\d+(\.\d+)*$/.test(version) ? version : null;
+  } catch {
+    return null;
+  }
+}
+
 function variantOf(text: string): Variant | null {
   try {
     const variant = (JSON.parse(text.replace(/^\uFEFF/, '')) as { variant?: unknown }).variant;
-    return variant === 'ist' || variant === 'soll' ? variant : null;
+    return VARIANTS.includes(variant as Variant) ? (variant as Variant) : null;
   } catch {
     return null;
   }
@@ -153,8 +161,12 @@ export async function prepareModelImport(fileName: string, text: string): Promis
     }
     if (active) known.push(active.version);
   }
-  const highest = known.reduce((best, version) => (compareVersions(version, best) > 0 ? version : best), '0');
-  const result = prepareImport({ text, base, version: nextVersion(highest), today: today() });
+  // the very first model of a variant keeps the number its file carries (0.0 for a new
+  // start); after that the app counts on from the highest version it knows
+  const version = known.length > 0
+    ? nextVersion(known.reduce((best, v) => (compareVersions(v, best) > 0 ? v : best), '0'))
+    : fileVersion(text) ?? '0.0';
+  const result = prepareImport({ text, base, version, today: today() });
   const unchanged = result.ok && base !== null && result.changes.length === 0;
   return { fileName, result, unchanged };
 }

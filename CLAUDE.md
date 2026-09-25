@@ -19,7 +19,8 @@ npm run e2e            # Playwright, baut und startet die App selbst
 npm run build          # Produktionsbuild nach dist/
 ```
 
-**Das 3D-Modell liegt nur in Firestore** (`meta/model-ist`, `meta/model-soll`), nicht im
+**Das 3D-Modell liegt nur in Firestore** (`meta/model-ist` Bestand, `meta/model-aktuell`
+Stand der Arbeiten – nur zum Anschauen, `meta/model-soll` Plan), nicht im
 Repo und nicht im App-Bündel. Quelle ist die Hausdatei (Format `reno-haus/1`,
 `tools/model/ANLEITUNG-EXTERN.md`), die mit jedem Modell im Dokument steht. Geändert wird
 es in der App: Einstellungen → 3D-Modelle → „Modell exportieren“ / „Modell importieren“;

@@ -2,8 +2,8 @@
 
 Diese Anleitung richtet sich an den Agenten (oder Menschen), der das Hausmodell ändert.
 
-> **Das Modell liegt nur in der Datenbank** (Firestore, `meta/model-ist` und
-> `meta/model-soll`) – nicht im Repo und nicht in der App. Gepflegt wird es in der App:
+> **Das Modell liegt nur in der Datenbank** (Firestore, `meta/model-ist` = Bestand,
+> `meta/model-aktuell` = Stand der Arbeiten, `meta/model-soll` = Plan) – nicht im Repo und nicht in der App. Gepflegt wird es in der App:
 > Einstellungen → 3D-Modelle → „Modell exportieren“ gibt die Hausdateien (Format
 > `reno-haus/1`, [`ANLEITUNG-EXTERN.md`](ANLEITUNG-EXTERN.md)), „Modell importieren“ nimmt
 > sie geändert zurück, baut Szene, Räume und Pläne auf dem Gerät und veröffentlicht sie.

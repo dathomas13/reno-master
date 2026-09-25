@@ -10,7 +10,7 @@
  * data-room-id on every room area, so rooms are tappable in the plan as in the 3D view.
  */
 import { pyRound } from './pyRound';
-import { alongX, type HouseSource } from './source';
+import { alongX, type HouseSource, type HouseVariant } from './source';
 import type { BuiltRooms } from './types';
 
 export type PlanFloor = 'KG' | 'EG' | 'OG';
@@ -19,7 +19,7 @@ export const PLAN_FLOORS: PlanFloor[] = ['KG', 'EG', 'OG'];
 const MARGIN = 1100; // mm left/right/top of the building
 const MARGIN_BOTTOM = 2100; // mm below (dimension chain + scale bar)
 export const FLOOR_LABEL: Record<PlanFloor, string> = { KG: 'Kellergeschoss', EG: 'Erdgeschoss', OG: 'Obergeschoss' };
-export const VARIANT_LABEL: Record<'ist' | 'soll', string> = { ist: 'Bestand', soll: 'Zielzustand' };
+export const VARIANT_LABEL: Record<HouseVariant, string> = { ist: 'Bestand', aktuell: 'Aktuell', soll: 'Plan' };
 const TAG_FILL: Record<string, string> = { A: 'var(--wall-a)', B: 'var(--wall-b)', C: 'var(--wall-c)' };
 
 const STYLE = `

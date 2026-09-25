@@ -18,6 +18,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import hausdatei  # noqa: E402
 from hausdatei import DATA as MODELS  # noqa: E402
 
 import build_scene_lite  # noqa: E402
@@ -25,9 +26,9 @@ import build_scene_lite  # noqa: E402
 
 def main() -> int:
     bad = 0
-    for variant in ("ist", "soll"):
+    for variant in hausdatei.present():
         committed = json.loads((MODELS / f"{variant}.json").read_text(encoding="utf-8"))
-        m = importlib.import_module("haus_model" if variant == "ist" else "haus_model_soll")
+        m = hausdatei.module(variant)
         meta = committed.get("meta", {})
         if meta.get("version") != m.SOURCE["version"]:
             print(f"{variant}: Szene v{meta.get('version')}, Hausdatei v{m.SOURCE['version']}")

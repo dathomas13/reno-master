@@ -577,14 +577,15 @@ def build(m, variant: str, version: str, note: str) -> dict:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--variant", choices=("ist", "soll"), default="ist")
+    ap.add_argument("--variant", choices=("ist", "aktuell", "soll"), default="ist")
     ap.add_argument("--version", help="model version, always increase it "
                     "(default: the version in the house file)")
     ap.add_argument("--note", help="short note shown in the app (default: from the house file)")
     ap.add_argument("--out", help=f"output file (default {MODELS}/<variant>.json)")
     args = ap.parse_args()
 
-    m = importlib.import_module("haus_model" if args.variant == "ist" else "haus_model_soll")
+    import hausdatei
+    m = hausdatei.module(args.variant)
     version = args.version or m.SOURCE["version"]
     note = m.SOURCE.get("note", "") if args.note is None else args.note
     scene = build(m, args.variant, version, note)

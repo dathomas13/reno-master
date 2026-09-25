@@ -30,6 +30,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import hausdatei  # noqa: E402
 from hausdatei import DATA as MODELS  # noqa: E402
 
 TOL = 2                 # mm - rooms may touch wall faces
@@ -75,9 +76,8 @@ def wall_pieces(wall, openings):
 
 
 def build(variant: str) -> dict:
-    rooms_mod = importlib.import_module("rooms_ist" if variant == "ist" else "rooms_soll")
-    model_mod = importlib.import_module("haus_model" if variant == "ist" else "haus_model_soll")
-    rooms = rooms_mod.ROOMS
+    model_mod = hausdatei.module(variant)
+    rooms = hausdatei.rooms(variant)
 
     problems: list[str] = []
     pending: list[str] = []   # rooms without geometry yet - not a problem, just noted
@@ -194,10 +194,11 @@ def scene_date(variant: str) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--variant", choices=["ist", "soll", "both"], default="both")
+    ap.add_argument("--variant", choices=[*hausdatei.VARIANTS, "both"], default="both",
+                    help="both = every variant with a house file")
     args = ap.parse_args()
 
-    variants = ["ist", "soll"] if args.variant == "both" else [args.variant]
+    variants = hausdatei.present() if args.variant == "both" else [args.variant]
     for variant in variants:
         try:
             doc = build(variant)
