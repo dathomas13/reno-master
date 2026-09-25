@@ -151,8 +151,9 @@ Steht:
   Export als ZIP (Anleitung, `haus-ist.json`, `haus-soll.json`, DXF-Grundrisse), Import
   mit Prüfung, Änderungsbericht, Vorschau im 3D und Veröffentlichen über Firestore. Die
   2D-Pläne zeichnet die App ebenfalls aus der Hausdatei (`modelBuild/plansSvg.ts`, byte-gleich
-  zu `build_plans_svg.py`), sie folgen einem Import also sofort. Offen laut
-  `tools/model/PLAN-MODELL-WORKFLOW.md`: DXF-Import, Änderung per Sprache in der App (Stufe 6).
+  zu `build_plans_svg.py`), sie folgen einem Import also sofort. Der Plan dazu ist
+  abgeschlossen; DXF-Import und Änderung per Sprache in der App sind bewusst verworfen
+  (`tools/model/PLAN-MODELL-WORKFLOW.md`).
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

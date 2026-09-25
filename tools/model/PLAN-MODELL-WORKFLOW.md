@@ -12,8 +12,11 @@ Testdaten in `tools/model/testdata/`. Stufe 5 (Rückweg ins Repo) hat sich damit
 Was unten über gebündelte Dateien und `git push` steht, ist Geschichte.
 
 **Stand der Umsetzung (App 0.50.0):** Stufen 0 bis 3 sind fertig, von Stufe 4 der
-DXF-Export. Offen sind der DXF-Import, Stufe 5 als Werkzeug (heute nur als Regel in
-`README-MODELL.md`, Abschnitt 5) und Stufe 6.
+DXF-Export. **Der Plan ist damit abgeschlossen (09/2026).** Bewusst verworfen: der
+DXF-Import (ein Aufmaß aus dem CAD übersetzt eine KI mit dem Export-ZIP in die
+Hausdatei) und Stufe 6 (Änderung per Sprache in der App – bräuchte einen kostenpflichtigen
+Claude-Schlüssel, das Beleg-Auslesen läuft mit einem kostenlosen Gemini-Modell). Stufe 5
+hat sich mit „Modell nur in der Datenbank“ erledigt.
 Abweichungen vom Plan: Die Hausdateien liegen direkt unter `public/models/` statt unter
 `tools/model/source/`, damit es nur eine Kopie gibt. Gebaut wird im Hauptthread (0,2 s
 am Rechner), ein Web Worker war dafür nicht nötig. Die Pläne (Stufe 3) zeichnet
