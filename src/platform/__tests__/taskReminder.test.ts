@@ -48,6 +48,38 @@ describe('task reminder notifications', () => {
     });
   });
 
+  it('applies overlapping plans one after the other, so the newer one stands', async () => {
+    const standing = new Set<number>();
+    let slow = true;
+    const api = {
+      // the first run stalls before it reads the pending alarms, like a busy bridge
+      registerActionTypes: vi.fn(async () => {
+        if (!slow) return;
+        slow = false;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }),
+      getPending: vi.fn(async () => ({ notifications: [...standing].map((id) => ({ id })) })),
+      cancel: vi.fn(async ({ notifications }: { notifications: { id: number }[] }) => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        notifications.forEach(({ id }) => standing.delete(id));
+      }),
+      schedule: vi.fn(async ({ notifications }: { notifications: { id: number }[] }) => {
+        notifications.forEach(({ id }) => standing.add(id));
+      }),
+      addListener: vi.fn(),
+    };
+    setLocalNotifications(api);
+    standing.add(8_000_123);
+
+    const first = applyTaskReminderPlan([]);
+    const second = applyTaskReminderPlan([
+      { id: 8_000_123, taskId: 'task-1', title: 'Mittag', at: new Date('2099-09-25T12:00:00') },
+    ]);
+    await Promise.all([first, second]);
+
+    expect([...standing]).toEqual([8_000_123]);
+  });
+
   it('still schedules reminders when registering the done action fails', async () => {
     const api = {
       registerActionTypes: vi.fn().mockRejectedValue(new Error('Aktion nicht verfügbar')),

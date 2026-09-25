@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.56.1 – Aufgaben-Erinnerungen kommen pünktlich
+
+- Erinnerungen an Aufgaben kommen jetzt auf die Minute, auch wenn sie lange vorher gestellt
+  wurden – bisher konnten sie sich um Stunden verspäten.
+- Die Diagnose der Abend-Erinnerung zählt auch die gestellten Aufgaben-Wecker.
+
 ## 0.56.0 – Drittes Modell „Aktuell“, Zielzustand heißt jetzt „Plan“
 
 - Neben Bestand und Plan gibt es das Modell „Aktuell“ für den Stand der Arbeiten – im

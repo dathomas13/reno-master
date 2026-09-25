@@ -172,6 +172,8 @@ export interface ReminderDiagnosis {
   pending: number;
   /** the day of the earliest of them */
   nextPending: string | null;
+  /** how many task reminders stand in the system */
+  taskPending?: number;
   /** what went wrong, if anything did */
   error?: string;
 }
@@ -205,7 +207,7 @@ export function describeDiagnosis(diagnosis: ReminderDiagnosis): string[] {
 
   if (diagnosis.mode === 'native') {
     if (diagnosis.exactAlarms === 'ungenau') {
-      lines.push('Weckzeit: nur ungefähr – die Erinnerung kann ein paar Minuten später kommen.');
+      lines.push('Weckzeit: nur ungefähr – eine Erinnerung kann um Stunden später kommen.');
     } else if (diagnosis.exactAlarms === 'erlaubt') {
       lines.push('Weckzeit: auf die Minute genau.');
     }
@@ -216,6 +218,9 @@ export function describeDiagnosis(diagnosis: ReminderDiagnosis): string[] {
             diagnosis.nextPending ? `, der nächste für den ${formatDate(diagnosis.nextPending)}` : ''
           }.`,
     );
+    if (diagnosis.taskPending !== undefined) {
+      lines.push(`Aufgaben-Wecker: ${diagnosis.taskPending === 0 ? 'keine' : diagnosis.taskPending}.`);
+    }
   }
 
   if (diagnosis.error) lines.push(`Fehler: ${diagnosis.error}`);

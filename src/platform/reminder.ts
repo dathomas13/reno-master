@@ -43,6 +43,7 @@ import {
   type ReminderDiagnosis,
   type ReminderInput,
 } from './reminderPlan';
+import { isTaskReminderId } from './taskReminderPlan';
 
 const LAST_SHOWN_KEY = 'reno.reminder.lastShown';
 
@@ -357,11 +358,13 @@ export async function reminderDiagnosis(): Promise<ReminderDiagnosis> {
   try {
     const pending = await withDeadline(local.getPending());
     const days = pending.notifications
+      .filter(({ id }) => isReminderId(id) && id !== TEST_REMINDER_ID)
       .map(({ id }) => dateOfReminderId(id))
       .filter((day): day is string => day !== null)
       .sort();
     diagnosis.pending = days.length;
     diagnosis.nextPending = days[0] ?? null;
+    diagnosis.taskPending = pending.notifications.filter(({ id }) => isTaskReminderId(id)).length;
   } catch (error) {
     diagnosis.error ??= messageOf(error);
   }

@@ -157,7 +157,7 @@ jobs:
         run: |
           set -e
           manifest=android/app/src/main/AndroidManifest.xml
-          for permission in CAMERA POST_NOTIFICATIONS READ_MEDIA_IMAGES READ_EXTERNAL_STORAGE REQUEST_INSTALL_PACKAGES READ_CONTACTS; do
+          for permission in CAMERA POST_NOTIFICATIONS READ_MEDIA_IMAGES READ_EXTERNAL_STORAGE REQUEST_INSTALL_PACKAGES READ_CONTACTS USE_EXACT_ALARM SCHEDULE_EXACT_ALARM; do
             grep -q "android.permission.$permission" "$manifest" \
               || { echo "Berechtigung fehlt im Manifest: $permission"; exit 1; }
           done
