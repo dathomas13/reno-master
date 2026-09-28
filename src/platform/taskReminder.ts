@@ -102,7 +102,17 @@ async function hasPermission(local: LocalNotificationsApi, ask: boolean): Promis
   return requested.display === 'granted';
 }
 
-export async function applyTaskReminderPlan(tasks: readonly PlannedTaskReminder[]): Promise<void> {
+// Plans are applied one after the other. Two overlapping runs (the empty list before the
+// first snapshot, then the real one) could otherwise interleave, and the older run would
+// cancel the alarms the newer one had just set.
+let applying: Promise<void> = Promise.resolve();
+
+export function applyTaskReminderPlan(tasks: readonly PlannedTaskReminder[]): Promise<void> {
+  applying = applying.then(() => applyTaskReminderPlanNow(tasks));
+  return applying;
+}
+
+async function applyTaskReminderPlanNow(tasks: readonly PlannedTaskReminder[]): Promise<void> {
   try {
     const local = plugin();
     if (!local) return;

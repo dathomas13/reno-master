@@ -71,6 +71,12 @@ const PERMISSIONS = [
   // for the contact import; the ContactsPlugin brings this too, declared again here like
   // the media permissions above
   '<uses-permission android:name="android.permission.READ_CONTACTS" />',
+  // reminders to the minute. Without one of these Android only sets inexact alarms, and
+  // those may be moved by up to three quarters of the time left: a task reminder set the
+  // day before for noon can come hours late. USE_EXACT_ALARM is
+  // granted on install from Android 13 on; SCHEDULE_EXACT_ALARM covers Android 12.
+  '<uses-permission android:name="android.permission.USE_EXACT_ALARM" />',
+  '<uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />',
   '<uses-permission\n        android:name="android.permission.READ_EXTERNAL_STORAGE"\n        android:maxSdkVersion="32" />',
 ];
 

@@ -196,8 +196,13 @@ describe('describeDiagnosis', () => {
 
   it('warns when the phone only allows rough alarm times', () => {
     expect(describeDiagnosis({ ...base, exactAlarms: 'ungenau' }).join(' | ')).toContain(
-      'ein paar Minuten später',
+      'um Stunden später',
     );
+  });
+
+  it('counts the task alarms separately', () => {
+    expect(describeDiagnosis({ ...base, taskPending: 2 }).join(' | ')).toContain('Aufgaben-Wecker: 2.');
+    expect(describeDiagnosis(base).join(' | ')).not.toContain('Aufgaben-Wecker');
   });
 
   it('says so when the notification part cannot be reached at all', () => {
