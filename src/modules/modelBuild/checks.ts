@@ -170,6 +170,9 @@ export function checkSource(src: HouseSource): CheckResult {
     if (!(d.frontH > 0)) errors.push(`${where}: frontH muss größer als 0 sein.`);
     if (!(d.frontT > 0)) errors.push(`${where}: frontT muss größer als 0 sein.`);
     if (d.overhang < 0) errors.push(`${where}: overhang darf nicht negativ sein.`);
+    if (!(d.sillH > 0 && d.plateH > 0 && d.sillH + d.plateH < d.frontH)) {
+      errors.push(`${where}: sillH und plateH müssen größer als 0 und zusammen kleiner als frontH sein.`);
+    }
     if (!(d.pitch > 0 && d.pitch < p.roofPitch)) {
       errors.push(`${where}: pitch muss zwischen 0 und der Dachneigung (${p.roofPitch}°) liegen.`);
       return;

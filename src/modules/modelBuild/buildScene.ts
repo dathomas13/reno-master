@@ -78,7 +78,7 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
   interface Dormer {
     side: 'N' | 'S'; i0: number; i1: number; x0: number; x1: number; tg: number; hrg: number;
     hsg: number; zW: number; uA: number; uB: number; uK: number; frontT: number; overhang: number;
-    windows: [number, number][]; tag: Confidence;
+    windows: [number, number][]; sillH: number; plateH: number; glass: boolean; tag: Confidence;
   }
   const dormers: Dormer[] = [];
   let hr = 0; let hs = 0; let rb = 0; let spX: number[] = []; let zC = 0; let zPt = 0;
@@ -105,19 +105,29 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       dormers.push({
         side: d.side, i0, i1, x0: spX[i0], x1: spX[i1] + rb, tg, hrg, hsg, zW: zC + d.frontH,
         uA, uB: uA + hrg / (tr - tg), uK: (d.frontH - tg * d.frontT + hrg + hsg - hs) / (tr - tg),
-        frontT: d.frontT, overhang: d.overhang, windows: d.windows, tag: d.tag,
+        frontT: d.frontT, overhang: d.overhang, windows: d.windows, sillH: d.sillH, plateH: d.plateH,
+        glass: d.glass, tag: d.tag,
       });
     }
     clipOuter = [
       ...prism(-ov - 1, p.houseW + 1, -ov - 1, ridge, zOG - 500, zOG - 500, zu(-ov - 1) + hr, zu(ridge) + hr),
       ...prism(-ov - 1, p.houseW + 1, ridge, p.houseD + ov + 1, zOG - 500, zOG - 500, zu(ridge) + hr, zu(p.houseD + ov + 1) + hr),
     ];
-    // inner walls end under the Spitzboden ceiling, which spans between the purlins
+    // inner walls end under the Spitzboden ceiling, which spans between the purlins, and
+    // under the purlins themselves
+    const zHigh = zr(uR) + dzT + 1000;
     underRoofG = solidSub(underRoofG, box(-ov - 1, p.tOut + uPi, p.ogCeil, p.houseW + ov + 1,
-      p.houseD - p.tOut - uPi, zr(uR) + dzT + 1000));
+      p.houseD - p.tOut - uPi, zHigh));
+    for (const side of ['S', 'N'] as const) {
+      underRoofG = solidSub(underRoofG, band(side, -ov - 1, p.houseW + ov + 1, uPn, uPi,
+        zPt - rf.purlinH, zPt - rf.purlinH, zHigh, zHigh));
+    }
     for (const d of dormers) {
-      underRoofG = solidUnion(underRoofG, band(d.side, d.x0, d.x1, 0, d.uA, zOG - 500, zOG - 500,
-        d.zW - d.tg * d.frontT, d.zW + d.tg * (d.uA - d.frontT)));
+      // between the cheeks, behind the front and in front of the purlin only - walls must
+      // not grow into a cheek, the front or the purlin
+      const uEnd = Math.min(d.uA, uPn);
+      underRoofG = solidUnion(underRoofG, band(d.side, d.x0 + rb, d.x1 - rb, d.frontT, uEnd, zOG - 500, zOG - 500,
+        d.zW, d.zW + d.tg * (uEnd - d.frontT)));
     }
   }
   /** underside of the dormer rafters */
@@ -297,7 +307,7 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     for (const [side, name] of [['S', 'Süd'], ['N', 'Nord']] as const) {
       add('DACH', `Sparren ${name}`, 'roof', rf.tag, solidSub(rafters[side], oldCut), true);
       add('DACH', `Mittelpfette ${name}`, 'roof', rf.tag,
-        band(side, 0, p.houseW, uPn, uPi, zPt - rf.purlinH, zPt - rf.purlinH, zPt, zPt), true);
+        band(side, 50, p.houseW - 50, uPn, uPi, zPt - rf.purlinH, zPt - rf.purlinH, zPt, zPt), true);
       const uM = (uPn + uPi) / 2;
       const pb = rf.postB / 2;
       for (const x of rf.posts) {
@@ -308,15 +318,21 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     for (const d of dormers) {
       const { side, x0, x1, frontT: tf } = d;
       const label = `Gaube ${side === 'N' ? 'Nord' : 'Süd'}`;
-      let front = band(side, x0, x1, 0, tf, zC, zC, d.zW, d.zW);
+      // the boundary rafters run on under the front
+      let front = solidSub(band(side, x0, x1, 0, tf, zC, zC, d.zW, d.zW), rafters[side]);
       if (d.windows.length > 0) {
         const total = d.windows.reduce((sum, [wd]) => sum + wd, 0)
           + d.windows.slice(0, -1).reduce((sum, [, gap]) => sum + gap, 0);
         let cx = x0 + rb + (x1 - x0 - 2 * rb - total) / 2;
+        // timber frame: sill on the rafter stubs, plate under the dormer rafters; the openings
+        // between them leave the posts standing
+        const zLo = zC + d.sillH;
+        const zHi = d.zW - d.plateH;
         for (const [wd, gap] of d.windows) {
-          front = solidSub(front, band(side, cx, cx + wd, -10, tf + 10, zOG + 900, zOG + 900, zOG + 2000, zOG + 2000));
-          add('DACH', `Gaubenfenster ${wd}`, 'glass', d.tag,
-            band(side, cx, cx + wd, tf / 2 - 20, tf / 2 + 20, zOG + 900, zOG + 900, zOG + 2000, zOG + 2000));
+          front = solidSub(front, band(side, cx, cx + wd, -10, tf + 10, zLo, zLo, zHi, zHi));
+          if (d.glass) {
+            add('DACH', `Gaubenfenster ${wd}`, 'glass', d.tag, band(side, cx, cx + wd, tf / 2 - 20, tf / 2 + 20, zLo, zLo, zHi, zHi));
+          }
           cx += wd + gap;
         }
       }

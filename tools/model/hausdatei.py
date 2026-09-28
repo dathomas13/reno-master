@@ -95,7 +95,8 @@ def load(variant: str) -> dict:
         post_b=rf.get("postB", 140), tag=rf.get("tag", "B"))
     ns["DORMERS"] = [dict(side=d["side"], rafters=tuple(d["rafters"]), front_h=d["frontH"],
                           front_t=d.get("frontT", 200), pitch=d["pitch"], overhang=d.get("overhang", 0),
-                          windows=[tuple(x) for x in d.get("windows", [])], tag=d.get("tag", "C"))
+                          windows=[tuple(x) for x in d.get("windows", [])], sill_h=d.get("sillH", 120),
+                          plate_h=d.get("plateH", 120), glass=d.get("glass", True), tag=d.get("tag", "C"))
                      for d in doc.get("dormers", [])]
     ns["BALKON"] = dict(doc["balkon"])
     gar = doc["garage"]

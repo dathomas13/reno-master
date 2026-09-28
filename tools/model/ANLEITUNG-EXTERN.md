@@ -117,7 +117,9 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
     { "side": "N", "rafters": [10, 16],     // Seite N|S, von Sparren 10 bis 16 (von Westen gezählt)
       "frontH": 1300, "frontT": 200,        // lichte Höhe der Front über OK Sparren, Frontstärke
       "pitch": 17, "overhang": 150,         // Dachneigung, Überstand vor der Front
-      "windows": [], "tag": "C" }           // Fenster [Breite, Pfosten danach], mittig in der Front
+      "windows": [[1025, 120], [1394, 120], [820, 0]],   // Öffnungen [Breite, Pfosten danach], mittig
+      "sillH": 120, "plateH": 120,          // Schwelle unten, Rähm oben - die Front ist ein Fachwerk
+      "glass": true, "tag": "C" }           // false: Öffnungen noch unverglast
   ],
   "balkon": { "x0": -1300, "x1": 0, "y0": 3035, "y1": 8095, "tag": "A" },
   "garage": { "x": [-8000, -1510], "y": [5100, 12090], "z0": -1360, "hFront": 2600, "hBack": 2300 },

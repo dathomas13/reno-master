@@ -119,11 +119,13 @@ export interface HouseSource {
    * shed dormers over rafters `rafters[0]`…`rafters[1]` (counted from 1, from the west),
    * front `frontT` thick right behind the eave wall, `frontH` clear height above the rafter
    * top there, roof at `pitch` degrees resting on the main rafters, `overhang` beyond the
-   * front; windows [width, gap after] centred in the front
+   * front; the front is a timber frame - sill `sillH` on the rafter stubs, plate `plateH`
+   * under the dormer rafters - and its openings [width, post after] are centred, glazed
+   * unless `glass` is false
    */
   dormers?: {
     side: 'N' | 'S'; rafters: [number, number]; frontH: number; frontT: number; pitch: number;
-    overhang: number; windows: [number, number][]; tag: Tag;
+    overhang: number; windows: [number, number][]; sillH: number; plateH: number; glass: boolean; tag: Tag;
   }[];
   balkon: { x0: number; x1: number; y0: number; y1: number; tag: Tag };
   garage: { x: [number, number]; y: [number, number]; z0: number; hFront: number; hBack: number };
@@ -356,6 +358,7 @@ export function parseSource(text: string): ParseResult {
     const d = isObj(entry) ? entry : {};
     const where = `dormers[${i}]`;
     if (d.side !== 'N' && d.side !== 'S') errors.push(`${where}.side: "N" oder "S" erwartet.`);
+    if (d.glass !== undefined && typeof d.glass !== 'boolean') errors.push(`${where}.glass: true oder false erwartet.`);
     return {
       side: d.side as 'N' | 'S', rafters: pair(d.rafters, `${where}.rafters`),
       frontH: num(d.frontH, `${where}.frontH`),
@@ -363,6 +366,9 @@ export function parseSource(text: string): ParseResult {
       pitch: num(d.pitch, `${where}.pitch`),
       overhang: d.overhang === undefined ? 0 : num(d.overhang, `${where}.overhang`),
       windows: list(d.windows, `${where}.windows`).map((w, k) => pair(w, `${where}.windows[${k}]`)),
+      sillH: d.sillH === undefined ? 120 : num(d.sillH, `${where}.sillH`),
+      plateH: d.plateH === undefined ? 120 : num(d.plateH, `${where}.plateH`),
+      glass: d.glass === undefined ? true : d.glass === true,
       tag: tag(d.tag, where),
     };
   });

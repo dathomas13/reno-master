@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.60.1 – Gaube als Fachwerk, kein Flackern mehr
+
+- Die Gaubenfront ist jetzt ein Holzrahmen mit Schwelle, Rähm und Pfosten, die Öffnungen
+  dürfen noch unverglast sein.
+- Die Seitenwände der Gauben flackern beim Drehen nicht mehr.
+
 ## 0.60.0 – Dachstuhl im 3D-Modell
 
 - Das Dach zeigt jetzt den echten Dachstuhl: Sparren, Mittelpfetten mit ihren Stützen und

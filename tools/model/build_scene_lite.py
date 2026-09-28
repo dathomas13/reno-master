@@ -445,13 +445,21 @@ def build(m, variant: str, version: str, note: str) -> dict:
                             m.Z_OG - 500, m.Z_OG - 500, zu(-ov - 1) + hr, zu(ridge) + hr)
                       + prism(-ov - 1, m.HOUSE_W + 1, ridge, m.HOUSE_D + ov + 1,
                               m.Z_OG - 500, m.Z_OG - 500, zu(ridge) + hr, zu(m.HOUSE_D + ov + 1) + hr))
-        # inner walls end under the Spitzboden ceiling, which spans between the purlins
+        # inner walls end under the Spitzboden ceiling, which spans between the purlins, and
+        # under the purlins themselves
+        z_high = zr(u_r) + dz_t + 1000
         under_roof_g = solid_sub(under_roof_g, box(-ov - 1, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W + ov + 1,
-                                                   m.HOUSE_D - m.T_OUT - u_pi, zr(u_r) + dz_t + 1000))
+                                                   m.HOUSE_D - m.T_OUT - u_pi, z_high))
+        for side in ("S", "N"):
+            under_roof_g = solid_sub(under_roof_g, band(side, -ov - 1, m.HOUSE_W + ov + 1, u_pn, u_pi,
+                                                        z_pt - rf["purlin_h"], z_pt - rf["purlin_h"], z_high, z_high))
         for d in dormers:
+            # between the cheeks, behind the front and in front of the purlin only - walls must
+            # not grow into a cheek, the front or the purlin
+            u_end = min(d["u_a"], u_pn)
             under_roof_g = solid_union(under_roof_g, band(
-                d["side"], d["x0"], d["x1"], 0, d["u_a"], m.Z_OG - 500, m.Z_OG - 500,
-                d["z_w"] - d["tg"] * d["front_t"], d["z_w"] + d["tg"] * (d["u_a"] - d["front_t"])))
+                d["side"], d["x0"] + rb, d["x1"] - rb, d["front_t"], u_end, m.Z_OG - 500, m.Z_OG - 500,
+                d["z_w"], d["z_w"] + d["tg"] * (u_end - d["front_t"])))
 
     def zd(d, u):
         """underside of the dormer rafters"""
@@ -622,7 +630,7 @@ def build(m, variant: str, version: str, note: str) -> dict:
         for side, name in (("S", "Süd"), ("N", "Nord")):
             add("DACH", f"Sparren {name}", "roof", rf["tag"], solid_sub(rafters[side], old_cut), tragend=True)
             add("DACH", f"Mittelpfette {name}", "roof", rf["tag"],
-                band(side, 0, m.HOUSE_W, u_pn, u_pi, z_pt - rf["purlin_h"], z_pt - rf["purlin_h"], z_pt, z_pt),
+                band(side, 50, m.HOUSE_W - 50, u_pn, u_pi, z_pt - rf["purlin_h"], z_pt - rf["purlin_h"], z_pt, z_pt),
                 tragend=True)
             u_m, pb = (u_pn + u_pi) / 2, rf["post_b"] / 2
             for x in rf["posts"]:
@@ -632,16 +640,19 @@ def build(m, variant: str, version: str, note: str) -> dict:
         for d in dormers:
             side, x0, x1, tf = d["side"], d["x0"], d["x1"], d["front_t"]
             label = f'Gaube {"Nord" if side == "N" else "Süd"}'
-            front = band(side, x0, x1, 0, tf, z_c, z_c, d["z_w"], d["z_w"])
+            # the boundary rafters run on under the front
+            front = solid_sub(band(side, x0, x1, 0, tf, z_c, z_c, d["z_w"], d["z_w"]), rafters[side])
             if d["windows"]:
                 total = sum(wd for wd, _ in d["windows"]) + sum(gap for _, gap in d["windows"][:-1])
                 cx = x0 + rb + (x1 - x0 - 2 * rb - total) / 2
+                # Fachwerk: Schwelle auf den Sparrenstummeln, Rähm unter den Gaubensparren,
+                # die Öffnungen dazwischen lassen die Pfosten stehen
+                z_lo, z_hi = z_c + d["sill_h"], d["z_w"] - d["plate_h"]
                 for wd, gap in d["windows"]:
-                    front = solid_sub(front, band(side, cx, cx + wd, -10, tf + 10, m.Z_OG + 900, m.Z_OG + 900,
-                                                  m.Z_OG + 2000, m.Z_OG + 2000))
-                    add("DACH", f"Gaubenfenster {wd}", "glass", d["tag"],
-                        band(side, cx, cx + wd, tf / 2 - 20, tf / 2 + 20, m.Z_OG + 900, m.Z_OG + 900,
-                             m.Z_OG + 2000, m.Z_OG + 2000))
+                    front = solid_sub(front, band(side, cx, cx + wd, -10, tf + 10, z_lo, z_lo, z_hi, z_hi))
+                    if d["glass"]:
+                        add("DACH", f"Gaubenfenster {wd}", "glass", d["tag"],
+                            band(side, cx, cx + wd, tf / 2 - 20, tf / 2 + 20, z_lo, z_lo, z_hi, z_hi))
                     cx += wd + gap
             add("DACH", f"{label} Front", "wall", d["tag"], front)
             for nm, x in (("West", x0), ("Ost", x1 - rb)):
