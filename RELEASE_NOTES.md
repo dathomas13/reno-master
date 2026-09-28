@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.56.2 – Kosten und Belege richtig sortiert
+
+- Kosten und Belege vom selben Tag stehen jetzt zuverlässig nach Eingabe sortiert, das
+  zuletzt erfasste oben.
+
 ## 0.56.1 – Aufgaben-Erinnerungen kommen pünktlich
 
 - Erinnerungen an Aufgaben kommen jetzt auf die Minute, auch wenn sie lange vorher gestellt
