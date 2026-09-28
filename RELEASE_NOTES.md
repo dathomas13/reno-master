@@ -8,6 +8,21 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.58.2 – Keine falsche Warnung beim Import des Stands der Arbeiten
+
+- Beim Import von „Aktuell“ erscheint die Warnung „Räume entfallen“ nicht mehr – Einträge
+  hängen nie an Räumen dieses Stands, es geht nichts verloren.
+
+## 0.58.1 – Pläne scharf, Raumkarte sichtbar
+
+- Grundrisse bleiben beim Hineinzoomen scharf.
+- Tippt man in einem Plan auf einen Raum, erscheint unten die Raumkarte mit Links zu Einträgen, Fotos, Kosten, Aufgaben und Notizen.
+
+## 0.58.0 – Pläne und Fotos lassen sich zoomen
+
+- Pläne, Fotos und Belege: mit zwei Fingern zoomen, mit einem verschieben, Doppeltipp vergrößert. Dazu Plus- und Minus-Knöpfe.
+- PDF-Pläne öffnen in der gleichen Ansicht mit Seitenwechsel und Zoom.
+
 ## 0.57.1 – Räume im 3D ohne Linien quer über den Boden
 
 - Räume aus mehreren Teilflächen haben im 3D nur noch ihren Außenumriss, keine Linien

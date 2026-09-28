@@ -25,6 +25,7 @@ function istSource(): { text: string; source: HouseSource } {
 
 interface EditDoc {
   note?: string;
+  variant?: string;
   walls: { id: string; x0: number; x1: number; openings: { from: number; to: number }[] }[];
   rooms: { id: string; rects: number[][] }[];
 }
@@ -164,6 +165,20 @@ describe('prepareImport', () => {
     const result = prepareImport({ text, base, version: '0.26', today: '2026-09-24' });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.removedRoomIds).toEqual(['eg-speise']);
+  });
+
+  it('does not ask for confirmation when the Aktuell state drops a room', () => {
+    const { source: ist } = istSource();
+    const base = { ...ist, variant: 'aktuell' as const };
+    const text = edited((doc) => {
+      doc.variant = 'aktuell';
+      doc.rooms = doc.rooms.filter((r) => r.id !== 'eg-speise');
+    });
+    const result = prepareImport({ text, base, version: '0.1', today: '2026-09-28' });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.removedRoomIds).toEqual([]);
+    expect(result.changes.join('\n')).toMatch('Raum entfernt: eg-speise');
   });
 
   it('warns when the file is based on an older version than the one in use', () => {
