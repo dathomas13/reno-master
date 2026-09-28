@@ -144,30 +144,58 @@ export function checkSource(src: HouseSource): CheckResult {
   }
 
   const g = src.gaube;
-  if (!(g.x0 < g.x1)) errors.push('gaube: x0 muss kleiner als x1 sein.');
-  const n = src.gaubeNord;
-  if (n) {
-    if (!(n.x0 < n.x1)) errors.push('gaubeNord: x0 muss kleiner als x1 sein.');
-    else if (!(n.cheek[0] + n.cheek[1] < n.x1 - n.x0)) errors.push('gaubeNord: die Wangen sind breiter als die Gaube.');
-    if (!(n.frontH > 0)) errors.push('gaubeNord: frontH muss größer als 0 sein.');
-    if (!(n.frontT > 0)) errors.push('gaubeNord: frontT muss größer als 0 sein.');
-    if (n.overhang < 0) errors.push('gaubeNord: overhang darf nicht negativ sein.');
-    if (!(n.pitch > 0 && n.pitch < p.roofPitch)) {
-      errors.push(`gaubeNord: pitch muss zwischen 0 und der Dachneigung (${p.roofPitch}°) liegen.`);
-    } else {
-      // same numbers as buildScene: where the dormer roof meets the main roof
-      const tanR = Math.tan(p.roofPitch * Math.PI / 180);
-      const tanN = Math.tan(n.pitch * Math.PI / 180);
-      const dzT = p.roofT / Math.cos(p.roofPitch * Math.PI / 180);
-      const dzN = p.roofT / Math.cos(n.pitch * Math.PI / 180);
-      const depth = (n.frontH - tanN * n.frontT - dzT) / (tanR - tanN);
-      if (!(depth > n.frontT)) {
-        errors.push('gaubeNord: das Gaubendach trifft das Hauptdach schon vor der Front – frontH größer oder pitch kleiner wählen.');
-      } else if (p.houseD - p.tOut - depth - dzN / (tanR - tanN) <= p.houseD / 2) {
-        errors.push('gaubeNord: das Gaubendach erreicht das Hauptdach erst hinter dem First – frontH kleiner oder pitch größer wählen.');
-      }
+  if (g && !(g.x0 < g.x1)) errors.push('gaube: x0 muss kleiner als x1 sein.');
+  const rf = src.roofFrame;
+  if (rf) {
+    if (!(Number.isInteger(rf.rafters) && rf.rafters >= 2)) errors.push('roofFrame.rafters: ganze Zahl ab 2 erwartet.');
+    for (const key of ['rafterB', 'rafterH', 'purlinB', 'purlinH', 'postB'] as const) {
+      if (!(rf[key] > 0)) errors.push(`roofFrame.${key} muss größer als 0 sein.`);
+    }
+    if (!(rf.rafterH < p.roofT)) errors.push('roofFrame.rafterH muss kleiner als params.roofT sein (darüber liegt die Dachhaut).');
+    for (const x of rf.posts) {
+      if (!(x > 0 && x < p.houseW)) errors.push(`roofFrame.posts: ${x} liegt außerhalb des Hauses.`);
     }
   }
+  const tanR = Math.tan(p.roofPitch * Math.PI / 180);
+  (src.dormers ?? []).forEach((d, i) => {
+    const where = `dormers[${i}] (Gaube ${d.side === 'N' ? 'Nord' : 'Süd'})`;
+    if (!rf) {
+      errors.push(`${where}: Gauben brauchen einen Dachstuhl (roofFrame).`);
+      return;
+    }
+    const [a, b] = d.rafters;
+    if (!(Number.isInteger(a) && Number.isInteger(b) && a >= 1 && b <= rf.rafters && b - a >= 2)) {
+      errors.push(`${where}: rafters [${a}, ${b}] – Sparrennummern von 1 bis ${rf.rafters}, mindestens einer dazwischen.`);
+    }
+    if (!(d.frontH > 0)) errors.push(`${where}: frontH muss größer als 0 sein.`);
+    if (!(d.frontT > 0)) errors.push(`${where}: frontT muss größer als 0 sein.`);
+    if (d.overhang < 0) errors.push(`${where}: overhang darf nicht negativ sein.`);
+    if (!(d.pitch > 0 && d.pitch < p.roofPitch)) {
+      errors.push(`${where}: pitch muss zwischen 0 und der Dachneigung (${p.roofPitch}°) liegen.`);
+      return;
+    }
+    // same numbers as buildScene: where the dormer rafters rest on the main rafters
+    const tg = Math.tan(d.pitch * Math.PI / 180);
+    const uA = (d.frontH - tg * d.frontT) / (tanR - tg);
+    const uB = uA + rf.rafterH / Math.cos(d.pitch * Math.PI / 180) / (tanR - tg);
+    if (!(uA > d.frontT)) {
+      errors.push(`${where}: das Gaubendach trifft die Sparren schon vor der Front – frontH größer oder pitch kleiner wählen.`);
+    } else if (!(uB < p.houseD / 2 - p.tOut)) {
+      errors.push(`${where}: das Gaubendach erreicht die Sparren erst hinter dem First – frontH kleiner oder pitch größer wählen.`);
+    }
+    if (d.windows.length > 0 && Number.isInteger(a) && Number.isInteger(b)) {
+      const step = (p.houseW - 2 * p.tOut - rf.rafterB) / (rf.rafters - 1);
+      const inner = (b - a) * step - rf.rafterB;
+      const total = d.windows.reduce((sum, [wd]) => sum + wd, 0) + d.windows.slice(0, -1).reduce((sum, [, gap]) => sum + gap, 0);
+      if (total > inner) errors.push(`${where}: die Fenster (${total} mm) sind breiter als die Gaube innen (${Math.round(inner)} mm).`);
+    }
+  });
+  (['N', 'S'] as const).forEach((side) => {
+    const own = (src.dormers ?? []).filter((d) => d.side === side).sort((x, y) => x.rafters[0] - y.rafters[0]);
+    for (let i = 1; i < own.length; i += 1) {
+      if (own[i].rafters[0] < own[i - 1].rafters[1]) errors.push(`dormers: zwei Gauben ${side === 'N' ? 'Nord' : 'Süd'} überlappen sich.`);
+    }
+  });
   if (!(src.garage.x[0] < src.garage.x[1] && src.garage.y[0] < src.garage.y[1])) {
     errors.push('garage: x und y müssen aufsteigend sein.');
   }

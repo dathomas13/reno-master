@@ -94,7 +94,7 @@ export function diffSources(base: HouseSource | null, next: HouseSource): Source
 
   const sections: [keyof HouseSource, string][] = [
     ['stairs', 'Treppen'], ['landings', 'Podeste'], ['slabOpenings', 'Deckenöffnungen'],
-    ['slabExtras', 'Deckenstücke'], ['loggiaParapets', 'Loggia-Brüstungen'], ['gaube', 'Gaube'], ['gaubeNord', 'Nordgaube'],
+    ['slabExtras', 'Deckenstücke'], ['loggiaParapets', 'Loggia-Brüstungen'], ['gaube', 'Gaube'], ['roofFrame', 'Dachstuhl'], ['dormers', 'Gauben'],
     ['balkon', 'Balkon'], ['garage', 'Garage'], ['roomMap', 'Umbenennungstabelle Bestand → Planung'],
   ];
   for (const [key, label] of sections) if (!same(base[key], next[key])) changes.push(`${label} geändert`);

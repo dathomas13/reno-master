@@ -101,19 +101,30 @@ export interface HouseSource {
   slabOpenings: Partial<Record<'EG' | 'OG', [number, number, number, number]>>;
   slabExtras: SourceSlabExtra[];
   loggiaParapets: SourceParapet[];
-  gaube: {
+  /** the old flat dormer on the south side - absent once a roof frame carries dormers */
+  gaube?: {
     x0: number; x1: number; depth: number; wallH: number;
     windows: [number, number][]; cheek: [number, number]; tag: Tag;
   };
   /**
-   * optional shed dormer on the north side: a front wall `frontT` thick right behind the
-   * north wall, standing at Kniestock height with `frontH` clear height inside, roof at
-   * `pitch` degrees resting on the main roof at the back, `overhang` beyond the front
+   * optional timber roof frame: `rafters` rafters `rafterB` × `rafterH`, evenly between the
+   * gable walls, a middle purlin per side whose top is the top of the Spitzboden ceiling,
+   * posts under the purlins at the given x
    */
-  gaubeNord?: {
-    x0: number; x1: number; frontH: number; frontT: number; pitch: number; overhang: number;
-    cheek: [number, number]; tag: Tag;
+  roofFrame?: {
+    rafters: number; rafterB: number; rafterH: number; purlinB: number; purlinH: number;
+    posts: number[]; postB: number; tag: Tag;
   };
+  /**
+   * shed dormers over rafters `rafters[0]`…`rafters[1]` (counted from 1, from the west),
+   * front `frontT` thick right behind the eave wall, `frontH` clear height above the rafter
+   * top there, roof at `pitch` degrees resting on the main rafters, `overhang` beyond the
+   * front; windows [width, gap after] centred in the front
+   */
+  dormers?: {
+    side: 'N' | 'S'; rafters: [number, number]; frontH: number; frontT: number; pitch: number;
+    overhang: number; windows: [number, number][]; tag: Tag;
+  }[];
   balkon: { x0: number; x1: number; y0: number; y1: number; tag: Tag };
   garage: { x: [number, number]; y: [number, number]; z0: number; hFront: number; hBack: number };
   rooms: SourceRoom[];
@@ -311,7 +322,6 @@ export function parseSource(text: string): ParseResult {
     };
   });
 
-  const g = isObj(raw.gaube) ? raw.gaube : (errors.push('gaube fehlt.'), {});
   const pair = (v: unknown, where: string): [number, number] => {
     if (!Array.isArray(v) || v.length !== 2) {
       errors.push(`${where}: [a, b] erwartet.`);
@@ -319,29 +329,43 @@ export function parseSource(text: string): ParseResult {
     }
     return [num(v[0], `${where}[0]`), num(v[1], `${where}[1]`)];
   };
-  const gaube: HouseSource['gaube'] = {
-    x0: num(g.x0, 'gaube.x0'), x1: num(g.x1, 'gaube.x1'), depth: num(g.depth, 'gaube.depth'),
-    wallH: num(g.wallH, 'gaube.wallH'),
-    windows: list(g.windows, 'gaube.windows').map((w, i) => pair(w, `gaube.windows[${i}]`)),
-    cheek: g.cheek === undefined ? [120, 120] : pair(g.cheek, 'gaube.cheek'),
-    tag: tag(g.tag, 'gaube'),
-  };
-  let gaubeNord: HouseSource['gaubeNord'];
-  if (raw.gaubeNord !== undefined) {
-    if (!isObj(raw.gaubeNord)) errors.push('gaubeNord: Objekt erwartet.');
-    else {
-      const n = raw.gaubeNord;
-      gaubeNord = {
-        x0: num(n.x0, 'gaubeNord.x0'), x1: num(n.x1, 'gaubeNord.x1'),
-        frontH: num(n.frontH, 'gaubeNord.frontH'),
-        frontT: n.frontT === undefined ? 200 : num(n.frontT, 'gaubeNord.frontT'),
-        pitch: num(n.pitch, 'gaubeNord.pitch'),
-        overhang: n.overhang === undefined ? 0 : num(n.overhang, 'gaubeNord.overhang'),
-        cheek: n.cheek === undefined ? [120, 120] : pair(n.cheek, 'gaubeNord.cheek'),
-        tag: tag(n.tag, 'gaubeNord'),
-      };
-    }
+  let gaube: HouseSource['gaube'];
+  if (raw.gaube !== undefined) {
+    const g = isObj(raw.gaube) ? raw.gaube : (errors.push('gaube: Objekt erwartet.'), {});
+    gaube = {
+      x0: num(g.x0, 'gaube.x0'), x1: num(g.x1, 'gaube.x1'), depth: num(g.depth, 'gaube.depth'),
+      wallH: num(g.wallH, 'gaube.wallH'),
+      windows: list(g.windows, 'gaube.windows').map((w, i) => pair(w, `gaube.windows[${i}]`)),
+      cheek: g.cheek === undefined ? [120, 120] : pair(g.cheek, 'gaube.cheek'),
+      tag: tag(g.tag, 'gaube'),
+    };
   }
+  let roofFrame: HouseSource['roofFrame'];
+  if (raw.roofFrame !== undefined) {
+    const f = isObj(raw.roofFrame) ? raw.roofFrame : (errors.push('roofFrame: Objekt erwartet.'), {});
+    roofFrame = {
+      rafters: num(f.rafters, 'roofFrame.rafters'), rafterB: num(f.rafterB, 'roofFrame.rafterB'),
+      rafterH: num(f.rafterH, 'roofFrame.rafterH'), purlinB: num(f.purlinB, 'roofFrame.purlinB'),
+      purlinH: num(f.purlinH, 'roofFrame.purlinH'),
+      posts: list(f.posts, 'roofFrame.posts').map((x, i) => num(x, `roofFrame.posts[${i}]`)),
+      postB: f.postB === undefined ? 140 : num(f.postB, 'roofFrame.postB'),
+      tag: f.tag === undefined ? 'B' : tag(f.tag, 'roofFrame'),
+    };
+  }
+  const dormers: NonNullable<HouseSource['dormers']> = list(raw.dormers, 'dormers').map((entry, i) => {
+    const d = isObj(entry) ? entry : {};
+    const where = `dormers[${i}]`;
+    if (d.side !== 'N' && d.side !== 'S') errors.push(`${where}.side: "N" oder "S" erwartet.`);
+    return {
+      side: d.side as 'N' | 'S', rafters: pair(d.rafters, `${where}.rafters`),
+      frontH: num(d.frontH, `${where}.frontH`),
+      frontT: d.frontT === undefined ? 200 : num(d.frontT, `${where}.frontT`),
+      pitch: num(d.pitch, `${where}.pitch`),
+      overhang: d.overhang === undefined ? 0 : num(d.overhang, `${where}.overhang`),
+      windows: list(d.windows, `${where}.windows`).map((w, k) => pair(w, `${where}.windows[${k}]`)),
+      tag: tag(d.tag, where),
+    };
+  });
   const b = isObj(raw.balkon) ? raw.balkon : (errors.push('balkon fehlt.'), {});
   const balkon: HouseSource['balkon'] = {
     x0: num(b.x0, 'balkon.x0'), x1: num(b.x1, 'balkon.x1'), y0: num(b.y0, 'balkon.y0'),
@@ -397,8 +421,9 @@ export function parseSource(text: string): ParseResult {
     slabOpenings,
     slabExtras,
     loggiaParapets,
-    gaube,
-    ...(gaubeNord ? { gaubeNord } : {}),
+    ...(gaube ? { gaube } : {}),
+    ...(roofFrame ? { roofFrame } : {}),
+    ...(dormers.length > 0 ? { dormers } : {}),
     balkon,
     garage,
     rooms,

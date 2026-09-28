@@ -84,15 +84,19 @@ def load(variant: str) -> dict:
     ns["SLAB_OPENINGS"] = {k: tuple(v) for k, v in doc.get("slabOpenings", {}).items()}
     ns["SLAB_EXTRAS"] = [dict(s) for s in doc.get("slabExtras", [])]
     ns["LOGGIA_PARAPETS"] = [dict(s) for s in doc.get("loggiaParapets", [])]
-    g = doc["gaube"]
-    ns["GAUBE"] = dict(x0=g["x0"], x1=g["x1"], depth=g["depth"], wall_h=g["wallH"],
-                       windows=[tuple(x) for x in g["windows"]], cheek=tuple(g["cheek"]),
-                       tag=g.get("tag", "B"))
-    gn = doc.get("gaubeNord")
-    ns["GAUBE_NORD"] = None if gn is None else dict(
-        x0=gn["x0"], x1=gn["x1"], front_h=gn["frontH"], front_t=gn.get("frontT", 200),
-        pitch=gn["pitch"], overhang=gn.get("overhang", 0),
-        cheek=tuple(gn.get("cheek", (120, 120))), tag=gn.get("tag", "C"))
+    g = doc.get("gaube")
+    ns["GAUBE"] = None if g is None else dict(
+        x0=g["x0"], x1=g["x1"], depth=g["depth"], wall_h=g["wallH"],
+        windows=[tuple(x) for x in g["windows"]], cheek=tuple(g["cheek"]), tag=g.get("tag", "B"))
+    rf = doc.get("roofFrame")
+    ns["ROOF_FRAME"] = None if rf is None else dict(
+        rafters=rf["rafters"], rafter_b=rf["rafterB"], rafter_h=rf["rafterH"],
+        purlin_b=rf["purlinB"], purlin_h=rf["purlinH"], posts=list(rf.get("posts", [])),
+        post_b=rf.get("postB", 140), tag=rf.get("tag", "B"))
+    ns["DORMERS"] = [dict(side=d["side"], rafters=tuple(d["rafters"]), front_h=d["frontH"],
+                          front_t=d.get("frontT", 200), pitch=d["pitch"], overhang=d.get("overhang", 0),
+                          windows=[tuple(x) for x in d.get("windows", [])], tag=d.get("tag", "C"))
+                     for d in doc.get("dormers", [])]
     ns["BALKON"] = dict(doc["balkon"])
     gar = doc["garage"]
     ns["GAR_X"], ns["GAR_Y"] = tuple(gar["x"]), tuple(gar["y"])

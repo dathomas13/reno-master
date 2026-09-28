@@ -388,38 +388,74 @@ def build(m, variant: str, version: str, note: str) -> dict:
     ov = m.ROOF_OVERHANG
     dz_t = m.ROOF_T / math.cos(math.radians(m.ROOF_PITCH))
     g = m.GAUBE
-    gtop = m.Z_OG + g["wall_h"]
+    gtop = m.Z_OG + g["wall_h"] if g else 0
 
     # everything below the rafters, plus the dormer volume - the OG walls are cut to it
     under_roof = (prism(-ov - 1, m.HOUSE_W + 1, -ov - 1, ridge,
                         m.Z_OG - 500, m.Z_OG - 500, zu(-ov - 1), zu(ridge))
                   + prism(-ov - 1, m.HOUSE_W + 1, ridge, m.HOUSE_D + ov + 1,
                           m.Z_OG - 500, m.Z_OG - 500, zu(ridge), zu(m.HOUSE_D + ov + 1)))
-    gaube_vol = box(g["x0"], -1, m.Z_OG - 500, g["x1"], g["depth"], gtop + 50)
-    under_roof_g = solid_union(under_roof, gaube_vol)
+    under_roof_g = under_roof
+    if g:
+        under_roof_g = solid_union(under_roof, box(g["x0"], -1, m.Z_OG - 500, g["x1"], g["depth"], gtop + 50))
+    clip_outer = under_roof_g
 
-    # Nordgaube (Schleppgaube): Front innen auf Höhe der Kniestock-Oberkante, direkt hinter
-    # der Nordwand; das Hauptdach davor bleibt unterhalb dieser Höhe als Traufe stehen. Das
-    # Gaubendach liegt hinten auf dem Hauptdach auf: y_a, wo seine Unterkante die Oberkante
-    # des Hauptdachs trifft, y_b, wo auch die Oberkanten zusammenlaufen.
-    n = m.GAUBE_NORD
-    y_in = m.HOUSE_D - m.T_OUT
-    z_k = m.Z_OG + m.KNIESTOCK
-    if n:
-        tan_n = math.tan(math.radians(n["pitch"]))
-        dz_n = m.ROOF_T / math.cos(math.radians(n["pitch"]))
-        y_fi = y_in - n["front_t"]
-        z_f = z_k + n["front_h"]
+    # Dachstuhl: Sparren, Mittelpfetten, Stützen, Dachhaut und Schleppgauben. Alles in u,
+    # dem Abstand von der Innenkante der Traufwand nach innen - Nord und Süd sind gleich.
+    rf = m.ROOF_FRAME
+    dormers = m.DORMERS if rf else []
+    tr = m.tan_roof()
+    z_k = m.Z_OG + m.KNIESTOCK                  # UK Sparren an der Innenkante der Traufwand
+    u_r = ridge - m.T_OUT                        # First
+    u_e = -(m.T_OUT + ov)                        # Traufe, Oberkante Sparren
 
-        def zd(y):
-            return z_f + tan_n * (y_fi - y)
+    def zr(u):
+        return z_k + tr * u
 
-        run = m.tan_roof() - tan_n
-        y_a = y_in - (n["front_h"] - tan_n * n["front_t"] - dz_t) / run
-        y_b = y_a - dz_n / run
-        # only up to the inner face of the north wall - that wall keeps its Kniestock
-        under_roof_g = solid_union(under_roof_g, prism(n["x0"], n["x1"], y_a, y_in,
-                                                       m.Z_OG - 500, m.Z_OG - 500, zd(y_a), zd(y_in)))
+    def band(side, x0, x1, ua, ub, lo_a, lo_b, hi_a, hi_b):
+        """A piece between distances ua < ub from the inner face of the eave wall."""
+        if side == "N":
+            y_in = m.HOUSE_D - m.T_OUT
+            return prism(x0, x1, y_in - ub, y_in - ua, lo_b, lo_a, hi_b, hi_a)
+        return prism(x0, x1, m.T_OUT + ua, m.T_OUT + ub, lo_a, lo_b, hi_a, hi_b)
+
+    if rf:
+        hr = rf["rafter_h"] / math.cos(math.radians(m.ROOF_PITCH))
+        hs = dz_t - hr                           # Dachhaut (Lattung + Deckung) über den Sparren
+        rb = rf["rafter_b"]
+        step = (m.HOUSE_W - 2 * m.T_OUT - rb) / (rf["rafters"] - 1)
+        sp_x = [m.T_OUT + i * step for i in range(rf["rafters"])]
+        z_c = z_k + hr                           # OK Sparren an der Innenkante
+        z_pt = m.OG_CEIL + 200                   # OK Mittelpfette = OK Spitzbodendecke
+        u_seat = (z_pt - z_k) / tr               # UK Sparren erreicht OK Pfette
+        u_pn = u_seat - 70                       # Außenkante Pfette, Kerve 7 cm lang
+        u_pi = u_pn + rf["purlin_b"]
+        u_eb = u_e + rf["rafter_h"] * math.sin(math.radians(m.ROOF_PITCH))   # rechtwinkliger Kopf
+        for d in dormers:
+            i0, i1 = d["rafters"][0] - 1, d["rafters"][1] - 1
+            tg = math.tan(math.radians(d["pitch"]))
+            hrg = rf["rafter_h"] / math.cos(math.radians(d["pitch"]))
+            hsg = (m.ROOF_T - rf["rafter_h"]) / math.cos(math.radians(d["pitch"]))
+            d.update(i0=i0, i1=i1, x0=sp_x[i0], x1=sp_x[i1] + rb, tg=tg, hrg=hrg, hsg=hsg,
+                     z_w=z_c + d["front_h"])
+            d["u_a"] = (d["front_h"] - tg * d["front_t"]) / (tr - tg)
+            d["u_b"] = d["u_a"] + hrg / (tr - tg)
+            d["u_k"] = (d["front_h"] - tg * d["front_t"] + hrg + hsg - hs) / (tr - tg)
+        clip_outer = (prism(-ov - 1, m.HOUSE_W + 1, -ov - 1, ridge,
+                            m.Z_OG - 500, m.Z_OG - 500, zu(-ov - 1) + hr, zu(ridge) + hr)
+                      + prism(-ov - 1, m.HOUSE_W + 1, ridge, m.HOUSE_D + ov + 1,
+                              m.Z_OG - 500, m.Z_OG - 500, zu(ridge) + hr, zu(m.HOUSE_D + ov + 1) + hr))
+        # inner walls end under the Spitzboden ceiling, which spans between the purlins
+        under_roof_g = solid_sub(under_roof_g, box(-ov - 1, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W + ov + 1,
+                                                   m.HOUSE_D - m.T_OUT - u_pi, zr(u_r) + dz_t + 1000))
+        for d in dormers:
+            under_roof_g = solid_union(under_roof_g, band(
+                d["side"], d["x0"], d["x1"], 0, d["u_a"], m.Z_OG - 500, m.Z_OG - 500,
+                d["z_w"] - d["tg"] * d["front_t"], d["z_w"] + d["tg"] * (d["u_a"] - d["front_t"])))
+
+    def zd(d, u):
+        """underside of the dormer rafters"""
+        return d["z_w"] + d["tg"] * (u - d["front_t"])
 
     parts: list[dict] = []
 
@@ -476,12 +512,12 @@ def build(m, variant: str, version: str, note: str) -> dict:
         th = min(w["x1"] - w["x0"], w["y1"] - w["y0"])
         return (0 if w["name"].startswith("Außenwand") else 1 if th >= 240 else 2, -th)
 
-    def build_floor_walls(floor, z0, z1, clip=None):
+    def build_floor_walls(floor, z0, z1, clip=None, clip_out=None):
         done = []
         for w in sorted([w for w in m.WALLS if w["floor"] == floor], key=wall_priority):
             s = wall_solid(w, z0, z1)
             if clip is not None:
-                s = solid_inter(s, clip)
+                s = solid_inter(s, clip_out if w["name"].startswith("Außenwand") else clip)
             for d in done:
                 s = solid_sub(s, d)                   # remove overlaps at crossings
             th = min(w["x1"] - w["x0"], w["y1"] - w["y0"])
@@ -536,7 +572,7 @@ def build(m, variant: str, version: str, note: str) -> dict:
 
     # ------------------------------------------------------------------ OG
     add("OG", "Stahlbetondecke über EG (14 cm)", "slab", "A", slab(m.Z_OG - m.SLAB, m.SLAB_OPENINGS["OG"]))
-    build_floor_walls("OG", m.Z_OG, zu(ridge) + 100, clip=under_roof_g)
+    build_floor_walls("OG", m.Z_OG, zu(ridge) + 100, clip=under_roof_g, clip_out=clip_outer)
     bk = m.BALKON
     add("OG", "Balkon Platte", "slab", bk["tag"],
         box(bk["x0"], bk["y0"], m.Z_OG - 160, bk["x1"], bk["y1"], m.Z_OG))
@@ -546,44 +582,107 @@ def build(m, variant: str, version: str, note: str) -> dict:
     add("OG", "Balkon Geländer", "rail", bk["tag"], rail)
 
     # ------------------------------------------------------------------ Dach + Gaube
-    roof = (prism(0, m.HOUSE_W, -ov, ridge, zu(-ov), zu(ridge), zu(-ov) + dz_t, zu(ridge) + dz_t)
-            + prism(0, m.HOUSE_W, ridge, m.HOUSE_D + ov,
-                    zu(ridge), zu(m.HOUSE_D + ov), zu(ridge) + dz_t, zu(m.HOUSE_D + ov) + dz_t))
-    # Wangenstärken aus der Datenbasis, sonst wie bisher 120
-    ch_w, ch_e = g.get("cheek", (120, 120))
-    roof = solid_sub(roof, box(g["x0"] + ch_w, -ov - 1, m.Z_OG, g["x1"] - ch_e, g["depth"] - 50, gtop))
-    if n:
-        # above the Kniestock only - the eave in front of the dormer stays
-        nw, ne = n["cheek"]
-        roof = solid_sub(roof, box(n["x0"] + nw, y_a, z_k, n["x1"] - ne, m.HOUSE_D + ov + 1, zu(ridge) + dz_t))
-    add("DACH", "Satteldach 36° (Kunstschiefer)", "roof", "A", roof)
-
-    front = box(g["x0"], 0, m.Z_OG, g["x1"], 365, gtop)
-    cx = g["x0"] + ch_w
-    for wd, gap in g["windows"]:
-        front = solid_sub(front, box(cx, -10, m.Z_OG + 900, cx + wd, 400, m.Z_OG + 2000))
-        add("DACH", f"Gaubenfenster {wd}", "glass", g["tag"],
-            box(cx, 160, m.Z_OG + 900, cx + wd, 200, m.Z_OG + 2000))
-        cx += wd + gap
-    add("DACH", "Gaube Frontwand", "wall", g["tag"], solid_sub(front, under_roof))
-    for name, x, t in (("Gaube Wange West", g["x0"], ch_w), ("Gaube Wange Ost", g["x1"] - ch_e, ch_e)):
-        add("DACH", name, "wall", g["tag"],
-            prism(x, x + t, 0, g["depth"], m.Z_OG + m.KNIESTOCK, zu(g["depth"]), gtop + 50, gtop + 50))
-    add("DACH", "Gaubendach", "roof", "C",
-        box(g["x0"] - 200, -300, gtop + 50, g["x1"] + 200, g["depth"] + 200, gtop + 250))
-    if n:
-        add("DACH", "Nordgaube Frontwand", "wall", n["tag"],
-            prism(n["x0"], n["x1"], y_fi, y_in, z_k, z_k, zd(y_fi), zd(y_in)))
-        for name, x, t in (("Nordgaube Wange West", n["x0"], nw), ("Nordgaube Wange Ost", n["x1"] - ne, ne)):
-            add("DACH", name, "wall", n["tag"],
-                prism(x, x + t, y_a, y_fi, zu(y_a) + dz_t, zu(y_fi) + dz_t, zd(y_a), zd(y_fi)))
-        y_end = y_in + n["overhang"]
-        add("DACH", "Nordgaube Dach", "roof", n["tag"], solid_union(
-            prism(n["x0"], n["x1"], y_b, y_a, zu(y_b) + dz_t, zu(y_a) + dz_t, zd(y_b) + dz_n, zd(y_a) + dz_n),
-            prism(n["x0"], n["x1"], y_a, y_end, zd(y_a), zd(y_end), zd(y_a) + dz_n, zd(y_end) + dz_n)))
-    ys_ =m.T_OUT + (m.OG_CEIL - (m.Z_OG + m.KNIESTOCK)) / m.tan_roof() + 100
-    add("DACH", "Holzbalkendecke Spitzboden", "slab", "B",
-        box(m.T_OUT, ys_, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - ys_, m.OG_CEIL + 200))
+    old_cut = []
+    if g:
+        # Wangenstärken aus der Datenbasis, sonst wie bisher 120
+        ch_w, ch_e = g.get("cheek", (120, 120))
+        old_cut = box(g["x0"] + ch_w, -ov - 1, m.Z_OG, g["x1"] - ch_e, g["depth"] - 50, gtop)
+    if not rf:
+        roof = (prism(0, m.HOUSE_W, -ov, ridge, zu(-ov), zu(ridge), zu(-ov) + dz_t, zu(ridge) + dz_t)
+                + prism(0, m.HOUSE_W, ridge, m.HOUSE_D + ov,
+                        zu(ridge), zu(m.HOUSE_D + ov), zu(ridge) + dz_t, zu(m.HOUSE_D + ov) + dz_t))
+        add("DACH", "Satteldach 36° (Kunstschiefer)", "roof", "A", solid_sub(roof, old_cut))
+    else:
+        z_top = zr(u_r) + dz_t + 1000
+        skin, rafters = [], {"N": [], "S": []}
+        for side in ("S", "N"):
+            skin = solid_union(skin, band(side, 0, m.HOUSE_W, u_e, u_r, zr(u_e) + hr, zr(u_r) + hr,
+                                          zr(u_e) + dz_t, zr(u_r) + dz_t))
+            for i, x in enumerate(sp_x):
+                x1 = x + rb
+                inner = [d for d in dormers if d["side"] == side and d["i0"] < i < d["i1"]]
+                sol = band(side, x, x1, u_e, u_eb, zr(u_e) + hr, zr(u_eb), zr(u_e) + hr, zr(u_eb) + hr)
+                if inner:
+                    # ausgewechselt: unten der Stummel durch die Wand, innen waagrecht auf OK
+                    # Sparren abgeschnitten; oben ab 50 cm vor der Pfette bis zum First
+                    u_s = hr / tr
+                    sol = solid_union(sol, band(side, x, x1, u_eb, 0, zr(u_eb), zr(0), zr(u_eb) + hr, z_c))
+                    sol = solid_union(sol, band(side, x, x1, 0, u_s, zr(0), zr(u_s), z_c, z_c))
+                    u_lo = u_pn - 500
+                else:
+                    u_lo = u_eb
+                sol = solid_union(sol, band(side, x, x1, u_lo, u_pn, zr(u_lo), zr(u_pn), zr(u_lo) + hr, zr(u_pn) + hr))
+                sol = solid_union(sol, band(side, x, x1, u_pn, u_seat, z_pt, z_pt, zr(u_pn) + hr, zr(u_seat) + hr))
+                sol = solid_union(sol, band(side, x, x1, u_seat, u_r, zr(u_seat), zr(u_r), zr(u_seat) + hr, zr(u_r) + hr))
+                rafters[side] = solid_union(rafters[side], sol)
+        for d in dormers:
+            skin = solid_sub(skin, band(d["side"], d["x0"], d["x1"], 0, d["u_k"], m.Z_OG, m.Z_OG, z_top, z_top))
+        skin = solid_sub(skin, old_cut)
+        add("DACH", "Dachhaut 36° (Lattung + Kunstschiefer)", "roof", "A", skin)
+        for side, name in (("S", "Süd"), ("N", "Nord")):
+            add("DACH", f"Sparren {name}", "roof", rf["tag"], solid_sub(rafters[side], old_cut), tragend=True)
+            add("DACH", f"Mittelpfette {name}", "roof", rf["tag"],
+                band(side, 0, m.HOUSE_W, u_pn, u_pi, z_pt - rf["purlin_h"], z_pt - rf["purlin_h"], z_pt, z_pt),
+                tragend=True)
+            u_m, pb = (u_pn + u_pi) / 2, rf["post_b"] / 2
+            for x in rf["posts"]:
+                add("OG", "Stütze", "wall", rf["tag"],
+                    band(side, x - pb, x + pb, u_m - pb, u_m + pb, m.Z_OG, m.Z_OG,
+                         z_pt - rf["purlin_h"], z_pt - rf["purlin_h"]), tragend=True)
+        for d in dormers:
+            side, x0, x1, tf = d["side"], d["x0"], d["x1"], d["front_t"]
+            label = f'Gaube {"Nord" if side == "N" else "Süd"}'
+            front = band(side, x0, x1, 0, tf, z_c, z_c, d["z_w"], d["z_w"])
+            if d["windows"]:
+                total = sum(wd for wd, _ in d["windows"]) + sum(gap for _, gap in d["windows"][:-1])
+                cx = x0 + rb + (x1 - x0 - 2 * rb - total) / 2
+                for wd, gap in d["windows"]:
+                    front = solid_sub(front, band(side, cx, cx + wd, -10, tf + 10, m.Z_OG + 900, m.Z_OG + 900,
+                                                  m.Z_OG + 2000, m.Z_OG + 2000))
+                    add("DACH", f"Gaubenfenster {wd}", "glass", d["tag"],
+                        band(side, cx, cx + wd, tf / 2 - 20, tf / 2 + 20, m.Z_OG + 900, m.Z_OG + 900,
+                             m.Z_OG + 2000, m.Z_OG + 2000))
+                    cx += wd + gap
+            add("DACH", f"{label} Front", "wall", d["tag"], front)
+            for nm, x in (("West", x0), ("Ost", x1 - rb)):
+                add("DACH", f"{label} Wange {nm}", "wall", d["tag"],
+                    band(side, x, x + rb, tf, d["u_a"], zr(tf) + hr, zr(d["u_a"]) + hr, zd(d, tf), zd(d, d["u_a"])))
+            ug, ua, ub = -d["overhang"], d["u_a"], d["u_b"]
+            ds = []
+            for i in range(d["i0"], d["i1"] + 1):
+                x, xe = sp_x[i], sp_x[i] + rb
+                sol = band(side, x, xe, ug, 0, zd(d, ug), zd(d, 0), zd(d, ug) + d["hrg"], zd(d, 0) + d["hrg"])
+                sol = solid_union(sol, band(side, x, xe, 0, tf, d["z_w"], d["z_w"], zd(d, 0) + d["hrg"], zd(d, tf) + d["hrg"]))
+                sol = solid_union(sol, band(side, x, xe, tf, ua, zd(d, tf), zd(d, ua), zd(d, tf) + d["hrg"], zd(d, ua) + d["hrg"]))
+                sol = solid_union(sol, band(side, x, xe, ua, ub, zr(ua) + hr, zr(ub) + hr, zd(d, ua) + d["hrg"], zd(d, ub) + d["hrg"]))
+                ds = solid_union(ds, sol)
+            add("DACH", f"{label} Sparren", "roof", d["tag"], ds, tragend=True)
+            uk = d["u_k"]
+            add("DACH", f"{label} Dachhaut", "roof", d["tag"],
+                band(side, x0, x1, ug, uk, zd(d, ug) + d["hrg"], zd(d, uk) + d["hrg"],
+                     zd(d, ug) + d["hrg"] + d["hsg"], zd(d, uk) + d["hrg"] + d["hsg"]))
+    if g:
+        front = box(g["x0"], 0, m.Z_OG, g["x1"], 365, gtop)
+        cx = g["x0"] + ch_w
+        for wd, gap in g["windows"]:
+            front = solid_sub(front, box(cx, -10, m.Z_OG + 900, cx + wd, 400, m.Z_OG + 2000))
+            add("DACH", f"Gaubenfenster {wd}", "glass", g["tag"],
+                box(cx, 160, m.Z_OG + 900, cx + wd, 200, m.Z_OG + 2000))
+            cx += wd + gap
+        add("DACH", "Gaube Frontwand", "wall", g["tag"], solid_sub(front, under_roof))
+        for name, x, t in (("Gaube Wange West", g["x0"], ch_w), ("Gaube Wange Ost", g["x1"] - ch_e, ch_e)):
+            add("DACH", name, "wall", g["tag"],
+                prism(x, x + t, 0, g["depth"], m.Z_OG + m.KNIESTOCK, zu(g["depth"]), gtop + 50, gtop + 50))
+        add("DACH", "Gaubendach", "roof", "C",
+            box(g["x0"] - 200, -300, gtop + 50, g["x1"] + 200, g["depth"] + 200, gtop + 250))
+    if rf:
+        # zwischen den Mittelpfetten
+        add("DACH", "Holzbalkendecke Spitzboden", "slab", "B",
+            box(m.T_OUT, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - m.T_OUT - u_pi, m.OG_CEIL + 200))
+    else:
+        ys_ = m.T_OUT + (m.OG_CEIL - (m.Z_OG + m.KNIESTOCK)) / m.tan_roof() + 100
+        add("DACH", "Holzbalkendecke Spitzboden", "slab", "B",
+            box(m.T_OUT, ys_, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - ys_, m.OG_CEIL + 200))
 
     # ------------------------------------------------------------------ Garage
     done = []

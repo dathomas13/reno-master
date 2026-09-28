@@ -105,15 +105,20 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
   "slabOpenings":   { "EG": [0, 5130, 3615, 7365], "OG": [5015, 6690, 6025, 10050] },  // Treppenaugen [x0,y0,x1,y1]
   "slabExtras":     [ { "floor": "EG", "name": "Loggia Boden", "x0": 8245, "y0": -125, "x1": 12995, "y1": 0, "z0": -140, "tag": "A" } ],
   "loggiaParapets": [],                  // Brüstungen: { x0, y0, x1, y1, h, tag }
-  "gaube":  { "x0": 4840, "x1": 9370, "depth": 2250, "wallH": 2200,
+  "gaube":  { "x0": 4840, "x1": 9370, "depth": 2250, "wallH": 2200,   // optional: alte Flachdachgaube (Bestand)
               "windows": [[1010, 60], [1010, 60], [1010, 60], [1010, 60]],   // [Breite, Pfosten danach]
               "cheek": [175, 135], "tag": "B" },
-  "gaubeNord": { "x0": 6025, "x1": 9370,   // optional: Schleppgaube nach Norden, Außenkanten der Wangen
-                 "frontH": 1300,          // lichte Höhe innen an der Front, ab Kniestock-Oberkante
-                 "frontT": 200,           // Stärke der Front, sie steht direkt hinter der Nordwand
-                 "pitch": 17,             // Dachneigung in Grad, flacher als das Hauptdach
-                 "overhang": 150,         // Dachüberstand vor der Front
-                 "cheek": [120, 135], "tag": "C" },   // Wangenstärken West/Ost
+  "roofFrame": { "rafters": 20,             // optional: Dachstuhl - Sparren gleichmäßig zwischen den Giebelwänden
+                 "rafterB": 100, "rafterH": 160,      // Sparrenquerschnitt; darüber die Dachhaut bis roofT
+                 "purlinB": 180, "purlinH": 270,      // Mittelpfetten, OK Pfette = OK Spitzbodendecke
+                 "posts": [4927.5, 9302.5], "postB": 140,   // Stützen unter beiden Pfetten, Mitte in x
+                 "tag": "B" },
+  "dormers": [                              // optional, nur mit roofFrame: Schleppgauben
+    { "side": "N", "rafters": [10, 16],     // Seite N|S, von Sparren 10 bis 16 (von Westen gezählt)
+      "frontH": 1300, "frontT": 200,        // lichte Höhe der Front über OK Sparren, Frontstärke
+      "pitch": 17, "overhang": 150,         // Dachneigung, Überstand vor der Front
+      "windows": [], "tag": "C" }           // Fenster [Breite, Pfosten danach], mittig in der Front
+  ],
   "balkon": { "x0": -1300, "x1": 0, "y0": 3035, "y1": 8095, "tag": "A" },
   "garage": { "x": [-8000, -1510], "y": [5100, 12090], "z0": -1360, "hFront": 2600, "hBack": 2300 },
 
@@ -190,10 +195,12 @@ nur hochstufen, wenn es wirklich ein Aufmaß gibt.
 
 Dachform (Satteldach, First mittig), die OG-Wände unter der Schräge, Spitzbodendecke,
 Garagendach, Balkongeländer und die Materialien baut die App selbst. Sie lassen sich nur
-über `params`, `gaube`, `gaubeNord`, `balkon` und `garage` beeinflussen. Die Nordgaube
-steht mit ihrer Front innen hinter der Nordwand auf Kniestockhöhe; das Hauptdach davor ist
-dort waagerecht abgeschnitten und bleibt als Traufe stehen. Ihr Dach liegt hinten auf dem
-Hauptdach auf. Für eine andere Dachform muss
+über `params`, `gaube`, `roofFrame`, `dormers`, `balkon` und `garage` beeinflussen.
+Mit `roofFrame` baut die App den Dachstuhl: Sparren mit Kerve auf den Mittelpfetten, durch die
+Traufwand bis zum rechtwinkligen Balkenkopf, Stützen, Dachhaut und die Spitzbodendecke
+zwischen den Pfetten. Eine Schleppgaube steht mit ihrer Front innen hinter der Traufwand auf
+den dort waagrecht abgeschnittenen Sparren; ihre Sparren liegen hinten auf den Hauptsparren
+auf, die Hauptsparren dazwischen sind ausgewechselt. Für eine andere Dachform muss
 das Programm geändert werden. Das gehört in einen Chat mit Repo-Zugriff, nicht in die
 Hausdatei.
 

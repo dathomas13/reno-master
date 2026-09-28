@@ -48,35 +48,80 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
   const ov = p.roofOverhang;
   const dzT = p.roofT / Math.cos(p.roofPitch * RAD);
   const g = src.gaube;
-  const gtop = zOG + g.wallH;
+  const gtop = g ? zOG + g.wallH : 0;
 
   // everything below the rafters, plus the dormer volume - the OG walls are cut to it
   const underRoof: Solid = [
     ...prism(-ov - 1, p.houseW + 1, -ov - 1, ridge, zOG - 500, zOG - 500, zu(-ov - 1), zu(ridge)),
     ...prism(-ov - 1, p.houseW + 1, ridge, p.houseD + ov + 1, zOG - 500, zOG - 500, zu(ridge), zu(p.houseD + ov + 1)),
   ];
-  const gaubeVol = box(g.x0, -1, zOG - 500, g.x1, g.depth, gtop + 50);
-  let underRoofG = solidUnion(underRoof, gaubeVol);
+  let underRoofG = underRoof;
+  if (g) underRoofG = solidUnion(underRoof, box(g.x0, -1, zOG - 500, g.x1, g.depth, gtop + 50));
+  let clipOuter = underRoofG;
 
-  // Nordgaube (shed dormer): front inside, at Kniestock height right behind the north wall;
-  // the main roof in front of it stays below that height as the eave. The dormer roof rests
-  // on the main roof at the back: yA where its underside meets the main roof's top, yB where
-  // the tops meet as well.
-  const n = src.gaubeNord;
-  const yIn = p.houseD - p.tOut;
-  const zK = zOG + p.kniestock;
-  const tanN = n ? Math.tan(n.pitch * RAD) : 0;
-  const dzN = n ? p.roofT / Math.cos(n.pitch * RAD) : 0;
-  const yFi = yIn - (n?.frontT ?? 0);
-  const zF = zK + (n?.frontH ?? 0);
-  const zd = (y: number) => zF + tanN * (yFi - y);
-  const run = tanRoof() - tanN;
-  const yA = n ? yIn - (n.frontH - tanN * n.frontT - dzT) / run : 0;
-  const yB = yA - dzN / run;
-  if (n) {
-    // only up to the inner face of the north wall - that wall keeps its Kniestock
-    underRoofG = solidUnion(underRoofG, prism(n.x0, n.x1, yA, yIn, zOG - 500, zOG - 500, zd(yA), zd(yIn)));
+  // Dachstuhl: rafters, middle purlins, posts, roof skin and shed dormers. Everything in u,
+  // the distance inwards from the inner face of the eave wall - north and south alike.
+  const rf = src.roofFrame;
+  const tr = tanRoof();
+  const zK = zOG + p.kniestock; // rafter underside at the inner face of the eave wall
+  const uR = ridge - p.tOut;
+  const uE = -(p.tOut + ov);
+  const zr = (u: number) => zK + tr * u;
+  const band = (side: 'N' | 'S', x0: number, x1: number, ua: number, ub: number,
+    loA: number, loB: number, hiA: number, hiB: number): Solid => {
+    if (side === 'N') {
+      const yIn = p.houseD - p.tOut;
+      return prism(x0, x1, yIn - ub, yIn - ua, loB, loA, hiB, hiA);
+    }
+    return prism(x0, x1, p.tOut + ua, p.tOut + ub, loA, loB, hiA, hiB);
+  };
+  interface Dormer {
+    side: 'N' | 'S'; i0: number; i1: number; x0: number; x1: number; tg: number; hrg: number;
+    hsg: number; zW: number; uA: number; uB: number; uK: number; frontT: number; overhang: number;
+    windows: [number, number][]; tag: Confidence;
   }
+  const dormers: Dormer[] = [];
+  let hr = 0; let hs = 0; let rb = 0; let spX: number[] = []; let zC = 0; let zPt = 0;
+  let uSeat = 0; let uPn = 0; let uPi = 0; let uEb = 0;
+  if (rf) {
+    hr = rf.rafterH / Math.cos(p.roofPitch * RAD);
+    hs = dzT - hr;
+    rb = rf.rafterB;
+    const step = (p.houseW - 2 * p.tOut - rb) / (rf.rafters - 1);
+    spX = Array.from({ length: rf.rafters }, (_, i) => p.tOut + i * step);
+    zC = zK + hr;
+    zPt = p.ogCeil + 200; // top of the purlin = top of the Spitzboden ceiling
+    uSeat = (zPt - zK) / tr;
+    uPn = uSeat - 70; // outer face of the purlin, birdsmouth 7 cm long
+    uPi = uPn + rf.purlinB;
+    uEb = uE + rf.rafterH * Math.sin(p.roofPitch * RAD); // square-cut rafter head
+    for (const d of src.dormers ?? []) {
+      const i0 = d.rafters[0] - 1;
+      const i1 = d.rafters[1] - 1;
+      const tg = Math.tan(d.pitch * RAD);
+      const hrg = rf.rafterH / Math.cos(d.pitch * RAD);
+      const hsg = (p.roofT - rf.rafterH) / Math.cos(d.pitch * RAD);
+      const uA = (d.frontH - tg * d.frontT) / (tr - tg);
+      dormers.push({
+        side: d.side, i0, i1, x0: spX[i0], x1: spX[i1] + rb, tg, hrg, hsg, zW: zC + d.frontH,
+        uA, uB: uA + hrg / (tr - tg), uK: (d.frontH - tg * d.frontT + hrg + hsg - hs) / (tr - tg),
+        frontT: d.frontT, overhang: d.overhang, windows: d.windows, tag: d.tag,
+      });
+    }
+    clipOuter = [
+      ...prism(-ov - 1, p.houseW + 1, -ov - 1, ridge, zOG - 500, zOG - 500, zu(-ov - 1) + hr, zu(ridge) + hr),
+      ...prism(-ov - 1, p.houseW + 1, ridge, p.houseD + ov + 1, zOG - 500, zOG - 500, zu(ridge) + hr, zu(p.houseD + ov + 1) + hr),
+    ];
+    // inner walls end under the Spitzboden ceiling, which spans between the purlins
+    underRoofG = solidSub(underRoofG, box(-ov - 1, p.tOut + uPi, p.ogCeil, p.houseW + ov + 1,
+      p.houseD - p.tOut - uPi, zr(uR) + dzT + 1000));
+    for (const d of dormers) {
+      underRoofG = solidUnion(underRoofG, band(d.side, d.x0, d.x1, 0, d.uA, zOG - 500, zOG - 500,
+        d.zW - d.tg * d.frontT, d.zW + d.tg * (d.uA - d.frontT)));
+    }
+  }
+  /** underside of the dormer rafters */
+  const zd = (d: Dormer, u: number) => d.zW + d.tg * (u - d.frontT);
 
   const parts: BuiltPrim[] = [];
 
@@ -142,11 +187,12 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     return [...walls].sort((a, b) => rank(a) - rank(b) || thickness(b) - thickness(a));
   };
 
-  const buildFloorWalls = (floor: 'KG' | 'EG' | 'OG', z0: number, z1: number, clip: Solid | null = null) => {
+  const buildFloorWalls = (floor: 'KG' | 'EG' | 'OG', z0: number, z1: number, clip: Solid | null = null,
+    clipOut: Solid | null = null) => {
     const done: Solid[] = [];
     for (const w of byPriority(src.walls.filter((x) => x.floor === floor))) {
       let s = wallSolid(w, z0, z1);
-      if (clip !== null) s = solidInter(s, clip);
+      if (clip !== null) s = solidInter(s, w.name.startsWith('Außenwand') ? (clipOut ?? clip) : clip);
       for (const d of done) s = solidSub(s, d); // remove overlaps at crossings
       const tragend = w.tragend ?? (thickness(w) >= 240 && !w.name.startsWith('Kamin'));
       add(floor, w.name, 'wall', w.tag, s, tragend);
@@ -202,7 +248,7 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
 
   // ------------------------------------------------------------------ OG
   add('OG', 'Stahlbetondecke über EG (14 cm)', 'slab', 'A', slab(zOG - p.slab, src.slabOpenings.OG));
-  buildFloorWalls('OG', zOG, zu(ridge) + 100, underRoofG);
+  buildFloorWalls('OG', zOG, zu(ridge) + 100, underRoofG, clipOuter);
   const bk = src.balkon;
   add('OG', 'Balkon Platte', 'slab', bk.tag, box(bk.x0, bk.y0, zOG - 160, bk.x1, bk.y1, zOG));
   let rail = box(bk.x0, bk.y0, zOG, bk.x0 + 60, bk.y1, zOG + 1000);
@@ -211,44 +257,116 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
   add('OG', 'Balkon Geländer', 'rail', bk.tag, rail);
 
   // ------------------------------------------------------------------ Dach + Gaube
-  let roof: Solid = [
-    ...prism(0, p.houseW, -ov, ridge, zu(-ov), zu(ridge), zu(-ov) + dzT, zu(ridge) + dzT),
-    ...prism(0, p.houseW, ridge, p.houseD + ov, zu(ridge), zu(p.houseD + ov), zu(ridge) + dzT, zu(p.houseD + ov) + dzT),
-  ];
-  const [chW, chE] = g.cheek;
-  roof = solidSub(roof, box(g.x0 + chW, -ov - 1, zOG, g.x1 - chE, g.depth - 50, gtop));
-  const [nW, nE] = n?.cheek ?? [120, 120];
-  // above the Kniestock only - the eave in front of the dormer stays
-  if (n) roof = solidSub(roof, box(n.x0 + nW, yA, zK, n.x1 - nE, p.houseD + ov + 1, zu(ridge) + dzT));
-  add('DACH', 'Satteldach 36° (Kunstschiefer)', 'roof', 'A', roof);
-
-  let front = box(g.x0, 0, zOG, g.x1, 365, gtop);
-  let cx = g.x0 + chW;
-  for (const [wd, gap] of g.windows) {
-    front = solidSub(front, box(cx, -10, zOG + 900, cx + wd, 400, zOG + 2000));
-    add('DACH', `Gaubenfenster ${wd}`, 'glass', g.tag, box(cx, 160, zOG + 900, cx + wd, 200, zOG + 2000));
-    cx += wd + gap;
-  }
-  add('DACH', 'Gaube Frontwand', 'wall', g.tag, solidSub(front, underRoof));
-  for (const [name, x, t] of [['Gaube Wange West', g.x0, chW], ['Gaube Wange Ost', g.x1 - chE, chE]] as const) {
-    add('DACH', name, 'wall', g.tag,
-      prism(x, x + t, 0, g.depth, zOG + p.kniestock, zu(g.depth), gtop + 50, gtop + 50));
-  }
-  add('DACH', 'Gaubendach', 'roof', 'C', box(g.x0 - 200, -300, gtop + 50, g.x1 + 200, g.depth + 200, gtop + 250));
-  if (n) {
-    add('DACH', 'Nordgaube Frontwand', 'wall', n.tag, prism(n.x0, n.x1, yFi, yIn, zK, zK, zd(yFi), zd(yIn)));
-    for (const [name, x, t] of [['Nordgaube Wange West', n.x0, nW], ['Nordgaube Wange Ost', n.x1 - nE, nE]] as const) {
-      add('DACH', name, 'wall', n.tag,
-        prism(x, x + t, yA, yFi, zu(yA) + dzT, zu(yFi) + dzT, zd(yA), zd(yFi)));
+  let oldCut: Solid = [];
+  const [chW, chE] = g?.cheek ?? [120, 120];
+  if (g) oldCut = box(g.x0 + chW, -ov - 1, zOG, g.x1 - chE, g.depth - 50, gtop);
+  if (!rf) {
+    const roof: Solid = [
+      ...prism(0, p.houseW, -ov, ridge, zu(-ov), zu(ridge), zu(-ov) + dzT, zu(ridge) + dzT),
+      ...prism(0, p.houseW, ridge, p.houseD + ov, zu(ridge), zu(p.houseD + ov), zu(ridge) + dzT, zu(p.houseD + ov) + dzT),
+    ];
+    add('DACH', 'Satteldach 36° (Kunstschiefer)', 'roof', 'A', solidSub(roof, oldCut));
+  } else {
+    const zTop = zr(uR) + dzT + 1000;
+    let skin: Solid = [];
+    const rafters: Record<'N' | 'S', Solid> = { N: [], S: [] };
+    for (const side of ['S', 'N'] as const) {
+      skin = solidUnion(skin, band(side, 0, p.houseW, uE, uR, zr(uE) + hr, zr(uR) + hr, zr(uE) + dzT, zr(uR) + dzT));
+      spX.forEach((x, i) => {
+        const x1 = x + rb;
+        const inner = dormers.some((d) => d.side === side && d.i0 < i && i < d.i1);
+        let sol = band(side, x, x1, uE, uEb, zr(uE) + hr, zr(uEb), zr(uE) + hr, zr(uEb) + hr);
+        let uLo = uEb;
+        if (inner) {
+          // trimmed: below the stub through the wall, cut flat at rafter top inside;
+          // above from 50 cm in front of the purlin up to the ridge
+          const uS = hr / tr;
+          sol = solidUnion(sol, band(side, x, x1, uEb, 0, zr(uEb), zr(0), zr(uEb) + hr, zC));
+          sol = solidUnion(sol, band(side, x, x1, 0, uS, zr(0), zr(uS), zC, zC));
+          uLo = uPn - 500;
+        }
+        sol = solidUnion(sol, band(side, x, x1, uLo, uPn, zr(uLo), zr(uPn), zr(uLo) + hr, zr(uPn) + hr));
+        sol = solidUnion(sol, band(side, x, x1, uPn, uSeat, zPt, zPt, zr(uPn) + hr, zr(uSeat) + hr));
+        sol = solidUnion(sol, band(side, x, x1, uSeat, uR, zr(uSeat), zr(uR), zr(uSeat) + hr, zr(uR) + hr));
+        rafters[side] = solidUnion(rafters[side], sol);
+      });
     }
-    const yEnd = yIn + n.overhang;
-    add('DACH', 'Nordgaube Dach', 'roof', n.tag, solidUnion(
-      prism(n.x0, n.x1, yB, yA, zu(yB) + dzT, zu(yA) + dzT, zd(yB) + dzN, zd(yA) + dzN),
-      prism(n.x0, n.x1, yA, yEnd, zd(yA), zd(yEnd), zd(yA) + dzN, zd(yEnd) + dzN)));
+    for (const d of dormers) skin = solidSub(skin, band(d.side, d.x0, d.x1, 0, d.uK, zOG, zOG, zTop, zTop));
+    skin = solidSub(skin, oldCut);
+    add('DACH', 'Dachhaut 36° (Lattung + Kunstschiefer)', 'roof', 'A', skin);
+    for (const [side, name] of [['S', 'Süd'], ['N', 'Nord']] as const) {
+      add('DACH', `Sparren ${name}`, 'roof', rf.tag, solidSub(rafters[side], oldCut), true);
+      add('DACH', `Mittelpfette ${name}`, 'roof', rf.tag,
+        band(side, 0, p.houseW, uPn, uPi, zPt - rf.purlinH, zPt - rf.purlinH, zPt, zPt), true);
+      const uM = (uPn + uPi) / 2;
+      const pb = rf.postB / 2;
+      for (const x of rf.posts) {
+        add('OG', 'Stütze', 'wall', rf.tag,
+          band(side, x - pb, x + pb, uM - pb, uM + pb, zOG, zOG, zPt - rf.purlinH, zPt - rf.purlinH), true);
+      }
+    }
+    for (const d of dormers) {
+      const { side, x0, x1, frontT: tf } = d;
+      const label = `Gaube ${side === 'N' ? 'Nord' : 'Süd'}`;
+      let front = band(side, x0, x1, 0, tf, zC, zC, d.zW, d.zW);
+      if (d.windows.length > 0) {
+        const total = d.windows.reduce((sum, [wd]) => sum + wd, 0)
+          + d.windows.slice(0, -1).reduce((sum, [, gap]) => sum + gap, 0);
+        let cx = x0 + rb + (x1 - x0 - 2 * rb - total) / 2;
+        for (const [wd, gap] of d.windows) {
+          front = solidSub(front, band(side, cx, cx + wd, -10, tf + 10, zOG + 900, zOG + 900, zOG + 2000, zOG + 2000));
+          add('DACH', `Gaubenfenster ${wd}`, 'glass', d.tag,
+            band(side, cx, cx + wd, tf / 2 - 20, tf / 2 + 20, zOG + 900, zOG + 900, zOG + 2000, zOG + 2000));
+          cx += wd + gap;
+        }
+      }
+      add('DACH', `${label} Front`, 'wall', d.tag, front);
+      for (const [nm, x] of [['West', x0], ['Ost', x1 - rb]] as const) {
+        add('DACH', `${label} Wange ${nm}`, 'wall', d.tag,
+          band(side, x, x + rb, tf, d.uA, zr(tf) + hr, zr(d.uA) + hr, zd(d, tf), zd(d, d.uA)));
+      }
+      const ug = -d.overhang;
+      const { uA: ua, uB: ub, hrg, hsg } = d;
+      let ds: Solid = [];
+      for (let i = d.i0; i <= d.i1; i += 1) {
+        const x = spX[i];
+        const xe = spX[i] + rb;
+        let sol = band(side, x, xe, ug, 0, zd(d, ug), zd(d, 0), zd(d, ug) + hrg, zd(d, 0) + hrg);
+        sol = solidUnion(sol, band(side, x, xe, 0, tf, d.zW, d.zW, zd(d, 0) + hrg, zd(d, tf) + hrg));
+        sol = solidUnion(sol, band(side, x, xe, tf, ua, zd(d, tf), zd(d, ua), zd(d, tf) + hrg, zd(d, ua) + hrg));
+        sol = solidUnion(sol, band(side, x, xe, ua, ub, zr(ua) + hr, zr(ub) + hr, zd(d, ua) + hrg, zd(d, ub) + hrg));
+        ds = solidUnion(ds, sol);
+      }
+      add('DACH', `${label} Sparren`, 'roof', d.tag, ds, true);
+      const uk = d.uK;
+      add('DACH', `${label} Dachhaut`, 'roof', d.tag,
+        band(side, x0, x1, ug, uk, zd(d, ug) + hrg, zd(d, uk) + hrg, zd(d, ug) + hrg + hsg, zd(d, uk) + hrg + hsg));
+    }
   }
-  const ys = p.tOut + (p.ogCeil - (zOG + p.kniestock)) / tanRoof() + 100;
-  add('DACH', 'Holzbalkendecke Spitzboden', 'slab', 'B',
-    box(p.tOut, ys, p.ogCeil, p.houseW - p.tOut, p.houseD - ys, p.ogCeil + 200));
+  if (g) {
+    let front = box(g.x0, 0, zOG, g.x1, 365, gtop);
+    let cx = g.x0 + chW;
+    for (const [wd, gap] of g.windows) {
+      front = solidSub(front, box(cx, -10, zOG + 900, cx + wd, 400, zOG + 2000));
+      add('DACH', `Gaubenfenster ${wd}`, 'glass', g.tag, box(cx, 160, zOG + 900, cx + wd, 200, zOG + 2000));
+      cx += wd + gap;
+    }
+    add('DACH', 'Gaube Frontwand', 'wall', g.tag, solidSub(front, underRoof));
+    for (const [name, x, t] of [['Gaube Wange West', g.x0, chW], ['Gaube Wange Ost', g.x1 - chE, chE]] as const) {
+      add('DACH', name, 'wall', g.tag,
+        prism(x, x + t, 0, g.depth, zOG + p.kniestock, zu(g.depth), gtop + 50, gtop + 50));
+    }
+    add('DACH', 'Gaubendach', 'roof', 'C', box(g.x0 - 200, -300, gtop + 50, g.x1 + 200, g.depth + 200, gtop + 250));
+  }
+  if (rf) {
+    // between the purlins
+    add('DACH', 'Holzbalkendecke Spitzboden', 'slab', 'B',
+      box(p.tOut, p.tOut + uPi, p.ogCeil, p.houseW - p.tOut, p.houseD - p.tOut - uPi, p.ogCeil + 200));
+  } else {
+    const ys = p.tOut + (p.ogCeil - (zOG + p.kniestock)) / tanRoof() + 100;
+    add('DACH', 'Holzbalkendecke Spitzboden', 'slab', 'B',
+      box(p.tOut, ys, p.ogCeil, p.houseW - p.tOut, p.houseD - ys, p.ogCeil + 200));
+  }
 
   // ------------------------------------------------------------------ Garage
   const gar = src.garage;
