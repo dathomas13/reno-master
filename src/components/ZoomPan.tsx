@@ -156,10 +156,10 @@ export function ZoomPan({ children, className = '', onScaleChange }: ZoomPanProp
   const button = 'btn btn-ghost w-11 h-11 min-h-0 p-0 bg-panel/80';
   return (
     <div ref={box} className={`relative overflow-hidden touch-none select-none ${className}`} onClickCapture={swallowClickAfterDrag}>
-      <div ref={content} className="w-full h-full origin-top-left will-change-transform">
+      <div ref={content} className="w-full h-full origin-top-left">
         {children}
       </div>
-      <div className="absolute right-2 bottom-2 flex flex-col gap-1">
+      <div className="absolute right-2 top-2 flex flex-col gap-1">
         <button type="button" className={button} aria-label="Vergrößern" title="Vergrößern"
           disabled={scale >= MAX_SCALE} onClick={() => zoomCentered(1.6)}>+</button>
         <button type="button" className={button} aria-label="Verkleinern" title="Verkleinern"

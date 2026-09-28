@@ -96,7 +96,11 @@ export default function PlanViewPage() {
             {missing ?? 'Diese Datei ist offline nicht verfügbar. Einmal mit Netz öffnen, dann bleibt sie gespeichert.'}
           </div>
         )}
-        {room && <RoomPanel room={room} onClose={() => setRoom(null)} />}
+        {room && (
+          <div className="absolute inset-x-2 bottom-2 z-10">
+            <RoomPanel room={room} onClose={() => setRoom(null)} />
+          </div>
+        )}
       </div>
       <button type="button" className="btn btn-ghost m-2" onClick={() => navigate('/plaene')}>
         Zurück zur Übersicht
