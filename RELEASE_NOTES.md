@@ -8,6 +8,16 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.58.1 – Pläne scharf, Raumkarte sichtbar
+
+- Grundrisse bleiben beim Hineinzoomen scharf.
+- Tippt man in einem Plan auf einen Raum, erscheint unten die Raumkarte mit Links zu Einträgen, Fotos, Kosten, Aufgaben und Notizen.
+
+## 0.58.0 – Pläne und Fotos lassen sich zoomen
+
+- Pläne, Fotos und Belege: mit zwei Fingern zoomen, mit einem verschieben, Doppeltipp vergrößert. Dazu Plus- und Minus-Knöpfe.
+- PDF-Pläne öffnen in der gleichen Ansicht mit Seitenwechsel und Zoom.
+
 ## 0.57.0 – Grundrisse mit Maßketten wie ein Bauplan
 
 - Die 2D-Pläne sehen jetzt aus wie ein Papierplan: Maßketten in cm auf allen vier Seiten,
