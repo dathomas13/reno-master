@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.59.1 – Nordgaube wie gebaut
+
+- Die Gaube zur Gartenseite steht jetzt so im 3D-Modell, wie sie gebaut ist: Front innen
+  hinter der Wand, Traufe davor, Dach hinten auf dem Hauptdach aufgelegt.
+
 ## 0.59.0 – Gaube nach Norden im 3D-Modell
 
 - Das 3D-Modell kann jetzt eine Schleppgaube zur Gartenseite zeigen, mit flacherem Dach

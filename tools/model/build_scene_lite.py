@@ -398,21 +398,28 @@ def build(m, variant: str, version: str, note: str) -> dict:
     gaube_vol = box(g["x0"], -1, m.Z_OG - 500, g["x1"], g["depth"], gtop + 50)
     under_roof_g = solid_union(under_roof, gaube_vol)
 
-    # Nordgaube (Schleppgaube): Front auf dem Kniestock der Nordwand, Dach flacher als das
-    # Hauptdach; sie endet, wo ihre Dachunterkante die des Hauptdachs trifft (y_meet)
+    # Nordgaube (Schleppgaube): Front innen auf Höhe der Kniestock-Oberkante, direkt hinter
+    # der Nordwand; das Hauptdach davor bleibt unterhalb dieser Höhe als Traufe stehen. Das
+    # Gaubendach liegt hinten auf dem Hauptdach auf: y_a, wo seine Unterkante die Oberkante
+    # des Hauptdachs trifft, y_b, wo auch die Oberkanten zusammenlaufen.
     n = m.GAUBE_NORD
     y_in = m.HOUSE_D - m.T_OUT
+    z_k = m.Z_OG + m.KNIESTOCK
     if n:
-        z_f = m.Z_OG + m.KNIESTOCK + n["front_h"]
         tan_n = math.tan(math.radians(n["pitch"]))
-        y_meet = y_in - n["front_h"] / (m.tan_roof() - tan_n)
+        dz_n = m.ROOF_T / math.cos(math.radians(n["pitch"]))
+        y_fi = y_in - n["front_t"]
+        z_f = z_k + n["front_h"]
 
         def zd(y):
-            return z_f + tan_n * (y_in - y)
+            return z_f + tan_n * (y_fi - y)
 
-        under_roof_g = solid_union(under_roof_g, prism(n["x0"], n["x1"], y_meet, m.HOUSE_D + ov + 1,
-                                                       m.Z_OG - 500, m.Z_OG - 500,
-                                                       zd(y_meet), zd(m.HOUSE_D + ov + 1)))
+        run = m.tan_roof() - tan_n
+        y_a = y_in - (n["front_h"] - tan_n * n["front_t"] - dz_t) / run
+        y_b = y_a - dz_n / run
+        # only up to the inner face of the north wall - that wall keeps its Kniestock
+        under_roof_g = solid_union(under_roof_g, prism(n["x0"], n["x1"], y_a, y_in,
+                                                       m.Z_OG - 500, m.Z_OG - 500, zd(y_a), zd(y_in)))
 
     parts: list[dict] = []
 
@@ -546,9 +553,9 @@ def build(m, variant: str, version: str, note: str) -> dict:
     ch_w, ch_e = g.get("cheek", (120, 120))
     roof = solid_sub(roof, box(g["x0"] + ch_w, -ov - 1, m.Z_OG, g["x1"] - ch_e, g["depth"] - 50, gtop))
     if n:
-        # the eave in front of the dormer stays
+        # above the Kniestock only - the eave in front of the dormer stays
         nw, ne = n["cheek"]
-        roof = solid_sub(roof, box(n["x0"] + nw, y_meet, m.Z_OG, n["x1"] - ne, y_in, zu(ridge) + dz_t))
+        roof = solid_sub(roof, box(n["x0"] + nw, y_a, z_k, n["x1"] - ne, m.HOUSE_D + ov + 1, zu(ridge) + dz_t))
     add("DACH", "Satteldach 36° (Kunstschiefer)", "roof", "A", roof)
 
     front = box(g["x0"], 0, m.Z_OG, g["x1"], 365, gtop)
@@ -565,17 +572,15 @@ def build(m, variant: str, version: str, note: str) -> dict:
     add("DACH", "Gaubendach", "roof", "C",
         box(g["x0"] - 200, -300, gtop + 50, g["x1"] + 200, g["depth"] + 200, gtop + 250))
     if n:
-        dz_n = m.ROOF_T / math.cos(math.radians(n["pitch"]))
-        z_k = m.Z_OG + m.KNIESTOCK
         add("DACH", "Nordgaube Frontwand", "wall", n["tag"],
-            prism(n["x0"], n["x1"], y_in, m.HOUSE_D, z_k, z_k, zd(y_in), zd(m.HOUSE_D)))
+            prism(n["x0"], n["x1"], y_fi, y_in, z_k, z_k, zd(y_fi), zd(y_in)))
         for name, x, t in (("Nordgaube Wange West", n["x0"], nw), ("Nordgaube Wange Ost", n["x1"] - ne, ne)):
             add("DACH", name, "wall", n["tag"],
-                prism(x, x + t, y_meet, m.HOUSE_D, zu(y_meet), zu(m.HOUSE_D),
-                      zd(y_meet) + dz_n, zd(m.HOUSE_D) + dz_n))
-        y_end = m.HOUSE_D + n["overhang"]
-        add("DACH", "Nordgaube Dach", "roof", n["tag"],
-            prism(n["x0"], n["x1"], y_meet, y_end, zd(y_meet), zd(y_end), zd(y_meet) + dz_n, zd(y_end) + dz_n))
+                prism(x, x + t, y_a, y_fi, zu(y_a) + dz_t, zu(y_fi) + dz_t, zd(y_a), zd(y_fi)))
+        y_end = y_in + n["overhang"]
+        add("DACH", "Nordgaube Dach", "roof", n["tag"], solid_union(
+            prism(n["x0"], n["x1"], y_b, y_a, zu(y_b) + dz_t, zu(y_a) + dz_t, zd(y_b) + dz_n, zd(y_a) + dz_n),
+            prism(n["x0"], n["x1"], y_a, y_end, zd(y_a), zd(y_end), zd(y_a) + dz_n, zd(y_end) + dz_n)))
     ys_ =m.T_OUT + (m.OG_CEIL - (m.Z_OG + m.KNIESTOCK)) / m.tan_roof() + 100
     add("DACH", "Holzbalkendecke Spitzboden", "slab", "B",
         box(m.T_OUT, ys_, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - ys_, m.OG_CEIL + 200))

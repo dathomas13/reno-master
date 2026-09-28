@@ -150,12 +150,20 @@ export function checkSource(src: HouseSource): CheckResult {
     if (!(n.x0 < n.x1)) errors.push('gaubeNord: x0 muss kleiner als x1 sein.');
     else if (!(n.cheek[0] + n.cheek[1] < n.x1 - n.x0)) errors.push('gaubeNord: die Wangen sind breiter als die Gaube.');
     if (!(n.frontH > 0)) errors.push('gaubeNord: frontH muss größer als 0 sein.');
+    if (!(n.frontT > 0)) errors.push('gaubeNord: frontT muss größer als 0 sein.');
     if (n.overhang < 0) errors.push('gaubeNord: overhang darf nicht negativ sein.');
     if (!(n.pitch > 0 && n.pitch < p.roofPitch)) {
       errors.push(`gaubeNord: pitch muss zwischen 0 und der Dachneigung (${p.roofPitch}°) liegen.`);
     } else {
-      const depth = n.frontH / (Math.tan(p.roofPitch * Math.PI / 180) - Math.tan(n.pitch * Math.PI / 180));
-      if (p.houseD - p.tOut - depth <= p.houseD / 2) {
+      // same numbers as buildScene: where the dormer roof meets the main roof
+      const tanR = Math.tan(p.roofPitch * Math.PI / 180);
+      const tanN = Math.tan(n.pitch * Math.PI / 180);
+      const dzT = p.roofT / Math.cos(p.roofPitch * Math.PI / 180);
+      const dzN = p.roofT / Math.cos(n.pitch * Math.PI / 180);
+      const depth = (n.frontH - tanN * n.frontT - dzT) / (tanR - tanN);
+      if (!(depth > n.frontT)) {
+        errors.push('gaubeNord: das Gaubendach trifft das Hauptdach schon vor der Front – frontH größer oder pitch kleiner wählen.');
+      } else if (p.houseD - p.tOut - depth - dzN / (tanR - tanN) <= p.houseD / 2) {
         errors.push('gaubeNord: das Gaubendach erreicht das Hauptdach erst hinter dem First – frontH kleiner oder pitch größer wählen.');
       }
     }

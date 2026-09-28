@@ -90,8 +90,9 @@ def load(variant: str) -> dict:
                        tag=g.get("tag", "B"))
     gn = doc.get("gaubeNord")
     ns["GAUBE_NORD"] = None if gn is None else dict(
-        x0=gn["x0"], x1=gn["x1"], front_h=gn["frontH"], pitch=gn["pitch"],
-        overhang=gn.get("overhang", 0), cheek=tuple(gn.get("cheek", (120, 120))), tag=gn.get("tag", "C"))
+        x0=gn["x0"], x1=gn["x1"], front_h=gn["frontH"], front_t=gn.get("frontT", 200),
+        pitch=gn["pitch"], overhang=gn.get("overhang", 0),
+        cheek=tuple(gn.get("cheek", (120, 120))), tag=gn.get("tag", "C"))
     ns["BALKON"] = dict(doc["balkon"])
     gar = doc["garage"]
     ns["GAR_X"], ns["GAR_Y"] = tuple(gar["x"]), tuple(gar["y"])

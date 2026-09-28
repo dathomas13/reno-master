@@ -109,9 +109,10 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
               "windows": [[1010, 60], [1010, 60], [1010, 60], [1010, 60]],   // [Breite, Pfosten danach]
               "cheek": [175, 135], "tag": "B" },
   "gaubeNord": { "x0": 6025, "x1": 9370,   // optional: Schleppgaube nach Norden, Außenkanten der Wangen
-                 "frontH": 1300,          // lichte Höhe der Front über dem Kniestock
+                 "frontH": 1300,          // lichte Höhe innen an der Front, ab Kniestock-Oberkante
+                 "frontT": 200,           // Stärke der Front, sie steht direkt hinter der Nordwand
                  "pitch": 17,             // Dachneigung in Grad, flacher als das Hauptdach
-                 "overhang": 300,         // Dachüberstand vor der Außenwand
+                 "overhang": 150,         // Dachüberstand vor der Front
                  "cheek": [120, 135], "tag": "C" },   // Wangenstärken West/Ost
   "balkon": { "x0": -1300, "x1": 0, "y0": 3035, "y1": 8095, "tag": "A" },
   "garage": { "x": [-8000, -1510], "y": [5100, 12090], "z0": -1360, "hFront": 2600, "hBack": 2300 },
@@ -190,8 +191,9 @@ nur hochstufen, wenn es wirklich ein Aufmaß gibt.
 Dachform (Satteldach, First mittig), die OG-Wände unter der Schräge, Spitzbodendecke,
 Garagendach, Balkongeländer und die Materialien baut die App selbst. Sie lassen sich nur
 über `params`, `gaube`, `gaubeNord`, `balkon` und `garage` beeinflussen. Die Nordgaube
-steht mit ihrer Front auf dem Kniestock der Nordwand, der Traufüberstand des Hauptdachs
-bleibt davor; ihr Dach läuft so weit nach Süden, bis es das Hauptdach trifft. Für eine andere Dachform muss
+steht mit ihrer Front innen hinter der Nordwand auf Kniestockhöhe; das Hauptdach davor ist
+dort waagerecht abgeschnitten und bleibt als Traufe stehen. Ihr Dach liegt hinten auf dem
+Hauptdach auf. Für eine andere Dachform muss
 das Programm geändert werden. Das gehört in einen Chat mit Repo-Zugriff, nicht in die
 Hausdatei.
 
