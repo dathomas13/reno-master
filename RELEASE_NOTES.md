@@ -8,6 +8,13 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.57.0 – Grundrisse mit Maßketten wie ein Bauplan
+
+- Die 2D-Pläne sehen jetzt aus wie ein Papierplan: Maßketten in cm auf allen vier Seiten,
+  Wände mit schwarzer Kontur, leichte Wände dunkel, geschätzte schraffiert.
+- Jeder Raum zeigt Fläche und lichte Innenmaße, jedes Fenster und jede Tür Breite/Höhe,
+  Fenster zusätzlich die Brüstungshöhe.
+
 ## 0.56.2 – Kosten und Belege richtig sortiert
 
 - Kosten und Belege vom selben Tag stehen jetzt zuverlässig nach Eingabe sortiert, das
