@@ -4,7 +4,7 @@ import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { PhotoImage, Lightbox } from '@/components/PhotoView';
 import { useCollection } from '@/data/hooks';
-import { COL, type Cost, type Photo } from '@/data/types';
+import { COL, createdAtMillis, type Cost, type Photo } from '@/data/types';
 import { orderBy } from '@/firebase/db';
 import { formatEuro } from '@/lib/money';
 import { formatDate, formatMonth, monthKey } from '@/lib/date';
@@ -17,6 +17,15 @@ interface Row {
 /** the day a receipt shows: the cost it belongs to, falling back to when the file was taken */
 function rowDate(row: Row): string {
   return row.cost?.date ?? row.photo.takenAt?.slice(0, 10) ?? '';
+}
+
+/**
+ * tie-breaker for receipts that share a day (a cost's date is day-only, so several receipts
+ * from the same invoice date are common) - by when the record was created, so the newest
+ * still lands on top instead of following Firestore's unrelated document-id order
+ */
+function rowCreatedMillis(row: Row): number {
+  return createdAtMillis(row.cost?.createdAt ?? row.photo.createdAt);
 }
 
 /**
@@ -36,7 +45,7 @@ export default function ReceiptsPage() {
     return photos
       .filter((photo) => photo.kind === 'receipt')
       .map((photo) => ({ photo, cost: photo.costId ? byId.get(photo.costId) : undefined }))
-      .sort((a, b) => rowDate(b).localeCompare(rowDate(a)));
+      .sort((a, b) => rowDate(b).localeCompare(rowDate(a)) || rowCreatedMillis(b) - rowCreatedMillis(a));
   }, [photos, costs]);
 
   const visible = useMemo(() => {

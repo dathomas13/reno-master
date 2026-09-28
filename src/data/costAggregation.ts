@@ -3,7 +3,7 @@
  * overview can be tested directly - these are the figures Thomas plans the renovation
  * with, a wrong sum here is worse than a wrong pixel anywhere else.
  */
-import type { Cost, Trade } from './types';
+import { createdAtMillis, type Cost, type Trade } from './types';
 import { monthKey } from '@/lib/date';
 import { round2 } from '@/lib/money';
 
@@ -14,6 +14,18 @@ export interface Bucket {
 }
 
 export const NO_CATEGORY = 'ohne Kategorie';
+
+/**
+ * Newest first: by invoice date, then - for costs entered on the same day, which happens
+ * whenever several receipts are logged in one sitting - by when the entry was created.
+ * `date` alone ties there, and Firestore's own tiebreaker (document id) is unrelated to
+ * entry order, so the list would not reliably show the latest one on top.
+ */
+export function sortNewestFirst(costs: Cost[]): Cost[] {
+  return [...costs].sort(
+    (a, b) => b.date.localeCompare(a.date) || createdAtMillis(b.createdAt) - createdAtMillis(a.createdAt),
+  );
+}
 
 export function sumGross(costs: Cost[]): number {
   return round2(costs.reduce((sum, cost) => sum + (Number.isFinite(cost.amountGross) ? cost.amountGross : 0), 0));

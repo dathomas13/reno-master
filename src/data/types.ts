@@ -16,6 +16,22 @@ export interface BaseDoc {
   updatedBy?: string;
 }
 
+/**
+ * `createdAt` as milliseconds, for tie-breaking lists that sort by a coarser, user-facing
+ * date (a day-only invoice or shoot date, where several entries share the same value).
+ * A doc just written offline reads `createdAt` as `null` until the server resolves the
+ * timestamp - treated as "now" so it still sorts to the top while offline, not to the
+ * bottom of the tie.
+ */
+export function createdAtMillis(value: unknown): number {
+  if (value && typeof value === 'object') {
+    const stamp = value as { toMillis?: () => number; seconds?: number };
+    if (typeof stamp.toMillis === 'function') return stamp.toMillis();
+    if (typeof stamp.seconds === 'number') return stamp.seconds * 1000;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
 export const WEATHER = ['Sonnig', 'Bewölkt', 'Regen', 'Frost', 'Schnee'] as const;
 export type Weather = (typeof WEATHER)[number];
 
