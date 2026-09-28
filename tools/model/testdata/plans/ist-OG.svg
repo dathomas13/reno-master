@@ -1,33 +1,44 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1100 -1100 15195 15015" data-variant="ist" data-floor="OG" data-version="0.27" role="img" aria-label="Obergeschoss Bestand">
+<svg xmlns="http://www.w3.org/2000/svg" class="reno-plan" viewBox="-1950 -3050 16895 17815" data-variant="ist" data-floor="OG" data-version="0.27" role="img" aria-label="Obergeschoss Bestand">
 <style>
-  svg { --bg:#1d2126; --ink:#e8e4da; --muted:#9aa3ad; --accent:#c9a86a;
-        --wall-a:#d9d3c5; --wall-b:#c9b990; --wall-c:#b8845a; --room:#c9a86a;
-        --window:#8ec6e6; --door:#7fc98a; --open:#e8e4da; --stair:#a88a5c;
-        background:var(--bg); font-family:"Segoe UI",system-ui,sans-serif; }
-  svg.light { --bg:#ffffff; --ink:#1d2126; --muted:#666e76; --accent:#8a6d2f;
-        --wall-a:#3a3a36; --wall-b:#6b6354; --wall-c:#8a6242; --room:#8a6d2f;
-        --window:#2f7fae; --door:#2e7d46; --open:#999; --stair:#7a6338; }
-  .room { fill:var(--room); fill-opacity:.14; stroke:var(--room); stroke-opacity:.35;
-          stroke-width:12; cursor:pointer; }
-  .room:hover, .room.selected { fill-opacity:.28; }
-  .room-label { fill:var(--ink); font-size:230px; text-anchor:middle; pointer-events:none;
-                paint-order:stroke; stroke:var(--bg); stroke-width:70px; stroke-linejoin:round; }
-  .room-area { fill:var(--muted); font-size:170px; text-anchor:middle; pointer-events:none;
-               paint-order:stroke; stroke:var(--bg); stroke-width:70px; stroke-linejoin:round; }
-  .wall { stroke:none; }
-  .window { fill:var(--window); }
-  .door { fill:var(--door); }
-  .open { fill:var(--open); fill-opacity:.35; }
-  .stair { fill:none; stroke:var(--stair); stroke-width:30; }
-  .dim { stroke:var(--muted); stroke-width:14; }
-  .dim-text { fill:var(--muted); font-size:200px; text-anchor:middle; }
-  .title { fill:var(--ink); font-size:400px; font-weight:600; }
-  .subtitle { fill:var(--muted); font-size:220px; }
-  .north { fill:var(--accent); }
-  .north-text { fill:var(--accent); font-size:300px; text-anchor:middle; font-weight:600; }
-  @media print { svg { --bg:#fff; } }
+  .reno-plan { --paper:#ffffff; --ink:#111111; --muted:#555555; --wall:#d6d6d6;
+        --wall-light:#5f5f5f; --dim:#c62828; --window:#1f6fb2; --door:#2e7d32;
+        --room:#1f6fb2; --stair:#333333;
+        background:var(--paper); font-family:Arial,"Liberation Sans","Helvetica Neue",sans-serif; }
+  .reno-plan .room { fill:var(--room); fill-opacity:0; stroke:none; cursor:pointer; }
+  .reno-plan .room:hover, .reno-plan .room.selected { fill-opacity:.12; }
+  .reno-plan .room-label { fill:var(--ink); font-size:230px; text-anchor:middle; pointer-events:none;
+        paint-order:stroke; stroke:var(--paper); stroke-width:60px; stroke-linejoin:round; }
+  .reno-plan .room-area, .reno-plan .room-size { fill:var(--ink); text-anchor:middle; pointer-events:none;
+        paint-order:stroke; stroke:var(--paper); stroke-width:50px; stroke-linejoin:round; }
+  .reno-plan .room-area { font-size:170px; }
+  .reno-plan .room-size { font-size:140px; fill:var(--muted); }
+  .reno-plan .wall-edge { fill:var(--ink); stroke:var(--ink); stroke-width:30; }
+  .reno-plan .wall { fill:var(--wall); stroke:var(--wall); stroke-width:8; }
+  .reno-plan .wall.light { fill:var(--wall-light); stroke:var(--wall-light); }
+  .reno-plan .wall-c { fill:url(#reno-plan-hatch); stroke:none; }
+  .reno-plan .gap { fill:var(--paper); stroke:none; }
+  .reno-plan .jamb { stroke:var(--ink); stroke-width:15; }
+  .reno-plan .glass { stroke:var(--window); stroke-width:12; }
+  .reno-plan .door-line { stroke:var(--door); stroke-width:12; stroke-dasharray:60 40; }
+  .reno-plan .opening-text { fill:var(--ink); font-size:110px; text-anchor:middle;
+        paint-order:stroke; stroke:var(--paper); stroke-width:40px; stroke-linejoin:round; }
+  .reno-plan .stair { fill:none; stroke:var(--stair); stroke-width:12; }
+  .reno-plan .stair-run { fill:none; stroke:var(--stair); stroke-width:15; }
+  .reno-plan .stair-arrow { fill:var(--stair); }
+  .reno-plan .dim { stroke:var(--dim); stroke-width:10; }
+  .reno-plan .dim-tick { stroke:var(--dim); stroke-width:22; }
+  .reno-plan .dim-text { fill:var(--dim); font-size:150px; text-anchor:middle; }
+  .reno-plan .dim-text.small { font-size:110px; }
+  .reno-plan .scale { stroke:var(--ink); stroke-width:14; }
+  .reno-plan .scale-text { fill:var(--ink); font-size:170px; text-anchor:middle; }
+  .reno-plan .legend { fill:var(--muted); font-size:150px; }
+  .reno-plan .title { fill:var(--ink); font-size:380px; font-weight:600; }
+  .reno-plan .subtitle { fill:var(--muted); font-size:200px; }
+  .reno-plan .north { fill:var(--ink); }
+  .reno-plan .north-text { fill:var(--ink); font-size:260px; text-anchor:middle; font-weight:600; }
 </style>
-<rect x="-1100" y="-1100" width="15195" height="15015" fill="var(--bg)"/>
+<defs><pattern id="reno-plan-hatch" patternUnits="userSpaceOnUse" width="120" height="120" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="120" stroke="#8a8a8a" stroke-width="18"/></pattern></defs>
+<rect x="-1950" y="-3050" width="16895" height="17815" fill="var(--paper)"/>
 <g id="rooms">
 <g class="room-group" data-room-id="og-kind2">
 <rect class="room" x="400" y="6015" width="4440" height="5400" data-room-id="og-kind2"/>
@@ -63,79 +74,259 @@
 </g>
 </g>
 <g id="walls">
-<rect class="wall" x="400" y="11415" width="4440" height="400" fill="var(--wall-a)" data-wall="Außenwand Süd"/>
-<rect class="wall" x="4840" y="11450" width="4530" height="365" fill="var(--wall-a)" data-wall="Außenwand Süd (Erker)"/>
-<rect class="wall" x="9370" y="11415" width="3225" height="400" fill="var(--wall-a)" data-wall="Außenwand Süd (Ost)"/>
-<rect class="wall" x="400" y="0" width="12195" height="400" fill="var(--wall-a)" data-wall="Außenwand Nord"/>
-<rect class="wall" x="0" y="0" width="400" height="11815" fill="var(--wall-a)" data-wall="Außenwand West"/>
-<rect class="wall" x="12595" y="0" width="400" height="11815" fill="var(--wall-a)" data-wall="Außenwand Ost"/>
-<rect class="wall" x="4840" y="1245" width="175" height="10205" fill="var(--wall-a)" data-wall="Westspalte | Mitte 17,5"/>
-<rect class="wall" x="9235" y="4860" width="135" height="6590" fill="var(--wall-a)" data-wall="Mitte | Ostspalte 13,5"/>
-<rect class="wall" x="400" y="5895" width="4440" height="120" fill="var(--wall-a)" data-wall="Kind 1 | Kind 2 12"/>
-<rect class="wall" x="9370" y="5895" width="3225" height="120" fill="var(--wall-a)" data-wall="HWR | Wäscheboden 12"/>
-<rect class="wall" x="5015" y="7110" width="4220" height="160" fill="var(--wall-a)" data-wall="Kind 3 Nord 16"/>
-<rect class="wall" x="9370" y="10125" width="3225" height="120" fill="var(--wall-a)" data-wall="Abseitenwand HWR 12"/>
-<rect class="wall" x="400" y="1245" width="5625" height="120" fill="var(--wall-a)" data-wall="Abseitenwand Kind 1 12"/>
-<rect class="wall" x="6025" y="1245" width="120" height="3735" fill="var(--wall-a)" data-wall="Treppe | Bad 12"/>
-<rect class="wall" x="6945" y="4860" width="2425" height="120" fill="var(--wall-b)" data-wall="Diele | Bad 12"/>
-<rect class="wall" x="6945" y="4190" width="120" height="670" fill="var(--wall-b)" data-wall="G | Bad 12"/>
-<rect class="wall" x="6145" y="4190" width="920" height="120" fill="var(--wall-b)" data-wall="G Nord 12"/>
-<rect class="wall" x="6145" y="3120" width="2855" height="120" fill="var(--wall-b)" data-wall="Bad Nord 12"/>
-<rect class="wall" x="8880" y="3240" width="120" height="1620" fill="var(--wall-b)" data-wall="Bad | Wäscheboden 12"/>
-<rect class="wall" x="9000" y="4250" width="1625" height="510" fill="var(--wall-a)" data-wall="Kamin"/>
+<rect class="wall-edge" x="400" y="11415" width="4440" height="400"/>
+<rect class="wall-edge" x="4840" y="11450" width="4530" height="365"/>
+<rect class="wall-edge" x="9370" y="11415" width="3225" height="400"/>
+<rect class="wall-edge" x="400" y="0" width="12195" height="400"/>
+<rect class="wall-edge" x="0" y="0" width="400" height="11815"/>
+<rect class="wall-edge" x="12595" y="0" width="400" height="11815"/>
+<rect class="wall-edge" x="4840" y="1245" width="175" height="10205"/>
+<rect class="wall-edge" x="9235" y="4860" width="135" height="6590"/>
+<rect class="wall-edge" x="400" y="5895" width="4440" height="120"/>
+<rect class="wall-edge" x="9370" y="5895" width="3225" height="120"/>
+<rect class="wall-edge" x="5015" y="7110" width="4220" height="160"/>
+<rect class="wall-edge" x="9370" y="10125" width="3225" height="120"/>
+<rect class="wall-edge" x="400" y="1245" width="5625" height="120"/>
+<rect class="wall-edge" x="6025" y="1245" width="120" height="3735"/>
+<rect class="wall-edge" x="6945" y="4860" width="2425" height="120"/>
+<rect class="wall-edge" x="6945" y="4190" width="120" height="670"/>
+<rect class="wall-edge" x="6145" y="4190" width="920" height="120"/>
+<rect class="wall-edge" x="6145" y="3120" width="2855" height="120"/>
+<rect class="wall-edge" x="8880" y="3240" width="120" height="1620"/>
+<rect class="wall-edge" x="9000" y="4250" width="1625" height="510"/>
+<rect class="wall" x="400" y="11415" width="4440" height="400" data-wall="Außenwand Süd"/>
+<rect class="wall" x="4840" y="11450" width="4530" height="365" data-wall="Außenwand Süd (Erker)"/>
+<rect class="wall" x="9370" y="11415" width="3225" height="400" data-wall="Außenwand Süd (Ost)"/>
+<rect class="wall" x="400" y="0" width="12195" height="400" data-wall="Außenwand Nord"/>
+<rect class="wall" x="0" y="0" width="400" height="11815" data-wall="Außenwand West"/>
+<rect class="wall" x="12595" y="0" width="400" height="11815" data-wall="Außenwand Ost"/>
+<rect class="wall light" x="4840" y="1245" width="175" height="10205" data-wall="Westspalte | Mitte 17,5"/>
+<rect class="wall light" x="9235" y="4860" width="135" height="6590" data-wall="Mitte | Ostspalte 13,5"/>
+<rect class="wall light" x="400" y="5895" width="4440" height="120" data-wall="Kind 1 | Kind 2 12"/>
+<rect class="wall light" x="9370" y="5895" width="3225" height="120" data-wall="HWR | Wäscheboden 12"/>
+<rect class="wall light" x="5015" y="7110" width="4220" height="160" data-wall="Kind 3 Nord 16"/>
+<rect class="wall light" x="9370" y="10125" width="3225" height="120" data-wall="Abseitenwand HWR 12"/>
+<rect class="wall light" x="400" y="1245" width="5625" height="120" data-wall="Abseitenwand Kind 1 12"/>
+<rect class="wall light" x="6025" y="1245" width="120" height="3735" data-wall="Treppe | Bad 12"/>
+<rect class="wall light" x="6945" y="4860" width="2425" height="120" data-wall="Diele | Bad 12"/>
+<rect class="wall light" x="6945" y="4190" width="120" height="670" data-wall="G | Bad 12"/>
+<rect class="wall light" x="6145" y="4190" width="920" height="120" data-wall="G Nord 12"/>
+<rect class="wall light" x="6145" y="3120" width="2855" height="120" data-wall="Bad Nord 12"/>
+<rect class="wall light" x="8880" y="3240" width="120" height="1620" data-wall="Bad | Wäscheboden 12"/>
+<rect class="wall" x="9000" y="4250" width="1625" height="510" data-wall="Kamin"/>
 </g>
 <g id="openings">
-<rect class="door" x="0" y="6075" width="400" height="2010"/>
-<rect class="door" x="0" y="3825" width="400" height="2010"/>
-<rect class="window" x="12595" y="6075" width="400" height="1135"/>
-<rect class="window" x="12595" y="4700" width="400" height="1135"/>
-<rect class="door" x="4840" y="6075" width="175" height="885"/>
-<rect class="door" x="4840" y="4915" width="175" height="885"/>
-<rect class="door" x="9235" y="6075" width="135" height="885"/>
-<rect class="door" x="9235" y="4990" width="135" height="885"/>
-<rect class="door" x="6140" y="7110" width="885" height="160"/>
-<rect class="door" x="7185" y="4860" width="760" height="120"/>
+<rect class="gap" x="-25" y="6075" width="450" height="2010"/>
+<line class="jamb" x1="-15" y1="6075" x2="415" y2="6075"/>
+<line class="jamb" x1="-15" y1="8085" x2="415" y2="8085"/>
+<line class="door-line" x1="200" y1="6075" x2="200" y2="8085"/>
+<text class="opening-text" x="550" y="7080" transform="rotate(-90 550 7080)">201/213,5</text>
+<rect class="gap" x="-25" y="3825" width="450" height="2010"/>
+<line class="jamb" x1="-15" y1="3825" x2="415" y2="3825"/>
+<line class="jamb" x1="-15" y1="5835" x2="415" y2="5835"/>
+<line class="door-line" x1="200" y1="3825" x2="200" y2="5835"/>
+<text class="opening-text" x="550" y="4830" transform="rotate(-90 550 4830)">201/213,5</text>
+<rect class="gap" x="12570" y="6075" width="450" height="1135"/>
+<line class="jamb" x1="12580" y1="6075" x2="13010" y2="6075"/>
+<line class="jamb" x1="12580" y1="7210" x2="13010" y2="7210"/>
+<line class="glass" x1="12755" y1="6075" x2="12755" y2="7210"/>
+<line class="glass" x1="12835" y1="6075" x2="12835" y2="7210"/>
+<text class="opening-text" x="12525" y="6642" transform="rotate(-90 12525 6642)">113,5/130 · BRH 90</text>
+<rect class="gap" x="12570" y="4700" width="450" height="1135"/>
+<line class="jamb" x1="12580" y1="4700" x2="13010" y2="4700"/>
+<line class="jamb" x1="12580" y1="5835" x2="13010" y2="5835"/>
+<line class="glass" x1="12755" y1="4700" x2="12755" y2="5835"/>
+<line class="glass" x1="12835" y1="4700" x2="12835" y2="5835"/>
+<text class="opening-text" x="12525" y="5268" transform="rotate(-90 12525 5268)">113,5/130 · BRH 90</text>
+<rect class="gap" x="4815" y="6075" width="225" height="885"/>
+<line class="jamb" x1="4825" y1="6075" x2="5030" y2="6075"/>
+<line class="jamb" x1="4825" y1="6960" x2="5030" y2="6960"/>
+<line class="door-line" x1="4928" y1="6075" x2="4928" y2="6960"/>
+<text class="opening-text" x="5165" y="6518" transform="rotate(-90 5165 6518)">88,5/201</text>
+<rect class="gap" x="4815" y="4915" width="225" height="885"/>
+<line class="jamb" x1="4825" y1="4915" x2="5030" y2="4915"/>
+<line class="jamb" x1="4825" y1="5800" x2="5030" y2="5800"/>
+<line class="door-line" x1="4928" y1="4915" x2="4928" y2="5800"/>
+<text class="opening-text" x="5165" y="5358" transform="rotate(-90 5165 5358)">88,5/201</text>
+<rect class="gap" x="9210" y="6075" width="185" height="885"/>
+<line class="jamb" x1="9220" y1="6075" x2="9385" y2="6075"/>
+<line class="jamb" x1="9220" y1="6960" x2="9385" y2="6960"/>
+<line class="door-line" x1="9302" y1="6075" x2="9302" y2="6960"/>
+<text class="opening-text" x="9165" y="6518" transform="rotate(-90 9165 6518)">88,5/201</text>
+<rect class="gap" x="9210" y="4990" width="185" height="885"/>
+<line class="jamb" x1="9220" y1="4990" x2="9385" y2="4990"/>
+<line class="jamb" x1="9220" y1="5875" x2="9385" y2="5875"/>
+<line class="door-line" x1="9302" y1="4990" x2="9302" y2="5875"/>
+<text class="opening-text" x="9165" y="5432" transform="rotate(-90 9165 5432)">88,5/201</text>
+<rect class="gap" x="6140" y="7085" width="885" height="210"/>
+<line class="jamb" x1="6140" y1="7095" x2="6140" y2="7285"/>
+<line class="jamb" x1="7025" y1="7095" x2="7025" y2="7285"/>
+<line class="door-line" x1="6140" y1="7190" x2="7025" y2="7190"/>
+<text class="opening-text" x="6582" y="7040">88,5/201</text>
+<rect class="gap" x="7185" y="4835" width="760" height="170"/>
+<line class="jamb" x1="7185" y1="4845" x2="7185" y2="4995"/>
+<line class="jamb" x1="7945" y1="4845" x2="7945" y2="4995"/>
+<line class="door-line" x1="7185" y1="4920" x2="7945" y2="4920"/>
+<text class="opening-text" x="7565" y="5130">76/201</text>
 </g>
 <g id="stairs">
 </g>
 <g id="room-labels">
-<text class="room-label" x="2620" y="8715" font-size="230px">Kind 2</text>
-<text class="room-area" x="2620" y="8945">24.0 m²</text>
-<text class="room-label" x="2620" y="3630" font-size="230px">Kind 1</text>
-<text class="room-area" x="2620" y="3860">20.1 m²</text>
-<text class="room-label" x="7125" y="9205" font-size="230px">Kind 3</text>
-<text class="room-area" x="7125" y="9435">16.3 m²</text>
-<text class="room-label" x="7125" y="6045" font-size="230px">Diele</text>
-<text class="room-area" x="7125" y="6275">9.0 m²</text>
+<text class="room-label" x="2620" y="8565" font-size="230px">Kind 2</text>
+<text class="room-area" x="2620" y="8795">23,98 m²</text>
+<text class="room-size" x="2620" y="8995">4,440 × 5,400</text>
+<text class="room-label" x="2620" y="3480" font-size="230px">Kind 1</text>
+<text class="room-area" x="2620" y="3710">20,11 m²</text>
+<text class="room-size" x="2620" y="3910">4,440 × 4,530</text>
+<text class="room-label" x="7125" y="9055" font-size="230px">Kind 3</text>
+<text class="room-area" x="7125" y="9285">16,33 m²</text>
+<text class="room-size" x="7125" y="9485">4,220 × 3,870</text>
+<text class="room-label" x="7125" y="5895" font-size="230px">Diele</text>
+<text class="room-area" x="7125" y="6125">8,99 m²</text>
+<text class="room-size" x="7125" y="6325">4,220 × 2,130</text>
 <text class="room-label" x="5520" y="3172" font-size="230px">Treppe</text>
-<text class="room-area" x="5520" y="3402">3.6 m²</text>
+<text class="room-area" x="5520" y="3402">3,65 m²</text>
 <text class="room-label" x="6545" y="4543" font-size="120px" textLength="620" lengthAdjust="spacingAndGlyphs">Garderobe</text>
 <text class="room-label" x="7972" y="4050" font-size="230px">Bad</text>
-<text class="room-area" x="7972" y="4280">3.8 m²</text>
-<text class="room-label" x="10982" y="8070" font-size="230px">Hauswirtschaftsraum</text>
-<text class="room-area" x="10982" y="8300">13.2 m²</text>
+<text class="room-area" x="7972" y="4280">3,81 m²</text>
+<text class="room-label" x="10982" y="7920" font-size="230px">Hauswirtschaftsraum</text>
+<text class="room-area" x="10982" y="8150">13,25 m²</text>
+<text class="room-size" x="10982" y="8350">3,225 × 4,110</text>
 <text class="room-label" x="9370" y="1760" font-size="230px">Wäscheboden</text>
-<text class="room-area" x="9370" y="1990">26.3 m²</text>
+<text class="room-area" x="9370" y="1990">26,31 m²</text>
 </g>
 <g id="dimensions">
-<line class="dim" x1="0" y1="12335" x2="12995" y2="12335"/>
-<line class="dim" x1="0" y1="12245" x2="0" y2="12425"/>
-<line class="dim" x1="12995" y1="12245" x2="12995" y2="12425"/>
-<text class="dim-text" x="6498" y="12595">12.99 m</text>
-<line class="dim" x1="-520" y1="0" x2="-520" y2="11815"/>
-<line class="dim" x1="-610" y1="0" x2="-430" y2="0"/>
-<line class="dim" x1="-610" y1="11815" x2="-430" y2="11815"/>
-<text class="dim-text" x="-650" y="5908" transform="rotate(-90 -650 5908)">11.81 m</text>
+<line class="dim" x1="-150" y1="12515" x2="13145" y2="12515"/>
+<line class="dim-tick" x1="-60" y1="12575" x2="60" y2="12455"/>
+<line class="dim-tick" x1="340" y1="12575" x2="460" y2="12455"/>
+<line class="dim-tick" x1="4780" y1="12575" x2="4900" y2="12455"/>
+<line class="dim-tick" x1="4955" y1="12575" x2="5075" y2="12455"/>
+<line class="dim-tick" x1="9175" y1="12575" x2="9295" y2="12455"/>
+<line class="dim-tick" x1="9310" y1="12575" x2="9430" y2="12455"/>
+<line class="dim-tick" x1="12535" y1="12575" x2="12655" y2="12455"/>
+<line class="dim-tick" x1="12935" y1="12575" x2="13055" y2="12455"/>
+<text class="dim-text small" x="200" y="12465">40</text>
+<text class="dim-text" x="2620" y="12465">444</text>
+<text class="dim-text small" x="4928" y="12465">17,5</text>
+<text class="dim-text" x="7125" y="12465">422</text>
+<text class="dim-text small" x="9302" y="12465">13,5</text>
+<text class="dim-text" x="10982" y="12465">322,5</text>
+<text class="dim-text small" x="12795" y="12465">40</text>
+<line class="dim" x1="-150" y1="12965" x2="13145" y2="12965"/>
+<line class="dim-tick" x1="-60" y1="13025" x2="60" y2="12905"/>
+<line class="dim-tick" x1="12935" y1="13025" x2="13055" y2="12905"/>
+<text class="dim-text" x="6498" y="12915">1299,5</text>
+<line class="dim" x1="-150" y1="-700" x2="13145" y2="-700"/>
+<line class="dim-tick" x1="-60" y1="-640" x2="60" y2="-760"/>
+<line class="dim-tick" x1="340" y1="-640" x2="460" y2="-760"/>
+<line class="dim-tick" x1="12535" y1="-640" x2="12655" y2="-760"/>
+<line class="dim-tick" x1="12935" y1="-640" x2="13055" y2="-760"/>
+<text class="dim-text small" x="200" y="-750">40</text>
+<text class="dim-text" x="6498" y="-750">1219,5</text>
+<text class="dim-text small" x="12795" y="-750">40</text>
+<line class="dim" x1="-150" y1="-1150" x2="13145" y2="-1150"/>
+<line class="dim-tick" x1="-60" y1="-1090" x2="60" y2="-1210"/>
+<line class="dim-tick" x1="12935" y1="-1090" x2="13055" y2="-1210"/>
+<text class="dim-text" x="6498" y="-1200">1299,5</text>
+<line class="dim" x1="-700" y1="11965" x2="-700" y2="-150"/>
+<line class="dim-tick" x1="-760" y1="11875" x2="-640" y2="11755"/>
+<line class="dim-tick" x1="-760" y1="11475" x2="-640" y2="11355"/>
+<line class="dim-tick" x1="-760" y1="8145" x2="-640" y2="8025"/>
+<line class="dim-tick" x1="-760" y1="6135" x2="-640" y2="6015"/>
+<line class="dim-tick" x1="-760" y1="6075" x2="-640" y2="5955"/>
+<line class="dim-tick" x1="-760" y1="5955" x2="-640" y2="5835"/>
+<line class="dim-tick" x1="-760" y1="5895" x2="-640" y2="5775"/>
+<line class="dim-tick" x1="-760" y1="3885" x2="-640" y2="3765"/>
+<line class="dim-tick" x1="-760" y1="1425" x2="-640" y2="1305"/>
+<line class="dim-tick" x1="-760" y1="1305" x2="-640" y2="1185"/>
+<line class="dim-tick" x1="-760" y1="460" x2="-640" y2="340"/>
+<line class="dim-tick" x1="-760" y1="60" x2="-640" y2="-60"/>
+<text class="dim-text small" x="-750" y="11615" transform="rotate(-90 -750 11615)">40</text>
+<text class="dim-text" x="-750" y="9750" transform="rotate(-90 -750 9750)">333</text>
+<text class="dim-text" x="-750" y="7080" transform="rotate(-90 -750 7080)">201</text>
+<text class="dim-text small" x="-750" y="6045" transform="rotate(-90 -750 6045)">6</text>
+<text class="dim-text small" x="-750" y="5955" transform="rotate(-90 -750 5955)">12</text>
+<text class="dim-text small" x="-750" y="5865" transform="rotate(-90 -750 5865)">6</text>
+<text class="dim-text" x="-750" y="4830" transform="rotate(-90 -750 4830)">201</text>
+<text class="dim-text" x="-750" y="2595" transform="rotate(-90 -750 2595)">246</text>
+<text class="dim-text small" x="-750" y="1305" transform="rotate(-90 -750 1305)">12</text>
+<text class="dim-text" x="-750" y="822" transform="rotate(-90 -750 822)">84,5</text>
+<text class="dim-text small" x="-750" y="200" transform="rotate(-90 -750 200)">40</text>
+<line class="dim" x1="-1150" y1="11965" x2="-1150" y2="-150"/>
+<line class="dim-tick" x1="-1210" y1="11875" x2="-1090" y2="11755"/>
+<line class="dim-tick" x1="-1210" y1="11475" x2="-1090" y2="11355"/>
+<line class="dim-tick" x1="-1210" y1="6075" x2="-1090" y2="5955"/>
+<line class="dim-tick" x1="-1210" y1="5955" x2="-1090" y2="5835"/>
+<line class="dim-tick" x1="-1210" y1="1425" x2="-1090" y2="1305"/>
+<line class="dim-tick" x1="-1210" y1="1305" x2="-1090" y2="1185"/>
+<line class="dim-tick" x1="-1210" y1="460" x2="-1090" y2="340"/>
+<line class="dim-tick" x1="-1210" y1="60" x2="-1090" y2="-60"/>
+<text class="dim-text small" x="-1200" y="11615" transform="rotate(-90 -1200 11615)">40</text>
+<text class="dim-text" x="-1200" y="8715" transform="rotate(-90 -1200 8715)">540</text>
+<text class="dim-text small" x="-1200" y="5955" transform="rotate(-90 -1200 5955)">12</text>
+<text class="dim-text" x="-1200" y="3630" transform="rotate(-90 -1200 3630)">453</text>
+<text class="dim-text small" x="-1200" y="1305" transform="rotate(-90 -1200 1305)">12</text>
+<text class="dim-text" x="-1200" y="822" transform="rotate(-90 -1200 822)">84,5</text>
+<text class="dim-text small" x="-1200" y="200" transform="rotate(-90 -1200 200)">40</text>
+<line class="dim" x1="-1600" y1="11965" x2="-1600" y2="-150"/>
+<line class="dim-tick" x1="-1660" y1="11875" x2="-1540" y2="11755"/>
+<line class="dim-tick" x1="-1660" y1="60" x2="-1540" y2="-60"/>
+<text class="dim-text" x="-1650" y="5908" transform="rotate(-90 -1650 5908)">1181,5</text>
+<line class="dim" x1="13695" y1="11965" x2="13695" y2="-150"/>
+<line class="dim-tick" x1="13635" y1="11875" x2="13755" y2="11755"/>
+<line class="dim-tick" x1="13635" y1="11475" x2="13755" y2="11355"/>
+<line class="dim-tick" x1="13635" y1="10305" x2="13755" y2="10185"/>
+<line class="dim-tick" x1="13635" y1="10185" x2="13755" y2="10065"/>
+<line class="dim-tick" x1="13635" y1="7270" x2="13755" y2="7150"/>
+<line class="dim-tick" x1="13635" y1="6135" x2="13755" y2="6015"/>
+<line class="dim-tick" x1="13635" y1="6075" x2="13755" y2="5955"/>
+<line class="dim-tick" x1="13635" y1="5955" x2="13755" y2="5835"/>
+<line class="dim-tick" x1="13635" y1="5895" x2="13755" y2="5775"/>
+<line class="dim-tick" x1="13635" y1="4760" x2="13755" y2="4640"/>
+<line class="dim-tick" x1="13635" y1="460" x2="13755" y2="340"/>
+<line class="dim-tick" x1="13635" y1="60" x2="13755" y2="-60"/>
+<text class="dim-text small" x="13645" y="11615" transform="rotate(-90 13645 11615)">40</text>
+<text class="dim-text" x="13645" y="10830" transform="rotate(-90 13645 10830)">117</text>
+<text class="dim-text small" x="13645" y="10185" transform="rotate(-90 13645 10185)">12</text>
+<text class="dim-text" x="13645" y="8668" transform="rotate(-90 13645 8668)">291,5</text>
+<text class="dim-text" x="13645" y="6642" transform="rotate(-90 13645 6642)">113,5</text>
+<text class="dim-text small" x="13645" y="6045" transform="rotate(-90 13645 6045)">6</text>
+<text class="dim-text small" x="13645" y="5955" transform="rotate(-90 13645 5955)">12</text>
+<text class="dim-text small" x="13645" y="5865" transform="rotate(-90 13645 5865)">6</text>
+<text class="dim-text" x="13645" y="5268" transform="rotate(-90 13645 5268)">113,5</text>
+<text class="dim-text" x="13645" y="2550" transform="rotate(-90 13645 2550)">430</text>
+<text class="dim-text small" x="13645" y="200" transform="rotate(-90 13645 200)">40</text>
+<line class="dim" x1="14145" y1="11965" x2="14145" y2="-150"/>
+<line class="dim-tick" x1="14085" y1="11875" x2="14205" y2="11755"/>
+<line class="dim-tick" x1="14085" y1="11475" x2="14205" y2="11355"/>
+<line class="dim-tick" x1="14085" y1="10305" x2="14205" y2="10185"/>
+<line class="dim-tick" x1="14085" y1="10185" x2="14205" y2="10065"/>
+<line class="dim-tick" x1="14085" y1="6075" x2="14205" y2="5955"/>
+<line class="dim-tick" x1="14085" y1="5955" x2="14205" y2="5835"/>
+<line class="dim-tick" x1="14085" y1="460" x2="14205" y2="340"/>
+<line class="dim-tick" x1="14085" y1="60" x2="14205" y2="-60"/>
+<text class="dim-text small" x="14095" y="11615" transform="rotate(-90 14095 11615)">40</text>
+<text class="dim-text" x="14095" y="10830" transform="rotate(-90 14095 10830)">117</text>
+<text class="dim-text small" x="14095" y="10185" transform="rotate(-90 14095 10185)">12</text>
+<text class="dim-text" x="14095" y="8070" transform="rotate(-90 14095 8070)">411</text>
+<text class="dim-text small" x="14095" y="5955" transform="rotate(-90 14095 5955)">12</text>
+<text class="dim-text" x="14095" y="3148" transform="rotate(-90 14095 3148)">549,5</text>
+<text class="dim-text small" x="14095" y="200" transform="rotate(-90 14095 200)">40</text>
+<line class="dim" x1="14595" y1="11965" x2="14595" y2="-150"/>
+<line class="dim-tick" x1="14535" y1="11875" x2="14655" y2="11755"/>
+<line class="dim-tick" x1="14535" y1="60" x2="14655" y2="-60"/>
+<text class="dim-text" x="14545" y="5908" transform="rotate(-90 14545 5908)">1181,5</text>
 </g>
-<g id="north"><path class="north" d="M 13375 -380 l 150 380 l -150 -120 l -150 120 z"/><text class="north-text" x="13375" y="320">N</text></g>
-<g id="scale"><line class="dim" x1="0" y1="12975" x2="5000" y2="12975"/>
-<line class="dim" x1="0" y1="12905" x2="0" y2="13045"/>
-<line class="dim" x1="1000" y1="12905" x2="1000" y2="13045"/>
-<line class="dim" x1="2000" y1="12905" x2="2000" y2="13045"/>
-<line class="dim" x1="3000" y1="12905" x2="3000" y2="13045"/>
-<line class="dim" x1="4000" y1="12905" x2="4000" y2="13045"/>
-<line class="dim" x1="5000" y1="12905" x2="5000" y2="13045"/>
-<text class="dim-text" x="2500" y="13255">5 m</text></g>
-<text class="title" x="0" y="-620">Obergeschoss</text>
-<text class="subtitle" x="0" y="-300">Bestand · Modell v0.27 · Schlesierstraße 31</text>
+<g id="north"><path class="north" d="M 14495 -2850 l 150 380 l -150 -120 l -150 120 z"/><text class="north-text" x="14495" y="-2200">N</text></g>
+<g id="scale"><line class="scale" x1="-1800" y1="14165" x2="3200" y2="14165"/>
+<line class="scale" x1="-1800" y1="14095" x2="-1800" y2="14235"/>
+<line class="scale" x1="-800" y1="14095" x2="-800" y2="14235"/>
+<line class="scale" x1="200" y1="14095" x2="200" y2="14235"/>
+<line class="scale" x1="1200" y1="14095" x2="1200" y2="14235"/>
+<line class="scale" x1="2200" y1="14095" x2="2200" y2="14235"/>
+<line class="scale" x1="3200" y1="14095" x2="3200" y2="14235"/>
+<text class="scale-text" x="700" y="14445">5 m</text></g>
+<text class="legend" x="3700" y="14215">Maße in cm · Raummaße in m · Öffnungen Breite/Höhe, BRH Brüstungshöhe · * oder schraffiert: geschätzt</text>
+<text class="title" x="-1800" y="-2600">Obergeschoss</text>
+<text class="subtitle" x="-1800" y="-2270">Bestand · Modell v0.27 · Schlesierstraße 31</text>
 </svg>
