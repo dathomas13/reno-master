@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.57.1 – Räume im 3D ohne Linien quer über den Boden
+
+- Räume aus mehreren Teilflächen haben im 3D nur noch ihren Außenumriss, keine Linien
+  mehr dort, wo die Teilflächen aneinanderstoßen.
+
 ## 0.57.0 – Grundrisse mit Maßketten wie ein Bauplan
 
 - Die 2D-Pläne sehen jetzt aus wie ein Papierplan: Maßketten in cm auf allen vier Seiten,

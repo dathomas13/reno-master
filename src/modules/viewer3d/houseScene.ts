@@ -148,6 +148,53 @@ export function isVisible(object: THREE_NS.Object3D): boolean {
   return true;
 }
 
+/** [x0, y0, x1, y1] in mm, axis-parallel */
+export type Segment = [number, number, number, number];
+
+function insideRects(rects: readonly (readonly number[])[], x: number, y: number): boolean {
+  return rects.some(([x0, y0, x1, y1]) => x > x0 && x < x1 && y > y0 && y < y1);
+}
+
+/**
+ * The outline of a room made of several rectangles: only the edges between inside and
+ * outside, none where two rectangles of the same room meet - otherwise an L-shaped room
+ * shows lines across its floor.
+ */
+export function roomOutline(rects: readonly (readonly number[])[]): Segment[] {
+  const xs = [...new Set(rects.flatMap((r) => [r[0], r[2]]))].sort((a, b) => a - b);
+  const ys = [...new Set(rects.flatMap((r) => [r[1], r[3]]))].sort((a, b) => a - b);
+  const out: Segment[] = [];
+
+  for (const y of ys) {
+    let start: number | null = null;
+    for (let i = 0; i < xs.length - 1; i++) {
+      const xm = (xs[i] + xs[i + 1]) / 2;
+      const edge = insideRects(rects, xm, y - 0.5) !== insideRects(rects, xm, y + 0.5);
+      if (edge && start === null) start = xs[i];
+      if (!edge && start !== null) {
+        out.push([start, y, xs[i], y]);
+        start = null;
+      }
+    }
+    if (start !== null) out.push([start, y, xs[xs.length - 1], y]);
+  }
+
+  for (const x of xs) {
+    let start: number | null = null;
+    for (let i = 0; i < ys.length - 1; i++) {
+      const ym = (ys[i] + ys[i + 1]) / 2;
+      const edge = insideRects(rects, x - 0.5, ym) !== insideRects(rects, x + 0.5, ym);
+      if (edge && start === null) start = ys[i];
+      if (!edge && start !== null) {
+        out.push([x, start, x, ys[i]]);
+        start = null;
+      }
+    }
+    if (start !== null) out.push([x, start, x, ys[ys.length - 1]]);
+  }
+  return out;
+}
+
 /** model (x, y, z) in mm to three world coordinates in metres */
 export function toWorld(THREE: ThreeNamespace, x: number, y: number, z: number): THREE_NS.Vector3 {
   return new THREE.Vector3(x * MM, z * MM, -y * MM);
@@ -346,11 +393,19 @@ export function buildHouse(
         parent.add(mesh);
         roomPickables.push(mesh);
         disposables.push(geometry);
+      }
 
-        // outline, so a room reads as an area even on a light slab
-        const edgeGeo = new THREE.EdgesGeometry(geometry);
+      // outline, so a room reads as an area even on a light slab - around the whole
+      // room, not around each of its rectangles
+      const points: number[] = [];
+      for (const [x0, y0, x1, y1] of roomOutline(room.rects)) {
+        points.push(x0 * MM, z * MM, -y0 * MM, x1 * MM, z * MM, -y1 * MM);
+      }
+      if (points.length > 0) {
+        const edgeGeo = new THREE.BufferGeometry();
+        edgeGeo.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
         const edgeMat = new THREE.LineBasicMaterial({ color: ROOM_COLOR, transparent: true, opacity: 0.9 });
-        mesh.add(new THREE.LineSegments(edgeGeo, edgeMat));
+        parent.add(new THREE.LineSegments(edgeGeo, edgeMat));
         disposables.push(edgeGeo, edgeMat);
       }
     }
