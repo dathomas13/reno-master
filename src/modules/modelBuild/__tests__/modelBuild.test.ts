@@ -67,6 +67,24 @@ describe('the house file', () => {
     }
   });
 
+  // testdata/ist-gaube-nord.json: build_scene_lite.py on haus-ist.json plus its gaubeNord,
+  // written when the north dormer was added - rebuild it the same way if the builders change
+  it('builds the north dormer the same way as tools/model/build_scene_lite.py', () => {
+    const reference = JSON.parse(read('ist-gaube-nord.json'));
+    const text = JSON.stringify({ ...JSON.parse(read('haus-ist.json')), gaubeNord: reference.gaubeNord });
+    const parsed = parseSource(text);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const scene = buildScene(parsed.source, { version: parsed.source.version, note: '', generatedAt: '2026-09-28' });
+    expect(scene.prims.map((prim) => prim.name)).toEqual(reference.prims.map((prim: { name: string }) => prim.name));
+    expect(scene.prims.filter((prim) => prim.name.startsWith('Nordgaube')).length).toBe(4);
+    for (let i = 0; i < reference.prims.length; i += 1) {
+      expect(JSON.stringify(scene.prims[i].v) === JSON.stringify(reference.prims[i].v)).toBe(true);
+      expect(JSON.stringify(scene.prims[i].t) === JSON.stringify(reference.prims[i].t)).toBe(true);
+      expect(scene.prims[i].bb).toEqual(reference.prims[i].bb);
+    }
+  });
+
   it('builds the same rooms as tools/model/build_rooms.py', () => {
     const { source } = istSource();
     const reference = JSON.parse(read('rooms-ist.json'));

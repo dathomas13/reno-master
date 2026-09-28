@@ -88,6 +88,10 @@ def load(variant: str) -> dict:
     ns["GAUBE"] = dict(x0=g["x0"], x1=g["x1"], depth=g["depth"], wall_h=g["wallH"],
                        windows=[tuple(x) for x in g["windows"]], cheek=tuple(g["cheek"]),
                        tag=g.get("tag", "B"))
+    gn = doc.get("gaubeNord")
+    ns["GAUBE_NORD"] = None if gn is None else dict(
+        x0=gn["x0"], x1=gn["x1"], front_h=gn["frontH"], pitch=gn["pitch"],
+        overhang=gn.get("overhang", 0), cheek=tuple(gn.get("cheek", (120, 120))), tag=gn.get("tag", "C"))
     ns["BALKON"] = dict(doc["balkon"])
     gar = doc["garage"]
     ns["GAR_X"], ns["GAR_Y"] = tuple(gar["x"]), tuple(gar["y"])

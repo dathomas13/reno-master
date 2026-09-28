@@ -56,7 +56,20 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     ...prism(-ov - 1, p.houseW + 1, ridge, p.houseD + ov + 1, zOG - 500, zOG - 500, zu(ridge), zu(p.houseD + ov + 1)),
   ];
   const gaubeVol = box(g.x0, -1, zOG - 500, g.x1, g.depth, gtop + 50);
-  const underRoofG = solidUnion(underRoof, gaubeVol);
+  let underRoofG = solidUnion(underRoof, gaubeVol);
+
+  // Nordgaube (Schleppgaube): front on the Kniestock of the north wall, roof flatter than
+  // the main roof; it ends where its roof underside meets that of the main roof (yMeet)
+  const n = src.gaubeNord;
+  const yIn = p.houseD - p.tOut;
+  const zF = zOG + p.kniestock + (n?.frontH ?? 0);
+  const tanN = n ? Math.tan(n.pitch * RAD) : 0;
+  const yMeet = n ? yIn - n.frontH / (tanRoof() - tanN) : 0;
+  const zd = (y: number) => zF + tanN * (yIn - y);
+  if (n) {
+    underRoofG = solidUnion(underRoofG, prism(n.x0, n.x1, yMeet, p.houseD + ov + 1,
+      zOG - 500, zOG - 500, zd(yMeet), zd(p.houseD + ov + 1)));
+  }
 
   const parts: BuiltPrim[] = [];
 
@@ -197,6 +210,9 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
   ];
   const [chW, chE] = g.cheek;
   roof = solidSub(roof, box(g.x0 + chW, -ov - 1, zOG, g.x1 - chE, g.depth - 50, gtop));
+  const [nW, nE] = n?.cheek ?? [120, 120];
+  // the eave in front of the dormer stays
+  if (n) roof = solidSub(roof, box(n.x0 + nW, yMeet, zOG, n.x1 - nE, yIn, zu(ridge) + dzT));
   add('DACH', 'Satteldach 36° (Kunstschiefer)', 'roof', 'A', roof);
 
   let front = box(g.x0, 0, zOG, g.x1, 365, gtop);
@@ -212,6 +228,19 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       prism(x, x + t, 0, g.depth, zOG + p.kniestock, zu(g.depth), gtop + 50, gtop + 50));
   }
   add('DACH', 'Gaubendach', 'roof', 'C', box(g.x0 - 200, -300, gtop + 50, g.x1 + 200, g.depth + 200, gtop + 250));
+  if (n) {
+    const dzN = p.roofT / Math.cos(n.pitch * RAD);
+    const zK = zOG + p.kniestock;
+    add('DACH', 'Nordgaube Frontwand', 'wall', n.tag,
+      prism(n.x0, n.x1, yIn, p.houseD, zK, zK, zd(yIn), zd(p.houseD)));
+    for (const [name, x, t] of [['Nordgaube Wange West', n.x0, nW], ['Nordgaube Wange Ost', n.x1 - nE, nE]] as const) {
+      add('DACH', name, 'wall', n.tag,
+        prism(x, x + t, yMeet, p.houseD, zu(yMeet), zu(p.houseD), zd(yMeet) + dzN, zd(p.houseD) + dzN));
+    }
+    const yEnd = p.houseD + n.overhang;
+    add('DACH', 'Nordgaube Dach', 'roof', n.tag,
+      prism(n.x0, n.x1, yMeet, yEnd, zd(yMeet), zd(yEnd), zd(yMeet) + dzN, zd(yEnd) + dzN));
+  }
   const ys = p.tOut + (p.ogCeil - (zOG + p.kniestock)) / tanRoof() + 100;
   add('DACH', 'Holzbalkendecke Spitzboden', 'slab', 'B',
     box(p.tOut, ys, p.ogCeil, p.houseW - p.tOut, p.houseD - ys, p.ogCeil + 200));

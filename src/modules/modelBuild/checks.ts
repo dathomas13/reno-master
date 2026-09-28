@@ -145,6 +145,21 @@ export function checkSource(src: HouseSource): CheckResult {
 
   const g = src.gaube;
   if (!(g.x0 < g.x1)) errors.push('gaube: x0 muss kleiner als x1 sein.');
+  const n = src.gaubeNord;
+  if (n) {
+    if (!(n.x0 < n.x1)) errors.push('gaubeNord: x0 muss kleiner als x1 sein.');
+    else if (!(n.cheek[0] + n.cheek[1] < n.x1 - n.x0)) errors.push('gaubeNord: die Wangen sind breiter als die Gaube.');
+    if (!(n.frontH > 0)) errors.push('gaubeNord: frontH muss größer als 0 sein.');
+    if (n.overhang < 0) errors.push('gaubeNord: overhang darf nicht negativ sein.');
+    if (!(n.pitch > 0 && n.pitch < p.roofPitch)) {
+      errors.push(`gaubeNord: pitch muss zwischen 0 und der Dachneigung (${p.roofPitch}°) liegen.`);
+    } else {
+      const depth = n.frontH / (Math.tan(p.roofPitch * Math.PI / 180) - Math.tan(n.pitch * Math.PI / 180));
+      if (p.houseD - p.tOut - depth <= p.houseD / 2) {
+        errors.push('gaubeNord: das Gaubendach erreicht das Hauptdach erst hinter dem First – frontH kleiner oder pitch größer wählen.');
+      }
+    }
+  }
   if (!(src.garage.x[0] < src.garage.x[1] && src.garage.y[0] < src.garage.y[1])) {
     errors.push('garage: x und y müssen aufsteigend sein.');
   }

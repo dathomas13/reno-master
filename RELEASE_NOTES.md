@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.59.0 – Gaube nach Norden im 3D-Modell
+
+- Das 3D-Modell kann jetzt eine Schleppgaube zur Gartenseite zeigen, mit flacherem Dach
+  und kleinem Überstand.
+
 ## 0.58.2 – Keine falsche Warnung beim Import des Stands der Arbeiten
 
 - Beim Import von „Aktuell“ erscheint die Warnung „Räume entfallen“ nicht mehr – Einträge

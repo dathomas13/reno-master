@@ -105,6 +105,15 @@ export interface HouseSource {
     x0: number; x1: number; depth: number; wallH: number;
     windows: [number, number][]; cheek: [number, number]; tag: Tag;
   };
+  /**
+   * optional shed dormer on the north side: front on the Kniestock of the north wall,
+   * `frontH` clear height above it, roof at `pitch` degrees up to the main roof,
+   * `overhang` beyond the outer wall face
+   */
+  gaubeNord?: {
+    x0: number; x1: number; frontH: number; pitch: number; overhang: number;
+    cheek: [number, number]; tag: Tag;
+  };
   balkon: { x0: number; x1: number; y0: number; y1: number; tag: Tag };
   garage: { x: [number, number]; y: [number, number]; z0: number; hFront: number; hBack: number };
   rooms: SourceRoom[];
@@ -317,6 +326,20 @@ export function parseSource(text: string): ParseResult {
     cheek: g.cheek === undefined ? [120, 120] : pair(g.cheek, 'gaube.cheek'),
     tag: tag(g.tag, 'gaube'),
   };
+  let gaubeNord: HouseSource['gaubeNord'];
+  if (raw.gaubeNord !== undefined) {
+    if (!isObj(raw.gaubeNord)) errors.push('gaubeNord: Objekt erwartet.');
+    else {
+      const n = raw.gaubeNord;
+      gaubeNord = {
+        x0: num(n.x0, 'gaubeNord.x0'), x1: num(n.x1, 'gaubeNord.x1'),
+        frontH: num(n.frontH, 'gaubeNord.frontH'), pitch: num(n.pitch, 'gaubeNord.pitch'),
+        overhang: n.overhang === undefined ? 0 : num(n.overhang, 'gaubeNord.overhang'),
+        cheek: n.cheek === undefined ? [120, 120] : pair(n.cheek, 'gaubeNord.cheek'),
+        tag: tag(n.tag, 'gaubeNord'),
+      };
+    }
+  }
   const b = isObj(raw.balkon) ? raw.balkon : (errors.push('balkon fehlt.'), {});
   const balkon: HouseSource['balkon'] = {
     x0: num(b.x0, 'balkon.x0'), x1: num(b.x1, 'balkon.x1'), y0: num(b.y0, 'balkon.y0'),
@@ -373,6 +396,7 @@ export function parseSource(text: string): ParseResult {
     slabExtras,
     loggiaParapets,
     gaube,
+    ...(gaubeNord ? { gaubeNord } : {}),
     balkon,
     garage,
     rooms,
