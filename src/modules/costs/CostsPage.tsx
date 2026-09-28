@@ -8,14 +8,23 @@ import { orderBy } from '@/firebase/db';
 import { formatEuro, formatAmount } from '@/lib/money';
 import { formatDate, monthKey, today } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
-import { sumGross, byCategory, byMonth, totalForMonth, budgetPerTrade, toCsv } from '@/data/costAggregation';
+import {
+  sumGross,
+  byCategory,
+  byMonth,
+  totalForMonth,
+  budgetPerTrade,
+  toCsv,
+  sortNewestFirst,
+} from '@/data/costAggregation';
 import { isNative } from '@/platform';
 
 type Tab = 'liste' | 'uebersicht';
 
 export default function CostsPage() {
   const [params, setParams] = useSearchParams();
-  const { data: costs, loading } = useCollection<Cost>(COL.costs, [orderBy('date', 'desc')]);
+  const { data: rawCosts, loading } = useCollection<Cost>(COL.costs, [orderBy('date', 'desc')]);
+  const costs = useMemo(() => sortNewestFirst(rawCosts), [rawCosts]);
   const { data: trades } = useCollection<Trade>(COL.trades);
   const { shortLabel: roomLabel, matches } = useRooms();
   const [tab, setTab] = useState<Tab>('liste');

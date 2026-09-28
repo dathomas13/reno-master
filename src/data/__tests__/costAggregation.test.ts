@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { sumGross, byCategory, byMonth, totalForMonth, budgetPerTrade, toCsv, NO_CATEGORY } from '@/data/costAggregation';
+import {
+  sumGross,
+  byCategory,
+  byMonth,
+  totalForMonth,
+  budgetPerTrade,
+  toCsv,
+  sortNewestFirst,
+  NO_CATEGORY,
+} from '@/data/costAggregation';
 import { formatAmount } from '@/lib/money';
 import type { Cost, Trade } from '@/data/types';
 
@@ -59,6 +68,34 @@ describe('byMonth', () => {
     ]);
     expect(rows.map((row) => row.key)).toEqual(['2026-08', '2026-09']);
     expect(rows[1]?.total).toBe(15);
+  });
+});
+
+describe('sortNewestFirst', () => {
+  it('sorts by date, newest first', () => {
+    const rows = sortNewestFirst([
+      cost({ id: 'a', date: '2026-09-01' }),
+      cost({ id: 'b', date: '2026-09-14' }),
+      cost({ id: 'c', date: '2026-08-30' }),
+    ]);
+    expect(rows.map((row) => row.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('breaks ties on the same day by when the entry was created, not the (random) id', () => {
+    const rows = sortNewestFirst([
+      cost({ id: 'a', date: '2026-09-01', createdAt: { seconds: 100 } }),
+      cost({ id: 'b', date: '2026-09-01', createdAt: { seconds: 300 } }),
+      cost({ id: 'c', date: '2026-09-01', createdAt: { seconds: 200 } }),
+    ]);
+    expect(rows.map((row) => row.id)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('treats a still-pending offline write (no resolved createdAt yet) as the newest', () => {
+    const rows = sortNewestFirst([
+      cost({ id: 'synced', date: '2026-09-01', createdAt: { seconds: 100 } }),
+      cost({ id: 'pending', date: '2026-09-01' }),
+    ]);
+    expect(rows.map((row) => row.id)).toEqual(['pending', 'synced']);
   });
 });
 
