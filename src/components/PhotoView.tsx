@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { resolveFileUrl } from '@/offline/fileUrls';
 import type { Photo } from '@/data/types';
 import { PdfViewer } from './PdfViewer';
+import { ZoomPan } from './ZoomPan';
 
 /** shows a photo from the upload queue, the URL cache or the network, in that order */
 export function PhotoImage({
@@ -75,9 +76,12 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
   const isPdf = photo?.contentType === 'application/pdf';
   // the original can be several megabytes, so it is only fetched when asked for
   const [showOriginal, setShowOriginal] = useState(false);
+  // swiping to the next photo only makes sense while the picture is not zoomed
+  const [zoomed, setZoomed] = useState(false);
 
   useEffect(() => {
     setShowOriginal(false);
+    setZoomed(false);
   }, [index]);
 
   useEffect(() => {
@@ -125,18 +129,22 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
       <div
         className="flex-1 min-h-0 min-w-0 flex items-center justify-center overflow-hidden"
         onTouchStart={(event) => {
-          if (isPdf) return;
+          if (isPdf || zoomed) return;
           startX = event.touches[0]?.clientX ?? 0;
         }}
         onTouchEnd={(event) => {
-          if (isPdf) return;
+          if (isPdf || zoomed) return;
           const delta = (event.changedTouches[0]?.clientX ?? 0) - startX;
           if (delta < -50) onIndexChange(Math.min(index + 1, photos.length - 1));
           if (delta > 50) onIndexChange(Math.max(index - 1, 0));
         }}
       >
         {isPdf ? <PdfViewer key={photo.storagePath} storagePath={photo.storagePath} /> : (
-          <PhotoImage photo={photo} full={showOriginal} className="max-h-full max-w-full object-contain" />
+          <ZoomPan key={photo.id} className="w-full h-full" onScaleChange={(scale) => setZoomed(scale > 1)}>
+            <div className="w-full h-full flex items-center justify-center">
+              <PhotoImage photo={photo} full={showOriginal} className="max-h-full max-w-full object-contain pointer-events-none" />
+            </div>
+          </ZoomPan>
         )}
       </div>
       {footer && <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted shrink-0 max-h-[25dvh] overflow-auto break-words">{footer(photo)}</div>}
