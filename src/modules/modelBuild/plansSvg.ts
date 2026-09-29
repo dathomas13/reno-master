@@ -20,7 +20,7 @@ export const PLAN_FLOORS: PlanFloor[] = ['KG', 'EG', 'OG'];
 
 const CHAIN_GAP = 700; // mm from the building to the first dimension chain
 const CHAIN_STEP = 450; // mm between two chains
-const CHAIN_ZONE = CHAIN_GAP + 2 * CHAIN_STEP + 350; // room for three chains and their text
+const CHAIN_ZONE = CHAIN_GAP + 3 * CHAIN_STEP + 350; // room for four chains and their text
 const TITLE_ZONE = 1100; // mm above the chains for the title
 const FOOT_ZONE = 1000; // mm below the chains for scale bar and legend
 export const FLOOR_LABEL: Record<PlanFloor, string> = { KG: 'Kellergeschoss', EG: 'Erdgeschoss', OG: 'Obergeschoss' };
@@ -316,7 +316,20 @@ export function buildPlanSvg(
   add('<g id="dimensions">');
   const band = tOut + 200; // how far into the house a wall may start and still meet the facade
 
-  const chainPoints = (side: Side): [number[], number[], number[]] => {
+  const stairBoxes: [number, number, number, number][] = [];
+  for (const s of src.stairs) {
+    if ((s.z0 < 0 ? 'KG' : 'EG') !== floor) continue;
+    const length = s.steps * s.run;
+    if (s.direction === '+x' || s.direction === '-x') {
+      const x = s.direction === '+x' ? s.x0 : s.x0 - length;
+      stairBoxes.push([x, s.y0, x + length, s.y0 + s.width]);
+    } else {
+      const y = s.direction === '+y' ? s.y0 : s.y0 - length;
+      stairBoxes.push([s.x0, y, s.x0 + s.width, y + length]);
+    }
+  }
+
+  const chainPoints = (side: Side): [number[], number[], number[], number[]] => {
     const horizontal = side === 'S' || side === 'N';
     const [lo, hi] = horizontal ? [bx0, bx1] : [by0, by1];
     const edge = { S: by0, N: by1, W: bx0, E: bx1 }[side];
@@ -344,10 +357,19 @@ export function buildPlanSvg(
         }
       }
     }
-    return [mergePoints(openPts), mergePoints(roomPts), [lo, hi]];
+    // every edge of every wall and stair, so no clear width or wall thickness is missing
+    const detailPts = [...roomPts];
+    for (const w of walls) detailPts.push(...span(w));
+    for (const [x0, y0, x1, y1] of stairBoxes) detailPts.push(...(horizontal ? [x0, x1] : [y0, y1]));
+    return [
+      mergePoints(openPts),
+      mergePoints(roomPts),
+      mergePoints(detailPts.filter((p) => p >= lo && p <= hi)),
+      [lo, hi],
+    ];
   };
 
-  const drawChain = (side: Side, level: number, pts: number[]) => {
+  const drawChain = (side: Side, level: number, pts: number[], minLabel = 0) => {
     let pos: number;
     if (side === 'S') pos = fy(by0) + CHAIN_GAP + level * CHAIN_STEP;
     else if (side === 'N') pos = fy(by1) - CHAIN_GAP - level * CHAIN_STEP;
@@ -361,6 +383,7 @@ export function buildPlanSvg(
       for (let i = 0; i + 1 < pts.length; i += 1) {
         const a = pts[i];
         const b = pts[i + 1];
+        if (b - a < minLabel) continue;
         const small = b - a < 600 ? ' small' : '';
         add(`<text class="dim-text${small}" x="${f0((a + b) / 2)}" y="${f0(pos - 50)}">${cm(b - a)}</text>`);
       }
@@ -370,6 +393,7 @@ export function buildPlanSvg(
       for (let i = 0; i + 1 < pts.length; i += 1) {
         const a = pts[i];
         const b = pts[i + 1];
+        if (b - a < minLabel) continue;
         const small = b - a < 600 ? ' small' : '';
         const tx = pos - 50;
         const ty = fy((a + b) / 2);
@@ -382,7 +406,7 @@ export function buildPlanSvg(
   const same = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => v === b[i]);
   if (walls.length > 0) {
     for (const side of ['S', 'N', 'W', 'E'] as const) {
-      const [openingChain, roomChain, totalChain] = chainPoints(side);
+      const [openingChain, roomChain, detailChain, totalChain] = chainPoints(side);
       let level = 0;
       for (const pts of [openingChain, roomChain]) {
         // a chain that shows nothing new is left out
@@ -390,6 +414,11 @@ export function buildPlanSvg(
           drawChain(side, level, pts);
           level += 1;
         }
+      }
+      // all wall edges and stairs; segments too short for their text stay unlabelled
+      if (detailChain.length > 2 && !same(detailChain, openingChain) && !same(detailChain, roomChain)) {
+        drawChain(side, level, detailChain, 150);
+        level += 1;
       }
       drawChain(side, level, totalChain);
     }
