@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.63.1 – Menü mit Trennstrich auch in der Webansicht
+
+- Die Menü-Einstellung mit Trennstrich steht jetzt auch in der Webansicht bereit.
+
 ## 0.63.0 – Menü mit Trennstrich, Einstellungen aufgeräumt
 
 - Im Menü entscheidet ein Strich statt der Haken: was darüber steht, kommt in die Leiste.

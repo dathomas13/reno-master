@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsPage from './SettingsPage';
 
@@ -99,16 +99,18 @@ describe('settings disclosure', () => {
     await openSettings();
     expect(screen.queryByRole('checkbox', { name: /in der Leiste/ })).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Menü'));
-    expect(screen.getByRole('separator')).toBeInTheDocument();
+    // the start page section has a "Kosten" row too
+    const menu = within(screen.getByText('Menü').closest('details')!);
+    expect(menu.getByRole('separator')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Kosten nach unten' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Suche nach oben' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Suche nach oben' }));
+    fireEvent.click(menu.getByRole('button', { name: 'Kosten nach unten' }));
+    fireEvent.click(menu.getByRole('button', { name: 'Suche nach oben' }));
+    fireEvent.click(menu.getByRole('button', { name: 'Suche nach oben' }));
 
     const stored = JSON.parse(localStorage.getItem('reno.settings') ?? '{}');
     expect(stored.navLayout.bar).toEqual(['/', '/tagebuch', '/3d', '/suche']);
     expect(stored.navLayout.order.slice(3, 5)).toEqual(['/suche', '/kosten']);
-    expect(screen.getByRole('button', { name: 'Start nach oben' })).toBeDisabled();
+    expect(menu.getByRole('button', { name: 'Start nach oben' })).toBeDisabled();
   });
 
   it('saves the reminder time immediately when it changes', async () => {
