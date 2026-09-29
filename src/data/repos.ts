@@ -203,5 +203,10 @@ export async function patchTrade(id: string, patch: Partial<Trade>): Promise<voi
 }
 
 export async function patchPhase(id: string, patch: Partial<Phase>): Promise<void> {
-  await patchDoc(COL.phases, id, patch as Record<string, unknown>);
+  // Firestore rejects `undefined`; an explicitly unset field means "remove it"
+  const value: Record<string, unknown> = { ...patch };
+  for (const key of Object.keys(value)) {
+    if (value[key] === undefined) value[key] = deleteField();
+  }
+  await patchDoc(COL.phases, id, value);
 }

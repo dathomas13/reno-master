@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.65.1 – Phase lässt sich wieder wechseln
+
+- Die Phase auf der Startseite wechselt jetzt zuverlässig; ein Tipp auf eine Phase setzt sie auf „In Arbeit“.
+
 ## 0.65.0 – Dach, Dachstuhl und Dachgeschoss einzeln
 
 - Im 3D-Modell lassen sich Dach, Dachstuhl und Dachgeschoss getrennt ein- und ausblenden, dazu die neue Ansicht „Dachstuhl“.
