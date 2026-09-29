@@ -51,9 +51,9 @@ const SCENE = __SCENE_JSON__;
 const S = 0.001; // mm -> m
 const KIND_COLOR = { wall:0xd9d3c5, slab:0xb5b9bd, roof:0x4a5563, glass:0x8ec6e6, door:0x7a5a3a, stair:0xa88a5c, rail:0x2b2f34 };
 const TAG_COLOR  = { A:0xd9d3c5, B:0xc9b990, C:0xb8845a };
-const LAYERS = ["KG","EG","OG","DACH","GAR"];
-const LAYER_LABEL = { KG:"Keller", EG:"Erdgeschoss", OG:"Obergeschoss", DACH:"Dach + Gaube", GAR:"Garage" };
-const LAYER_SHORT = { KG:"KG", EG:"EG", OG:"OG", DACH:"Dach", GAR:"Garage" };
+const LAYERS = ["KG","EG","OG","DG","STUHL","DACH","GAR"];
+const LAYER_LABEL = { KG:"Keller", EG:"Erdgeschoss", OG:"Obergeschoss", DG:"Dachgeschoss", STUHL:"Dachstuhl", DACH:"Dach + Gauben", GAR:"Garage" };
+const LAYER_SHORT = { KG:"KG", EG:"EG", OG:"OG", DG:"DG", STUHL:"Dachstuhl", DACH:"Dach", GAR:"Garage" };
 
 const canvas = document.getElementById('c');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});

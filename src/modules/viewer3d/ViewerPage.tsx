@@ -42,7 +42,7 @@ export default function ViewerPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [layerState, setLayerState] = useState<Record<Layer, boolean>>(
-    saved?.layers ?? { KG: true, EG: true, OG: true, DACH: true, GAR: true },
+    saved?.layers ?? { KG: true, EG: true, OG: true, DG: true, STUHL: true, DACH: true, GAR: true },
   );
   const [viewLabel, setViewLabel] = useState(saved?.viewLabel || VIEW_PRESETS[0]!.label);
   const [structural, setStructural] = useState(saved?.structural ?? false);

@@ -68,9 +68,9 @@ describe('the house file', () => {
   });
 
   // testdata/ist-dachstuhl.json: build_scene_lite.py on haus-ist.json without its flat dormer,
-  // plus the roof frame and both shed dormers in `extra` and deep window frames on the
-  // openings in `frames` ([wall id, opening index, frame]) - rebuild it the same way if the
-  // builders change
+  // plus the roof frame with ties (insulation and lining) and a trimmer, both shed dormers in
+  // `extra` and deep window frames on the openings in `frames` ([wall id, opening index,
+  // frame]) - rebuild it the same way if the builders change
   it('builds the roof frame, shed dormers and window frames the same way as tools/model/build_scene_lite.py', () => {
     const reference = JSON.parse(read('ist-dachstuhl.json'));
     const doc = JSON.parse(read('haus-ist.json'));
@@ -86,6 +86,13 @@ describe('the house file', () => {
     expect(scene.prims.map((prim) => prim.name)).toEqual(reference.prims.map((prim: { name: string }) => prim.name));
     expect(scene.prims.some((prim) => prim.name === 'Gaube Nord Sparren')).toBe(true);
     expect(scene.prims.filter((prim) => prim.name.startsWith('Fensterrahmen'))).toHaveLength(2);
+    const layerOf = (name: string) => scene.prims.find((prim) => prim.name === name)?.layer;
+    expect(['Zangen', 'Wechsel Sparren', 'Wechsel Zangen', 'Sparren Süd', 'Mittelpfette Nord', 'Stütze'].map(layerOf))
+      .toEqual(['STUHL', 'STUHL', 'STUHL', 'STUHL', 'STUHL', 'STUHL']);
+    expect(['Spitzboden Bretter', 'Dämmung zwischen den Zangen', 'Gipskarton unter den Zangen'].map(layerOf))
+      .toEqual(['DG', 'DG', 'DG']);
+    expect(layerOf('Dachhaut 36° (Lattung + Kunstschiefer)')).toBe('DACH');
+    expect(layerOf('Holzbalkendecke Spitzboden')).toBeUndefined();
     for (let i = 0; i < reference.prims.length; i += 1) {
       expect(JSON.stringify(scene.prims[i].v) === JSON.stringify(reference.prims[i].v)).toBe(true);
       expect(JSON.stringify(scene.prims[i].t) === JSON.stringify(reference.prims[i].t)).toBe(true);
@@ -101,6 +108,19 @@ describe('the house file', () => {
     const roofFrame = { rafters: 20, rafterB: 100, rafterH: 160, purlinB: 180, purlinH: 270 };
     const steep = parseSource(JSON.stringify({ ...doc, roofFrame, dormers: [{ ...dormer, pitch: 40 }] }));
     expect(steep.ok && checkSource(steep.source).errors.join()).toMatch('pitch muss zwischen 0');
+  });
+
+  it('reads ties with their defaults and refuses trimmers across the ridge', () => {
+    const doc = JSON.parse(read('haus-ist.json'));
+    const roofFrame = {
+      rafters: 20, rafterB: 100, rafterH: 160, purlinB: 180, purlinH: 270,
+      ties: { insulation: true }, trimmers: [{ rafters: [14, 18], y: [5000, 7000] }],
+    };
+    const parsed = parseSource(JSON.stringify({ ...doc, roofFrame }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.source.roofFrame?.ties).toEqual({ b: 50, h: 160, notch: 40, play: 20, deck: 24, insulation: true, lining: 0 });
+    expect(checkSource(parsed.source).errors.join()).toMatch('ganz auf einer Seite des Firsts');
   });
 
   it('refuses a window frame on a door or thicker than half the opening', () => {

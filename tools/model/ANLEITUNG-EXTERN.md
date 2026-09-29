@@ -113,6 +113,11 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
                  "rafterB": 100, "rafterH": 160,      // Sparrenquerschnitt; darüber die Dachhaut bis roofT
                  "purlinB": 180, "purlinH": 270,      // Mittelpfetten, OK Pfette = OK Spitzbodendecke
                  "posts": [4927.5, 9302.5], "postB": 140,   // Stützen unter beiden Pfetten, Mitte in x
+                 "ties": { "b": 50, "h": 160,         // optional: Zangen, je 2 Bretter b×h an jedem Sparren
+                           "notch": 40, "play": 20,   // Ausklinkung an der Pfette, Spiel des schrägen Endes zum Dach
+                           "deck": 24,                // Bretter des Spitzbodens auf den Zangen
+                           "insulation": false, "lining": 0 },   // Dämmung zwischen den Zangen, Gipskarton darunter (0 = keiner)
+                 "trimmers": [ { "rafters": [14, 18], "y": [7005, 7615] } ],   // optional: Wechsel, Öffnung in y zwischen Sparren 14 und 18
                  "tag": "B" },
   "dormers": [                              // optional, nur mit roofFrame: Schleppgauben
     { "side": "N", "rafters": [10, 16],     // Seite N|S, von Sparren 10 bis 16 (von Westen gezählt)
@@ -206,7 +211,13 @@ Garagendach, Balkongeländer und die Materialien baut die App selbst. Sie lassen
 über `params`, `gaube`, `roofFrame`, `dormers`, `balkon` und `garage` beeinflussen.
 Mit `roofFrame` baut die App den Dachstuhl: Sparren mit Kerve auf den Mittelpfetten, durch die
 Traufwand bis zum rechtwinkligen Balkenkopf, Stützen, Dachhaut und die Spitzbodendecke
-zwischen den Pfetten. Eine Schleppgaube steht mit ihrer Front innen hinter der Traufwand auf
+zwischen den Pfetten. Mit `ties` hängen unter den Pfetten Zangen von Sparren zu Sparren – je ein
+Brett links und rechts, an der Pfette um `notch` ausgeklinkt, die Enden im Dachwinkel `play`
+unter der Sparrenoberkante abgeschnitten; statt der Spitzbodendecke liegen dann Bretter auf den
+Zangen, wahlweise mit Dämmung dazwischen und Gipskarton darunter, und die Innenwände enden
+unter den Zangen. Ein Eintrag in `trimmers` unterbricht die Sparren zwischen den beiden
+genannten über der Öffnung `y` (ganz auf einer Seite des Firsts) und die Zangen darunter und
+setzt oben und unten je einen Wechsel ein. Eine Schleppgaube steht mit ihrer Front innen hinter der Traufwand auf
 den dort waagrecht abgeschnittenen Sparren; ihre Sparren liegen hinten auf den Hauptsparren
 auf, die Hauptsparren dazwischen sind ausgewechselt. Für eine andere Dachform muss
 das Programm geändert werden. Das gehört in einen Chat mit Repo-Zugriff, nicht in die

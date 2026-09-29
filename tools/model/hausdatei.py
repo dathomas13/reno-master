@@ -92,7 +92,12 @@ def load(variant: str) -> dict:
     ns["ROOF_FRAME"] = None if rf is None else dict(
         rafters=rf["rafters"], rafter_b=rf["rafterB"], rafter_h=rf["rafterH"],
         purlin_b=rf["purlinB"], purlin_h=rf["purlinH"], posts=list(rf.get("posts", [])),
-        post_b=rf.get("postB", 140), tag=rf.get("tag", "B"))
+        post_b=rf.get("postB", 140), tag=rf.get("tag", "B"),
+        ties=None if rf.get("ties") is None else dict(
+            b=rf["ties"].get("b", 50), h=rf["ties"].get("h", 160), notch=rf["ties"].get("notch", 40),
+            play=rf["ties"].get("play", 20), deck=rf["ties"].get("deck", 24),
+            insulation=rf["ties"].get("insulation") is True, lining=rf["ties"].get("lining", 0)),
+        trimmers=[dict(rafters=tuple(t["rafters"]), y=tuple(t["y"])) for t in rf.get("trimmers", [])])
     ns["DORMERS"] = [dict(side=d["side"], rafters=tuple(d["rafters"]), front_h=d["frontH"],
                           front_t=d.get("frontT", 200), pitch=d["pitch"], overhang=d.get("overhang", 0),
                           windows=[tuple(x) for x in d.get("windows", [])], sill_h=d.get("sillH", 120),

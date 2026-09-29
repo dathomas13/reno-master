@@ -29,7 +29,7 @@ import pathlib
 import sys
 from collections import Counter, defaultdict
 
-LAYERS = {"KG", "EG", "OG", "DACH", "GAR"}
+LAYERS = {"KG", "EG", "OG", "DG", "STUHL", "DACH", "GAR"}
 KINDS = {"wall", "slab", "roof", "glass", "door", "stair", "rail"}
 TAGS = {"A", "B", "C"}
 

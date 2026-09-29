@@ -9,7 +9,7 @@ import {
 
 const good: ViewerState = {
   camera: { theta: 0.8, phi: 1.1, distance: 42, target: [0, 1.5, -2] },
-  layers: { KG: false, EG: true, OG: true, DACH: false, GAR: true },
+  layers: { KG: false, EG: true, OG: true, DG: true, STUHL: false, DACH: false, GAR: true },
   structural: true,
   showRooms: true,
   viewLabel: 'OG-Grundriss',
@@ -37,7 +37,7 @@ describe('parseViewerState', () => {
 
   it('fills in what an older version did not store', () => {
     const older = parseViewerState({ camera: good.camera });
-    expect(older?.layers).toEqual({ KG: true, EG: true, OG: true, DACH: true, GAR: true });
+    expect(older?.layers).toEqual({ KG: true, EG: true, OG: true, DG: true, STUHL: true, DACH: true, GAR: true });
     expect(older?.structural).toBe(false);
     expect(older?.showRooms).toBe(false);
     expect(older?.viewLabel).toBe('');

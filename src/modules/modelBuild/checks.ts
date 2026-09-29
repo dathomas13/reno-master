@@ -163,6 +163,27 @@ export function checkSource(src: HouseSource): CheckResult {
     for (const x of rf.posts) {
       if (!(x > 0 && x < p.houseW)) errors.push(`roofFrame.posts: ${x} liegt außerhalb des Hauses.`);
     }
+    const t = rf.ties;
+    if (t) {
+      if (!(t.b > 0 && t.h > 0)) errors.push('roofFrame.ties: b und h müssen größer als 0 sein.');
+      if (!(t.notch >= 0 && t.notch < t.h && t.notch < rf.purlinH)) {
+        errors.push('roofFrame.ties.notch: zwischen 0 und der Zangen- bzw. Pfettenhöhe erwartet.');
+      }
+      if (!(t.play >= 0 && t.deck >= 0 && t.lining >= 0)) errors.push('roofFrame.ties: play, deck und lining dürfen nicht negativ sein.');
+    }
+    const ridgeY = p.houseD / 2;
+    (rf.trimmers ?? []).forEach((w, i) => {
+      const where = `roofFrame.trimmers[${i}]`;
+      const [a, b] = w.rafters;
+      if (!(Number.isInteger(a) && Number.isInteger(b) && a >= 1 && b <= rf.rafters && b - a >= 2)) {
+        errors.push(`${where}: rafters [${a}, ${b}] – Sparrennummern von 1 bis ${rf.rafters}, mindestens einer dazwischen.`);
+      }
+      const [y0, y1] = w.y;
+      if (!(y0 < y1)) errors.push(`${where}: y[0] muss kleiner als y[1] sein.`);
+      else if (!((y0 > p.tOut && y1 <= ridgeY) || (y0 >= ridgeY && y1 < p.houseD - p.tOut))) {
+        errors.push(`${where}: die Öffnung muss ganz auf einer Seite des Firsts und innerhalb der Außenwände liegen.`);
+      }
+    });
   }
   const tanR = Math.tan(p.roofPitch * Math.PI / 180);
   (src.dormers ?? []).forEach((d, i) => {

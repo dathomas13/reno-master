@@ -11,7 +11,9 @@
  * unknown: half written, from an older version, edited by hand. `parseViewerState` is the
  * gate, and it is the part that is tested.
  */
-import type { Floor } from '@/data/types';
+/** the layers of the scene (houseScene.ts), kept here so this module stays free of three */
+export const VIEWER_LAYERS = ['KG', 'EG', 'OG', 'DG', 'STUHL', 'DACH', 'GAR'] as const;
+export type ViewerLayer = (typeof VIEWER_LAYERS)[number];
 
 export interface ViewerCamera {
   theta: number;
@@ -23,7 +25,7 @@ export interface ViewerCamera {
 
 export interface ViewerState {
   camera: ViewerCamera;
-  layers: Record<Floor, boolean>;
+  layers: Record<ViewerLayer, boolean>;
   structural: boolean;
   showRooms: boolean;
   /** the entry of the view menu that was chosen last */
@@ -33,7 +35,6 @@ export interface ViewerState {
 }
 
 const KEY = 'reno.viewer.view';
-const FLOORS: Floor[] = ['KG', 'EG', 'OG', 'DACH', 'GAR'];
 
 /** the state of this session, which does not need storage to survive a navigation */
 let current: ViewerState | null = null;
@@ -62,8 +63,9 @@ export function parseViewerState(value: unknown): ViewerState | null {
   if (!Array.isArray(target) || target.length !== 3 || !target.every(isFiniteNumber)) return null;
 
   const layersRaw = (raw.layers ?? {}) as Record<string, unknown>;
-  const layers = {} as Record<Floor, boolean>;
-  for (const floor of FLOORS) {
+  // a layer the saved view does not know yet (an older version) is shown
+  const layers = {} as Record<ViewerLayer, boolean>;
+  for (const floor of VIEWER_LAYERS) {
     layers[floor] = typeof layersRaw[floor] === 'boolean' ? (layersRaw[floor] as boolean) : true;
   }
 

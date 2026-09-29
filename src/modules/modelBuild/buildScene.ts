@@ -83,6 +83,8 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
   const dormers: Dormer[] = [];
   let hr = 0; let hs = 0; let rb = 0; let spX: number[] = []; let zC = 0; let zPt = 0;
   let uSeat = 0; let uPn = 0; let uPi = 0; let uEb = 0;
+  // ties: top and underside, where the sloped end leaves the underside and the top
+  let zTt = 0; let zTb = 0; let uTb = 0; let uTt = 0; let zCeil = 0;
   if (rf) {
     hr = rf.rafterH / Math.cos(p.roofPitch * RAD);
     hs = dzT - hr;
@@ -95,6 +97,15 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     uPn = uSeat - 70; // outer face of the purlin, birdsmouth 7 cm long
     uPi = uPn + rf.purlinB;
     uEb = uE + rf.rafterH * Math.sin(p.roofPitch * RAD); // square-cut rafter head
+    const ti = rf.ties;
+    if (ti) {
+      zTt = zPt - rf.purlinH + ti.notch;
+      zTb = zTt - ti.h;
+      const dp = ti.play / Math.cos(p.roofPitch * RAD); // play square to the slope, measured plumb
+      uTb = (zTb + dp - hr - zK) / tr;
+      uTt = (zTt + dp - hr - zK) / tr;
+      zCeil = zTb - ti.lining;
+    }
     for (const d of src.dormers ?? []) {
       const i0 = d.rafters[0] - 1;
       const i1 = d.rafters[1] - 1;
@@ -114,10 +125,12 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       ...prism(-ov - 1, p.houseW + 1, ridge, p.houseD + ov + 1, zOG - 500, zOG - 500, zu(ridge) + hr, zu(p.houseD + ov + 1) + hr),
     ];
     // inner walls end under the Spitzboden ceiling, which spans between the purlins, and
-    // under the purlins themselves
+    // under the purlins themselves - with ties under them and their lining instead
     const zHigh = zr(uR) + dzT + 1000;
-    underRoofG = solidSub(underRoofG, box(-ov - 1, p.tOut + uPi, p.ogCeil, p.houseW + ov + 1,
-      p.houseD - p.tOut - uPi, zHigh));
+    if (!ti) {
+      underRoofG = solidSub(underRoofG, box(-ov - 1, p.tOut + uPi, p.ogCeil, p.houseW + ov + 1,
+        p.houseD - p.tOut - uPi, zHigh));
+    }
     for (const side of ['S', 'N'] as const) {
       underRoofG = solidSub(underRoofG, band(side, -ov - 1, p.houseW + ov + 1, uPn, uPi,
         zPt - rf.purlinH, zPt - rf.purlinH, zHigh, zHigh));
@@ -129,7 +142,16 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       underRoofG = solidUnion(underRoofG, band(d.side, d.x0 + rb, d.x1 - rb, d.frontT, uEnd, zOG - 500, zOG - 500,
         d.zW, d.zW + d.tg * (uEnd - d.frontT)));
     }
+    if (ti) underRoofG = solidSub(underRoofG, box(-ov - 1, p.tOut + uTb, zCeil, p.houseW + ov + 1, p.houseD - p.tOut - uTb, zHigh));
   }
+  /** the trimmers as ranges of u on their side, between the inner faces of the full rafters */
+  const trims = (rf?.trimmers ?? []).map((w) => {
+    const side: 'N' | 'S' = w.y[0] >= ridge ? 'N' : 'S';
+    const yIn = p.houseD - p.tOut;
+    const [ua, ub] = side === 'N' ? [yIn - w.y[1], yIn - w.y[0]] : [w.y[0] - p.tOut, w.y[1] - p.tOut];
+    return { side, i0: w.rafters[0] - 1, i1: w.rafters[1] - 1, ua, ub, y0: w.y[0], y1: w.y[1],
+      xa: spX[w.rafters[0] - 1] + rb, xb: spX[w.rafters[1] - 1] };
+  });
   /** underside of the dormer rafters */
   const zd = (d: Dormer, u: number) => d.zW + d.tg * (u - d.frontT);
 
@@ -333,26 +355,68 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
           const uS = hr / tr;
           sol = solidUnion(sol, band(side, x, x1, uEb, 0, zr(uEb), zr(0), zr(uEb) + hr, zC));
           sol = solidUnion(sol, band(side, x, x1, 0, uS, zr(0), zr(uS), zC, zC));
-          uLo = uPn - 500;
+          uLo = rf.ties ? Math.min(uPn - 500, uTb - 100) : uPn - 500;
         }
         sol = solidUnion(sol, band(side, x, x1, uLo, uPn, zr(uLo), zr(uPn), zr(uLo) + hr, zr(uPn) + hr));
         sol = solidUnion(sol, band(side, x, x1, uPn, uSeat, zPt, zPt, zr(uPn) + hr, zr(uSeat) + hr));
         sol = solidUnion(sol, band(side, x, x1, uSeat, uR, zr(uSeat), zr(uR), zr(uSeat) + hr, zr(uR) + hr));
+        for (const w of trims) {
+          if (w.side === side && w.i0 < i && i < w.i1) {
+            sol = solidSub(sol, band(side, x - 1, x1 + 1, w.ua - rb, w.ub + rb, zOG, zOG, zTop, zTop));
+          }
+        }
         rafters[side] = solidUnion(rafters[side], sol);
       });
     }
     for (const d of dormers) skin = solidSub(skin, band(d.side, d.x0, d.x1, 0, d.uK, zOG, zOG, zTop, zTop));
     skin = solidSub(skin, oldCut);
     add('DACH', 'Dachhaut 36° (Lattung + Kunstschiefer)', 'roof', 'A', skin);
+    const purlins: Solid = [];
     for (const [side, name] of [['S', 'Süd'], ['N', 'Nord']] as const) {
-      add('DACH', `Sparren ${name}`, 'roof', rf.tag, solidSub(rafters[side], oldCut), true);
-      add('DACH', `Mittelpfette ${name}`, 'roof', rf.tag,
-        band(side, 50, p.houseW - 50, uPn, uPi, zPt - rf.purlinH, zPt - rf.purlinH, zPt, zPt), true);
+      add('STUHL', `Sparren ${name}`, 'roof', rf.tag, solidSub(rafters[side], oldCut), true);
+      const purlin = band(side, 50, p.houseW - 50, uPn, uPi, zPt - rf.purlinH, zPt - rf.purlinH, zPt, zPt);
+      purlins.push(...purlin);
+      add('STUHL', `Mittelpfette ${name}`, 'roof', rf.tag, purlin, true);
       const uM = (uPn + uPi) / 2;
       const pb = rf.postB / 2;
       for (const x of rf.posts) {
-        add('OG', 'Stütze', 'wall', rf.tag,
+        add('STUHL', 'Stütze', 'wall', rf.tag,
           band(side, x - pb, x + pb, uM - pb, uM + pb, zOG, zOG, zPt - rf.purlinH, zPt - rf.purlinH), true);
+      }
+    }
+    for (const w of trims) {
+      let hd: Solid = [];
+      for (const [u0, u1] of [[w.ua - rb, w.ua], [w.ub, w.ub + rb]]) {
+        hd = solidUnion(hd, band(w.side, w.xa, w.xb, u0, u1, zr(u0), zr(u1), zr(u0) + hr, zr(u1) + hr));
+      }
+      add('STUHL', 'Wechsel Sparren', 'roof', rf.tag, hd, true);
+    }
+    const ti = rf.ties;
+    if (ti) {
+      // both ends cut at the roof pitch, `play` below the rafter top; notched onto the purlins
+      const zEnd = (u: number) => zr(u) + hr - ti.play / Math.cos(p.roofPitch * RAD);
+      let ties: Solid = [];
+      spX.forEach((x, i) => {
+        const boards: [number, number][] = [];
+        if (i > 0) boards.push([x - ti.b, x]); // the gable rafters have their outer side in the wall
+        if (i < spX.length - 1) boards.push([x + rb, x + rb + ti.b]);
+        for (const [a, b] of boards) {
+          let t: Solid = [];
+          for (const side of ['S', 'N'] as const) {
+            t = solidUnion(t, band(side, a, b, uTb, uTt, zTb, zTb, zEnd(uTb), zTt));
+            t = solidUnion(t, band(side, a, b, uTt, uR, zTb, zTb, zTt, zTt));
+          }
+          for (const w of trims) {
+            if (w.i0 < i && i < w.i1) t = solidSub(t, box(a - 1, w.y0 - rb, zTb - 1, b + 1, w.y1 + rb, zTt + 1));
+          }
+          ties = [...ties, ...solidSub(t, purlins)];
+        }
+      });
+      add('STUHL', 'Zangen', 'roof', rf.tag, ties, true);
+      for (const w of trims) {
+        add('STUHL', 'Wechsel Zangen', 'roof', rf.tag, [
+          ...box(w.xa + ti.b, w.y0 - rb, zTb, w.xb - ti.b, w.y0, zTt),
+          ...box(w.xa + ti.b, w.y1, zTb, w.xb - ti.b, w.y1 + rb, zTt)], true);
       }
     }
     for (const d of dormers) {
@@ -393,7 +457,7 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
         sol = solidUnion(sol, band(side, x, xe, ua, ub, zr(ua) + hr, zr(ub) + hr, zd(d, ua) + hrg, zd(d, ub) + hrg));
         ds = solidUnion(ds, sol);
       }
-      add('DACH', `${label} Sparren`, 'roof', d.tag, ds, true);
+      add('STUHL', `${label} Sparren`, 'roof', d.tag, ds, true);
       const uk = d.uK;
       add('DACH', `${label} Dachhaut`, 'roof', d.tag,
         band(side, x0, x1, ug, uk, zd(d, ug) + hrg, zd(d, uk) + hrg, zd(d, ug) + hrg + hsg, zd(d, uk) + hrg + hsg));
@@ -414,13 +478,34 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     }
     add('DACH', 'Gaubendach', 'roof', 'C', box(g.x0 - 200, -300, gtop + 50, g.x1 + 200, g.depth + 200, gtop + 250));
   }
-  if (rf) {
+  if (rf?.ties) {
+    // boards on the ties between the purlins, insulation between the ties, the lining under
+    // them from slope to slope; the trimmers leave their opening
+    const ti = rf.ties;
+    const y0 = p.tOut + uPi;
+    const y1 = p.houseD - p.tOut - uPi;
+    let deck = box(p.tOut, y0, zTt, p.houseW - p.tOut, y1, zTt + ti.deck);
+    for (const w of trims) deck = solidSub(deck, box(w.xa + ti.b, w.y0, zTt - 1, w.xb - ti.b, w.y1, zTt + ti.deck + 1));
+    add('DG', 'Spitzboden Bretter', 'slab', rf.tag, deck);
+    if (ti.insulation) {
+      let ins = box(p.tOut, y0, zTb, p.houseW - p.tOut, y1, zTt);
+      for (const x of spX) ins = solidSub(ins, box(x - ti.b, y0 - 1, zTb - 1, x + rb + ti.b, y1 + 1, zTt + 1));
+      for (const w of trims) ins = solidSub(ins, box(w.xa + ti.b, w.y0 - rb, zTb - 1, w.xb - ti.b, w.y1 + rb, zTt + 1));
+      add('DG', 'Dämmung zwischen den Zangen', 'slab', rf.tag, ins);
+    }
+    if (ti.lining > 0) {
+      const uF = (zCeil - zK) / tr; // where the ceiling meets the underside of the rafters
+      let lining = box(p.tOut, p.tOut + uF, zCeil, p.houseW - p.tOut, p.houseD - p.tOut - uF, zTb);
+      for (const w of trims) lining = solidSub(lining, box(w.xa + ti.b, w.y0, zCeil - 1, w.xb - ti.b, w.y1, zTb + 1));
+      add('DG', 'Gipskarton unter den Zangen', 'slab', rf.tag, lining);
+    }
+  } else if (rf) {
     // between the purlins
-    add('DACH', 'Holzbalkendecke Spitzboden', 'slab', 'B',
+    add('DG', 'Holzbalkendecke Spitzboden', 'slab', 'B',
       box(p.tOut, p.tOut + uPi, p.ogCeil, p.houseW - p.tOut, p.houseD - p.tOut - uPi, p.ogCeil + 200));
   } else {
     const ys = p.tOut + (p.ogCeil - (zOG + p.kniestock)) / tanRoof() + 100;
-    add('DACH', 'Holzbalkendecke Spitzboden', 'slab', 'B',
+    add('DG', 'Holzbalkendecke Spitzboden', 'slab', 'B',
       box(p.tOut, ys, p.ogCeil, p.houseW - p.tOut, p.houseD - ys, p.ogCeil + 200));
   }
 

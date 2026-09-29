@@ -141,7 +141,7 @@ export function planSync(candidates: (ReleaseInfo | null | undefined)[]): SyncPl
   return { action: best.source === 'cache' ? 'keep' : 'download', release: best };
 }
 
-const LAYERS = new Set(['KG', 'EG', 'OG', 'DACH', 'GAR']);
+const LAYERS = new Set(['KG', 'EG', 'OG', 'DG', 'STUHL', 'DACH', 'GAR']);
 const KINDS = new Set(['wall', 'slab', 'roof', 'glass', 'door', 'stair', 'rail']);
 
 /**
