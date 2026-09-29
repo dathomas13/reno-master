@@ -23,6 +23,9 @@ export function ZoomPan({ children, className = '', onScaleChange }: ZoomPanProp
   const dragged = useRef(false);
   const lastTap = useRef(0);
   const [scale, setScale] = useState(1);
+  // a parent passing a fresh callback each render must not rebuild the listeners
+  const onScale = useRef(onScaleChange);
+  onScale.current = onScaleChange;
 
   const apply = useCallback(
     (next: { scale: number; x: number; y: number }) => {
@@ -38,10 +41,10 @@ export function ZoomPan({ children, className = '', onScaleChange }: ZoomPanProp
       if (content.current) content.current.style.transform = `translate(${x}px, ${y}px) scale(${scaleNow})`;
       if (scaleNow !== previous) {
         setScale(scaleNow);
-        onScaleChange?.(scaleNow);
+        onScale.current?.(scaleNow);
       }
     },
-    [onScaleChange],
+    [],
   );
 
   /** zoom to `target` keeping the box point (px, py) where it is */
@@ -127,7 +130,14 @@ export function ZoomPan({ children, className = '', onScaleChange }: ZoomPanProp
       zoomAt(view.current.scale * Math.exp(-event.deltaY * 0.0015), point.x, point.y);
     };
     // a resize (rotation) would leave a zoomed view off-centre; start over
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => apply({ scale: 1, x: 0, y: 0 }));
+    // (observe() reports once at the start; only a real size change counts)
+    let size = `${element.clientWidth}x${element.clientHeight}`;
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => {
+      const now = `${element.clientWidth}x${element.clientHeight}`;
+      if (now === size) return;
+      size = now;
+      apply({ scale: 1, x: 0, y: 0 });
+    });
     observer?.observe(element);
 
     element.addEventListener('pointerdown', down);

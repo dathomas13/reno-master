@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" class="reno-plan" viewBox="-1950 -3050 16895 17815" data-variant="soll" data-floor="OG" data-version="0.0.24" role="img" aria-label="Obergeschoss Plan">
+<svg xmlns="http://www.w3.org/2000/svg" class="reno-plan" viewBox="-2400 -3500 17795 18715" data-variant="soll" data-floor="OG" data-version="0.0.24" role="img" aria-label="Obergeschoss Plan">
 <style>
   .reno-plan { --paper:#ffffff; --ink:#111111; --muted:#555555; --wall:#d6d6d6;
         --wall-light:#5f5f5f; --dim:#c62828; --window:#1f6fb2; --door:#2e7d32;
@@ -38,7 +38,7 @@
   .reno-plan .north-text { fill:var(--ink); font-size:260px; text-anchor:middle; font-weight:600; }
 </style>
 <defs><pattern id="reno-plan-hatch" patternUnits="userSpaceOnUse" width="120" height="120" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="120" stroke="#8a8a8a" stroke-width="18"/></pattern></defs>
-<rect x="-1950" y="-3050" width="16895" height="17815" fill="var(--paper)"/>
+<rect x="-2400" y="-3500" width="17795" height="18715" fill="var(--paper)"/>
 <g id="rooms">
 <g class="room-group" data-room-id="og-kind2">
 <rect class="room" x="400" y="6015" width="4440" height="5400" data-room-id="og-kind2"/>
@@ -214,8 +214,34 @@
 <text class="dim-text small" x="12795" y="12465">40</text>
 <line class="dim" x1="-150" y1="12965" x2="13145" y2="12965"/>
 <line class="dim-tick" x1="-60" y1="13025" x2="60" y2="12905"/>
+<line class="dim-tick" x1="340" y1="13025" x2="460" y2="12905"/>
+<line class="dim-tick" x1="4780" y1="13025" x2="4900" y2="12905"/>
+<line class="dim-tick" x1="4955" y1="13025" x2="5075" y2="12905"/>
+<line class="dim-tick" x1="5965" y1="13025" x2="6085" y2="12905"/>
+<line class="dim-tick" x1="6085" y1="13025" x2="6205" y2="12905"/>
+<line class="dim-tick" x1="6885" y1="13025" x2="7005" y2="12905"/>
+<line class="dim-tick" x1="7005" y1="13025" x2="7125" y2="12905"/>
+<line class="dim-tick" x1="8820" y1="13025" x2="8940" y2="12905"/>
+<line class="dim-tick" x1="8940" y1="13025" x2="9060" y2="12905"/>
+<line class="dim-tick" x1="9175" y1="13025" x2="9295" y2="12905"/>
+<line class="dim-tick" x1="9310" y1="13025" x2="9430" y2="12905"/>
+<line class="dim-tick" x1="10565" y1="13025" x2="10685" y2="12905"/>
+<line class="dim-tick" x1="12535" y1="13025" x2="12655" y2="12905"/>
 <line class="dim-tick" x1="12935" y1="13025" x2="13055" y2="12905"/>
-<text class="dim-text" x="6498" y="12915">1299,5</text>
+<text class="dim-text small" x="200" y="12915">40</text>
+<text class="dim-text" x="2620" y="12915">444</text>
+<text class="dim-text small" x="4928" y="12915">17,5</text>
+<text class="dim-text" x="5520" y="12915">101</text>
+<text class="dim-text" x="6545" y="12915">80</text>
+<text class="dim-text" x="7972" y="12915">181,5</text>
+<text class="dim-text small" x="9118" y="12915">23,5</text>
+<text class="dim-text" x="9998" y="12915">125,5</text>
+<text class="dim-text" x="11610" y="12915">197</text>
+<text class="dim-text small" x="12795" y="12915">40</text>
+<line class="dim" x1="-150" y1="13415" x2="13145" y2="13415"/>
+<line class="dim-tick" x1="-60" y1="13475" x2="60" y2="13355"/>
+<line class="dim-tick" x1="12935" y1="13475" x2="13055" y2="13355"/>
+<text class="dim-text" x="6498" y="13365">1299,5</text>
 <line class="dim" x1="-150" y1="-700" x2="13145" y2="-700"/>
 <line class="dim-tick" x1="-60" y1="-640" x2="60" y2="-760"/>
 <line class="dim-tick" x1="340" y1="-640" x2="460" y2="-760"/>
@@ -226,8 +252,34 @@
 <text class="dim-text small" x="12795" y="-750">40</text>
 <line class="dim" x1="-150" y1="-1150" x2="13145" y2="-1150"/>
 <line class="dim-tick" x1="-60" y1="-1090" x2="60" y2="-1210"/>
+<line class="dim-tick" x1="340" y1="-1090" x2="460" y2="-1210"/>
+<line class="dim-tick" x1="4780" y1="-1090" x2="4900" y2="-1210"/>
+<line class="dim-tick" x1="4955" y1="-1090" x2="5075" y2="-1210"/>
+<line class="dim-tick" x1="5965" y1="-1090" x2="6085" y2="-1210"/>
+<line class="dim-tick" x1="6085" y1="-1090" x2="6205" y2="-1210"/>
+<line class="dim-tick" x1="6885" y1="-1090" x2="7005" y2="-1210"/>
+<line class="dim-tick" x1="7005" y1="-1090" x2="7125" y2="-1210"/>
+<line class="dim-tick" x1="8820" y1="-1090" x2="8940" y2="-1210"/>
+<line class="dim-tick" x1="8940" y1="-1090" x2="9060" y2="-1210"/>
+<line class="dim-tick" x1="9175" y1="-1090" x2="9295" y2="-1210"/>
+<line class="dim-tick" x1="9310" y1="-1090" x2="9430" y2="-1210"/>
+<line class="dim-tick" x1="10565" y1="-1090" x2="10685" y2="-1210"/>
+<line class="dim-tick" x1="12535" y1="-1090" x2="12655" y2="-1210"/>
 <line class="dim-tick" x1="12935" y1="-1090" x2="13055" y2="-1210"/>
-<text class="dim-text" x="6498" y="-1200">1299,5</text>
+<text class="dim-text small" x="200" y="-1200">40</text>
+<text class="dim-text" x="2620" y="-1200">444</text>
+<text class="dim-text small" x="4928" y="-1200">17,5</text>
+<text class="dim-text" x="5520" y="-1200">101</text>
+<text class="dim-text" x="6545" y="-1200">80</text>
+<text class="dim-text" x="7972" y="-1200">181,5</text>
+<text class="dim-text small" x="9118" y="-1200">23,5</text>
+<text class="dim-text" x="9998" y="-1200">125,5</text>
+<text class="dim-text" x="11610" y="-1200">197</text>
+<text class="dim-text small" x="12795" y="-1200">40</text>
+<line class="dim" x1="-150" y1="-1600" x2="13145" y2="-1600"/>
+<line class="dim-tick" x1="-60" y1="-1540" x2="60" y2="-1660"/>
+<line class="dim-tick" x1="12935" y1="-1540" x2="13055" y2="-1660"/>
+<text class="dim-text" x="6498" y="-1650">1299,5</text>
 <line class="dim" x1="-700" y1="11965" x2="-700" y2="-150"/>
 <line class="dim-tick" x1="-760" y1="11875" x2="-640" y2="11755"/>
 <line class="dim-tick" x1="-760" y1="11475" x2="-640" y2="11355"/>
@@ -270,8 +322,41 @@
 <text class="dim-text small" x="-1200" y="200" transform="rotate(-90 -1200 200)">40</text>
 <line class="dim" x1="-1600" y1="11965" x2="-1600" y2="-150"/>
 <line class="dim-tick" x1="-1660" y1="11875" x2="-1540" y2="11755"/>
+<line class="dim-tick" x1="-1660" y1="11510" x2="-1540" y2="11390"/>
+<line class="dim-tick" x1="-1660" y1="11475" x2="-1540" y2="11355"/>
+<line class="dim-tick" x1="-1660" y1="10305" x2="-1540" y2="10185"/>
+<line class="dim-tick" x1="-1660" y1="10185" x2="-1540" y2="10065"/>
+<line class="dim-tick" x1="-1660" y1="7330" x2="-1540" y2="7210"/>
+<line class="dim-tick" x1="-1660" y1="7170" x2="-1540" y2="7050"/>
+<line class="dim-tick" x1="-1660" y1="6075" x2="-1540" y2="5955"/>
+<line class="dim-tick" x1="-1660" y1="5955" x2="-1540" y2="5835"/>
+<line class="dim-tick" x1="-1660" y1="5040" x2="-1540" y2="4920"/>
+<line class="dim-tick" x1="-1660" y1="4920" x2="-1540" y2="4800"/>
+<line class="dim-tick" x1="-1660" y1="4820" x2="-1540" y2="4700"/>
+<line class="dim-tick" x1="-1660" y1="4370" x2="-1540" y2="4250"/>
+<line class="dim-tick" x1="-1660" y1="4310" x2="-1540" y2="4190"/>
+<line class="dim-tick" x1="-1660" y1="4250" x2="-1540" y2="4130"/>
+<line class="dim-tick" x1="-1660" y1="3300" x2="-1540" y2="3180"/>
+<line class="dim-tick" x1="-1660" y1="3180" x2="-1540" y2="3060"/>
+<line class="dim-tick" x1="-1660" y1="1425" x2="-1540" y2="1305"/>
+<line class="dim-tick" x1="-1660" y1="1305" x2="-1540" y2="1185"/>
+<line class="dim-tick" x1="-1660" y1="460" x2="-1540" y2="340"/>
 <line class="dim-tick" x1="-1660" y1="60" x2="-1540" y2="-60"/>
-<text class="dim-text" x="-1650" y="5908" transform="rotate(-90 -1650 5908)">1181,5</text>
+<text class="dim-text small" x="-1650" y="11632" transform="rotate(-90 -1650 11632)">36,5</text>
+<text class="dim-text" x="-1650" y="10830" transform="rotate(-90 -1650 10830)">117</text>
+<text class="dim-text" x="-1650" y="8698" transform="rotate(-90 -1650 8698)">285,5</text>
+<text class="dim-text small" x="-1650" y="7190" transform="rotate(-90 -1650 7190)">16</text>
+<text class="dim-text" x="-1650" y="6562" transform="rotate(-90 -1650 6562)">109,5</text>
+<text class="dim-text" x="-1650" y="5438" transform="rotate(-90 -1650 5438)">91,5</text>
+<text class="dim-text small" x="-1650" y="4535" transform="rotate(-90 -1650 4535)">45</text>
+<text class="dim-text" x="-1650" y="3715" transform="rotate(-90 -1650 3715)">95</text>
+<text class="dim-text" x="-1650" y="2242" transform="rotate(-90 -1650 2242)">175,5</text>
+<text class="dim-text" x="-1650" y="822" transform="rotate(-90 -1650 822)">84,5</text>
+<text class="dim-text small" x="-1650" y="200" transform="rotate(-90 -1650 200)">40</text>
+<line class="dim" x1="-2050" y1="11965" x2="-2050" y2="-150"/>
+<line class="dim-tick" x1="-2110" y1="11875" x2="-1990" y2="11755"/>
+<line class="dim-tick" x1="-2110" y1="60" x2="-1990" y2="-60"/>
+<text class="dim-text" x="-2100" y="5908" transform="rotate(-90 -2100 5908)">1181,5</text>
 <line class="dim" x1="13695" y1="11965" x2="13695" y2="-150"/>
 <line class="dim-tick" x1="13635" y1="11875" x2="13755" y2="11755"/>
 <line class="dim-tick" x1="13635" y1="11475" x2="13755" y2="11355"/>
@@ -314,19 +399,52 @@
 <text class="dim-text small" x="14095" y="200" transform="rotate(-90 14095 200)">40</text>
 <line class="dim" x1="14595" y1="11965" x2="14595" y2="-150"/>
 <line class="dim-tick" x1="14535" y1="11875" x2="14655" y2="11755"/>
+<line class="dim-tick" x1="14535" y1="11510" x2="14655" y2="11390"/>
+<line class="dim-tick" x1="14535" y1="11475" x2="14655" y2="11355"/>
+<line class="dim-tick" x1="14535" y1="10305" x2="14655" y2="10185"/>
+<line class="dim-tick" x1="14535" y1="10185" x2="14655" y2="10065"/>
+<line class="dim-tick" x1="14535" y1="7330" x2="14655" y2="7210"/>
+<line class="dim-tick" x1="14535" y1="7170" x2="14655" y2="7050"/>
+<line class="dim-tick" x1="14535" y1="6075" x2="14655" y2="5955"/>
+<line class="dim-tick" x1="14535" y1="5955" x2="14655" y2="5835"/>
+<line class="dim-tick" x1="14535" y1="5040" x2="14655" y2="4920"/>
+<line class="dim-tick" x1="14535" y1="4920" x2="14655" y2="4800"/>
+<line class="dim-tick" x1="14535" y1="4820" x2="14655" y2="4700"/>
+<line class="dim-tick" x1="14535" y1="4370" x2="14655" y2="4250"/>
+<line class="dim-tick" x1="14535" y1="4310" x2="14655" y2="4190"/>
+<line class="dim-tick" x1="14535" y1="4250" x2="14655" y2="4130"/>
+<line class="dim-tick" x1="14535" y1="3300" x2="14655" y2="3180"/>
+<line class="dim-tick" x1="14535" y1="3180" x2="14655" y2="3060"/>
+<line class="dim-tick" x1="14535" y1="1425" x2="14655" y2="1305"/>
+<line class="dim-tick" x1="14535" y1="1305" x2="14655" y2="1185"/>
+<line class="dim-tick" x1="14535" y1="460" x2="14655" y2="340"/>
 <line class="dim-tick" x1="14535" y1="60" x2="14655" y2="-60"/>
-<text class="dim-text" x="14545" y="5908" transform="rotate(-90 14545 5908)">1181,5</text>
+<text class="dim-text small" x="14545" y="11632" transform="rotate(-90 14545 11632)">36,5</text>
+<text class="dim-text" x="14545" y="10830" transform="rotate(-90 14545 10830)">117</text>
+<text class="dim-text" x="14545" y="8698" transform="rotate(-90 14545 8698)">285,5</text>
+<text class="dim-text small" x="14545" y="7190" transform="rotate(-90 14545 7190)">16</text>
+<text class="dim-text" x="14545" y="6562" transform="rotate(-90 14545 6562)">109,5</text>
+<text class="dim-text" x="14545" y="5438" transform="rotate(-90 14545 5438)">91,5</text>
+<text class="dim-text small" x="14545" y="4535" transform="rotate(-90 14545 4535)">45</text>
+<text class="dim-text" x="14545" y="3715" transform="rotate(-90 14545 3715)">95</text>
+<text class="dim-text" x="14545" y="2242" transform="rotate(-90 14545 2242)">175,5</text>
+<text class="dim-text" x="14545" y="822" transform="rotate(-90 14545 822)">84,5</text>
+<text class="dim-text small" x="14545" y="200" transform="rotate(-90 14545 200)">40</text>
+<line class="dim" x1="15045" y1="11965" x2="15045" y2="-150"/>
+<line class="dim-tick" x1="14985" y1="11875" x2="15105" y2="11755"/>
+<line class="dim-tick" x1="14985" y1="60" x2="15105" y2="-60"/>
+<text class="dim-text" x="14995" y="5908" transform="rotate(-90 14995 5908)">1181,5</text>
 </g>
-<g id="north"><path class="north" d="M 14495 -2850 l 150 380 l -150 -120 l -150 120 z"/><text class="north-text" x="14495" y="-2200">N</text></g>
-<g id="scale"><line class="scale" x1="-1800" y1="14165" x2="3200" y2="14165"/>
-<line class="scale" x1="-1800" y1="14095" x2="-1800" y2="14235"/>
-<line class="scale" x1="-800" y1="14095" x2="-800" y2="14235"/>
-<line class="scale" x1="200" y1="14095" x2="200" y2="14235"/>
-<line class="scale" x1="1200" y1="14095" x2="1200" y2="14235"/>
-<line class="scale" x1="2200" y1="14095" x2="2200" y2="14235"/>
-<line class="scale" x1="3200" y1="14095" x2="3200" y2="14235"/>
-<text class="scale-text" x="700" y="14445">5 m</text></g>
-<text class="legend" x="3700" y="14215">Maße in cm · Raummaße in m · Öffnungen Breite/Höhe, BRH Brüstungshöhe · * oder schraffiert: geschätzt</text>
-<text class="title" x="-1800" y="-2600">Obergeschoss</text>
-<text class="subtitle" x="-1800" y="-2270">Plan · Modell v0.0.24 · Schlesierstraße 31</text>
+<g id="north"><path class="north" d="M 14945 -3300 l 150 380 l -150 -120 l -150 120 z"/><text class="north-text" x="14945" y="-2650">N</text></g>
+<g id="scale"><line class="scale" x1="-2250" y1="14615" x2="2750" y2="14615"/>
+<line class="scale" x1="-2250" y1="14545" x2="-2250" y2="14685"/>
+<line class="scale" x1="-1250" y1="14545" x2="-1250" y2="14685"/>
+<line class="scale" x1="-250" y1="14545" x2="-250" y2="14685"/>
+<line class="scale" x1="750" y1="14545" x2="750" y2="14685"/>
+<line class="scale" x1="1750" y1="14545" x2="1750" y2="14685"/>
+<line class="scale" x1="2750" y1="14545" x2="2750" y2="14685"/>
+<text class="scale-text" x="250" y="14895">5 m</text></g>
+<text class="legend" x="3250" y="14665">Maße in cm · Raummaße in m · Öffnungen Breite/Höhe, BRH Brüstungshöhe · * oder schraffiert: geschätzt</text>
+<text class="title" x="-2250" y="-3050">Obergeschoss</text>
+<text class="subtitle" x="-2250" y="-2720">Plan · Modell v0.0.24 · Schlesierstraße 31</text>
 </svg>

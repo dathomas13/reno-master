@@ -31,7 +31,7 @@ from hausdatei import DATA, PLANS  # noqa: E402
 
 CHAIN_GAP = 700                    # mm from the building to the first dimension chain
 CHAIN_STEP = 450                   # mm between two chains
-CHAIN_ZONE = CHAIN_GAP + 2 * CHAIN_STEP + 350   # room for three chains and their text
+CHAIN_ZONE = CHAIN_GAP + 3 * CHAIN_STEP + 350   # room for four chains and their text
 TITLE_ZONE = 1100                  # mm above the chains for the title
 FOOT_ZONE = 1000                   # mm below the chains for scale bar and legend
 FLOOR_LABEL = {"KG": "Kellergeschoss", "EG": "Erdgeschoss", "OG": "Obergeschoss"}
@@ -305,7 +305,20 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
     add('<g id="dimensions">')
     band = t_out + 200     # how far into the house a wall may start and still meet the facade
 
-    def chain_points(side: str) -> tuple[list[float], list[float], list[float]]:
+    stair_boxes = []
+    for s in model.STAIRS:
+        if ("KG" if s["z0"] < 0 else "EG") != floor:
+            continue
+        length = s["steps"] * s["run"]
+        sx0, sy0 = s["x0"], s["y0"]
+        if s["direction"] in ("+x", "-x"):
+            bx = sx0 if s["direction"] == "+x" else sx0 - length
+            stair_boxes.append((bx, sy0, bx + length, sy0 + s["width"]))
+        else:
+            by = sy0 if s["direction"] == "+y" else sy0 - length
+            stair_boxes.append((sx0, by, sx0 + s["width"], by + length))
+
+    def chain_points(side: str) -> tuple[list[float], list[float], list[float], list[float]]:
         horizontal = side in ("S", "N")
         lo, hi = (bx0, bx1) if horizontal else (by0, by1)
         edge = {"S": by0, "N": by1, "W": bx0, "E": bx1}[side]
@@ -335,9 +348,16 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
                 for o in model.OPENINGS:
                     if o["floor"] == floor and o["wall"] == w["name"]:
                         open_pts.extend((start + o["a0"], start + o["a0"] + o["width"]))
-        return merge_points(open_pts), merge_points(rooms_pts), [lo, hi]
+        # every edge of every wall and stair, so no clear width or wall thickness is missing
+        detail_pts = list(rooms_pts)
+        for w in walls:
+            detail_pts.extend(span(w))
+        for x0, y0, x1, y1 in stair_boxes:
+            detail_pts.extend((x0, x1) if horizontal else (y0, y1))
+        detail_pts = [p for p in detail_pts if lo <= p <= hi]
+        return merge_points(open_pts), merge_points(rooms_pts), merge_points(detail_pts), [lo, hi]
 
-    def draw_chain(side: str, level: int, pts: list[float]) -> None:
+    def draw_chain(side: str, level: int, pts: list[float], min_label: float = 0) -> None:
         if side == "S":
             pos = fy(by0) + CHAIN_GAP + level * CHAIN_STEP
         elif side == "N":
@@ -351,6 +371,8 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
             for p in pts:
                 line(p - 60, pos + 60, p + 60, pos - 60, "dim-tick")
             for a, b in zip(pts, pts[1:]):
+                if b - a < min_label:
+                    continue
                 small = ' small' if b - a < 600 else ''
                 add(f'<text class="dim-text{small}" x="{(a + b) / 2:.0f}" y="{pos - 50:.0f}">'
                     f'{cm(b - a)}</text>')
@@ -359,6 +381,8 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
             for p in pts:
                 line(pos - 60, fy(p) + 60, pos + 60, fy(p) - 60, "dim-tick")
             for a, b in zip(pts, pts[1:]):
+                if b - a < min_label:
+                    continue
                 small = ' small' if b - a < 600 else ''
                 tx = pos - 50
                 ty = fy((a + b) / 2)
@@ -367,13 +391,17 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
 
     if walls:
         for side in ("S", "N", "W", "E"):
-            openings_c, rooms_c, total_c = chain_points(side)
+            openings_c, rooms_c, detail_c, total_c = chain_points(side)
             level = 0
             for pts in (openings_c, rooms_c):
                 # a chain that shows nothing new is left out
                 if len(pts) > 2 and (pts is rooms_c or pts != rooms_c):
                     draw_chain(side, level, pts)
                     level += 1
+            # all wall edges and stairs; segments too short for their text stay unlabelled
+            if len(detail_c) > 2 and detail_c not in (openings_c, rooms_c):
+                draw_chain(side, level, detail_c, 150)
+                level += 1
             draw_chain(side, level, total_c)
     add("</g>")
 

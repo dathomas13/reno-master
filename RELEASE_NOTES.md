@@ -8,6 +8,20 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.64.1 – Mehr Maße am Rand der Grundrisse
+
+- Neue Maßkette an jeder Seite mit allen Wandkanten und Treppen, z. B. die Breite der Holztreppe.
+- Sehr kurze Abschnitte bleiben unbeschriftet, damit sich nichts überlagert.
+
+## 0.64.0 – Angepinnte Notizen auf der Startseite
+
+- Angepinnte Notizen erscheinen auf der Startseite; Antippen öffnet die Notiz.
+- Ein- und ausblenden und verschieben unter Einstellungen → Startseite.
+
+## 0.63.3 – Zoom im Foto-Tab läuft ruhig
+
+- Beim Zoomen mit zwei Fingern springt das Bild nicht mehr hin und her.
+
 ## 0.63.2 – Symbol im Browser-Tab
 
 - Im Browser-Tab erscheint jetzt das App-Symbol.
