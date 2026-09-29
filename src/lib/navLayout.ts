@@ -27,9 +27,9 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
 export const MAX_BAR_ITEMS = 4;
 
 export interface NavLayout {
-  /** every entry, in the order the menu shows them; the bar follows the same order */
+  /** every entry in menu order; the bar entries always come first */
   order: string[];
-  /** the entries in the bottom bar, at most MAX_BAR_ITEMS */
+  /** the entries in the bottom bar - the first bar.length entries of order, at most MAX_BAR_ITEMS */
   bar: string[];
 }
 
@@ -45,13 +45,22 @@ function known(routes: unknown): string[] {
   return [...new Set(routes.filter((route): route is string => typeof route === 'string' && KNOWN.has(route)))];
 }
 
-/** repairs whatever is stored: unknown routes out, missing ones appended, bar capped */
+/** the bar is simply the top of the list: everything above the line in the settings */
+function withBarCount(order: string[], count: number): NavLayout {
+  return { order, bar: order.slice(0, count) };
+}
+
+/**
+ * repairs whatever is stored: unknown routes out, missing ones appended, bar capped and
+ * moved to the top of the order (older layouts kept bar and order independent)
+ */
 export function normalizeNavLayout(layout: Partial<NavLayout> | null | undefined): NavLayout {
-  if (!layout || typeof layout !== 'object') return { order: [...DEFAULT_NAV_LAYOUT.order], bar: [...DEFAULT_NAV_LAYOUT.bar] };
+  if (!layout || typeof layout !== 'object') return withBarCount([...DEFAULT_NAV_LAYOUT.order], DEFAULT_NAV_LAYOUT.bar.length);
   const stored = known(layout.order);
-  const order = [...stored, ...DEFAULT_NAV_LAYOUT.order.filter((route) => !stored.includes(route))];
+  const full = [...stored, ...DEFAULT_NAV_LAYOUT.order.filter((route) => !stored.includes(route))];
   const bar = Array.isArray(layout.bar) ? known(layout.bar).slice(0, MAX_BAR_ITEMS) : [...DEFAULT_NAV_LAYOUT.bar];
-  return { order, bar };
+  const inBar = full.filter((route) => bar.includes(route));
+  return withBarCount([...inBar, ...full.filter((route) => !bar.includes(route))], inBar.length);
 }
 
 export function entryOf(route: string): NavEntry | undefined {
@@ -67,19 +76,21 @@ export function splitNav(layout: NavLayout): { bar: string[]; more: string[] } {
   };
 }
 
-/** moves one entry up (-1) or down (+1); at either end nothing changes */
+/**
+ * moves one entry up (-1) or down (+1). Next to the line it crosses it instead: the last
+ * bar entry drops into "Mehr", the first "Mehr" entry climbs into the bar - and if the
+ * bar is full, it trades places with the last bar entry. At either end nothing changes,
+ * so the caller can compare with the input to know whether a move is possible.
+ */
 export function moveNavEntry(layout: NavLayout, route: string, delta: -1 | 1): NavLayout {
+  const count = layout.bar.length;
   const index = layout.order.indexOf(route);
+  if (index < 0) return layout;
+  if (delta === 1 && index === count - 1) return withBarCount(layout.order, count - 1);
+  if (delta === -1 && index === count && count < MAX_BAR_ITEMS) return withBarCount(layout.order, count + 1);
   const target = index + delta;
-  if (index < 0 || target < 0 || target >= layout.order.length) return layout;
+  if (target < 0 || target >= layout.order.length) return layout;
   const order = [...layout.order];
   [order[index], order[target]] = [order[target], order[index]];
-  return { ...layout, order };
-}
-
-/** puts an entry into the bar or takes it out; a full bar takes nothing more */
-export function toggleNavBar(layout: NavLayout, route: string): NavLayout {
-  if (layout.bar.includes(route)) return { ...layout, bar: layout.bar.filter((item) => item !== route) };
-  if (layout.bar.length >= MAX_BAR_ITEMS || !KNOWN.has(route)) return layout;
-  return { ...layout, bar: [...layout.bar, route] };
+  return withBarCount(order, count);
 }

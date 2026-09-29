@@ -6,7 +6,6 @@ import {
   moveNavEntry,
   normalizeNavLayout,
   splitNav,
-  toggleNavBar,
 } from '../navLayout';
 
 describe('normalizeNavLayout', () => {
@@ -18,6 +17,7 @@ describe('normalizeNavLayout', () => {
   it('drops unknown routes and duplicates, appends missing ones', () => {
     const layout = normalizeNavLayout({ order: ['/kosten', '/weg', '/kosten', '/'], bar: ['/weg', '/kosten'] });
     expect(layout.order.slice(0, 2)).toEqual(['/kosten', '/']);
+    expect(layout.bar).toEqual(['/kosten']);
     expect(layout.order).toHaveLength(NAV_ENTRIES.length);
     expect(new Set(layout.order).size).toBe(NAV_ENTRIES.length);
     expect(layout.bar).toEqual(['/kosten']);
@@ -50,15 +50,23 @@ describe('moveNavEntry', () => {
     expect(moveNavEntry(layout, '/', -1)).toBe(layout);
     expect(moveNavEntry(layout, '/einstellungen', 1)).toBe(layout);
   });
-});
 
-describe('toggleNavBar', () => {
-  it('adds up to the limit and removes again', () => {
+  it('crosses the line between bar and "Mehr"', () => {
     const full = normalizeNavLayout(undefined);
-    expect(full.bar).toHaveLength(MAX_BAR_ITEMS);
-    expect(toggleNavBar(full, '/suche')).toBe(full);
-    const freed = toggleNavBar(full, '/3d');
-    expect(freed.bar).not.toContain('/3d');
-    expect(toggleNavBar(freed, '/suche').bar).toContain('/suche');
+    const dropped = moveNavEntry(full, '/kosten', 1);
+    expect(dropped.bar).toEqual(['/', '/tagebuch', '/3d']);
+    expect(dropped.order).toEqual(full.order);
+    const climbed = moveNavEntry(dropped, '/kosten', -1);
+    expect(climbed.bar).toEqual(full.bar);
+    // a full bar trades its last entry for the one climbing in
+    const traded = moveNavEntry(full, '/suche', -1);
+    expect(traded.bar).toEqual(['/', '/tagebuch', '/3d', '/suche']);
+    expect(splitNav(traded).more[0]).toBe('/kosten');
+  });
+
+  it('keeps the bar on top when an old layout had it scattered', () => {
+    const layout = normalizeNavLayout({ order: ['/suche', '/', '/kosten'], bar: ['/kosten', '/'] });
+    expect(layout.order.slice(0, 3)).toEqual(['/', '/kosten', '/suche']);
+    expect(layout.bar).toEqual(['/', '/kosten']);
   });
 });

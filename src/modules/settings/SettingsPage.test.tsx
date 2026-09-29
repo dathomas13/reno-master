@@ -95,21 +95,20 @@ describe('settings disclosure', () => {
     await act(async () => {});
   });
 
-  it('sorts the menu and chooses the bar entries', async () => {
+  it('sorts the menu, the line decides what goes into the bar', async () => {
     await openSettings();
-    const diary = screen.getByRole('checkbox', { name: 'Tagebuch in der Leiste' });
-    const search = screen.getByRole('checkbox', { name: 'Suche in der Leiste' });
-    expect(diary).toBeChecked();
-    expect(search).toBeDisabled();
+    expect(screen.queryByRole('checkbox', { name: /in der Leiste/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Menü'));
+    expect(screen.getByRole('separator')).toBeInTheDocument();
 
-    fireEvent.click(diary);
-    expect(search).not.toBeDisabled();
-    fireEvent.click(search);
+    fireEvent.click(screen.getByRole('button', { name: 'Kosten nach unten' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Suche nach oben' }));
     fireEvent.click(screen.getByRole('button', { name: 'Suche nach oben' }));
 
     const stored = JSON.parse(localStorage.getItem('reno.settings') ?? '{}');
-    expect(stored.navLayout.bar).toEqual(['/', '/3d', '/kosten', '/suche']);
+    expect(stored.navLayout.bar).toEqual(['/', '/tagebuch', '/3d', '/suche']);
     expect(stored.navLayout.order.slice(3, 5)).toEqual(['/suche', '/kosten']);
+    expect(screen.getByRole('button', { name: 'Start nach oben' })).toBeDisabled();
   });
 
   it('saves the reminder time immediately when it changes', async () => {

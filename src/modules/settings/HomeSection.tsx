@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { SettingsHeading } from './SettingsHelp';
 import { OrderList } from './OrderList';
+import { SettingsFold } from './SettingsFold';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import {
   DEFAULT_HOME_LAYOUT,
@@ -8,6 +8,7 @@ import {
   moveHomeBlock,
   normalizeHomeLayout,
   toggleHomeBlock,
+  visibleHomeBlocks,
   type HomeLayout,
 } from '@/lib/homeLayout';
 
@@ -20,24 +21,27 @@ export function HomeSection() {
   }
 
   return (
-    <section className="card p-4">
-      <SettingsHeading title="Startseite">
+    <SettingsFold
+      title="Startseite"
+      summary={`${visibleHomeBlocks(layout).length} von ${layout.order.length} Kacheln sichtbar`}
+    >
+      <p className="text-sm text-muted mb-2">
         Mit dem Haken wählen, was auf der Startseite erscheint, mit den Pfeilen die Reihenfolge von oben nach
         unten. Gilt nur für dieses Gerät.
-      </SettingsHeading>
+      </p>
       <OrderList
         items={layout.order.map((id) => ({
           id,
           label: homeBlockOf(id)?.label ?? id,
           checked: !layout.hidden.includes(id),
         }))}
-        checkLabel="auf der Startseite"
-        onToggle={(id) => update(toggleHomeBlock(layout, id))}
+        canMove={(id, delta) => moveHomeBlock(layout, id, delta) !== layout}
         onMove={(id, delta) => update(moveHomeBlock(layout, id, delta))}
+        check={{ label: 'auf der Startseite', onToggle: (id) => update(toggleHomeBlock(layout, id)) }}
       />
       <button type="button" className="btn mt-3" onClick={() => update(normalizeHomeLayout(DEFAULT_HOME_LAYOUT))}>
         Zurücksetzen
       </button>
-    </section>
+    </SettingsFold>
   );
 }

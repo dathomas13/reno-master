@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.63.0 – Menü mit Trennstrich, Einstellungen aufgeräumt
+
+- Im Menü entscheidet ein Strich statt der Haken: was darüber steht, kommt in die Leiste.
+- Menü und Startseite sind in den Einstellungen zugeklappt und öffnen sich per Tippen.
+
 ## 0.62.0 – Menü und Startseite selbst einrichten
 
 - Unter Einstellungen → Menü legst du fest, welche bis zu vier Einträge unten in der Leiste
