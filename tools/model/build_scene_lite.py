@@ -504,6 +504,9 @@ def build(m, variant: str, version: str, note: str) -> dict:
             kind = "glass" if o["kind"] == "window" else "door"
             name = f'{"Fenster" if kind == "glass" else "Tür"} {o["width"]}×{o["height"]}'
             a = o["a0"]
+            if o.get("frame"):
+                out += frame_box(w, o, z0, name)
+                continue
             if along:
                 ym = (w["y0"] + w["y1"]) / 2
                 s = box(w["x0"] + a, ym - 20, z0 + o["sill"],
@@ -514,6 +517,33 @@ def build(m, variant: str, version: str, note: str) -> dict:
                         xm + 20, w["y0"] + a + o["width"], z0 + o["sill"] + o["height"])
             out.append((name, kind, o["tag"], s))
         return out
+
+    def frame_box(w, o, z0, name):
+        """A deep window frame lining the hole: four boards from `in` beyond the inner face
+        to `out` beyond the outer one (outer = away from the middle of the house), the pane
+        near its outer end, reaching halfway into the boards."""
+        f = o["frame"]
+        t = f["t"]
+        along = (w["x1"] - w["x0"]) >= (w["y1"] - w["y0"])
+        c0, c1 = (w["y0"], w["y1"]) if along else (w["x0"], w["x1"])
+        if (c0 + c1) / 2 < (m.HOUSE_D if along else m.HOUSE_W) / 2:
+            d0, d1 = c0 - f.get("out", 0), c1 + f.get("in", 0)
+            g0 = d0 + 20
+        else:
+            d0, d1 = c0 - f.get("in", 0), c1 + f.get("out", 0)
+            g0 = d1 - 60
+        a0 = (w["x0"] if along else w["y0"]) + o["a0"]
+        a1, zs, zh = a0 + o["width"], z0 + o["sill"], z0 + o["sill"] + o["height"]
+
+        def piece(p0, p1, q0, q1, z_0, z_1):
+            return box(p0, q0, z_0, p1, q1, z_1) if along else box(q0, p0, z_0, q1, p1, z_1)
+        boards = solid_union(piece(a0, a1, d0, d1, zs, zs + t), piece(a0, a1, d0, d1, zh - t, zh))
+        boards = solid_union(boards, piece(a0, a0 + t, d0, d1, zs + t, zh - t))
+        boards = solid_union(boards, piece(a1 - t, a1, d0, d1, zs + t, zh - t))
+        res = [(f"Fensterrahmen {o['width']}×{o['height']}", "door", o["tag"], boards)]
+        glass = piece(a0 + t / 2, a1 - t / 2, g0, g0 + 40, zs + t / 2, zh - t / 2)
+        res.append((name, "glass", o["tag"], glass))
+        return res
 
     def wall_priority(w):
         """Order for overlap removal: outer walls first, then 240, then light walls."""

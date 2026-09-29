@@ -29,6 +29,12 @@ export interface SourceOpening {
   sill: number;
   height: number;
   tag: Tag;
+  /**
+   * window only: a deep frame lining the hole (a window seat) - boards t thick, reaching
+   * out beyond the outer wall face and in beyond the inner one (outer = away from the
+   * middle of the house); the pane sits near its outer end
+   */
+  frame?: { t: number; out: number; in: number };
   note?: string;
 }
 
@@ -265,6 +271,15 @@ export function parseSource(text: string): ParseResult {
         height: o.kind === 'passage' && o.height === undefined ? 0 : num(o.height, `${where}.height`),
         tag: tag(o.tag, where),
       };
+      if (o.frame !== undefined) {
+        const f = isObj(o.frame) ? o.frame : {};
+        if (!isObj(o.frame)) errors.push(`${where}.frame: Objekt mit t, out und in erwartet.`);
+        opening.frame = {
+          t: num(f.t, `${where}.frame.t`),
+          out: f.out === undefined ? 0 : num(f.out, `${where}.frame.out`),
+          in: f.in === undefined ? 0 : num(f.in, `${where}.frame.in`),
+        };
+      }
       if (typeof o.note === 'string') opening.note = o.note;
       return opening;
     });

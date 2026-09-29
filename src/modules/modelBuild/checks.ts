@@ -102,6 +102,14 @@ export function checkSource(src: HouseSource): CheckResult {
       }
       if (o.kind !== 'passage' && !(o.height > 0)) errors.push(`${label}: height muss größer als 0 sein.`);
       if (o.sill < 0) errors.push(`${label}: sill darf nicht negativ sein.`);
+      if (o.frame) {
+        const f = o.frame;
+        if (o.kind !== 'window') errors.push(`${label}: frame gibt es nur an Fenstern.`);
+        if (!(f.t > 0 && 2 * f.t < o.to - o.from && 2 * f.t < o.height)) {
+          errors.push(`${label}: frame.t muss größer als 0 und kleiner als die halbe Breite und Höhe sein.`);
+        }
+        if (f.out < 0 || f.in < 0) errors.push(`${label}: frame.out und frame.in dürfen nicht negativ sein.`);
+      }
       if (clear !== null && o.kind !== 'passage' && o.sill + o.height > clear) {
         warnings.push(`${label}: Brüstung + Höhe = ${o.sill + o.height} mm, höher als das Geschoss (${clear} mm).`);
       }

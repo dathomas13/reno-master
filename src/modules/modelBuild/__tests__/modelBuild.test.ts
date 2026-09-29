@@ -68,12 +68,16 @@ describe('the house file', () => {
   });
 
   // testdata/ist-dachstuhl.json: build_scene_lite.py on haus-ist.json without its flat dormer,
-  // plus the roof frame and both shed dormers in `extra` - rebuild it the same way if the
+  // plus the roof frame and both shed dormers in `extra` and deep window frames on the
+  // openings in `frames` ([wall id, opening index, frame]) - rebuild it the same way if the
   // builders change
-  it('builds the roof frame and shed dormers the same way as tools/model/build_scene_lite.py', () => {
+  it('builds the roof frame, shed dormers and window frames the same way as tools/model/build_scene_lite.py', () => {
     const reference = JSON.parse(read('ist-dachstuhl.json'));
     const doc = JSON.parse(read('haus-ist.json'));
     delete doc.gaube;
+    for (const [id, k, frame] of reference.frames as [string, number, object][]) {
+      doc.walls.find((w: { id: string }) => w.id === id).openings[k].frame = frame;
+    }
     const parsed = parseSource(JSON.stringify({ ...doc, ...reference.extra }));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -81,6 +85,7 @@ describe('the house file', () => {
     const scene = buildScene(parsed.source, { version: parsed.source.version, note: '', generatedAt: '2026-09-28' });
     expect(scene.prims.map((prim) => prim.name)).toEqual(reference.prims.map((prim: { name: string }) => prim.name));
     expect(scene.prims.some((prim) => prim.name === 'Gaube Nord Sparren')).toBe(true);
+    expect(scene.prims.filter((prim) => prim.name.startsWith('Fensterrahmen'))).toHaveLength(2);
     for (let i = 0; i < reference.prims.length; i += 1) {
       expect(JSON.stringify(scene.prims[i].v) === JSON.stringify(reference.prims[i].v)).toBe(true);
       expect(JSON.stringify(scene.prims[i].t) === JSON.stringify(reference.prims[i].t)).toBe(true);
@@ -96,6 +101,17 @@ describe('the house file', () => {
     const roofFrame = { rafters: 20, rafterB: 100, rafterH: 160, purlinB: 180, purlinH: 270 };
     const steep = parseSource(JSON.stringify({ ...doc, roofFrame, dormers: [{ ...dormer, pitch: 40 }] }));
     expect(steep.ok && checkSource(steep.source).errors.join()).toMatch('pitch muss zwischen 0');
+  });
+
+  it('refuses a window frame on a door or thicker than half the opening', () => {
+    const doc = JSON.parse(read('haus-ist.json'));
+    const west = doc.walls.find((w: { id: string }) => w.id === 'eg-aussenwand-west');
+    west.openings[0].frame = { t: 1100 };
+    west.openings[1].frame = { t: 50, out: 200 };
+    const parsed = parseSource(JSON.stringify(doc));
+    const errors = parsed.ok ? checkSource(parsed.source).errors.join('\n') : '';
+    expect(errors).toMatch('Öffnung 1: frame.t muss größer als 0');
+    expect(errors).toMatch('Öffnung 2: frame gibt es nur an Fenstern');
   });
 
   it('builds the same rooms as tools/model/build_rooms.py', () => {

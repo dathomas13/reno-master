@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.61.0 – Sitzfenster im Modell
+
+- Fenster können einen tiefen Rahmenkasten bekommen, etwa zum Sitzen. Der Kasten steht im
+  3D vor der Fassade.
+
 ## 0.60.1 – Gaube als Fachwerk, kein Flackern mehr
 
 - Die Gaubenfront ist jetzt ein Holzrahmen mit Schwelle, Rähm und Pfosten, die Öffnungen

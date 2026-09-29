@@ -168,6 +168,42 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     return s;
   };
 
+  /**
+   * a deep window frame lining the hole: four boards from `in` beyond the inner face to
+   * `out` beyond the outer one (outer = away from the middle of the house), the pane near
+   * its outer end, reaching halfway into the boards
+   */
+  const frameBox = (w: SourceWall, o: ReturnType<typeof openingsOf>[number], z0: number, name: string) => {
+    const f = o.frame!;
+    const t = f.t;
+    const along = alongX(w);
+    const [c0, c1] = along ? [w.y0, w.y1] : [w.x0, w.x1];
+    let d0: number;
+    let d1: number;
+    let g0: number;
+    if ((c0 + c1) / 2 < (along ? p.houseD : p.houseW) / 2) {
+      [d0, d1] = [c0 - f.out, c1 + f.in];
+      g0 = d0 + 20;
+    } else {
+      [d0, d1] = [c0 - f.in, c1 + f.out];
+      g0 = d1 - 60;
+    }
+    const a0 = (along ? w.x0 : w.y0) + o.a;
+    const a1 = a0 + o.width;
+    const zs = z0 + o.sill;
+    const zh = z0 + o.sill + o.height;
+    const piece = (p0: number, p1: number, q0: number, q1: number, zA: number, zB: number) =>
+      (along ? box(p0, q0, zA, p1, q1, zB) : box(q0, p0, zA, q1, p1, zB));
+    let boards = solidUnion(piece(a0, a1, d0, d1, zs, zs + t), piece(a0, a1, d0, d1, zh - t, zh));
+    boards = solidUnion(boards, piece(a0, a0 + t, d0, d1, zs + t, zh - t));
+    boards = solidUnion(boards, piece(a1 - t, a1, d0, d1, zs + t, zh - t));
+    const glass = piece(a0 + t / 2, a1 - t / 2, g0, g0 + 40, zs + t / 2, zh - t / 2);
+    return [
+      [`Fensterrahmen ${o.width}×${o.height}`, 'door', o.tag, boards],
+      [name, 'glass', o.tag, glass],
+    ] as [string, PrimKind, Confidence, Solid][];
+  };
+
   /** window and door leaves as thin sheets, for display */
   const panels = (w: SourceWall, z0: number) => {
     const along = alongX(w);
@@ -177,6 +213,10 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       const kind: PrimKind = o.kind === 'window' ? 'glass' : 'door';
       const name = `${kind === 'glass' ? 'Fenster' : 'Tür'} ${o.width}×${o.height}`;
       const a = o.a;
+      if (o.frame) {
+        out.push(...frameBox(w, o, z0, name));
+        continue;
+      }
       let s: Solid;
       if (along) {
         const ym = (w.y0 + w.y1) / 2;

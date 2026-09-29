@@ -90,6 +90,7 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
           "sill": 700,                   // Brüstung über Geschossboden (Tür: 0)
           "height": 1385,                // lichte Höhe (bei passage ignoriert)
           "tag": "A",
+          "frame": { "t": 60, "out": 350, "in": 0 },  // optional, nur window: tiefer Rahmen (Sitzfenster)
           "note": "Wohnzimmer"
         }
       ]
@@ -155,6 +156,11 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
 - Sie müssen innerhalb der Wand liegen (`x0 ≤ from < to ≤ x1` bzw. mit y). Sonst lehnt die
   App den Import ab.
 - `sill` und `height` zählen ab dem Geschossboden (KG −2750, EG 0, OG 2750, GAR −1360).
+- `frame` (nur Fenster, optional) kleidet die Öffnung mit einem Rahmenkasten aus Brettern
+  der Stärke `t` aus – etwa für ein Sitzfenster. `out` ist, wie weit er außen vor der Wand
+  steht, `in`, wie weit er innen hineinragt (beide ohne Angabe 0); außen heißt: von der
+  Hausmitte weg. Das Glas sitzt vorn im Kasten. `sill` und `height` bleiben das Loch in der
+  Wand, die Sitzfläche liegt also `t` höher.
 
 ### Räume
 
