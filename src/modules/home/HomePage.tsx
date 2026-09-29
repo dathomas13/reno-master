@@ -4,7 +4,7 @@ import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
 import { Sheet } from '@/components/Sheet';
 import { useCollection } from '@/data/hooks';
-import { COL, type Cost, type DiaryEntry, type Phase, type Photo, type Task } from '@/data/types';
+import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
 import { patchPhase } from '@/data/repos';
 import { orderBy, limit } from '@/firebase/db';
 import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib/date';
@@ -17,6 +17,7 @@ export default function HomePage() {
   const { data: photos } = useCollection<Photo>(COL.photos);
   const { data: costs } = useCollection<Cost>(COL.costs);
   const { data: tasks } = useCollection<Task>(COL.tasks);
+  const { data: notes } = useCollection<Note>(COL.notes);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [phaseBusy, setPhaseBusy] = useState(false);
@@ -35,6 +36,10 @@ export default function HomePage() {
     .filter((task) => task.status !== 'Erledigt')
     .filter((task) => task.priority === 'Hoch' || (task.due && task.due <= today()))
     .slice(0, 5);
+
+  const pinnedNotes = notes
+    .filter((note) => note.pinned)
+    .sort((a, b) => b.at.localeCompare(a.at));
 
   const photoFor = (entry: DiaryEntry) => photos.find((photo) => photo.entryId === entry.id);
 
@@ -112,6 +117,31 @@ export default function HomePage() {
             </span>
             <span className="text-accent">›</span>
           </Link>
+        )}
+      </>
+    ),
+    pinned: (
+      <>
+        {pinnedNotes.length > 0 && (
+          <section className="card">
+            <div className="section-title">📌 Angepinnte Notizen</div>
+            <ul>
+              {pinnedNotes.map((note) => (
+                <li key={note.id}>
+                  <Link to={`/notizen?notiz=${note.id}`} className="list-row last:border-0">
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{note.text.split('\n')[0].trim() || 'Notiz'}</span>
+                      {note.text.includes('\n') && (
+                        <span className="block text-xs text-muted line-clamp-2 whitespace-pre-line">
+                          {note.text.split('\n').slice(1).join('\n').trim()}
+                        </span>
+                      )}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </>
     ),

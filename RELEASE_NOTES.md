@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.64.0 – Angepinnte Notizen auf der Startseite
+
+- Angepinnte Notizen erscheinen auf der Startseite; Antippen öffnet die Notiz.
+- Ein- und ausblenden und verschieben unter Einstellungen → Startseite.
+
 ## 0.63.3 – Zoom im Foto-Tab läuft ruhig
 
 - Beim Zoomen mit zwei Fingern springt das Bild nicht mehr hin und her.

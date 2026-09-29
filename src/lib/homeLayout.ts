@@ -12,6 +12,7 @@ export const HOME_BLOCKS: readonly HomeBlock[] = [
   { id: 'search', label: 'Suchfeld' },
   { id: 'house', label: 'Hausbild mit Phase' },
   { id: 'today', label: 'Heutiger Tagebuch-Eintrag' },
+  { id: 'pinned', label: 'Angepinnte Notizen' },
   { id: 'shortcuts', label: 'Schnellzugriff (Beleg, 3D, Aufgaben)' },
   { id: 'costs', label: 'Kosten' },
   { id: 'urgent', label: 'Dringende Aufgaben' },
