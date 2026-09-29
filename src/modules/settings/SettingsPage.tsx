@@ -8,6 +8,8 @@ import { AppUpdateSection } from './AppUpdateSection';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
 import { ModelSection } from './ModelSection';
+import { NavSection } from './NavSection';
+import { HomeSection } from './HomeSection';
 import { listJobs, retryAll, type OutboxJob } from '@/offline/outbox';
 import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
@@ -170,6 +172,9 @@ export default function SettingsPage() {
           </details>
         </section>
 
+        <NavSection />
+
+        <HomeSection />
         <section className="card p-4">
           <SettingsHeading title="Fotos">
             Neben der verkleinerten Fassung wird die unveränderte Datei gespeichert. Das braucht deutlich mehr

@@ -25,6 +25,7 @@ vi.mock('@/data/repos', () => ({ patchPhase }));
 vi.mock('@/firebase/db', () => ({ orderBy: vi.fn(), limit: vi.fn() }));
 
 beforeEach(() => {
+  localStorage.clear();
   patchPhase.mockClear();
 });
 afterEach(cleanup);
@@ -56,5 +57,19 @@ describe('home phase', () => {
       'href',
       '/aufgaben?aufgabe=task-1',
     );
+  });
+
+  it('shows only the blocks chosen in the settings, in their order', () => {
+    localStorage.setItem(
+      'reno.settings',
+      JSON.stringify({ homeLayout: { order: ['urgent', 'search'], hidden: ['house', 'costs'] } }),
+    );
+    renderHome();
+
+    expect(screen.queryByRole('button', { name: 'Phase 2: Entkernung & Rückbau' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Kosten gesamt')).not.toBeInTheDocument();
+    const urgent = screen.getByText('Dringend');
+    const search = screen.getByRole('link', { name: 'Suchen' });
+    expect(urgent.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

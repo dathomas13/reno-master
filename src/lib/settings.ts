@@ -1,3 +1,6 @@
+import { DEFAULT_NAV_LAYOUT, type NavLayout } from './navLayout';
+import { DEFAULT_HOME_LAYOUT, type HomeLayout } from './homeLayout';
+
 /**
  * Device local settings. These never leave the phone: the API keys in particular are
  * stored here and nowhere else, so they are not in the repo and not in Firestore.
@@ -34,6 +37,10 @@ export interface LocalSettings {
   cameraLockZoom: boolean;
   cameraFixedFocus: boolean;
   cameraResolution: 'auto' | 'hd' | 'max';
+  /** bottom bar and menu order; read through normalizeNavLayout, the stored value may be old */
+  navLayout: NavLayout;
+  /** start page blocks and their order; read through normalizeHomeLayout */
+  homeLayout: HomeLayout;
 }
 
 const KEY = 'reno.settings';
@@ -52,6 +59,8 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   cameraLockZoom: false,
   cameraFixedFocus: false,
   cameraResolution: 'auto',
+  navLayout: DEFAULT_NAV_LAYOUT,
+  homeLayout: DEFAULT_HOME_LAYOUT,
 };
 
 export const CLAUDE_MODELS = [

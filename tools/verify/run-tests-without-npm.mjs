@@ -37,7 +37,10 @@ function collect(dir, acc = []) {
 
 // only files that do not need third party modules can run here
 const skip = /from '(react|react-dom|firebase|three|idb|nanoid|exifr|recharts|pdfjs-dist|@anthropic-ai|@testing-library|fake-indexeddb)|import '(@testing-library|fake-indexeddb)/;
-const sources = collect(path.join(repo, 'src')).filter((file) => !skip.test(fs.readFileSync(file, 'utf8')));
+// JSX needs React, so a .tsx file never runs here, with or without a react import
+const sources = collect(path.join(repo, 'src')).filter(
+  (file) => !file.endsWith('.tsx') && !skip.test(fs.readFileSync(file, 'utf8')),
+);
 
 fs.rmSync(outDir, { recursive: true, force: true });
 fs.mkdirSync(outDir, { recursive: true });

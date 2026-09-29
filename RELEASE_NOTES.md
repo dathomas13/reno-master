@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.61.0 – Menü und Startseite selbst einrichten
+
+- Unter Einstellungen → Menü legst du fest, welche bis zu vier Einträge unten in der Leiste stehen und in welcher Reihenfolge das Menü sie zeigt.
+- Unter Einstellungen → Startseite wählst du, welche Kacheln auf der Startseite erscheinen und in welcher Reihenfolge.
+
 ## 0.58.1 – Pläne scharf, Raumkarte sichtbar
 
 - Grundrisse bleiben beim Hineinzoomen scharf.
