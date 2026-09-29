@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.65.0 – Dach, Dachstuhl und Dachgeschoss einzeln
+
+- Im 3D-Modell lassen sich Dach, Dachstuhl und Dachgeschoss getrennt ein- und ausblenden, dazu die neue Ansicht „Dachstuhl“.
+- Das Modell kann jetzt Zangen unter den Mittelpfetten, Wechsel im Dach und den Bretterboden im Spitzboden zeigen.
+
 ## 0.64.1 – Mehr Maße am Rand der Grundrisse
 
 - Neue Maßkette an jeder Seite mit allen Wandkanten und Treppen, z. B. die Breite der Holztreppe.

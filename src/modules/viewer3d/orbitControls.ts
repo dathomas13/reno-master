@@ -168,7 +168,7 @@ export interface ViewPreset {
   rooms?: boolean;
 }
 
-/** the four presets from the handover viewer, plus room display for the floor plans */
+/** the four presets from the handover viewer, plus room display for the floor plans, and the roof frame alone */
 export const VIEW_PRESETS: ViewPreset[] = [
   {
     label: 'Außen',
@@ -205,5 +205,14 @@ export const VIEW_PRESETS: ViewPreset[] = [
     distance: 36,
     target: [6.6, -2.75, -5.9],
     rooms: true,
+  },
+  {
+    label: 'Dachstuhl',
+    layers: { STUHL: true },
+    theta: -0.75,
+    phi: 0.95,
+    distance: 30,
+    target: [6.6, 4.3, -5.9],
+    rooms: false,
   },
 ];

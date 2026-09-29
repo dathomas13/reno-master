@@ -12,7 +12,7 @@ import type * as THREE_NS from 'three';
 
 export type ThreeNamespace = typeof THREE_NS;
 
-export type Layer = 'KG' | 'EG' | 'OG' | 'DACH' | 'GAR';
+export type Layer = 'KG' | 'EG' | 'OG' | 'DG' | 'STUHL' | 'DACH' | 'GAR';
 export type PrimKind = 'wall' | 'slab' | 'roof' | 'glass' | 'door' | 'stair' | 'rail';
 export type Confidence = 'A' | 'B' | 'C';
 
@@ -61,13 +61,15 @@ export interface RoomDoc {
   rooms: Room[];
 }
 
-export const LAYERS: Layer[] = ['KG', 'EG', 'OG', 'DACH', 'GAR'];
+export const LAYERS: Layer[] = ['KG', 'EG', 'OG', 'DG', 'STUHL', 'DACH', 'GAR'];
 
 export const LAYER_LABEL: Record<Layer, string> = {
   KG: 'Keller',
   EG: 'Erdgeschoss',
   OG: 'Obergeschoss',
-  DACH: 'Dach + Gaube',
+  DG: 'Dachgeschoss',
+  STUHL: 'Dachstuhl',
+  DACH: 'Dach + Gauben',
   GAR: 'Garage',
 };
 
@@ -75,6 +77,8 @@ export const LAYER_SHORT: Record<Layer, string> = {
   KG: 'KG',
   EG: 'EG',
   OG: 'OG',
+  DG: 'DG',
+  STUHL: 'Dachstuhl',
   DACH: 'Dach',
   GAR: 'Garage',
 };
@@ -98,6 +102,8 @@ const KIND_COLOR: Record<PrimKind, number> = {
 const TAG_COLOR: Record<Confidence, number> = { A: 0xd9d3c5, B: 0xc9b990, C: 0xb8845a };
 
 const STRUCTURAL_COLOR = { bearing: 0xc0392b, other: 0xe6e2d8 };
+/** the timber of the roof frame, which would otherwise take the dark colour of the roof skin */
+const TIMBER_COLOR = 0xb08850;
 const EDGE_COLOR = 0x1d2126;
 const ROOM_COLOR = 0xc9a86a;
 const ROOM_OPACITY = 0.32;
@@ -105,7 +111,7 @@ const ROOM_OPACITY_ACTIVE = 0.62;
 const MM = 0.001;
 
 /** floor level (mm) a room polygon is drawn at, slightly above the raw slab */
-const ROOM_Z: Record<Layer, number> = { KG: -2720, EG: 30, OG: 2780, DACH: 2780, GAR: -1330 };
+const ROOM_Z: Record<Layer, number> = { KG: -2720, EG: 30, OG: 2780, DG: 2780, STUHL: 2780, DACH: 2780, GAR: -1330 };
 
 export interface PickedPart {
   type: 'part';
@@ -319,7 +325,8 @@ export function buildHouse(
         shininess: 80,
       });
     }
-    const color = prim.kind === 'wall' ? wallColor(prim) : KIND_COLOR[prim.kind];
+    let color = prim.kind === 'wall' ? wallColor(prim) : KIND_COLOR[prim.kind];
+    if (prim.layer === 'STUHL') color = structural ? wallColor(prim) : TIMBER_COLOR;
     return new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
   };
 

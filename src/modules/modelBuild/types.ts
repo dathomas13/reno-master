@@ -3,7 +3,7 @@
  * src/modules/viewer3d/houseScene.ts structurally; they are repeated here so this module
  * stays free of three.js and runs in a worker and in the plain-Node test fallback.
  */
-export type Layer = 'KG' | 'EG' | 'OG' | 'DACH' | 'GAR';
+export type Layer = 'KG' | 'EG' | 'OG' | 'DG' | 'STUHL' | 'DACH' | 'GAR';
 export type PrimKind = 'wall' | 'slab' | 'roof' | 'glass' | 'door' | 'stair' | 'rail';
 export type Confidence = 'A' | 'B' | 'C';
 

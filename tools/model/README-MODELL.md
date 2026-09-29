@@ -118,7 +118,7 @@ Szene `<variante>.json` (in der Datenbank als Text im Feld `scene`)
   "meta": { "variant": "ist", "version": "0.24", "generatedAt": "2026-09-16",
             "note": "EG-Aufmaß 09/2026", "house_w": 12995, "house_d": 11815, "ridge": 7401.4 },
   "prims": [
-    { "layer": "KG|EG|OG|DACH|GAR",
+    { "layer": "KG|EG|OG|DG|STUHL|DACH|GAR",   // DG = Spitzboden, STUHL = Dachstuhl, DACH = Dachhaut + Gauben
       "name": "Außenwand Nord",
       "kind": "wall|slab|roof|glass|door|stair|rail",
       "tag": "A|B|C",               // Konfidenz: gesichert / abgeleitet / Annahme

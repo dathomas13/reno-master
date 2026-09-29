@@ -431,6 +431,15 @@ def build(m, variant: str, version: str, note: str) -> dict:
         u_pn = u_seat - 70                       # Außenkante Pfette, Kerve 7 cm lang
         u_pi = u_pn + rf["purlin_b"]
         u_eb = u_e + rf["rafter_h"] * math.sin(math.radians(m.ROOF_PITCH))   # rechtwinkliger Kopf
+        ti = rf["ties"]
+        if ti:
+            # Zangen: OK und UK, wo das schräge Ende die UK und die OK verlässt
+            z_tt = z_pt - rf["purlin_h"] + ti["notch"]
+            z_tb = z_tt - ti["h"]
+            dp = ti["play"] / math.cos(math.radians(m.ROOF_PITCH))   # Spiel rechtwinklig zum Dach, lotrecht gemessen
+            u_tb = (z_tb + dp - hr - z_k) / tr
+            u_tt = (z_tt + dp - hr - z_k) / tr
+            z_ceil = z_tb - ti["lining"]
         for d in dormers:
             i0, i1 = d["rafters"][0] - 1, d["rafters"][1] - 1
             tg = math.tan(math.radians(d["pitch"]))
@@ -446,10 +455,11 @@ def build(m, variant: str, version: str, note: str) -> dict:
                       + prism(-ov - 1, m.HOUSE_W + 1, ridge, m.HOUSE_D + ov + 1,
                               m.Z_OG - 500, m.Z_OG - 500, zu(ridge) + hr, zu(m.HOUSE_D + ov + 1) + hr))
         # inner walls end under the Spitzboden ceiling, which spans between the purlins, and
-        # under the purlins themselves
+        # under the purlins themselves - with ties under them and their lining instead
         z_high = zr(u_r) + dz_t + 1000
-        under_roof_g = solid_sub(under_roof_g, box(-ov - 1, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W + ov + 1,
-                                                   m.HOUSE_D - m.T_OUT - u_pi, z_high))
+        if not ti:
+            under_roof_g = solid_sub(under_roof_g, box(-ov - 1, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W + ov + 1,
+                                                       m.HOUSE_D - m.T_OUT - u_pi, z_high))
         for side in ("S", "N"):
             under_roof_g = solid_sub(under_roof_g, band(side, -ov - 1, m.HOUSE_W + ov + 1, u_pn, u_pi,
                                                         z_pt - rf["purlin_h"], z_pt - rf["purlin_h"], z_high, z_high))
@@ -460,6 +470,18 @@ def build(m, variant: str, version: str, note: str) -> dict:
             under_roof_g = solid_union(under_roof_g, band(
                 d["side"], d["x0"] + rb, d["x1"] - rb, d["front_t"], u_end, m.Z_OG - 500, m.Z_OG - 500,
                 d["z_w"], d["z_w"] + d["tg"] * (u_end - d["front_t"])))
+        if ti:
+            under_roof_g = solid_sub(under_roof_g, box(-ov - 1, m.T_OUT + u_tb, z_ceil, m.HOUSE_W + ov + 1,
+                                                       m.HOUSE_D - m.T_OUT - u_tb, z_high))
+
+    # Wechsel als u-Bereiche auf ihrer Seite, zwischen den Innenkanten der durchlaufenden Sparren
+    trims = []
+    for w in (rf["trimmers"] if rf else []):
+        side = "N" if w["y"][0] >= ridge else "S"
+        y_in = m.HOUSE_D - m.T_OUT
+        ua, ub = (y_in - w["y"][1], y_in - w["y"][0]) if side == "N" else (w["y"][0] - m.T_OUT, w["y"][1] - m.T_OUT)
+        trims.append(dict(side=side, i0=w["rafters"][0] - 1, i1=w["rafters"][1] - 1, ua=ua, ub=ub,
+                          y0=w["y"][0], y1=w["y"][1], xa=sp_x[w["rafters"][0] - 1] + rb, xb=sp_x[w["rafters"][1] - 1]))
 
     def zd(d, u):
         """underside of the dormer rafters"""
@@ -646,27 +668,61 @@ def build(m, variant: str, version: str, note: str) -> dict:
                     u_s = hr / tr
                     sol = solid_union(sol, band(side, x, x1, u_eb, 0, zr(u_eb), zr(0), zr(u_eb) + hr, z_c))
                     sol = solid_union(sol, band(side, x, x1, 0, u_s, zr(0), zr(u_s), z_c, z_c))
-                    u_lo = u_pn - 500
+                    u_lo = min(u_pn - 500, u_tb - 100) if rf["ties"] else u_pn - 500
                 else:
                     u_lo = u_eb
                 sol = solid_union(sol, band(side, x, x1, u_lo, u_pn, zr(u_lo), zr(u_pn), zr(u_lo) + hr, zr(u_pn) + hr))
                 sol = solid_union(sol, band(side, x, x1, u_pn, u_seat, z_pt, z_pt, zr(u_pn) + hr, zr(u_seat) + hr))
                 sol = solid_union(sol, band(side, x, x1, u_seat, u_r, zr(u_seat), zr(u_r), zr(u_seat) + hr, zr(u_r) + hr))
+                for w in trims:
+                    if w["side"] == side and w["i0"] < i < w["i1"]:
+                        sol = solid_sub(sol, band(side, x - 1, x1 + 1, w["ua"] - rb, w["ub"] + rb, m.Z_OG, m.Z_OG, z_top, z_top))
                 rafters[side] = solid_union(rafters[side], sol)
         for d in dormers:
             skin = solid_sub(skin, band(d["side"], d["x0"], d["x1"], 0, d["u_k"], m.Z_OG, m.Z_OG, z_top, z_top))
         skin = solid_sub(skin, old_cut)
         add("DACH", "Dachhaut 36° (Lattung + Kunstschiefer)", "roof", "A", skin)
+        purlins = []
         for side, name in (("S", "Süd"), ("N", "Nord")):
-            add("DACH", f"Sparren {name}", "roof", rf["tag"], solid_sub(rafters[side], old_cut), tragend=True)
-            add("DACH", f"Mittelpfette {name}", "roof", rf["tag"],
-                band(side, 50, m.HOUSE_W - 50, u_pn, u_pi, z_pt - rf["purlin_h"], z_pt - rf["purlin_h"], z_pt, z_pt),
-                tragend=True)
+            add("STUHL", f"Sparren {name}", "roof", rf["tag"], solid_sub(rafters[side], old_cut), tragend=True)
+            purlin = band(side, 50, m.HOUSE_W - 50, u_pn, u_pi, z_pt - rf["purlin_h"], z_pt - rf["purlin_h"], z_pt, z_pt)
+            purlins += purlin
+            add("STUHL", f"Mittelpfette {name}", "roof", rf["tag"], purlin, tragend=True)
             u_m, pb = (u_pn + u_pi) / 2, rf["post_b"] / 2
             for x in rf["posts"]:
-                add("OG", "Stütze", "wall", rf["tag"],
+                add("STUHL", "Stütze", "wall", rf["tag"],
                     band(side, x - pb, x + pb, u_m - pb, u_m + pb, m.Z_OG, m.Z_OG,
                          z_pt - rf["purlin_h"], z_pt - rf["purlin_h"]), tragend=True)
+        for w in trims:
+            hd = []
+            for u0, u1 in ((w["ua"] - rb, w["ua"]), (w["ub"], w["ub"] + rb)):
+                hd = solid_union(hd, band(w["side"], w["xa"], w["xb"], u0, u1, zr(u0), zr(u1), zr(u0) + hr, zr(u1) + hr))
+            add("STUHL", "Wechsel Sparren", "roof", rf["tag"], hd, tragend=True)
+        if ti:
+            # beide Enden im Dachwinkel, `play` unter OK Sparren; an den Pfetten ausgeklinkt
+            def z_end(u):
+                return zr(u) + hr - ti["play"] / math.cos(math.radians(m.ROOF_PITCH))
+            ties = []
+            for i, x in enumerate(sp_x):
+                boards = []
+                if i > 0:
+                    boards.append((x - ti["b"], x))   # die Giebelsparren haben ihre Außenseite in der Wand
+                if i < len(sp_x) - 1:
+                    boards.append((x + rb, x + rb + ti["b"]))
+                for a, b in boards:
+                    t = []
+                    for side in ("S", "N"):
+                        t = solid_union(t, band(side, a, b, u_tb, u_tt, z_tb, z_tb, z_end(u_tb), z_tt))
+                        t = solid_union(t, band(side, a, b, u_tt, u_r, z_tb, z_tb, z_tt, z_tt))
+                    for w in trims:
+                        if w["i0"] < i < w["i1"]:
+                            t = solid_sub(t, box(a - 1, w["y0"] - rb, z_tb - 1, b + 1, w["y1"] + rb, z_tt + 1))
+                    ties = ties + solid_sub(t, purlins)
+            add("STUHL", "Zangen", "roof", rf["tag"], ties, tragend=True)
+            for w in trims:
+                add("STUHL", "Wechsel Zangen", "roof", rf["tag"],
+                    box(w["xa"] + ti["b"], w["y0"] - rb, z_tb, w["xb"] - ti["b"], w["y0"], z_tt)
+                    + box(w["xa"] + ti["b"], w["y1"], z_tb, w["xb"] - ti["b"], w["y1"] + rb, z_tt), tragend=True)
         for d in dormers:
             side, x0, x1, tf = d["side"], d["x0"], d["x1"], d["front_t"]
             label = f'Gaube {"Nord" if side == "N" else "Süd"}'
@@ -697,7 +753,7 @@ def build(m, variant: str, version: str, note: str) -> dict:
                 sol = solid_union(sol, band(side, x, xe, tf, ua, zd(d, tf), zd(d, ua), zd(d, tf) + d["hrg"], zd(d, ua) + d["hrg"]))
                 sol = solid_union(sol, band(side, x, xe, ua, ub, zr(ua) + hr, zr(ub) + hr, zd(d, ua) + d["hrg"], zd(d, ub) + d["hrg"]))
                 ds = solid_union(ds, sol)
-            add("DACH", f"{label} Sparren", "roof", d["tag"], ds, tragend=True)
+            add("STUHL", f"{label} Sparren", "roof", d["tag"], ds, tragend=True)
             uk = d["u_k"]
             add("DACH", f"{label} Dachhaut", "roof", d["tag"],
                 band(side, x0, x1, ug, uk, zd(d, ug) + d["hrg"], zd(d, uk) + d["hrg"],
@@ -716,13 +772,35 @@ def build(m, variant: str, version: str, note: str) -> dict:
                 prism(x, x + t, 0, g["depth"], m.Z_OG + m.KNIESTOCK, zu(g["depth"]), gtop + 50, gtop + 50))
         add("DACH", "Gaubendach", "roof", "C",
             box(g["x0"] - 200, -300, gtop + 50, g["x1"] + 200, g["depth"] + 200, gtop + 250))
-    if rf:
+    if rf and rf["ties"]:
+        # Bretter auf den Zangen zwischen den Pfetten, Dämmung zwischen den Zangen, darunter
+        # die Bekleidung von Schräge zu Schräge; die Wechsel lassen ihre Öffnung frei
+        ti = rf["ties"]
+        y0, y1 = m.T_OUT + u_pi, m.HOUSE_D - m.T_OUT - u_pi
+        deck = box(m.T_OUT, y0, z_tt, m.HOUSE_W - m.T_OUT, y1, z_tt + ti["deck"])
+        for w in trims:
+            deck = solid_sub(deck, box(w["xa"] + ti["b"], w["y0"], z_tt - 1, w["xb"] - ti["b"], w["y1"], z_tt + ti["deck"] + 1))
+        add("DG", "Spitzboden Bretter", "slab", rf["tag"], deck)
+        if ti["insulation"]:
+            ins = box(m.T_OUT, y0, z_tb, m.HOUSE_W - m.T_OUT, y1, z_tt)
+            for x in sp_x:
+                ins = solid_sub(ins, box(x - ti["b"], y0 - 1, z_tb - 1, x + rb + ti["b"], y1 + 1, z_tt + 1))
+            for w in trims:
+                ins = solid_sub(ins, box(w["xa"] + ti["b"], w["y0"] - rb, z_tb - 1, w["xb"] - ti["b"], w["y1"] + rb, z_tt + 1))
+            add("DG", "Dämmung zwischen den Zangen", "slab", rf["tag"], ins)
+        if ti["lining"] > 0:
+            u_f = (z_ceil - z_k) / tr   # wo die Decke auf die Unterkante der Sparren trifft
+            lining = box(m.T_OUT, m.T_OUT + u_f, z_ceil, m.HOUSE_W - m.T_OUT, m.HOUSE_D - m.T_OUT - u_f, z_tb)
+            for w in trims:
+                lining = solid_sub(lining, box(w["xa"] + ti["b"], w["y0"], z_ceil - 1, w["xb"] - ti["b"], w["y1"], z_tb + 1))
+            add("DG", "Gipskarton unter den Zangen", "slab", rf["tag"], lining)
+    elif rf:
         # zwischen den Mittelpfetten
-        add("DACH", "Holzbalkendecke Spitzboden", "slab", "B",
+        add("DG", "Holzbalkendecke Spitzboden", "slab", "B",
             box(m.T_OUT, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - m.T_OUT - u_pi, m.OG_CEIL + 200))
     else:
         ys_ = m.T_OUT + (m.OG_CEIL - (m.Z_OG + m.KNIESTOCK)) / m.tan_roof() + 100
-        add("DACH", "Holzbalkendecke Spitzboden", "slab", "B",
+        add("DG", "Holzbalkendecke Spitzboden", "slab", "B",
             box(m.T_OUT, ys_, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - ys_, m.OG_CEIL + 200))
 
     # ------------------------------------------------------------------ Garage

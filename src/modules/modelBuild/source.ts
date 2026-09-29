@@ -115,11 +115,23 @@ export interface HouseSource {
   /**
    * optional timber roof frame: `rafters` rafters `rafterB` × `rafterH`, evenly between the
    * gable walls, a middle purlin per side whose top is the top of the Spitzboden ceiling,
-   * posts under the purlins at the given x
+   * posts under the purlins at the given x.
+   *
+   * `ties`: a pair of boards `b` × `h` on both sides of every rafter from rafter to rafter
+   * under the purlins, notched `notch` deep onto their underside, the ends cut at the roof
+   * pitch `play` below the rafter top; the Spitzboden floor is then boards `deck` thick on
+   * the ties instead of the ceiling slab, optionally with insulation between the ties and a
+   * `lining` (plasterboard, 0 = none) under them.
+   *
+   * `trimmers`: openings in the roof over plan y `y[0]`…`y[1]` (on one side of the ridge)
+   * between rafters `rafters[0]` and `rafters[1]` (counted from 1) - the rafters in
+   * between are cut and carried by a header on either side, and so are the ties
    */
   roofFrame?: {
     rafters: number; rafterB: number; rafterH: number; purlinB: number; purlinH: number;
     posts: number[]; postB: number; tag: Tag;
+    ties?: { b: number; h: number; notch: number; play: number; deck: number; insulation: boolean; lining: number };
+    trimmers?: { rafters: [number, number]; y: [number, number] }[];
   };
   /**
    * shed dormers over rafters `rafters[0]`…`rafters[1]` (counted from 1, from the west),
@@ -368,6 +380,26 @@ export function parseSource(text: string): ParseResult {
       postB: f.postB === undefined ? 140 : num(f.postB, 'roofFrame.postB'),
       tag: f.tag === undefined ? 'B' : tag(f.tag, 'roofFrame'),
     };
+    if (f.ties !== undefined) {
+      const t = isObj(f.ties) ? f.ties : (errors.push('roofFrame.ties: Objekt erwartet.'), {});
+      const opt = (v: unknown, fallback: number, where: string) => (v === undefined ? fallback : num(v, where));
+      if (t.insulation !== undefined && typeof t.insulation !== 'boolean') {
+        errors.push('roofFrame.ties.insulation: true oder false erwartet.');
+      }
+      roofFrame.ties = {
+        b: opt(t.b, 50, 'roofFrame.ties.b'), h: opt(t.h, 160, 'roofFrame.ties.h'),
+        notch: opt(t.notch, 40, 'roofFrame.ties.notch'), play: opt(t.play, 20, 'roofFrame.ties.play'),
+        deck: opt(t.deck, 24, 'roofFrame.ties.deck'), insulation: t.insulation === true,
+        lining: opt(t.lining, 0, 'roofFrame.ties.lining'),
+      };
+    }
+    if (f.trimmers !== undefined) {
+      roofFrame.trimmers = list(f.trimmers, 'roofFrame.trimmers').map((entry, i) => {
+        const t = isObj(entry) ? entry : {};
+        const where = `roofFrame.trimmers[${i}]`;
+        return { rafters: pair(t.rafters, `${where}.rafters`), y: pair(t.y, `${where}.y`) };
+      });
+    }
   }
   const dormers: NonNullable<HouseSource['dormers']> = list(raw.dormers, 'dormers').map((entry, i) => {
     const d = isObj(entry) ? entry : {};

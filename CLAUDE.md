@@ -155,6 +155,9 @@ Steht:
   zu `build_plans_svg.py`), sie folgen einem Import also sofort. Der Plan dazu ist
   abgeschlossen; DXF-Import und Änderung per Sprache in der App sind bewusst verworfen
   (`tools/model/PLAN-MODELL-WORKFLOW.md`).
+- **Dach, Dachstuhl und Dachgeschoss sind eigene Ebenen** (0.65.0): `DACH` (Dachhaut, Gauben),
+  `STUHL` (Sparren, Pfetten, Stützen, Zangen, Wechsel), `DG` (Spitzbodenboden). Zangen und
+  Wechsel stehen in der Hausdatei unter `roofFrame.ties` / `roofFrame.trimmers`.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
