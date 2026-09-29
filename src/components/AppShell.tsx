@@ -1,7 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { SyncBadge } from './SyncBadge';
 import { Sheet } from './Sheet';
+import { loadSettings, SETTINGS_EVENT, type LocalSettings } from '@/lib/settings';
+import { entryOf, normalizeNavLayout, splitNav } from '@/lib/navLayout';
 
 interface NavItem {
   to: string;
@@ -37,25 +39,48 @@ const ICONS = {
   files: 'M4 5h6l2 2h8v12H4zM4 9h16',
 };
 
-const MAIN_NAV: NavItem[] = [
-  { to: '/', label: 'Start', icon: <Icon path={ICONS.home} /> },
-  { to: '/tagebuch', label: 'Tagebuch', icon: <Icon path={ICONS.diary} /> },
-  { to: '/3d', label: '3D', icon: <Icon path={ICONS.cube} /> },
-  { to: '/kosten', label: 'Kosten', icon: <Icon path={ICONS.euro} /> },
-];
+const ROUTE_ICONS: Record<string, string> = {
+  '/': ICONS.home,
+  '/tagebuch': ICONS.diary,
+  '/3d': ICONS.cube,
+  '/kosten': ICONS.euro,
+  '/suche': ICONS.search,
+  '/dateien': ICONS.files,
+  '/aufgaben': ICONS.task,
+  '/notizen': ICONS.note,
+  '/kontakte': ICONS.contact,
+  '/gespraeche': ICONS.chat,
+  '/einstellungen': ICONS.settings,
+};
 
-const MORE_NAV: NavItem[] = [
-  { to: '/suche', label: 'Suche', icon: <Icon path={ICONS.search} /> },
-  { to: '/dateien', label: 'Dateien', icon: <Icon path={ICONS.files} /> },
-  { to: '/aufgaben', label: 'Aufgaben', icon: <Icon path={ICONS.task} /> },
-  { to: '/notizen', label: 'Notizen', icon: <Icon path={ICONS.note} /> },
-  { to: '/kontakte', label: 'Kontakte', icon: <Icon path={ICONS.contact} /> },
-  { to: '/gespraeche', label: 'Gespräche', icon: <Icon path={ICONS.chat} /> },
-  { to: '/einstellungen', label: 'Einstellungen', icon: <Icon path={ICONS.settings} /> },
-];
+function navItems(routes: string[]): NavItem[] {
+  return routes.flatMap((route) => {
+    const entry = entryOf(route);
+    return entry ? [{ ...entry, icon: <Icon path={ROUTE_ICONS[route] ?? ICONS.more} /> }] : [];
+  });
+}
+
+/** follows the settings screen live: a change there shows in the bar without a reload */
+function useNavLayout() {
+  const [layout, setLayout] = useState(() => normalizeNavLayout(loadSettings().navLayout));
+  useEffect(() => {
+    const onChange = (event: Event) => {
+      const detail = (event as CustomEvent<LocalSettings>).detail;
+      setLayout(normalizeNavLayout(detail?.navLayout));
+    };
+    window.addEventListener(SETTINGS_EVENT, onChange);
+    return () => window.removeEventListener(SETTINGS_EVENT, onChange);
+  }, []);
+  return layout;
+}
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const layout = useNavLayout();
+  const split = splitNav(layout);
+  const mainNav = navItems(split.bar);
+  const moreNav = navItems(split.more);
+  const allNav = navItems(layout.order);
   const location = useLocation();
   const fullBleed = location.pathname.startsWith('/3d') || location.pathname.startsWith('/plaene/');
 
@@ -72,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="font-semibold">Reno Master</div>
           <div className="text-xs text-muted">Schlesierstraße 31</div>
         </div>
-        {[...MAIN_NAV, ...MORE_NAV].map((item) => (
+        {allNav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -103,7 +128,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="md:hidden fixed bottom-0 inset-x-0 z-30 flex border-t border-line bg-panel/95 backdrop-blur
                    pb-[env(safe-area-inset-bottom)]"
       >
-        {MAIN_NAV.map((item) => (
+        {mainNav.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.to === '/'} className={linkClass}>
             {item.icon}
             <span>{item.label}</span>
@@ -117,7 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Mehr">
         <div className="flex flex-col">
-          {MORE_NAV.map((item) => (
+          {moreNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

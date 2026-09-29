@@ -8,6 +8,53 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.63.1 – Menü mit Trennstrich auch in der Webansicht
+
+- Die Menü-Einstellung mit Trennstrich steht jetzt auch in der Webansicht bereit.
+
+## 0.63.0 – Menü mit Trennstrich, Einstellungen aufgeräumt
+
+- Im Menü entscheidet ein Strich statt der Haken: was darüber steht, kommt in die Leiste.
+- Menü und Startseite sind in den Einstellungen zugeklappt und öffnen sich per Tippen.
+
+## 0.62.0 – Menü und Startseite selbst einrichten
+
+- Unter Einstellungen → Menü legst du fest, welche bis zu vier Einträge unten in der Leiste
+  stehen und in welcher Reihenfolge das Menü sie zeigt.
+- Unter Einstellungen → Startseite wählst du, welche Kacheln erscheinen und in welcher
+  Reihenfolge.
+
+## 0.61.0 – Sitzfenster im Modell
+
+- Fenster können im 3D-Modell einen tiefen Rahmenkasten bekommen, etwa als Sitzfenster.
+
+## 0.60.1 – Gaube als Fachwerk, kein Flackern mehr
+
+- Die Gaubenfront ist jetzt ein Holzrahmen mit Schwelle, Rähm und Pfosten, die Öffnungen
+  dürfen noch unverglast sein.
+- Die Seitenwände der Gauben flackern beim Drehen nicht mehr.
+
+## 0.60.0 – Dachstuhl im 3D-Modell
+
+- Das Dach zeigt jetzt den echten Dachstuhl: Sparren, Mittelpfetten mit ihren Stützen und
+  die Dachhaut darüber.
+- Die Gauben nach Norden und Süden sind Schleppgauben mit 17°, auf die Sparren aufgelegt.
+
+## 0.59.1 – Nordgaube wie gebaut
+
+- Die Gaube zur Gartenseite steht jetzt so im 3D-Modell, wie sie gebaut ist: Front innen
+  hinter der Wand, Traufe davor, Dach hinten auf dem Hauptdach aufgelegt.
+
+## 0.59.0 – Gaube nach Norden im 3D-Modell
+
+- Das 3D-Modell kann jetzt eine Schleppgaube zur Gartenseite zeigen, mit flacherem Dach
+  und kleinem Überstand.
+
+## 0.58.2 – Keine falsche Warnung beim Import des Stands der Arbeiten
+
+- Beim Import von „Aktuell“ erscheint die Warnung „Räume entfallen“ nicht mehr – Einträge
+  hängen nie an Räumen dieses Stands, es geht nichts verloren.
+
 ## 0.58.1 – Pläne scharf, Raumkarte sichtbar
 
 - Grundrisse bleiben beim Hineinzoomen scharf.
@@ -17,6 +64,11 @@ Commit-Nachricht, und die liest sich im Banner auch so.
 
 - Pläne, Fotos und Belege: mit zwei Fingern zoomen, mit einem verschieben, Doppeltipp vergrößert. Dazu Plus- und Minus-Knöpfe.
 - PDF-Pläne öffnen in der gleichen Ansicht mit Seitenwechsel und Zoom.
+
+## 0.57.1 – Räume im 3D ohne Linien quer über den Boden
+
+- Räume aus mehreren Teilflächen haben im 3D nur noch ihren Außenumriss, keine Linien
+  mehr dort, wo die Teilflächen aneinanderstoßen.
 
 ## 0.57.0 – Grundrisse mit Maßketten wie ein Bauplan
 

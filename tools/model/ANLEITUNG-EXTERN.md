@@ -90,6 +90,7 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
           "sill": 700,                   // Brüstung über Geschossboden (Tür: 0)
           "height": 1385,                // lichte Höhe (bei passage ignoriert)
           "tag": "A",
+          "frame": { "t": 60, "out": 350, "in": 0 },  // optional, nur window: tiefer Rahmen (Sitzfenster)
           "note": "Wohnzimmer"
         }
       ]
@@ -105,9 +106,22 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
   "slabOpenings":   { "EG": [0, 5130, 3615, 7365], "OG": [5015, 6690, 6025, 10050] },  // Treppenaugen [x0,y0,x1,y1]
   "slabExtras":     [ { "floor": "EG", "name": "Loggia Boden", "x0": 8245, "y0": -125, "x1": 12995, "y1": 0, "z0": -140, "tag": "A" } ],
   "loggiaParapets": [],                  // Brüstungen: { x0, y0, x1, y1, h, tag }
-  "gaube":  { "x0": 4840, "x1": 9370, "depth": 2250, "wallH": 2200,
+  "gaube":  { "x0": 4840, "x1": 9370, "depth": 2250, "wallH": 2200,   // optional: alte Flachdachgaube (Bestand)
               "windows": [[1010, 60], [1010, 60], [1010, 60], [1010, 60]],   // [Breite, Pfosten danach]
               "cheek": [175, 135], "tag": "B" },
+  "roofFrame": { "rafters": 20,             // optional: Dachstuhl - Sparren gleichmäßig zwischen den Giebelwänden
+                 "rafterB": 100, "rafterH": 160,      // Sparrenquerschnitt; darüber die Dachhaut bis roofT
+                 "purlinB": 180, "purlinH": 270,      // Mittelpfetten, OK Pfette = OK Spitzbodendecke
+                 "posts": [4927.5, 9302.5], "postB": 140,   // Stützen unter beiden Pfetten, Mitte in x
+                 "tag": "B" },
+  "dormers": [                              // optional, nur mit roofFrame: Schleppgauben
+    { "side": "N", "rafters": [10, 16],     // Seite N|S, von Sparren 10 bis 16 (von Westen gezählt)
+      "frontH": 1300, "frontT": 200,        // lichte Höhe der Front über OK Sparren, Frontstärke
+      "pitch": 17, "overhang": 150,         // Dachneigung, Überstand vor der Front
+      "windows": [[1025, 120], [1394, 120], [820, 0]],   // Öffnungen [Breite, Pfosten danach], mittig
+      "sillH": 120, "plateH": 120,          // Schwelle unten, Rähm oben - die Front ist ein Fachwerk
+      "glass": true, "tag": "C" }           // false: Öffnungen noch unverglast
+  ],
   "balkon": { "x0": -1300, "x1": 0, "y0": 3035, "y1": 8095, "tag": "A" },
   "garage": { "x": [-8000, -1510], "y": [5100, 12090], "z0": -1360, "hFront": 2600, "hBack": 2300 },
 
@@ -142,6 +156,11 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
 - Sie müssen innerhalb der Wand liegen (`x0 ≤ from < to ≤ x1` bzw. mit y). Sonst lehnt die
   App den Import ab.
 - `sill` und `height` zählen ab dem Geschossboden (KG −2750, EG 0, OG 2750, GAR −1360).
+- `frame` (nur Fenster, optional) kleidet die Öffnung mit einem Rahmenkasten aus Brettern
+  der Stärke `t` aus – etwa für ein Sitzfenster. `out` ist, wie weit er außen vor der Wand
+  steht, `in`, wie weit er innen hineinragt (beide ohne Angabe 0); außen heißt: von der
+  Hausmitte weg. Das Glas sitzt vorn im Kasten. `sill` und `height` bleiben das Loch in der
+  Wand, die Sitzfläche liegt also `t` höher.
 
 ### Räume
 
@@ -184,7 +203,12 @@ nur hochstufen, wenn es wirklich ein Aufmaß gibt.
 
 Dachform (Satteldach, First mittig), die OG-Wände unter der Schräge, Spitzbodendecke,
 Garagendach, Balkongeländer und die Materialien baut die App selbst. Sie lassen sich nur
-über `params`, `gaube`, `balkon` und `garage` beeinflussen. Für eine andere Dachform muss
+über `params`, `gaube`, `roofFrame`, `dormers`, `balkon` und `garage` beeinflussen.
+Mit `roofFrame` baut die App den Dachstuhl: Sparren mit Kerve auf den Mittelpfetten, durch die
+Traufwand bis zum rechtwinkligen Balkenkopf, Stützen, Dachhaut und die Spitzbodendecke
+zwischen den Pfetten. Eine Schleppgaube steht mit ihrer Front innen hinter der Traufwand auf
+den dort waagrecht abgeschnittenen Sparren; ihre Sparren liegen hinten auf den Hauptsparren
+auf, die Hauptsparren dazwischen sind ausgewechselt. Für eine andere Dachform muss
 das Programm geändert werden. Das gehört in einen Chat mit Repo-Zugriff, nicht in die
 Hausdatei.
 

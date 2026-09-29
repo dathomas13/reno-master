@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
@@ -9,6 +9,8 @@ import { patchPhase } from '@/data/repos';
 import { orderBy, limit } from '@/firebase/db';
 import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib/date';
 import { formatEuro } from '@/lib/money';
+import { loadSettings } from '@/lib/settings';
+import { normalizeHomeLayout, visibleHomeBlocks } from '@/lib/homeLayout';
 
 export default function HomePage() {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(20)]);
@@ -18,6 +20,8 @@ export default function HomePage() {
   const { data: phases } = useCollection<Phase>(COL.phases);
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [phaseBusy, setPhaseBusy] = useState(false);
+  // read on mount: the layout only changes on the settings screen, and coming back remounts this page
+  const [homeLayout] = useState(() => normalizeHomeLayout(loadSettings().homeLayout));
 
   const todayEntry = entries.find((entry) => entry.date === today());
   const recent = entries.slice(0, 3);
@@ -54,68 +58,45 @@ export default function HomePage() {
     }
   }
 
-  return (
-    <>
-      <TopBar title="Reno Master" subtitle={formatDateWithWeekday(today())} />
-
-      <div className="p-3 flex flex-col gap-3 max-w-3xl">
-        <Link to="/suche" className="field flex items-center gap-2 text-muted" aria-label="Suchen">
-          <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none" stroke="currentColor"
-               strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
-            <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21" />
-          </svg>
-          <span>Alles durchsuchen…</span>
-        </Link>
-
-        <div className="relative rounded-2xl overflow-hidden">
-          <img
-            src={`${import.meta.env.BASE_URL}img/nordansicht.jpg`}
-            alt="Nordansicht des Hauses vom Garten"
-            className="w-full h-40 object-cover"
-            onError={(event) => {
-              (event.currentTarget as HTMLImageElement).style.display = 'none';
-            }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-transparent" />
-          <div className="absolute bottom-0 left-0 p-4">
-            <div className="font-semibold">Schlesierstraße 31</div>
-            {orderedPhases.length > 0 ? (
-              <button
-                type="button"
-                className="text-xs text-muted underline decoration-line underline-offset-2 text-left"
-                onClick={() => setPhaseOpen(true)}
-              >
-                {phase?.name ?? 'Phase setzen'}
-              </button>
-            ) : (
-              <div className="text-xs text-muted">Kernsanierung</div>
-            )}
-          </div>
+  const blocks: Record<string, ReactNode> = {
+    search: (
+      <Link to="/suche" className="field flex items-center gap-2 text-muted" aria-label="Suchen">
+        <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none" stroke="currentColor"
+             strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
+          <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21" />
+        </svg>
+        <span>Alles durchsuchen…</span>
+      </Link>
+    ),
+    house: (
+      <div className="relative rounded-2xl overflow-hidden">
+        <img
+          src={`${import.meta.env.BASE_URL}img/nordansicht.jpg`}
+          alt="Nordansicht des Hauses vom Garten"
+          className="w-full h-40 object-cover"
+          onError={(event) => {
+            (event.currentTarget as HTMLImageElement).style.display = 'none';
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/40 to-transparent" />
+        <div className="absolute bottom-0 left-0 p-4">
+          <div className="font-semibold">Schlesierstraße 31</div>
+          {orderedPhases.length > 0 ? (
+            <button
+              type="button"
+              className="text-xs text-muted underline decoration-line underline-offset-2 text-left"
+              onClick={() => setPhaseOpen(true)}
+            >
+              {phase?.name ?? 'Phase setzen'}
+            </button>
+          ) : (
+            <div className="text-xs text-muted">Kernsanierung</div>
+          )}
         </div>
-
-        <Sheet open={phaseOpen} onClose={() => setPhaseOpen(false)} title="Aktuelle Phase">
-          <div className="p-3">
-            <ul className="flex flex-col">
-              {orderedPhases.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className="list-row w-full text-left last:border-0"
-                    onClick={() => void setCurrentPhase(item)}
-                    disabled={phaseBusy}
-                  >
-                    <span className="flex-1 min-w-0">
-                      <span className="block truncate">{item.name}</span>
-                      <span className="block text-xs text-muted">{item.status}</span>
-                    </span>
-                    {item.id === phase?.id && <span className="text-accent text-sm">Aktuell</span>}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Sheet>
-
+      </div>
+    ),
+    today: (
+      <>
         {todayEntry ? (
           <Link to={`/tagebuch/${todayEntry.id}`} className="card p-4">
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Heute</div>
@@ -132,33 +113,38 @@ export default function HomePage() {
             <span className="text-accent">›</span>
           </Link>
         )}
-
-        <div className="grid grid-cols-3 gap-2">
-          <Link to="/kosten/neu?capture=1" className="card p-3 text-center">
-            <div className="text-xl">🧾</div>
-            <div className="text-xs mt-1">Beleg</div>
-          </Link>
-          <Link to="/3d" className="card p-3 text-center">
-            <div className="text-xl">🏠</div>
-            <div className="text-xs mt-1">3D-Modell</div>
-          </Link>
-          <Link to="/aufgaben" className="card p-3 text-center">
-            <div className="text-xl">✅</div>
-            <div className="text-xs mt-1">Aufgaben</div>
-          </Link>
-        </div>
-
-        <Link to="/kosten" className="card p-4 flex items-center gap-4">
-          <div className="flex-1">
-            <div className="text-xs text-muted uppercase tracking-wide">Kosten gesamt</div>
-            <div className="text-2xl font-semibold">{formatEuro(total)}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-xs text-muted">diesen Monat</div>
-            <div>{formatEuro(thisMonth)}</div>
-          </div>
+      </>
+    ),
+    shortcuts: (
+      <div className="grid grid-cols-3 gap-2">
+        <Link to="/kosten/neu?capture=1" className="card p-3 text-center">
+          <div className="text-xl">🧾</div>
+          <div className="text-xs mt-1">Beleg</div>
         </Link>
-
+        <Link to="/3d" className="card p-3 text-center">
+          <div className="text-xl">🏠</div>
+          <div className="text-xs mt-1">3D-Modell</div>
+        </Link>
+        <Link to="/aufgaben" className="card p-3 text-center">
+          <div className="text-xl">✅</div>
+          <div className="text-xs mt-1">Aufgaben</div>
+        </Link>
+      </div>
+    ),
+    costs: (
+      <Link to="/kosten" className="card p-4 flex items-center gap-4">
+        <div className="flex-1">
+          <div className="text-xs text-muted uppercase tracking-wide">Kosten gesamt</div>
+          <div className="text-2xl font-semibold">{formatEuro(total)}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-xs text-muted">diesen Monat</div>
+          <div>{formatEuro(thisMonth)}</div>
+        </div>
+      </Link>
+    ),
+    urgent: (
+      <>
         {openTasks.length > 0 && (
           <section className="card">
             <div className="section-title">Dringend</div>
@@ -174,7 +160,10 @@ export default function HomePage() {
             </ul>
           </section>
         )}
-
+      </>
+    ),
+    recent: (
+      <>
         {recent.length > 0 && (
           <section className="card">
             <div className="section-title">Zuletzt im Tagebuch</div>
@@ -200,6 +189,41 @@ export default function HomePage() {
             </ul>
           </section>
         )}
+      </>
+    ),
+  };
+
+  return (
+    <>
+      <TopBar title="Reno Master" subtitle={formatDateWithWeekday(today())} />
+
+      <div className="p-3 flex flex-col gap-3 max-w-3xl">
+        {visibleHomeBlocks(homeLayout).map((id) => (
+          <Fragment key={id}>{blocks[id]}</Fragment>
+        ))}
+
+        <Sheet open={phaseOpen} onClose={() => setPhaseOpen(false)} title="Aktuelle Phase">
+          <div className="p-3">
+            <ul className="flex flex-col">
+              {orderedPhases.map((item) => (
+                <li key={item.id}>
+                  <button
+                    type="button"
+                    className="list-row w-full text-left last:border-0"
+                    onClick={() => void setCurrentPhase(item)}
+                    disabled={phaseBusy}
+                  >
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate">{item.name}</span>
+                      <span className="block text-xs text-muted">{item.status}</span>
+                    </span>
+                    {item.id === phase?.id && <span className="text-accent text-sm">Aktuell</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </Sheet>
       </div>
     </>
   );

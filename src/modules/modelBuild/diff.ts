@@ -86,12 +86,15 @@ export function diffSources(base: HouseSource | null, next: HouseSource): Source
     const target = mergedInto(r.id);
     if (target) changes.push(`Raum ${r.id} „${r.name}“ geht in ${target} „${newRooms.get(target)?.name ?? ''}“ auf`);
   }
-  const removedRoomIds = gone.filter((r) => !mergedInto(r.id)).map((r) => r.id);
-  for (const id of removedRoomIds) changes.push(`Raum entfernt: ${id} „${oldRooms.get(id)?.name ?? ''}“`);
+  const lost = gone.filter((r) => !mergedInto(r.id)).map((r) => r.id);
+  for (const id of lost) changes.push(`Raum entfernt: ${id} „${oldRooms.get(id)?.name ?? ''}“`);
+  // entries are linked to rooms of the Bestand or the Plan only, never to those of the
+  // Aktuell state - a room missing there costs nobody a link
+  const removedRoomIds = next.variant === 'aktuell' ? [] : lost;
 
   const sections: [keyof HouseSource, string][] = [
     ['stairs', 'Treppen'], ['landings', 'Podeste'], ['slabOpenings', 'Deckenöffnungen'],
-    ['slabExtras', 'Deckenstücke'], ['loggiaParapets', 'Loggia-Brüstungen'], ['gaube', 'Gaube'],
+    ['slabExtras', 'Deckenstücke'], ['loggiaParapets', 'Loggia-Brüstungen'], ['gaube', 'Gaube'], ['roofFrame', 'Dachstuhl'], ['dormers', 'Gauben'],
     ['balkon', 'Balkon'], ['garage', 'Garage'], ['roomMap', 'Umbenennungstabelle Bestand → Planung'],
   ];
   for (const [key, label] of sections) if (!same(base[key], next[key])) changes.push(`${label} geändert`);
