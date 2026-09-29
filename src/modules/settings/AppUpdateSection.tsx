@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SettingsHeading } from './SettingsHelp';
+import { Sheet } from '@/components/Sheet';
+import { RELEASE_NOTES } from '@/lib/releaseNotes';
 import { isNative } from '@/platform/index';
 import {
   fetchRemoteVersion,
@@ -23,6 +25,7 @@ export function AppUpdateSection() {
   const [remote, setRemote] = useState<RemoteVersion | null>(null);
   const [apkReady, setApkReady] = useState<boolean | null>(null);
   const { install, busy, progress, problem } = useVersionInstall();
+  const [notesOpen, setNotesOpen] = useState(false);
 
   useEffect(() => {
     void fetchRemoteVersion().then(setRemote);
@@ -59,6 +62,25 @@ export function AppUpdateSection() {
       <p className="text-xs text-muted mb-3">
         gebaut am {BUILD_DATE} · Stand {APP_SHA}
       </p>
+      <button type="button" className="btn mb-3" onClick={() => setNotesOpen(true)}>
+        Alle Release Notes
+      </button>
+      <Sheet open={notesOpen} onClose={() => setNotesOpen(false)} doneLabel="Schließen" title="Release Notes">
+        <ul className="space-y-4">
+          {RELEASE_NOTES.map((note) => (
+            <li key={note.version}>
+              <p className="font-medium">
+                {note.version} – {note.headline}
+              </p>
+              <ul className="list-disc pl-5 text-sm text-muted">
+                {note.points.map((point, position) => (
+                  <li key={position}>{point}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
 
       {newest ? (
         <>
