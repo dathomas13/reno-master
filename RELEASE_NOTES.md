@@ -8,10 +8,16 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.62.0 – Menü und Startseite selbst einrichten
+
+- Unter Einstellungen → Menü legst du fest, welche bis zu vier Einträge unten in der Leiste
+  stehen und in welcher Reihenfolge das Menü sie zeigt.
+- Unter Einstellungen → Startseite wählst du, welche Kacheln erscheinen und in welcher
+  Reihenfolge.
+
 ## 0.61.0 – Sitzfenster im Modell
 
-- Fenster können einen tiefen Rahmenkasten bekommen, etwa zum Sitzen. Der Kasten steht im
-  3D vor der Fassade.
+- Fenster können im 3D-Modell einen tiefen Rahmenkasten bekommen, etwa als Sitzfenster.
 
 ## 0.60.1 – Gaube als Fachwerk, kein Flackern mehr
 
