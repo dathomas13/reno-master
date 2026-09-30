@@ -164,7 +164,6 @@
 <rect class="gap" x="8220" y="10255" width="310" height="1010"/>
 <line class="jamb" x1="8230" y1="10255" x2="8520" y2="10255"/>
 <line class="jamb" x1="8230" y1="11265" x2="8520" y2="11265"/>
-<line class="door-line" x1="8375" y1="10255" x2="8375" y2="11265"/>
 <text class="opening-text" x="8175" y="10760" transform="rotate(-90 8175 10760)">101/213,5</text>
 <rect class="gap" x="8220" y="5015" width="310" height="885"/>
 <line class="jamb" x1="8230" y1="5015" x2="8520" y2="5015"/>
@@ -184,7 +183,10 @@
 <rect class="gap" x="5688" y="6660" width="1885" height="320"/>
 <line class="jamb" x1="5688" y1="6670" x2="5688" y2="6970"/>
 <line class="jamb" x1="7573" y1="6670" x2="7573" y2="6970"/>
-<line class="door-line" x1="5688" y1="6820" x2="7573" y2="6820"/>
+<rect class="slide-leaf" x="5010" y="6965" width="1307" height="40"/>
+<line class="slide-rail" x1="4381" y1="7005" x2="6945" y2="7005"/>
+<rect class="slide-leaf" x="7259" y="6965" width="678" height="40"/>
+<line class="slide-rail" x1="6945" y1="7005" x2="8251" y2="7005"/>
 <text class="opening-text" x="6630" y="6615">188,5/201</text>
 <rect class="gap" x="10108" y="9065" width="885" height="390"/>
 <line class="jamb" x1="10108" y1="9075" x2="10108" y2="9445"/>

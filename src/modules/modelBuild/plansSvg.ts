@@ -12,7 +12,7 @@
  * stamps with area and clear dimensions, dimension chains in cm on all four sides.
  */
 import { pyRound } from './pyRound';
-import { alongX, type HouseSource, type HouseVariant, type SourceOpening, type SourceWall } from './source';
+import { alongX, slideLeaves, type HouseSource, type HouseVariant, type SourceOpening, type SourceWall } from './source';
 import type { BuiltRooms } from './types';
 
 export type PlanFloor = 'KG' | 'EG' | 'OG';
@@ -217,25 +217,26 @@ export function buildPlanSvg(
   add('</g>');
 
   /**
-   * a sliding door: the leaf half open on its face of the wall, as in the 3D view, and the
-   * rail along its outer edge from the closed to the fully open leaf
+   * a sliding door: each leaf half open on its face of the wall, as in the 3D view, and its
+   * rail along the outer edge from the closed to the fully open leaf
    */
-  const slideSymbol = (w: SourceWall, o: SourceOpening, a0: number, a1: number) => {
+  const slideSymbol = (w: SourceWall, o: SourceOpening) => {
     const sl = o.slide!;
     const along = alongX(w);
     const [c0, c1] = along ? [w.y0, w.y1] : [w.x0, w.x1];
     const [q0, q1, qr] = sl.face === 'N' || sl.face === 'E' ? [c1 + 10, c1 + 50, c1 + 50] : [c0 - 50, c0 - 10, c0 - 50];
-    const start = along ? w.x0 : w.y0;
-    const width = a1 - a0;
-    const [l0, l1, r0, r1, half] = sl.open === 'E' || sl.open === 'N'
-      ? [start + a0, start + a1 + 50, start + a0, start + a1 + 50 + width, width / 2]
-      : [start + a0 - 50, start + a1, start + a0 - 50 - width, start + a1, -width / 2];
-    if (along) {
-      rect(l0 + half, q0, l1 + half, q1, 'slide-leaf');
-      line(r0, fy(qr), r1, fy(qr), 'slide-rail');
-    } else {
-      rect(q0, l0 + half, q1, l1 + half, 'slide-leaf');
-      line(qr, fy(r0), qr, fy(r1), 'slide-rail');
+    for (const [b0, b1, d] of slideLeaves(o)) {
+      const width = b1 - b0;
+      const [l0, l1, r0, r1, half] = d > 0
+        ? [b0, b1 + 50, b0, b1 + 50 + width, width / 2]
+        : [b0 - 50, b1, b0 - 50 - width, b1, -width / 2];
+      if (along) {
+        rect(l0 + half, q0, l1 + half, q1, 'slide-leaf');
+        line(r0, fy(qr), r1, fy(qr), 'slide-rail');
+      } else {
+        rect(q0, l0 + half, q1, l1 + half, 'slide-leaf');
+        line(qr, fy(r0), qr, fy(r1), 'slide-rail');
+      }
     }
   };
 
@@ -265,8 +266,8 @@ export function buildPlanSvg(
           line(x0, sm - 40, x1, sm - 40, 'glass');
           line(x0, sm + 40, x1, sm + 40, 'glass');
         } else if (o.slide) {
-          slideSymbol(w, o, a0, a1);
-        } else if (o.kind === 'door') {
+          slideSymbol(w, o);
+        } else if (o.kind === 'door' && o.leaf !== false) {
           line(x0, sm, x1, sm, 'door-line');
         }
         // the text goes to the side facing the middle of the house, clear of a sliding leaf
@@ -285,8 +286,8 @@ export function buildPlanSvg(
           line(xm - 40, y0, xm - 40, y1, 'glass');
           line(xm + 40, y0, xm + 40, y1, 'glass');
         } else if (o.slide) {
-          slideSymbol(w, o, a0, a1);
-        } else if (o.kind === 'door') {
+          slideSymbol(w, o);
+        } else if (o.kind === 'door' && o.leaf !== false) {
           line(xm, y0, xm, y1, 'door-line');
         }
         const east = xm < midX;

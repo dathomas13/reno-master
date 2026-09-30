@@ -113,10 +113,16 @@ export function checkSource(src: HouseSource): CheckResult {
       if (o.slide) {
         const [ways, faces] = alongX(w) ? [['W', 'E'], ['N', 'S']] : [['S', 'N'], ['W', 'E']];
         if (o.kind !== 'door') errors.push(`${label}: slide gibt es nur an Türen.`);
-        if (!ways.includes(o.slide.open) || !faces.includes(o.slide.face)) {
+        const split = o.slide.split;
+        if (split !== undefined) {
+          if (!(o.from < split && split < o.to)) errors.push(`${label}: slide.split muss zwischen from und to liegen.`);
+          if (!faces.includes(o.slide.face)) errors.push(`${label}: slide.face muss ${faces.join(' oder ')} sein.`);
+        } else if (!ways.includes(o.slide.open!) || !faces.includes(o.slide.face)) {
           errors.push(`${label}: slide.open muss ${ways.join(' oder ')} sein, slide.face ${faces.join(' oder ')}.`);
         }
+        if (o.leaf === false) errors.push(`${label}: eine Schiebetür ohne Türblatt (leaf: false) geht nicht.`);
       }
+      if (o.leaf === false && o.kind !== 'door') errors.push(`${label}: leaf gibt es nur an Türen.`);
       // a sliding door's rail sits 50 mm over the hole
       const top = o.sill + o.height + (o.slide ? 50 : 0);
       if (clear !== null && o.kind !== 'passage' && top > clear) {

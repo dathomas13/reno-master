@@ -39,9 +39,13 @@ export interface SourceOpening {
   /**
    * door only: a sliding door instead of a hinged one - the leaf runs on the `face` side of
    * the wall and opens towards `open` (W/E along an east-west wall, S/N along a north-south
-   * one; `face` the other pair)
+   * one; `face` the other pair). With `split` (absolute, like from/to) two leaves meet there
+   * instead: the one before it opens towards the start of the wall, the one after it
+   * towards the end, and `open` is left out.
    */
-  slide?: { open: Compass; face: Compass };
+  slide?: { open?: Compass; face: Compass; split?: number };
+  /** door only: false for a hole without a leaf (a breakthrough with a lintel) */
+  leaf?: boolean;
   note?: string;
 }
 
@@ -180,6 +184,17 @@ const PARAM_KEYS: (keyof HouseParams)[] = [
 ];
 
 /** A wall runs along its longer side; a square one counts as east-west. */
+/**
+ * the leaves of a sliding door as [start, end, direction] along the wall, in absolute
+ * coordinates: one leaf opening towards `open`, or two meeting at `split` - the one before
+ * it opening towards the start of the wall (-1), the one after it towards the end (+1)
+ */
+export function slideLeaves(o: SourceOpening): [number, number, number][] {
+  const sl = o.slide!;
+  if (sl.split !== undefined) return [[o.from, sl.split, -1], [sl.split, o.to, 1]];
+  return [[o.from, o.to, sl.open === 'E' || sl.open === 'N' ? 1 : -1]];
+}
+
 export function alongX(w: { x0: number; y0: number; x1: number; y1: number }): boolean {
   return (w.x1 - w.x0) >= (w.y1 - w.y0);
 }
@@ -313,7 +328,16 @@ export function parseSource(text: string): ParseResult {
           if (v !== 'N' && v !== 'S' && v !== 'W' && v !== 'E') errors.push(`${where}.slide.${key}: N, S, W oder E erwartet.`);
           return v as Compass;
         };
-        opening.slide = { open: compass(sl.open, 'open'), face: compass(sl.face, 'face') };
+        if (sl.split !== undefined) {
+          if (sl.open !== undefined) errors.push(`${where}.slide: entweder open oder split, nicht beides.`);
+          opening.slide = { face: compass(sl.face, 'face'), split: num(sl.split, `${where}.slide.split`) };
+        } else {
+          opening.slide = { open: compass(sl.open, 'open'), face: compass(sl.face, 'face') };
+        }
+      }
+      if (o.leaf !== undefined) {
+        if (typeof o.leaf !== 'boolean') errors.push(`${where}.leaf: true oder false erwartet.`);
+        else opening.leaf = o.leaf;
       }
       if (typeof o.note === 'string') opening.note = o.note;
       return opening;

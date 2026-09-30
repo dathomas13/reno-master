@@ -7,7 +7,7 @@
  */
 import { pyRound } from './pyRound';
 import { triangulate } from './mesh';
-import { alongX, type HouseSource, type SourceStair, type SourceWall } from './source';
+import { alongX, slideLeaves, type HouseSource, type SourceStair, type SourceWall } from './source';
 import type { BuiltPrim, BuiltScene, Confidence, Layer, PrimKind } from './types';
 import { box, prism, solidInter, solidSub, solidUnion, volume, type Solid } from './solid';
 
@@ -230,9 +230,9 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
   };
 
   /**
-   * a sliding door: the leaf 40 thick on the `face` side of the wall, half open towards
-   * `open` and 50 wider than the hole on that side, and its rail over the hole from the
-   * closed to the fully open leaf
+   * a sliding door: each leaf 40 thick on the `face` side of the wall, half open and 50
+   * wider than its part of the hole on the side it opens to, and its rail over the hole
+   * from the closed to the fully open leaf
    */
   const slideParts = (w: SourceWall, o: ReturnType<typeof openingsOf>[number], z0: number) => {
     const sl = o.slide!;
@@ -241,28 +241,20 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     const [q0, q1, r0, r1] = sl.face === 'N' || sl.face === 'E'
       ? [c1 + 10, c1 + 50, c1, c1 + 60]
       : [c0 - 50, c0 - 10, c0 - 60, c0];
-    const a0 = (along ? w.x0 : w.y0) + o.a;
-    const a1 = a0 + o.width;
-    let l0: number;
-    let l1: number;
-    let s0: number;
-    let s1: number;
-    let half: number;
-    if (sl.open === 'E' || sl.open === 'N') {
-      [l0, l1, s0, s1] = [a0, a1 + 50, a0, a1 + 50 + o.width];
-      half = o.width / 2;
-    } else {
-      [l0, l1, s0, s1] = [a0 - 50, a1, a0 - 50 - o.width, a1];
-      half = -o.width / 2;
-    }
     const zs = z0 + o.sill;
     const zh = z0 + o.sill + o.height;
     const piece = (p0: number, p1: number, qa: number, qb: number, zA: number, zB: number) =>
       (along ? box(p0, qa, zA, p1, qb, zB) : box(qa, p0, zA, qb, p1, zB));
-    return [
-      [`Schiebetür ${o.width}×${o.height}`, 'door', o.tag, piece(l0 + half, l1 + half, q0, q1, zs, zh)],
-      ['Laufschiene', 'door', o.tag, piece(s0, s1, r0, r1, zh, zh + 50)],
-    ] as [string, PrimKind, Confidence, Solid][];
+    const out: [string, PrimKind, Confidence, Solid][] = [];
+    for (const [a0, a1, d] of slideLeaves(o)) {
+      const width = a1 - a0;
+      const [l0, l1, s0, s1, half] = d > 0
+        ? [a0, a1 + 50, a0, a1 + 50 + width, width / 2]
+        : [a0 - 50, a1, a0 - 50 - width, a1, -width / 2];
+      out.push([`Schiebetür ${width}×${o.height}`, 'door', o.tag, piece(l0 + half, l1 + half, q0, q1, zs, zh)]);
+      out.push(['Laufschiene', 'door', o.tag, piece(s0, s1, r0, r1, zh, zh + 50)]);
+    }
+    return out;
   };
 
   /** window and door leaves as thin sheets, for display */
@@ -270,7 +262,7 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     const along = alongX(w);
     const out: [string, PrimKind, Confidence, Solid][] = [];
     for (const o of openingsOf(w)) {
-      if (o.kind === 'passage') continue;
+      if (o.kind === 'passage' || o.leaf === false) continue;
       const kind: PrimKind = o.kind === 'window' ? 'glass' : 'door';
       const name = `${kind === 'glass' ? 'Fenster' : 'Tür'} ${o.width}×${o.height}`;
       const a = o.a;

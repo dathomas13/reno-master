@@ -208,24 +208,29 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
     add("</g>")
 
     def slide_symbol(w, o, a0, a1):
-        """A sliding door: the leaf half open on its face of the wall, as in the 3D view, and
-        the rail along its outer edge from the closed to the fully open leaf."""
+        """A sliding door: each leaf half open on its face of the wall, as in the 3D view, and
+        its rail along the outer edge from the closed to the fully open leaf."""
         sl = o["slide"]
         along = along_x(w)
         c0, c1 = (w["y0"], w["y1"]) if along else (w["x0"], w["x1"])
         q0, q1, qr = (c1 + 10, c1 + 50, c1 + 50) if sl["face"] in ("N", "E") else (c0 - 50, c0 - 10, c0 - 50)
         start = w["x0"] if along else w["y0"]
-        width = a1 - a0
-        if sl["open"] in ("E", "N"):
-            l0, l1, r0, r1, half = start + a0, start + a1 + 50, start + a0, start + a1 + 50 + width, width / 2
+        if sl.get("split") is not None:
+            leaves = [(start + a0, sl["split"], -1), (sl["split"], start + a1, 1)]
         else:
-            l0, l1, r0, r1, half = start + a0 - 50, start + a1, start + a0 - 50 - width, start + a1, -width / 2
-        if along:
-            rect(l0 + half, q0, l1 + half, q1, "slide-leaf")
-            line(r0, fy(qr), r1, fy(qr), "slide-rail")
-        else:
-            rect(q0, l0 + half, q1, l1 + half, "slide-leaf")
-            line(qr, fy(r0), qr, fy(r1), "slide-rail")
+            leaves = [(start + a0, start + a1, 1 if sl["open"] in ("E", "N") else -1)]
+        for b0, b1, d in leaves:
+            width = b1 - b0
+            if d > 0:
+                l0, l1, r0, r1, half = b0, b1 + 50, b0, b1 + 50 + width, width / 2
+            else:
+                l0, l1, r0, r1, half = b0 - 50, b1, b0 - 50 - width, b1, -width / 2
+            if along:
+                rect(l0 + half, q0, l1 + half, q1, "slide-leaf")
+                line(r0, fy(qr), r1, fy(qr), "slide-rail")
+            else:
+                rect(q0, l0 + half, q1, l1 + half, "slide-leaf")
+                line(qr, fy(r0), qr, fy(r1), "slide-rail")
 
     # ---- openings: cut out of the wall, jambs, glass or door line, and the size as text
     add('<g id="openings">')
@@ -258,7 +263,7 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
                 line(x0, sm + 40, x1, sm + 40, "glass")
             elif o.get("slide"):
                 slide_symbol(w, o, a0, a1)
-            elif o["kind"] == "door":
+            elif o["kind"] == "door" and o.get("leaf", True):
                 line(x0, sm, x1, sm, "door-line")
             # the text goes to the side facing the middle of the house, clear of a sliding leaf
             north = (w["y0"] + w["y1"]) / 2 < mid_y
@@ -277,7 +282,7 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
                 line(xm + 40, y0, xm + 40, y1, "glass")
             elif o.get("slide"):
                 slide_symbol(w, o, a0, a1)
-            elif o["kind"] == "door":
+            elif o["kind"] == "door" and o.get("leaf", True):
                 line(xm, y0, xm, y1, "door-line")
             east = xm < mid_x
             shift = 60 if o.get("slide") and o["slide"]["face"] == ("E" if east else "W") else 0

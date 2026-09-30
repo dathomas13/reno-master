@@ -529,7 +529,7 @@ def build(m, variant: str, version: str, note: str) -> dict:
         along = (w["x1"] - w["x0"]) >= (w["y1"] - w["y0"])
         out = []
         for o in openings_of(w):
-            if o["kind"] == "loggia":
+            if o["kind"] == "loggia" or o.get("leaf") is False:
                 continue
             kind = "glass" if o["kind"] == "window" else "door"
             name = f'{"Fenster" if kind == "glass" else "Tür"} {o["width"]}×{o["height"]}'
@@ -578,10 +578,21 @@ def build(m, variant: str, version: str, note: str) -> dict:
         res.append((name, "glass", o["tag"], glass))
         return res
 
+    def slide_leaves(w, o):
+        """The leaves of a sliding door as (start, end, direction) along the wall: one leaf
+        opening towards `open`, or with `split` two meeting there - the one before it opens
+        towards the start of the wall, the one after it towards the end."""
+        a0 = (w["x0"] if (w["x1"] - w["x0"]) >= (w["y1"] - w["y0"]) else w["y0"]) + o["a0"]
+        a1 = a0 + o["width"]
+        sl = o["slide"]
+        if sl.get("split") is not None:
+            return [(a0, sl["split"], -1), (sl["split"], a1, 1)]
+        return [(a0, a1, 1 if sl["open"] in ("E", "N") else -1)]
+
     def slide_parts(w, o, z0):
-        """A sliding door: the leaf 40 thick on the `face` side of the wall, half open towards
-        `open` and 50 wider than the hole on that side, and its rail over the hole from the
-        closed to the fully open leaf."""
+        """A sliding door: each leaf 40 thick on the `face` side of the wall, half open and 50
+        wider than its part of the hole on the side it opens to, and its rail over the hole
+        from the closed to the fully open leaf."""
         sl = o["slide"]
         along = (w["x1"] - w["x0"]) >= (w["y1"] - w["y0"])
         c0, c1 = (w["y0"], w["y1"]) if along else (w["x0"], w["x1"])
@@ -589,21 +600,23 @@ def build(m, variant: str, version: str, note: str) -> dict:
             q0, q1, r0, r1 = c1 + 10, c1 + 50, c1, c1 + 60
         else:
             q0, q1, r0, r1 = c0 - 50, c0 - 10, c0 - 60, c0
-        a0 = (w["x0"] if along else w["y0"]) + o["a0"]
-        a1 = a0 + o["width"]
-        if sl["open"] in ("E", "N"):
-            l0, l1, s0, s1 = a0, a1 + 50, a0, a1 + 50 + o["width"]
-            half = o["width"] / 2
-        else:
-            l0, l1, s0, s1 = a0 - 50, a1, a0 - 50 - o["width"], a1
-            half = -o["width"] / 2
         zs, zh = z0 + o["sill"], z0 + o["sill"] + o["height"]
 
         def piece(p0, p1, q_0, q_1, z_0, z_1):
             return box(p0, q_0, z_0, p1, q_1, z_1) if along else box(q_0, p0, z_0, q_1, p1, z_1)
-        return [(f"Schiebetür {o['width']}×{o['height']}", "door", o["tag"],
-                 piece(l0 + half, l1 + half, q0, q1, zs, zh)),
-                ("Laufschiene", "door", o["tag"], piece(s0, s1, r0, r1, zh, zh + 50))]
+        out = []
+        for a0, a1, d in slide_leaves(w, o):
+            width = a1 - a0
+            if d > 0:
+                l0, l1, s0, s1 = a0, a1 + 50, a0, a1 + 50 + width
+                half = width / 2
+            else:
+                l0, l1, s0, s1 = a0 - 50, a1, a0 - 50 - width, a1
+                half = -width / 2
+            out.append((f"Schiebetür {width}×{o['height']}", "door", o["tag"],
+                        piece(l0 + half, l1 + half, q0, q1, zs, zh)))
+            out.append(("Laufschiene", "door", o["tag"], piece(s0, s1, r0, r1, zh, zh + 50)))
+        return out
 
     def wall_priority(w):
         """Order for overlap removal: outer walls first, then 240, then light walls."""

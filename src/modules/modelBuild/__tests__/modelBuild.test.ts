@@ -70,7 +70,8 @@ describe('the house file', () => {
   // testdata/ist-dachstuhl.json: build_scene_lite.py on haus-ist.json without its flat dormer,
   // plus the roof frame with ties (insulation and lining) and a trimmer, both shed dormers and a
   // chimney head over the old chimney in `extra`, deep window frames on the openings in `frames` ([wall id, opening index,
-  // frame]) and sliding doors in `slides` (the same) - rebuild it the same way if the builders change
+  // frame]), sliding doors in `slides` (the same) and doors without a leaf in `noLeaf` ([wall id, opening index]) - rebuild it
+  // the same way if the builders change
   it('builds the roof frame, shed dormers and window frames the same way as tools/model/build_scene_lite.py', () => {
     const reference = JSON.parse(read('ist-dachstuhl.json'));
     const doc = JSON.parse(read('haus-ist.json'));
@@ -81,6 +82,9 @@ describe('the house file', () => {
     for (const [id, k, slide] of reference.slides as [string, number, object][]) {
       doc.walls.find((w: { id: string }) => w.id === id).openings[k].slide = slide;
     }
+    for (const [id, k] of reference.noLeaf as [string, number][]) {
+      doc.walls.find((w: { id: string }) => w.id === id).openings[k].leaf = false;
+    }
     const parsed = parseSource(JSON.stringify({ ...doc, ...reference.extra }));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -89,8 +93,10 @@ describe('the house file', () => {
     expect(scene.prims.map((prim) => prim.name)).toEqual(reference.prims.map((prim: { name: string }) => prim.name));
     expect(scene.prims.some((prim) => prim.name === 'Gaube Nord Sparren')).toBe(true);
     expect(scene.prims.filter((prim) => prim.name.startsWith('Fensterrahmen'))).toHaveLength(2);
-    expect(scene.prims.filter((prim) => prim.name.startsWith('Schiebetür'))).toHaveLength(4);
-    expect(scene.prims.filter((prim) => prim.name === 'Laufschiene')).toHaveLength(4);
+    // five sliding doors, one of them with two leaves
+    expect(scene.prims.filter((prim) => prim.name.startsWith('Schiebetür'))).toHaveLength(6);
+    expect(scene.prims.filter((prim) => prim.name === 'Laufschiene')).toHaveLength(6);
+    expect(scene.prims.some((prim) => prim.name === 'Tür 1010×2135')).toBe(false);
     const layerOf = (name: string) => scene.prims.find((prim) => prim.name === name)?.layer;
     expect(['Zangen', 'Wechsel Sparren', 'Wechsel Zangen', 'Sparren Süd', 'Mittelpfette Nord', 'Stütze'].map(layerOf))
       .toEqual(['STUHL', 'STUHL', 'STUHL', 'STUHL', 'STUHL', 'STUHL']);
@@ -167,6 +173,13 @@ describe('the house file', () => {
     const errors = parsed.ok ? checkSource(parsed.source).errors.join('\n') : '';
     expect(errors).toMatch('Öffnung 1: slide gibt es nur an Türen');
     expect(errors).toMatch('Öffnung 2: slide.open muss S oder N sein, slide.face W oder E');
+    west.openings[0].slide = undefined;
+    west.openings[0].leaf = false;
+    west.openings[1].slide = { face: 'E', split: 7000 };
+    const worse = parseSource(JSON.stringify(doc));
+    const more = worse.ok ? checkSource(worse.source).errors.join('\n') : '';
+    expect(more).toMatch('Öffnung 1: leaf gibt es nur an Türen');
+    expect(more).toMatch('Öffnung 2: slide.split muss zwischen from und to liegen');
     west.openings[1].slide = { open: 'up', face: 'E' };
     const bad = parseSource(JSON.stringify(doc));
     expect(bad.ok ? '' : bad.errors.join()).toMatch('slide.open: N, S, W oder E erwartet');
@@ -338,16 +351,20 @@ describe('buildPlanSvg', () => {
   });
 
   // testdata/plans/ist-EG-schiebetuer.svg: build_plans_svg.py on haus-ist.json with the sliding
-  // doors of ist-dachstuhl.json
+  // doors and the doors without a leaf of ist-dachstuhl.json
   it('draws sliding doors like tools/model/build_plans_svg.py', () => {
     const doc = JSON.parse(read('haus-ist.json'));
-    for (const [id, k, slide] of JSON.parse(read('ist-dachstuhl.json')).slides as [string, number, object][]) {
+    const reference = JSON.parse(read('ist-dachstuhl.json'));
+    for (const [id, k, slide] of reference.slides as [string, number, object][]) {
       doc.walls.find((w: { id: string }) => w.id === id).openings[k].slide = slide;
+    }
+    for (const [id, k] of reference.noLeaf as [string, number][]) {
+      doc.walls.find((w: { id: string }) => w.id === id).openings[k].leaf = false;
     }
     const parsed = parseSource(JSON.stringify(doc));
     if (!parsed.ok) throw new Error(parsed.errors.join('\n'));
     const svg = buildPlanSvg(parsed.source, buildRooms(parsed.source, ''), 'EG', parsed.source.version);
-    expect(svg.match(/class="slide-leaf"/g)).toHaveLength(4);
+    expect(svg.match(/class="slide-leaf"/g)).toHaveLength(6);
     expect(svg === read(join('plans', 'ist-EG-schiebetuer.svg'))).toBe(true);
   });
 

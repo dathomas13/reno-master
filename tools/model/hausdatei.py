@@ -77,7 +77,7 @@ def load(variant: str) -> dict:
                                  a0=o["from"] - start, width=o["to"] - o["from"],
                                  sill=o.get("sill", 0), height=o.get("height", 0),
                                  tag=o.get("tag", "C"), frame=o.get("frame"),
-                                 slide=o.get("slide")))
+                                 slide=o.get("slide"), leaf=o.get("leaf", True)))
     ns["WALLS"], ns["OPENINGS"] = walls, openings
 
     ns["STAIRS"] = [dict(s) for s in doc.get("stairs", [])]

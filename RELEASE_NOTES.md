@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.69.0 – Zweiteilige Schiebetüren und Durchbrüche
+
+- Schiebetüren können zweiteilig sein, die Blätter gehen nach beiden Seiten auf.
+- Durchbrüche ohne Türblatt lassen sich mit eigener Höhe planen.
+
 ## 0.68.0 – Schiebetüren im Modell
 
 - Türen können Schiebetüren sein: im 3D halb geöffnet mit Laufschiene, im Plan mit eigenem Symbol.
