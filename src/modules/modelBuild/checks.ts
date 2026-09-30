@@ -185,6 +185,23 @@ export function checkSource(src: HouseSource): CheckResult {
       }
     });
   }
+  (src.chimneys ?? []).forEach((c, i) => {
+    const where = `chimneys[${i}] (${c.name})`;
+    if (!(c.x0 > p.tOut && c.x1 < p.houseW - p.tOut && c.y0 > p.tOut && c.y1 < p.houseD - p.tOut)) {
+      errors.push(`${where}: der Kamin muss innerhalb der Außenwände stehen.`);
+    }
+    if (!(c.above >= 0)) errors.push(`${where}: above darf nicht negativ sein.`);
+    if (!rf) return;
+    // every rafter the chimney meets has to be cut by a trimmer whose opening holds it
+    const step = (p.houseW - 2 * p.tOut - rf.rafterB) / (rf.rafters - 1);
+    for (let k = 0; k < rf.rafters; k += 1) {
+      const x = p.tOut + k * step;
+      if (x + rf.rafterB <= c.x0 || x >= c.x1) continue;
+      const open = (rf.trimmers ?? []).some((w) => w.rafters[0] - 1 < k && k < w.rafters[1] - 1
+        && w.y[0] <= c.y0 && c.y1 <= w.y[1]);
+      if (!open) warnings.push(`${where}: Sparren ${k + 1} läuft durch den Kamin – ein Wechsel (roofFrame.trimmers) fehlt.`);
+    }
+  });
   const tanR = Math.tan(p.roofPitch * Math.PI / 180);
   (src.dormers ?? []).forEach((d, i) => {
     const where = `dormers[${i}] (Gaube ${d.side === 'N' ? 'Nord' : 'Süd'})`;

@@ -158,6 +158,8 @@ Steht:
 - **Dach, Dachstuhl und Dachgeschoss sind eigene Ebenen** (0.65.0): `DACH` (Dachhaut, Gauben),
   `STUHL` (Sparren, Pfetten, Stützen, Zangen, Wechsel), `DG` (Spitzbodenboden). Zangen und
   Wechsel stehen in der Hausdatei unter `roofFrame.ties` / `roofFrame.trimmers`.
+  Kaminköpfe über Dach (0.67.0) stehen unter `chimneys` (Grundriss + `above` über OK First);
+  der Kamin darunter bleibt eine „Kamin …“-Wand je Geschoss, die Sparren öffnet ein Wechsel.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

@@ -144,6 +144,9 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     }
     if (ti) underRoofG = solidSub(underRoofG, box(-ov - 1, p.tOut + uTb, zCeil, p.houseW + ov + 1, p.houseD - p.tOut - uTb, zHigh));
   }
+  /** chimney heads from the OG up to `above` over the top of the ridge, as full columns */
+  const flues = (src.chimneys ?? []).map((c) => box(c.x0, c.y0, zOG, c.x1, c.y1, zu(ridge) + dzT + c.above));
+  const withoutFlues = (s: Solid) => flues.reduce((acc, f) => solidSub(acc, f), s);
   /** the trimmers as ranges of u on their side, between the inner faces of the full rafters */
   const trims = (rf?.trimmers ?? []).map((w) => {
     const side: 'N' | 'S' = w.y[0] >= ridge ? 'N' : 'S';
@@ -337,7 +340,7 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       ...prism(0, p.houseW, -ov, ridge, zu(-ov), zu(ridge), zu(-ov) + dzT, zu(ridge) + dzT),
       ...prism(0, p.houseW, ridge, p.houseD + ov, zu(ridge), zu(p.houseD + ov), zu(ridge) + dzT, zu(p.houseD + ov) + dzT),
     ];
-    add('DACH', 'Satteldach 36° (Kunstschiefer)', 'roof', 'A', solidSub(roof, oldCut));
+    add('DACH', 'Satteldach 36° (Kunstschiefer)', 'roof', 'A', withoutFlues(solidSub(roof, oldCut)));
   } else {
     const zTop = zr(uR) + dzT + 1000;
     let skin: Solid = [];
@@ -369,7 +372,7 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       });
     }
     for (const d of dormers) skin = solidSub(skin, band(d.side, d.x0, d.x1, 0, d.uK, zOG, zOG, zTop, zTop));
-    skin = solidSub(skin, oldCut);
+    skin = withoutFlues(solidSub(skin, oldCut));
     add('DACH', 'Dachhaut 36° (Lattung + Kunstschiefer)', 'roof', 'A', skin);
     const purlins: Solid = [];
     for (const [side, name] of [['S', 'Süd'], ['N', 'Nord']] as const) {
@@ -486,28 +489,30 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     const y1 = p.houseD - p.tOut - uPi;
     let deck = box(p.tOut, y0, zTt, p.houseW - p.tOut, y1, zTt + ti.deck);
     for (const w of trims) deck = solidSub(deck, box(w.xa + ti.b, w.y0, zTt - 1, w.xb - ti.b, w.y1, zTt + ti.deck + 1));
-    add('DG', 'Spitzboden Bretter', 'slab', rf.tag, deck);
+    add('DG', 'Spitzboden Bretter', 'slab', rf.tag, withoutFlues(deck));
     if (ti.insulation) {
       let ins = box(p.tOut, y0, zTb, p.houseW - p.tOut, y1, zTt);
       for (const x of spX) ins = solidSub(ins, box(x - ti.b, y0 - 1, zTb - 1, x + rb + ti.b, y1 + 1, zTt + 1));
       for (const w of trims) ins = solidSub(ins, box(w.xa + ti.b, w.y0 - rb, zTb - 1, w.xb - ti.b, w.y1 + rb, zTt + 1));
-      add('DG', 'Dämmung zwischen den Zangen', 'slab', rf.tag, ins);
+      add('DG', 'Dämmung zwischen den Zangen', 'slab', rf.tag, withoutFlues(ins));
     }
     if (ti.lining > 0) {
       const uF = (zCeil - zK) / tr; // where the ceiling meets the underside of the rafters
       let lining = box(p.tOut, p.tOut + uF, zCeil, p.houseW - p.tOut, p.houseD - p.tOut - uF, zTb);
       for (const w of trims) lining = solidSub(lining, box(w.xa + ti.b, w.y0, zCeil - 1, w.xb - ti.b, w.y1, zTb + 1));
-      add('DG', 'Gipskarton unter den Zangen', 'slab', rf.tag, lining);
+      add('DG', 'Gipskarton unter den Zangen', 'slab', rf.tag, withoutFlues(lining));
     }
   } else if (rf) {
     // between the purlins
-    add('DG', 'Holzbalkendecke Spitzboden', 'slab', 'B',
-      box(p.tOut, p.tOut + uPi, p.ogCeil, p.houseW - p.tOut, p.houseD - p.tOut - uPi, p.ogCeil + 200));
+    add('DG', 'Holzbalkendecke Spitzboden', 'slab', 'B', withoutFlues(
+      box(p.tOut, p.tOut + uPi, p.ogCeil, p.houseW - p.tOut, p.houseD - p.tOut - uPi, p.ogCeil + 200)));
   } else {
     const ys = p.tOut + (p.ogCeil - (zOG + p.kniestock)) / tanRoof() + 100;
     add('DG', 'Holzbalkendecke Spitzboden', 'slab', 'B',
-      box(p.tOut, ys, p.ogCeil, p.houseW - p.tOut, p.houseD - ys, p.ogCeil + 200));
+      withoutFlues(box(p.tOut, ys, p.ogCeil, p.houseW - p.tOut, p.houseD - ys, p.ogCeil + 200)));
   }
+  // the heads start where the OG walls end - the chimney below them is walls
+  (src.chimneys ?? []).forEach((c, i) => add('DACH', c.name, 'wall', c.tag, solidSub(flues[i], underRoofG)));
 
   // ------------------------------------------------------------------ Garage
   const gar = src.garage;
