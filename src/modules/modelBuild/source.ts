@@ -17,6 +17,7 @@ export const HOUSE_VARIANTS: HouseVariant[] = ['ist', 'aktuell', 'soll'];
 export type Floor = 'KG' | 'EG' | 'OG' | 'GAR';
 export type Tag = 'A' | 'B' | 'C';
 export type OpeningKind = 'window' | 'door' | 'passage';
+export type Compass = 'N' | 'S' | 'W' | 'E';
 
 export const FLOORS: Floor[] = ['KG', 'EG', 'OG', 'GAR'];
 
@@ -35,6 +36,12 @@ export interface SourceOpening {
    * middle of the house); the pane sits near its outer end
    */
   frame?: { t: number; out: number; in: number };
+  /**
+   * door only: a sliding door instead of a hinged one - the leaf runs on the `face` side of
+   * the wall and opens towards `open` (W/E along an east-west wall, S/N along a north-south
+   * one; `face` the other pair)
+   */
+  slide?: { open: Compass; face: Compass };
   note?: string;
 }
 
@@ -298,6 +305,15 @@ export function parseSource(text: string): ParseResult {
           out: f.out === undefined ? 0 : num(f.out, `${where}.frame.out`),
           in: f.in === undefined ? 0 : num(f.in, `${where}.frame.in`),
         };
+      }
+      if (o.slide !== undefined) {
+        const sl = isObj(o.slide) ? o.slide : {};
+        if (!isObj(o.slide)) errors.push(`${where}.slide: Objekt mit open und face erwartet.`);
+        const compass = (v: unknown, key: string): Compass => {
+          if (v !== 'N' && v !== 'S' && v !== 'W' && v !== 'E') errors.push(`${where}.slide.${key}: N, S, W oder E erwartet.`);
+          return v as Compass;
+        };
+        opening.slide = { open: compass(sl.open, 'open'), face: compass(sl.face, 'face') };
       }
       if (typeof o.note === 'string') opening.note = o.note;
       return opening;

@@ -537,6 +537,9 @@ def build(m, variant: str, version: str, note: str) -> dict:
             if o.get("frame"):
                 out += frame_box(w, o, z0, name)
                 continue
+            if o.get("slide"):
+                out += slide_parts(w, o, z0)
+                continue
             if along:
                 ym = (w["y0"] + w["y1"]) / 2
                 s = box(w["x0"] + a, ym - 20, z0 + o["sill"],
@@ -574,6 +577,33 @@ def build(m, variant: str, version: str, note: str) -> dict:
         glass = piece(a0 + t / 2, a1 - t / 2, g0, g0 + 40, zs + t / 2, zh - t / 2)
         res.append((name, "glass", o["tag"], glass))
         return res
+
+    def slide_parts(w, o, z0):
+        """A sliding door: the leaf 40 thick on the `face` side of the wall, half open towards
+        `open` and 50 wider than the hole on that side, and its rail over the hole from the
+        closed to the fully open leaf."""
+        sl = o["slide"]
+        along = (w["x1"] - w["x0"]) >= (w["y1"] - w["y0"])
+        c0, c1 = (w["y0"], w["y1"]) if along else (w["x0"], w["x1"])
+        if sl["face"] in ("N", "E"):
+            q0, q1, r0, r1 = c1 + 10, c1 + 50, c1, c1 + 60
+        else:
+            q0, q1, r0, r1 = c0 - 50, c0 - 10, c0 - 60, c0
+        a0 = (w["x0"] if along else w["y0"]) + o["a0"]
+        a1 = a0 + o["width"]
+        if sl["open"] in ("E", "N"):
+            l0, l1, s0, s1 = a0, a1 + 50, a0, a1 + 50 + o["width"]
+            half = o["width"] / 2
+        else:
+            l0, l1, s0, s1 = a0 - 50, a1, a0 - 50 - o["width"], a1
+            half = -o["width"] / 2
+        zs, zh = z0 + o["sill"], z0 + o["sill"] + o["height"]
+
+        def piece(p0, p1, q_0, q_1, z_0, z_1):
+            return box(p0, q_0, z_0, p1, q_1, z_1) if along else box(q_0, p0, z_0, q_1, p1, z_1)
+        return [(f"Schiebetür {o['width']}×{o['height']}", "door", o["tag"],
+                 piece(l0 + half, l1 + half, q0, q1, zs, zh)),
+                ("Laufschiene", "door", o["tag"], piece(s0, s1, r0, r1, zh, zh + 50))]
 
     def wall_priority(w):
         """Order for overlap removal: outer walls first, then 240, then light walls."""

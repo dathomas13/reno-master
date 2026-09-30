@@ -69,14 +69,17 @@ describe('the house file', () => {
 
   // testdata/ist-dachstuhl.json: build_scene_lite.py on haus-ist.json without its flat dormer,
   // plus the roof frame with ties (insulation and lining) and a trimmer, both shed dormers and a
-  // chimney head over the old chimney in `extra` and deep window frames on the openings in `frames` ([wall id, opening index,
-  // frame]) - rebuild it the same way if the builders change
+  // chimney head over the old chimney in `extra`, deep window frames on the openings in `frames` ([wall id, opening index,
+  // frame]) and sliding doors in `slides` (the same) - rebuild it the same way if the builders change
   it('builds the roof frame, shed dormers and window frames the same way as tools/model/build_scene_lite.py', () => {
     const reference = JSON.parse(read('ist-dachstuhl.json'));
     const doc = JSON.parse(read('haus-ist.json'));
     delete doc.gaube;
     for (const [id, k, frame] of reference.frames as [string, number, object][]) {
       doc.walls.find((w: { id: string }) => w.id === id).openings[k].frame = frame;
+    }
+    for (const [id, k, slide] of reference.slides as [string, number, object][]) {
+      doc.walls.find((w: { id: string }) => w.id === id).openings[k].slide = slide;
     }
     const parsed = parseSource(JSON.stringify({ ...doc, ...reference.extra }));
     expect(parsed.ok).toBe(true);
@@ -86,6 +89,8 @@ describe('the house file', () => {
     expect(scene.prims.map((prim) => prim.name)).toEqual(reference.prims.map((prim: { name: string }) => prim.name));
     expect(scene.prims.some((prim) => prim.name === 'Gaube Nord Sparren')).toBe(true);
     expect(scene.prims.filter((prim) => prim.name.startsWith('Fensterrahmen'))).toHaveLength(2);
+    expect(scene.prims.filter((prim) => prim.name.startsWith('Schiebetür'))).toHaveLength(4);
+    expect(scene.prims.filter((prim) => prim.name === 'Laufschiene')).toHaveLength(4);
     const layerOf = (name: string) => scene.prims.find((prim) => prim.name === name)?.layer;
     expect(['Zangen', 'Wechsel Sparren', 'Wechsel Zangen', 'Sparren Süd', 'Mittelpfette Nord', 'Stütze'].map(layerOf))
       .toEqual(['STUHL', 'STUHL', 'STUHL', 'STUHL', 'STUHL', 'STUHL']);
@@ -151,6 +156,20 @@ describe('the house file', () => {
     const errors = parsed.ok ? checkSource(parsed.source).errors.join('\n') : '';
     expect(errors).toMatch('Öffnung 1: frame.t muss größer als 0');
     expect(errors).toMatch('Öffnung 2: frame gibt es nur an Fenstern');
+  });
+
+  it('refuses a sliding door on a window or running across its wall', () => {
+    const doc = JSON.parse(read('haus-ist.json'));
+    const west = doc.walls.find((w: { id: string }) => w.id === 'eg-aussenwand-west');
+    west.openings[0].slide = { open: 'N', face: 'E' };
+    west.openings[1].slide = { open: 'W', face: 'E' };
+    const parsed = parseSource(JSON.stringify(doc));
+    const errors = parsed.ok ? checkSource(parsed.source).errors.join('\n') : '';
+    expect(errors).toMatch('Öffnung 1: slide gibt es nur an Türen');
+    expect(errors).toMatch('Öffnung 2: slide.open muss S oder N sein, slide.face W oder E');
+    west.openings[1].slide = { open: 'up', face: 'E' };
+    const bad = parseSource(JSON.stringify(doc));
+    expect(bad.ok ? '' : bad.errors.join()).toMatch('slide.open: N, S, W oder E erwartet');
   });
 
   it('builds the same rooms as tools/model/build_rooms.py', () => {
@@ -316,6 +335,20 @@ describe('buildPlanSvg', () => {
         expect(`${variant}-${floor} ${mine === committed}`).toBe(`${variant}-${floor} true`);
       }
     }
+  });
+
+  // testdata/plans/ist-EG-schiebetuer.svg: build_plans_svg.py on haus-ist.json with the sliding
+  // doors of ist-dachstuhl.json
+  it('draws sliding doors like tools/model/build_plans_svg.py', () => {
+    const doc = JSON.parse(read('haus-ist.json'));
+    for (const [id, k, slide] of JSON.parse(read('ist-dachstuhl.json')).slides as [string, number, object][]) {
+      doc.walls.find((w: { id: string }) => w.id === id).openings[k].slide = slide;
+    }
+    const parsed = parseSource(JSON.stringify(doc));
+    if (!parsed.ok) throw new Error(parsed.errors.join('\n'));
+    const svg = buildPlanSvg(parsed.source, buildRooms(parsed.source, ''), 'EG', parsed.source.version);
+    expect(svg.match(/class="slide-leaf"/g)).toHaveLength(4);
+    expect(svg === read(join('plans', 'ist-EG-schiebetuer.svg'))).toBe(true);
   });
 
   it('follows a moved wall', () => {

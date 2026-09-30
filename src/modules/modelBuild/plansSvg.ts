@@ -12,7 +12,7 @@
  * stamps with area and clear dimensions, dimension chains in cm on all four sides.
  */
 import { pyRound } from './pyRound';
-import { alongX, type HouseSource, type HouseVariant, type SourceWall } from './source';
+import { alongX, type HouseSource, type HouseVariant, type SourceOpening, type SourceWall } from './source';
 import type { BuiltRooms } from './types';
 
 export type PlanFloor = 'KG' | 'EG' | 'OG';
@@ -53,6 +53,8 @@ const STYLE = `
   .reno-plan .jamb { stroke:var(--ink); stroke-width:15; }
   .reno-plan .glass { stroke:var(--window); stroke-width:12; }
   .reno-plan .door-line { stroke:var(--door); stroke-width:12; stroke-dasharray:60 40; }
+  .reno-plan .slide-leaf { fill:var(--door); stroke:none; }
+  .reno-plan .slide-rail { stroke:var(--door); stroke-width:8; }
   .reno-plan .opening-text { fill:var(--ink); font-size:110px; text-anchor:middle;
         paint-order:stroke; stroke:var(--paper); stroke-width:40px; stroke-linejoin:round; }
   .reno-plan .stair { fill:none; stroke:var(--stair); stroke-width:12; }
@@ -214,6 +216,29 @@ export function buildPlanSvg(
   }
   add('</g>');
 
+  /**
+   * a sliding door: the leaf half open on its face of the wall, as in the 3D view, and the
+   * rail along its outer edge from the closed to the fully open leaf
+   */
+  const slideSymbol = (w: SourceWall, o: SourceOpening, a0: number, a1: number) => {
+    const sl = o.slide!;
+    const along = alongX(w);
+    const [c0, c1] = along ? [w.y0, w.y1] : [w.x0, w.x1];
+    const [q0, q1, qr] = sl.face === 'N' || sl.face === 'E' ? [c1 + 10, c1 + 50, c1 + 50] : [c0 - 50, c0 - 10, c0 - 50];
+    const start = along ? w.x0 : w.y0;
+    const width = a1 - a0;
+    const [l0, l1, r0, r1, half] = sl.open === 'E' || sl.open === 'N'
+      ? [start + a0, start + a1 + 50, start + a0, start + a1 + 50 + width, width / 2]
+      : [start + a0 - 50, start + a1, start + a0 - 50 - width, start + a1, -width / 2];
+    if (along) {
+      rect(l0 + half, q0, l1 + half, q1, 'slide-leaf');
+      line(r0, fy(qr), r1, fy(qr), 'slide-rail');
+    } else {
+      rect(q0, l0 + half, q1, l1 + half, 'slide-leaf');
+      line(qr, fy(r0), qr, fy(r1), 'slide-rail');
+    }
+  };
+
   // ---- openings: cut out of the wall, jambs, glass or door line, and the size as text
   add('<g id="openings">');
   const midX = (bx0 + bx1) / 2;
@@ -239,11 +264,15 @@ export function buildPlanSvg(
         if (o.kind === 'window') {
           line(x0, sm - 40, x1, sm - 40, 'glass');
           line(x0, sm + 40, x1, sm + 40, 'glass');
+        } else if (o.slide) {
+          slideSymbol(w, o, a0, a1);
         } else if (o.kind === 'door') {
           line(x0, sm, x1, sm, 'door-line');
         }
-        // the text goes to the side facing the middle of the house
-        const ty = (w.y0 + w.y1) / 2 < midY ? s0 - 70 : s1 + 150;
+        // the text goes to the side facing the middle of the house, clear of a sliding leaf
+        const north = (w.y0 + w.y1) / 2 < midY;
+        const shift = o.slide && o.slide.face === (north ? 'N' : 'S') ? 60 : 0;
+        const ty = north ? s0 - 70 - shift : s1 + 150 + shift;
         add(`<text class="opening-text" x="${f0((x0 + x1) / 2)}" y="${f0(ty)}">${text}</text>`);
       } else {
         const y0 = fy(w.y0 + a1); // svg: y0 is the northern end
@@ -255,10 +284,14 @@ export function buildPlanSvg(
         if (o.kind === 'window') {
           line(xm - 40, y0, xm - 40, y1, 'glass');
           line(xm + 40, y0, xm + 40, y1, 'glass');
+        } else if (o.slide) {
+          slideSymbol(w, o, a0, a1);
         } else if (o.kind === 'door') {
           line(xm, y0, xm, y1, 'door-line');
         }
-        const tx = xm < midX ? w.x1 + 150 : w.x0 - 70;
+        const east = xm < midX;
+        const shift = o.slide && o.slide.face === (east ? 'E' : 'W') ? 60 : 0;
+        const tx = east ? w.x1 + 150 + shift : w.x0 - 70 - shift;
         const ty = (y0 + y1) / 2;
         add(`<text class="opening-text" x="${f0(tx)}" y="${f0(ty)}" transform="rotate(-90 ${f0(tx)} ${f0(ty)})">${text}</text>`);
       }

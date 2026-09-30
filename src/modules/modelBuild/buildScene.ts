@@ -229,6 +229,42 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
     ] as [string, PrimKind, Confidence, Solid][];
   };
 
+  /**
+   * a sliding door: the leaf 40 thick on the `face` side of the wall, half open towards
+   * `open` and 50 wider than the hole on that side, and its rail over the hole from the
+   * closed to the fully open leaf
+   */
+  const slideParts = (w: SourceWall, o: ReturnType<typeof openingsOf>[number], z0: number) => {
+    const sl = o.slide!;
+    const along = alongX(w);
+    const [c0, c1] = along ? [w.y0, w.y1] : [w.x0, w.x1];
+    const [q0, q1, r0, r1] = sl.face === 'N' || sl.face === 'E'
+      ? [c1 + 10, c1 + 50, c1, c1 + 60]
+      : [c0 - 50, c0 - 10, c0 - 60, c0];
+    const a0 = (along ? w.x0 : w.y0) + o.a;
+    const a1 = a0 + o.width;
+    let l0: number;
+    let l1: number;
+    let s0: number;
+    let s1: number;
+    let half: number;
+    if (sl.open === 'E' || sl.open === 'N') {
+      [l0, l1, s0, s1] = [a0, a1 + 50, a0, a1 + 50 + o.width];
+      half = o.width / 2;
+    } else {
+      [l0, l1, s0, s1] = [a0 - 50, a1, a0 - 50 - o.width, a1];
+      half = -o.width / 2;
+    }
+    const zs = z0 + o.sill;
+    const zh = z0 + o.sill + o.height;
+    const piece = (p0: number, p1: number, qa: number, qb: number, zA: number, zB: number) =>
+      (along ? box(p0, qa, zA, p1, qb, zB) : box(qa, p0, zA, qb, p1, zB));
+    return [
+      [`Schiebetür ${o.width}×${o.height}`, 'door', o.tag, piece(l0 + half, l1 + half, q0, q1, zs, zh)],
+      ['Laufschiene', 'door', o.tag, piece(s0, s1, r0, r1, zh, zh + 50)],
+    ] as [string, PrimKind, Confidence, Solid][];
+  };
+
   /** window and door leaves as thin sheets, for display */
   const panels = (w: SourceWall, z0: number) => {
     const along = alongX(w);
@@ -240,6 +276,10 @@ export function buildScene(src: HouseSource, options: BuildOptions): BuiltScene 
       const a = o.a;
       if (o.frame) {
         out.push(...frameBox(w, o, z0, name));
+        continue;
+      }
+      if (o.slide) {
+        out.push(...slideParts(w, o, z0));
         continue;
       }
       let s: Solid;
