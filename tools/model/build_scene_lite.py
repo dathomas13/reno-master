@@ -474,6 +474,14 @@ def build(m, variant: str, version: str, note: str) -> dict:
             under_roof_g = solid_sub(under_roof_g, box(-ov - 1, m.T_OUT + u_tb, z_ceil, m.HOUSE_W + ov + 1,
                                                        m.HOUSE_D - m.T_OUT - u_tb, z_high))
 
+    # Kaminköpfe vom OG bis `above` über OK First, als volle Säulen
+    flues = [box(c["x0"], c["y0"], m.Z_OG, c["x1"], c["y1"], zu(ridge) + dz_t + c["above"]) for c in m.CHIMNEYS]
+
+    def without_flues(s):
+        for f in flues:
+            s = solid_sub(s, f)
+        return s
+
     # Wechsel als u-Bereiche auf ihrer Seite, zwischen den Innenkanten der durchlaufenden Sparren
     trims = []
     for w in (rf["trimmers"] if rf else []):
@@ -651,7 +659,7 @@ def build(m, variant: str, version: str, note: str) -> dict:
         roof = (prism(0, m.HOUSE_W, -ov, ridge, zu(-ov), zu(ridge), zu(-ov) + dz_t, zu(ridge) + dz_t)
                 + prism(0, m.HOUSE_W, ridge, m.HOUSE_D + ov,
                         zu(ridge), zu(m.HOUSE_D + ov), zu(ridge) + dz_t, zu(m.HOUSE_D + ov) + dz_t))
-        add("DACH", "Satteldach 36° (Kunstschiefer)", "roof", "A", solid_sub(roof, old_cut))
+        add("DACH", "Satteldach 36° (Kunstschiefer)", "roof", "A", without_flues(solid_sub(roof, old_cut)))
     else:
         z_top = zr(u_r) + dz_t + 1000
         skin, rafters = [], {"N": [], "S": []}
@@ -680,7 +688,7 @@ def build(m, variant: str, version: str, note: str) -> dict:
                 rafters[side] = solid_union(rafters[side], sol)
         for d in dormers:
             skin = solid_sub(skin, band(d["side"], d["x0"], d["x1"], 0, d["u_k"], m.Z_OG, m.Z_OG, z_top, z_top))
-        skin = solid_sub(skin, old_cut)
+        skin = without_flues(solid_sub(skin, old_cut))
         add("DACH", "Dachhaut 36° (Lattung + Kunstschiefer)", "roof", "A", skin)
         purlins = []
         for side, name in (("S", "Süd"), ("N", "Nord")):
@@ -780,28 +788,31 @@ def build(m, variant: str, version: str, note: str) -> dict:
         deck = box(m.T_OUT, y0, z_tt, m.HOUSE_W - m.T_OUT, y1, z_tt + ti["deck"])
         for w in trims:
             deck = solid_sub(deck, box(w["xa"] + ti["b"], w["y0"], z_tt - 1, w["xb"] - ti["b"], w["y1"], z_tt + ti["deck"] + 1))
-        add("DG", "Spitzboden Bretter", "slab", rf["tag"], deck)
+        add("DG", "Spitzboden Bretter", "slab", rf["tag"], without_flues(deck))
         if ti["insulation"]:
             ins = box(m.T_OUT, y0, z_tb, m.HOUSE_W - m.T_OUT, y1, z_tt)
             for x in sp_x:
                 ins = solid_sub(ins, box(x - ti["b"], y0 - 1, z_tb - 1, x + rb + ti["b"], y1 + 1, z_tt + 1))
             for w in trims:
                 ins = solid_sub(ins, box(w["xa"] + ti["b"], w["y0"] - rb, z_tb - 1, w["xb"] - ti["b"], w["y1"] + rb, z_tt + 1))
-            add("DG", "Dämmung zwischen den Zangen", "slab", rf["tag"], ins)
+            add("DG", "Dämmung zwischen den Zangen", "slab", rf["tag"], without_flues(ins))
         if ti["lining"] > 0:
             u_f = (z_ceil - z_k) / tr   # wo die Decke auf die Unterkante der Sparren trifft
             lining = box(m.T_OUT, m.T_OUT + u_f, z_ceil, m.HOUSE_W - m.T_OUT, m.HOUSE_D - m.T_OUT - u_f, z_tb)
             for w in trims:
                 lining = solid_sub(lining, box(w["xa"] + ti["b"], w["y0"], z_ceil - 1, w["xb"] - ti["b"], w["y1"], z_tb + 1))
-            add("DG", "Gipskarton unter den Zangen", "slab", rf["tag"], lining)
+            add("DG", "Gipskarton unter den Zangen", "slab", rf["tag"], without_flues(lining))
     elif rf:
         # zwischen den Mittelpfetten
-        add("DG", "Holzbalkendecke Spitzboden", "slab", "B",
-            box(m.T_OUT, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - m.T_OUT - u_pi, m.OG_CEIL + 200))
+        add("DG", "Holzbalkendecke Spitzboden", "slab", "B", without_flues(
+            box(m.T_OUT, m.T_OUT + u_pi, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - m.T_OUT - u_pi, m.OG_CEIL + 200)))
     else:
         ys_ = m.T_OUT + (m.OG_CEIL - (m.Z_OG + m.KNIESTOCK)) / m.tan_roof() + 100
         add("DG", "Holzbalkendecke Spitzboden", "slab", "B",
-            box(m.T_OUT, ys_, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - ys_, m.OG_CEIL + 200))
+            without_flues(box(m.T_OUT, ys_, m.OG_CEIL, m.HOUSE_W - m.T_OUT, m.HOUSE_D - ys_, m.OG_CEIL + 200)))
+    # die Köpfe beginnen, wo die OG-Wände enden - darunter ist der Kamin als Wände gezeichnet
+    for c, f in zip(m.CHIMNEYS, flues):
+        add("DACH", c["name"], "wall", c["tag"], solid_sub(f, under_roof_g))
 
     # ------------------------------------------------------------------ Garage
     done = []

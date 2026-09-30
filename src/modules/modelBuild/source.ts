@@ -145,6 +145,13 @@ export interface HouseSource {
     side: 'N' | 'S'; rafters: [number, number]; frontH: number; frontT: number; pitch: number;
     overhang: number; windows: [number, number][]; sillH: number; plateH: number; glass: boolean; tag: Tag;
   }[];
+  /**
+   * chimney heads: the part of a chimney above the OG, from where the OG walls end up
+   * through the Spitzboden and the roof skin to `above` mm over the top of the ridge. The
+   * chimney below is drawn as walls on each floor (name "Kamin …"); the rafters and ties
+   * it passes are opened with a trimmer
+   */
+  chimneys?: { name: string; x0: number; y0: number; x1: number; y1: number; above: number; tag: Tag }[];
   balkon: { x0: number; x1: number; y0: number; y1: number; tag: Tag };
   garage: { x: [number, number]; y: [number, number]; z0: number; hFront: number; hBack: number };
   rooms: SourceRoom[];
@@ -419,6 +426,17 @@ export function parseSource(text: string): ParseResult {
       tag: tag(d.tag, where),
     };
   });
+  const chimneys: NonNullable<HouseSource['chimneys']> = list(raw.chimneys, 'chimneys').map((entry, i) => {
+    const c = isObj(entry) ? entry : {};
+    const where = `chimneys[${i}]`;
+    const chimney = {
+      name: String(c.name ?? 'Kaminkopf'),
+      x0: num(c.x0, `${where}.x0`), y0: num(c.y0, `${where}.y0`), x1: num(c.x1, `${where}.x1`),
+      y1: num(c.y1, `${where}.y1`), above: num(c.above, `${where}.above`), tag: tag(c.tag, where),
+    };
+    if (!(chimney.x0 < chimney.x1 && chimney.y0 < chimney.y1)) errors.push(`${where}: es muss x0 < x1 und y0 < y1 gelten.`);
+    return chimney;
+  });
   const b = isObj(raw.balkon) ? raw.balkon : (errors.push('balkon fehlt.'), {});
   const balkon: HouseSource['balkon'] = {
     x0: num(b.x0, 'balkon.x0'), x1: num(b.x1, 'balkon.x1'), y0: num(b.y0, 'balkon.y0'),
@@ -477,6 +495,7 @@ export function parseSource(text: string): ParseResult {
     ...(gaube ? { gaube } : {}),
     ...(roofFrame ? { roofFrame } : {}),
     ...(dormers.length > 0 ? { dormers } : {}),
+    ...(chimneys.length > 0 ? { chimneys } : {}),
     balkon,
     garage,
     rooms,

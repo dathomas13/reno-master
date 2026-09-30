@@ -103,6 +103,9 @@ def load(variant: str) -> dict:
                           windows=[tuple(x) for x in d.get("windows", [])], sill_h=d.get("sillH", 120),
                           plate_h=d.get("plateH", 120), glass=d.get("glass", True), tag=d.get("tag", "C"))
                      for d in doc.get("dormers", [])]
+    ns["CHIMNEYS"] = [dict(name=c.get("name", "Kaminkopf"), x0=c["x0"], y0=c["y0"], x1=c["x1"], y1=c["y1"],
+                           above=c["above"], tag=c.get("tag", "C"))
+                      for c in doc.get("chimneys", [])]
     ns["BALKON"] = dict(doc["balkon"])
     gar = doc["garage"]
     ns["GAR_X"], ns["GAR_Y"] = tuple(gar["x"]), tuple(gar["y"])

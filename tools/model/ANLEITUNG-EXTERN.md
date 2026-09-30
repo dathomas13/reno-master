@@ -4,7 +4,7 @@ Diese Datei liegt in jedem Modell-Export der App **Reno Master**. Sie richtet si
 den, der das Modell außerhalb der App ändert: eine KI (Claude, ChatGPT, Gemini …), ein
 Skript oder einen Menschen mit Texteditor. Wer sie gelesen hat, braucht nichts anderes.
 
-> Format `reno-haus/1`, Stand 24.09.2026.
+> Format `reno-haus/1`, Stand 30.09.2026.
 
 ## Kurz gesagt
 
@@ -127,6 +127,11 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
       "sillH": 120, "plateH": 120,          // Schwelle unten, Rähm oben - die Front ist ein Fachwerk
       "glass": true, "tag": "C" }           // false: Öffnungen noch unverglast
   ],
+  "chimneys": [                             // optional: Kaminköpfe - der Kamin über dem OG bis übers Dach
+    { "name": "Kaminkopf Wohnzimmer",       // Anzeigename
+      "x0": 7475, "y0": 4320, "x1": 8245, "y1": 4710,   // Grundriss, wie die Kamin-Wände darunter
+      "above": 1600, "tag": "C" }           // Mündung so viele mm über OK First (Dachhaut am First)
+  ],
   "balkon": { "x0": -1300, "x1": 0, "y0": 3035, "y1": 8095, "tag": "A" },
   "garage": { "x": [-8000, -1510], "y": [5100, 12090], "z0": -1360, "hFront": 2600, "hBack": 2300 },
 
@@ -208,7 +213,7 @@ nur hochstufen, wenn es wirklich ein Aufmaß gibt.
 
 Dachform (Satteldach, First mittig), die OG-Wände unter der Schräge, Spitzbodendecke,
 Garagendach, Balkongeländer und die Materialien baut die App selbst. Sie lassen sich nur
-über `params`, `gaube`, `roofFrame`, `dormers`, `balkon` und `garage` beeinflussen.
+über `params`, `gaube`, `roofFrame`, `dormers`, `chimneys`, `balkon` und `garage` beeinflussen.
 Mit `roofFrame` baut die App den Dachstuhl: Sparren mit Kerve auf den Mittelpfetten, durch die
 Traufwand bis zum rechtwinkligen Balkenkopf, Stützen, Dachhaut und die Spitzbodendecke
 zwischen den Pfetten. Mit `ties` hängen unter den Pfetten Zangen von Sparren zu Sparren – je ein
@@ -248,6 +253,17 @@ betroffene Kante anpassen.
 **Wand im Soll entfernen:** das Wandobjekt löschen. Die beiden Räume links und rechts
 zu einem Raum zusammenfassen (Rechtecke vereinigen, eine id behalten) und den Streifen,
 auf dem die Wand stand, in ein Rechteck aufnehmen.
+
+**Kamin einbauen:** Auf jedem Geschoss, durch das er geht, eine Wand mit dem Grundriss des
+Kamins und einem Namen, der mit `Kamin` beginnt (dann zählt er nicht als tragende Wand), und
+die Räume darum herum aus mehreren Rechtecken zusammensetzen. Soll er übers Dach gehen, dazu
+ein Eintrag in `chimneys` mit demselben Grundriss: die App baut ihn vom Ende der OG-Wand durch
+Spitzboden und Dachhaut bis `above` über OK First und spart Dachhaut und Spitzbodenboden aus.
+Die Sparren, durch die er ginge, öffnet ein Eintrag in `roofFrame.trimmers` (y-Bereich etwa
+5 cm um den Kamin); fehlt er, meldet die App das als Hinweis. Rechtlich muss die Mündung einer
+neuen Feuerstätte für feste Brennstoffe firstnah liegen und den First um mindestens 40 cm
+überragen, wobei ihre Höhe über dem First größer sein muss als ihr waagrechter Abstand zum
+First (1. BImSchV § 19) – das letzte Wort hat der Kaminkehrer.
 
 **Aufmaß aus einem eigenen DXF übernehmen:** Wände im DXF als Rechtecke oder
 Linienpaare suchen. Die Außenkante der Westwand liegt bei x = 0, die der Südwand bei y = 0.
