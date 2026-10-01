@@ -20,6 +20,8 @@
   .reno-plan .jamb { stroke:var(--ink); stroke-width:15; }
   .reno-plan .glass { stroke:var(--window); stroke-width:12; }
   .reno-plan .door-line { stroke:var(--door); stroke-width:12; stroke-dasharray:60 40; }
+  .reno-plan .slide-leaf { fill:var(--door); stroke:none; }
+  .reno-plan .slide-rail { stroke:var(--door); stroke-width:8; }
   .reno-plan .opening-text { fill:var(--ink); font-size:110px; text-anchor:middle;
         paint-order:stroke; stroke:var(--paper); stroke-width:40px; stroke-linejoin:round; }
   .reno-plan .stair { fill:none; stroke:var(--stair); stroke-width:12; }

@@ -91,6 +91,8 @@ Fläche), `EG_TREPPE`, entsprechend für `KG`, `OG` und `GAR`.
           "height": 1385,                // lichte Höhe (bei passage ignoriert)
           "tag": "A",
           "frame": { "t": 60, "out": 350, "in": 0 },  // optional, nur window: tiefer Rahmen (Sitzfenster)
+          "slide": { "open": "W", "face": "N" },      // optional, nur door: Schiebetür (siehe unten)
+          "leaf": false,                 // optional, nur door: Durchbruch ohne Türblatt
           "note": "Wohnzimmer"
         }
       ]
@@ -249,6 +251,24 @@ betroffene Kante anpassen.
 **Tür einbauen:** in der Wand ein Objekt unter `openings` anlegen:
 `{"kind":"door","from":…,"to":…,"sill":0,"height":2010,"tag":"C"}`. Standardbreiten
 (Rohbau/Lichtmaß) sind 760, 885 und 1010, die Höhe 2010.
+
+**Schiebetür:** eine Tür wie oben, dazu `"slide": {"open": …, "face": …}`. `open` ist die
+Richtung, in die das Türblatt aufgeschoben wird – entlang der Wand, also `W`/`E` bei einer
+Ost-West-Wand, `S`/`N` bei einer Nord-Süd-Wand. `face` ist die Wandseite, vor der das Blatt
+läuft (`N`/`S` bzw. `W`/`E`). Das Blatt ist 50 mm breiter als die Öffnung (Überdeckung auf der
+Seite, in die es aufgeht), dort muss also Wand stehen. 3D und Plan zeigen es halb geöffnet, mit
+Laufschiene 50 mm über der Öffnung. Schließt eine Schiebetür eine Wand bis zur Nachbarwand,
+läuft die Wand über die ganze Länge und die Tür ist eine Öffnung darin.
+
+**Zweiteilige Schiebetür:** statt `open` ein `split` – die absolute Koordinate entlang der
+Wand (wie `from`/`to`), an der sich die beiden Blätter treffen:
+`"slide": {"face": "S", "split": 6945}`. Das Blatt vor `split` geht zum Wandanfang auf (W bzw.
+S), das Blatt dahinter zum Wandende (E bzw. N). Ein Drittel/zwei Drittel heißt also nur, `split`
+an die passende Stelle zu setzen.
+
+**Durchbruch** (Öffnung mit Sturz, aber ohne Türblatt): eine Tür mit `"leaf": false`, z. B.
+`{"kind":"door","from":1900,"to":3900,"sill":0,"height":2100,"leaf":false,"tag":"C"}`. Ein
+raumhoher offener Durchgang ist dagegen `passage`.
 
 **Wand im Soll entfernen:** das Wandobjekt löschen. Die beiden Räume links und rechts
 zu einem Raum zusammenfassen (Rechtecke vereinigen, eine id behalten) und den Streifen,

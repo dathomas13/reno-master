@@ -160,6 +160,12 @@ Steht:
   Wechsel stehen in der Hausdatei unter `roofFrame.ties` / `roofFrame.trimmers`.
   Kaminköpfe über Dach (0.67.0) stehen unter `chimneys` (Grundriss + `above` über OK First);
   der Kamin darunter bleibt eine „Kamin …“-Wand je Geschoss, die Sparren öffnet ein Wechsel.
+- **Schiebetüren** (0.68.0): eine Tür mit `slide: {open, face}` (Aufschieberichtung entlang
+  der Wand, Wandseite des Blatts). Beide Builder zeichnen sie halb geöffnet mit Laufschiene,
+  der Plan mit eigenem Symbol; Referenz in `testdata/ist-dachstuhl.json` (`slides`) und
+  `testdata/plans/ist-EG-schiebetuer.svg`. Zweiteilig (0.69.0) mit `split` statt `open`
+  (Treffpunkt der Blätter); `leaf: false` macht aus einer Tür einen Durchbruch ohne Blatt
+  (Referenz: `noLeaf` in derselben Datei).
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

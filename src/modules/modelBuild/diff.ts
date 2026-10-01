@@ -26,7 +26,7 @@ function coords(before: SourceWall, after: SourceWall): string {
 }
 
 function openingText(o: SourceOpening): string {
-  const kind = o.kind === 'window' ? 'Fenster' : o.kind === 'door' ? 'Tür' : 'Durchgang';
+  const kind = o.kind === 'window' ? 'Fenster' : o.kind === 'door' ? (o.slide ? 'Schiebetür' : o.leaf === false ? 'Durchbruch' : 'Tür') : 'Durchgang';
   return `${kind} ${o.from}–${o.to}`;
 }
 

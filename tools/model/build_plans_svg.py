@@ -64,6 +64,8 @@ STYLE = """
   .reno-plan .jamb { stroke:var(--ink); stroke-width:15; }
   .reno-plan .glass { stroke:var(--window); stroke-width:12; }
   .reno-plan .door-line { stroke:var(--door); stroke-width:12; stroke-dasharray:60 40; }
+  .reno-plan .slide-leaf { fill:var(--door); stroke:none; }
+  .reno-plan .slide-rail { stroke:var(--door); stroke-width:8; }
   .reno-plan .opening-text { fill:var(--ink); font-size:110px; text-anchor:middle;
         paint-order:stroke; stroke:var(--paper); stroke-width:40px; stroke-linejoin:round; }
   .reno-plan .stair { fill:none; stroke:var(--stair); stroke-width:12; }
@@ -205,6 +207,31 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
             rect(w["x0"], w["y0"], w["x1"], w["y1"], "wall-c")
     add("</g>")
 
+    def slide_symbol(w, o, a0, a1):
+        """A sliding door: each leaf half open on its face of the wall, as in the 3D view, and
+        its rail along the outer edge from the closed to the fully open leaf."""
+        sl = o["slide"]
+        along = along_x(w)
+        c0, c1 = (w["y0"], w["y1"]) if along else (w["x0"], w["x1"])
+        q0, q1, qr = (c1 + 10, c1 + 50, c1 + 50) if sl["face"] in ("N", "E") else (c0 - 50, c0 - 10, c0 - 50)
+        start = w["x0"] if along else w["y0"]
+        if sl.get("split") is not None:
+            leaves = [(start + a0, sl["split"], -1), (sl["split"], start + a1, 1)]
+        else:
+            leaves = [(start + a0, start + a1, 1 if sl["open"] in ("E", "N") else -1)]
+        for b0, b1, d in leaves:
+            width = b1 - b0
+            if d > 0:
+                l0, l1, r0, r1, half = b0, b1 + 50, b0, b1 + 50 + width, width / 2
+            else:
+                l0, l1, r0, r1, half = b0 - 50, b1, b0 - 50 - width, b1, -width / 2
+            if along:
+                rect(l0 + half, q0, l1 + half, q1, "slide-leaf")
+                line(r0, fy(qr), r1, fy(qr), "slide-rail")
+            else:
+                rect(q0, l0 + half, q1, l1 + half, "slide-leaf")
+                line(qr, fy(r0), qr, fy(r1), "slide-rail")
+
     # ---- openings: cut out of the wall, jambs, glass or door line, and the size as text
     add('<g id="openings">')
     mid_x = (bx0 + bx1) / 2
@@ -234,10 +261,14 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
             if o["kind"] == "window":
                 line(x0, sm - 40, x1, sm - 40, "glass")
                 line(x0, sm + 40, x1, sm + 40, "glass")
-            elif o["kind"] == "door":
+            elif o.get("slide"):
+                slide_symbol(w, o, a0, a1)
+            elif o["kind"] == "door" and o.get("leaf", True):
                 line(x0, sm, x1, sm, "door-line")
-            # the text goes to the side facing the middle of the house
-            ty = s0 - 70 if (w["y0"] + w["y1"]) / 2 < mid_y else s1 + 150
+            # the text goes to the side facing the middle of the house, clear of a sliding leaf
+            north = (w["y0"] + w["y1"]) / 2 < mid_y
+            shift = 60 if o.get("slide") and o["slide"]["face"] == ("N" if north else "S") else 0
+            ty = s0 - 70 - shift if north else s1 + 150 + shift
             add(f'<text class="opening-text" x="{(x0 + x1) / 2:.0f}" y="{ty:.0f}">{text}</text>')
         else:
             y0, y1 = fy(w["y0"] + a1), fy(w["y0"] + a0)  # svg: y0 is the northern end
@@ -249,9 +280,13 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
             if o["kind"] == "window":
                 line(xm - 40, y0, xm - 40, y1, "glass")
                 line(xm + 40, y0, xm + 40, y1, "glass")
-            elif o["kind"] == "door":
+            elif o.get("slide"):
+                slide_symbol(w, o, a0, a1)
+            elif o["kind"] == "door" and o.get("leaf", True):
                 line(xm, y0, xm, y1, "door-line")
-            tx = w["x1"] + 150 if xm < mid_x else w["x0"] - 70
+            east = xm < mid_x
+            shift = 60 if o.get("slide") and o["slide"]["face"] == ("E" if east else "W") else 0
+            tx = w["x1"] + 150 + shift if east else w["x0"] - 70 - shift
             ty = (y0 + y1) / 2
             add(f'<text class="opening-text" x="{tx:.0f}" y="{ty:.0f}" '
                 f'transform="rotate(-90 {tx:.0f} {ty:.0f})">{text}</text>')
