@@ -156,7 +156,7 @@ function split(width: number, target: number): number {
  * A row of base cabinets: plinth, carcass, fronts with handles, worktop.
  * `front` is the y the fronts stand at, `back` where the carcass ends.
  */
-function cabinetRow(w: number, front: number, back: number, h: number, top: number, fronts: number): Part[] {
+function cabinetRow(w: number, front: number, back: number, top: number, fronts: number): Part[] {
   const plinth = 100;
   const parts: Part[] = [];
   parts.push(boxY(0, front + 50, back, 0, w, plinth, 'dark'));
@@ -483,7 +483,7 @@ export const CATALOG: CatalogEntry[] = [
     build({ w, d, h }) {
       const n = split(w, 600);
       const top = h - 40;
-      const parts = cabinetRow(w, -d / 2 + 20, d / 2, h, top, n);
+      const parts = cabinetRow(w, -d / 2 + 20, d / 2, top, n);
       parts.push(box(0, 0, top, w, d, 40, 'worktop'));
       const mw = w / n;
       const at = (i: number) => -w / 2 + mw * (i + 0.5);
@@ -505,7 +505,7 @@ export const CATALOG: CatalogEntry[] = [
     dims: { w: 600, d: 620, h: 910 },
     build({ w, d, h }) {
       const top = h - 40;
-      return [...cabinetRow(w, -d / 2 + 20, d / 2, h, top, split(w, 600)), box(0, 0, top, w, d, 40, 'worktop')];
+      return [...cabinetRow(w, -d / 2 + 20, d / 2, top, split(w, 600)), box(0, 0, top, w, d, 40, 'worktop')];
     },
   },
   {
@@ -569,7 +569,7 @@ export const CATALOG: CatalogEntry[] = [
     build({ w, d, h }) {
       const top = h - 40;
       const overhang = Math.min(300, d / 3);
-      const parts = cabinetRow(w, -d / 2 + 20, d / 2 - overhang, h, top, split(w, 600));
+      const parts = cabinetRow(w, -d / 2 + 20, d / 2 - overhang, top, split(w, 600));
       parts.push(box(0, 0, top, w, d, 40, 'worktop'));
       parts.push(...hob(0, -d / 2 + 20 + (d - overhang - 20) / 2, h, Math.min(w - 200, 800), Math.min(d - overhang - 120, 520)));
       return parts;

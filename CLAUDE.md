@@ -166,7 +166,7 @@ Steht:
   `testdata/plans/ist-EG-schiebetuer.svg`. Zweiteilig (0.69.0) mit `split` statt `open`
   (Treffpunkt der Blätter); `leaf: false` macht aus einer Tür einen Durchbruch ohne Blatt
   (Referenz: `noLeaf` in derselben Datei).
-- **Möbel im Plan** (0.70.0): Viewer → Plan → „Einrichten“. Katalog mit 37 Stücken
+- **Möbel im Plan** (0.70.1): Viewer → Plan → „Einrichten“. Katalog mit 37 Stücken
   (`src/modules/furniture/catalog.ts`, aus Teilen berechnet, nicht gestreckt), Ziehen mit
   Einrasten an den Raumkanten, eigene glTF-Modelle über R2. Die Möbel stehen **nicht in der
   Hausdatei**, sondern in `meta/moebel-soll` (Format in `PLAN.md`, 5.13) – keine Modellversion,
