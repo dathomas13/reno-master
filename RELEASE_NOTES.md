@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.71.0 – Übersichtlichere Maßketten in den Grundrissen
+
+- Maßketten von außen nach innen: Gesamtmaß, Außenwand, anstoßende Wände, dann das Innere der jeweiligen Haushälfte.
+- Innentüren und Durchgänge sind jetzt mit ihrer Lage bemaßt; doppelte Ketten und Millimeter-Splitter sind weg.
+
 ## 0.70.1 – Möbel im Plan einrichten
 
 - Im 3D-Plan unter „Einrichten“ Möbel einfügen: WC, Dusche, Badewanne, Küche, Sofa, Esstisch, Stühle, Betten, Schränke und mehr.
