@@ -13,7 +13,10 @@ room area, so the app can make rooms tappable in the plan just like in the 3D vi
 Drawn like a paper plan: grey load-bearing walls with a black outline, dark light
 partitions, estimated walls (tag C) hatched, openings with width/height (and the sill
 height of windows), room stamps with area and clear dimensions, and dimension chains in
-cm on all four sides - openings, walls, overall.
+cm on all four sides. From the outside in: overall, the outer wall of that side (corners,
+piers, openings, set-backs), the walls meeting that facade, and the inside of the half of
+the house next to it - walls, free wall ends, doors and stairs - so the upper chain
+describes the northern half, the lower one the southern half.
 """
 from __future__ import annotations
 
@@ -31,6 +34,7 @@ from hausdatei import DATA, PLANS  # noqa: E402
 
 CHAIN_GAP = 700                    # mm from the building to the first dimension chain
 CHAIN_STEP = 450                   # mm between two chains
+SLIVER = 40                        # mm: closer edges of the inner chain are not both shown
 CHAIN_ZONE = CHAIN_GAP + 3 * CHAIN_STEP + 350   # room for four chains and their text
 TITLE_ZONE = 1100                  # mm above the chains for the title
 FOOT_ZONE = 1000                   # mm below the chains for scale bar and legend
@@ -336,7 +340,9 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
     out.extend(labels)
     add("</g>")
 
-    # ---- dimension chains on all four sides: openings, walls, overall - like a paper plan
+    # ---- dimension chains on all four sides, from the outside in: overall, the outer wall of
+    # that side, the walls meeting it, and then the inside of the half of the house next to it
+    # (the upper chain shows the northern half, the lower one the southern half)
     add('<g id="dimensions">')
     band = t_out + 200     # how far into the house a wall may start and still meet the facade
 
@@ -357,42 +363,111 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
         horizontal = side in ("S", "N")
         lo, hi = (bx0, bx1) if horizontal else (by0, by1)
         edge = {"S": by0, "N": by1, "W": bx0, "E": bx1}[side]
+        mid = mid_y if horizontal else mid_x
+        outward = 1 if side in ("N", "E") else -1    # direction from the middle to this side
+
+        def depth(w, end: str) -> float:
+            """a wall coordinate across the chain: y for a chain along x, x otherwise"""
+            return w[("y" if horizontal else "x") + end]
 
         def near(w, dist: float) -> bool:
             """does the wall reach within dist of this facade"""
-            if side == "S":
-                return w["y0"] <= edge + dist
-            if side == "N":
-                return w["y1"] >= edge - dist
-            if side == "W":
-                return w["x0"] <= edge + dist
-            return w["x1"] >= edge - dist
+            if outward < 0:
+                return depth(w, "0") <= edge + dist
+            return depth(w, "1") >= edge - dist
 
         def span(w) -> tuple[float, float]:
             return (w["x0"], w["x1"]) if horizontal else (w["y0"], w["y1"])
 
-        rooms_pts = [lo, hi]
-        for w in walls:
-            if along_x(w) != horizontal and near(w, band):
-                rooms_pts.extend(span(w))
-        open_pts = list(rooms_pts)
-        for w in walls:
-            if along_x(w) == horizontal and near(w, t_out):
-                open_pts.extend(span(w))
-                start = w["x0"] if horizontal else w["y0"]
-                for o in model.OPENINGS:
-                    if o["floor"] == floor and o["wall"] == w["name"]:
-                        open_pts.extend((start + o["a0"], start + o["a0"] + o["width"]))
-        # every edge of every wall and stair, so no clear width or wall thickness is missing
-        detail_pts = list(rooms_pts)
-        for w in walls:
-            detail_pts.extend(span(w))
-        for x0, y0, x1, y1 in stair_boxes:
-            detail_pts.extend((x0, x1) if horizontal else (y0, y1))
-        detail_pts = [p for p in detail_pts if lo <= p <= hi]
-        return merge_points(open_pts), merge_points(rooms_pts), merge_points(detail_pts), [lo, hi]
+        def openings_of(w) -> list[float]:
+            start = span(w)[0]
+            pts = []
+            for o in model.OPENINGS:
+                if o["floor"] == floor and o["wall"] == w["name"]:
+                    pts.extend((start + o["a0"], start + o["a0"] + o["width"]))
+            return pts
 
-    def draw_chain(side: str, level: int, pts: list[float], min_label: float = 0) -> None:
+        across = [w for w in walls if along_x(w) != horizontal]     # cut by the chain
+        parallel = [w for w in walls if along_x(w) == horizontal]
+        facade = [w for w in parallel if near(w, t_out)]
+
+        def face(w) -> float:
+            """the outer face of a wall on this side"""
+            return depth(w, "1" if outward > 0 else "0")
+
+        def on_facade(w) -> bool:
+            """a wall across the chain that is part of this facade: a corner piece, or a wall
+            that stands out in front of the outer wall - not one that only runs into it"""
+            if not near(w, t_out):
+                return False
+            a0, a1 = span(w)
+            behind = [f for f in facade if span(f)[0] < a1 and span(f)[1] > a0]
+            return all((face(w) - face(f)) * outward > 0 for f in behind)
+
+        def in_half(a: float, b: float) -> bool:
+            """does the stretch a..b across the chain reach into this half of the house"""
+            return b > mid if outward > 0 else a < mid
+
+        def on_side(c: float) -> bool:
+            """is a point across the chain in this half (the middle line counts to N and E)"""
+            return c >= mid if outward > 0 else c < mid
+
+        # the outer wall of this side: where it starts and ends, steps forward or back, and
+        # its openings; pieces that continue each other in one line count as one
+        pieces = sorted([(*span(w), face(w)) for w in facade]
+                        + [(*span(w), face(w)) for w in across if on_facade(w)])
+        runs: list[list[float]] = []
+        for a0, a1, f in pieces:
+            if runs and a0 <= runs[-1][1] + 1 and abs(f - runs[-1][2]) < 1:
+                runs[-1][1] = max(runs[-1][1], a1)
+            else:
+                runs.append([a0, a1, f])
+        facade_pts = [lo, hi]
+        for a0, a1, _ in runs:
+            facade_pts.extend((a0, a1))
+        for w in facade:
+            facade_pts.extend(openings_of(w))
+        # every wall that meets this facade - none but the two outer walls is nothing to show
+        walls_pts = [lo, hi]
+        for w in across:
+            if near(w, band):
+                walls_pts.extend(span(w))
+        if len(merge_points(walls_pts)) <= 4:
+            walls_pts = [lo, hi]
+        # the inside of this half: every wall, the free ends of the walls along the chain, the
+        # doors in them and the stairs - so every door can be found from the wall next to it.
+        # Each edge carries how far its part lies from this facade.
+        def remote(d0: float, d1: float) -> float:
+            return max(0, edge - d1 if outward > 0 else d0 - edge)
+
+        inner: list[tuple[float, float]] = [(-1, lo), (-1, hi)]
+        for w in across:
+            if in_half(depth(w, "0"), depth(w, "1")):
+                inner.extend((remote(depth(w, "0"), depth(w, "1")), e) for e in span(w))
+        for w in parallel:
+            if w in facade or not on_side((depth(w, "0") + depth(w, "1")) / 2):
+                continue
+            r = remote(depth(w, "0"), depth(w, "1"))
+            # an end that runs into a wall across says nothing new; a free end does
+            for e in span(w):
+                if not any(span(c)[0] - 1 <= e <= span(c)[1] + 1
+                           and depth(c, "0") <= depth(w, "1") + 1
+                           and depth(c, "1") >= depth(w, "0") - 1 for c in across):
+                    inner.append((r, e))
+            inner.extend((r, e) for e in openings_of(w))
+        for x0, y0, x1, y1 in stair_boxes:
+            a0, a1, b0, b1 = (x0, x1, y0, y1) if horizontal else (y0, y1, x0, x1)
+            if on_side((b0 + b1) / 2):
+                inner.extend(((remote(b0, b1), a0), (remote(b0, b1), a1)))
+        # rows of rooms at different depths are rarely in line to the millimetre: of two edges
+        # closer than SLIVER the one nearer this facade stays, so the chain shows no splinters
+        inner_pts: list[float] = []
+        for _, e in sorted(inner):
+            if lo <= e <= hi and all(abs(e - q) < 1 or abs(e - q) >= SLIVER for q in inner_pts):
+                inner_pts.append(e)
+        return merge_points(inner_pts), merge_points(walls_pts), merge_points(facade_pts), [lo, hi]
+
+    def draw_chain(side: str, level: int, pts: list[float]) -> None:
         if side == "S":
             pos = fy(by0) + CHAIN_GAP + level * CHAIN_STEP
         elif side == "N":
@@ -401,42 +476,45 @@ def build_floor(model, rooms_doc, variant: str, floor: str, version: str) -> str
             pos = bx0 - CHAIN_GAP - level * CHAIN_STEP
         else:
             pos = bx1 + CHAIN_GAP + level * CHAIN_STEP
-        if side in ("S", "N"):
+        horizontal = side in ("S", "N")
+        if horizontal:
             line(pts[0] - 150, pos, pts[-1] + 150, pos, "dim")
             for p in pts:
                 line(p - 60, pos + 60, p + 60, pos - 60, "dim-tick")
-            for a, b in zip(pts, pts[1:]):
-                if b - a < min_label:
-                    continue
-                small = ' small' if b - a < 600 else ''
-                add(f'<text class="dim-text{small}" x="{(a + b) / 2:.0f}" y="{pos - 50:.0f}">'
-                    f'{cm(b - a)}</text>')
         else:
             line(pos, fy(pts[0]) + 150, pos, fy(pts[-1]) - 150, "dim")
             for p in pts:
                 line(pos - 60, fy(p) + 60, pos + 60, fy(p) - 60, "dim-tick")
-            for a, b in zip(pts, pts[1:]):
-                if b - a < min_label:
-                    continue
-                small = ' small' if b - a < 600 else ''
-                tx = pos - 50
+        # a text too wide for its stretch goes to the other side of the line; several narrow
+        # ones in a row take turns, so neighbours do not overlap
+        flip = False
+        for a, b in zip(pts, pts[1:]):
+            text = cm(b - a)
+            size = 110 if b - a < 600 else 150
+            narrow = 0.56 * size * len(text) + 40 > b - a
+            flip = narrow and not flip
+            small = " small" if size == 110 else ""
+            off = 50 + 0.72 * size if flip else -50
+            if horizontal:
+                add(f'<text class="dim-text{small}" x="{(a + b) / 2:.0f}" y="{pos + off:.0f}">'
+                    f'{text}</text>')
+            else:
+                tx = pos + off
                 ty = fy((a + b) / 2)
                 add(f'<text class="dim-text{small}" x="{tx:.0f}" y="{ty:.0f}" '
-                    f'transform="rotate(-90 {tx:.0f} {ty:.0f})">{cm(b - a)}</text>')
+                    f'transform="rotate(-90 {tx:.0f} {ty:.0f})">{text}</text>')
 
     if walls:
         for side in ("S", "N", "W", "E"):
-            openings_c, rooms_c, detail_c, total_c = chain_points(side)
+            *chains, total_c = chain_points(side)
             level = 0
-            for pts in (openings_c, rooms_c):
+            drawn: list[list[float]] = []
+            for pts in chains:
                 # a chain that shows nothing new is left out
-                if len(pts) > 2 and (pts is rooms_c or pts != rooms_c):
+                if len(pts) > 2 and pts not in drawn:
                     draw_chain(side, level, pts)
+                    drawn.append(pts)
                     level += 1
-            # all wall edges and stairs; segments too short for their text stay unlabelled
-            if len(detail_c) > 2 and detail_c not in (openings_c, rooms_c):
-                draw_chain(side, level, detail_c, 150)
-                level += 1
             draw_chain(side, level, total_c)
     add("</g>")
 

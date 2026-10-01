@@ -203,15 +203,19 @@
 <line class="dim-tick" x1="340" y1="12575" x2="460" y2="12455"/>
 <line class="dim-tick" x1="4780" y1="12575" x2="4900" y2="12455"/>
 <line class="dim-tick" x1="4955" y1="12575" x2="5075" y2="12455"/>
+<line class="dim-tick" x1="6080" y1="12575" x2="6200" y2="12455"/>
+<line class="dim-tick" x1="6965" y1="12575" x2="7085" y2="12455"/>
 <line class="dim-tick" x1="9175" y1="12575" x2="9295" y2="12455"/>
 <line class="dim-tick" x1="9310" y1="12575" x2="9430" y2="12455"/>
 <line class="dim-tick" x1="12535" y1="12575" x2="12655" y2="12455"/>
 <line class="dim-tick" x1="12935" y1="12575" x2="13055" y2="12455"/>
 <text class="dim-text small" x="200" y="12465">40</text>
 <text class="dim-text" x="2620" y="12465">444</text>
-<text class="dim-text small" x="4928" y="12465">17,5</text>
-<text class="dim-text" x="7125" y="12465">422</text>
-<text class="dim-text small" x="9302" y="12465">13,5</text>
+<text class="dim-text small" x="4928" y="12644">17,5</text>
+<text class="dim-text" x="5578" y="12465">112,5</text>
+<text class="dim-text" x="6582" y="12465">88,5</text>
+<text class="dim-text" x="8130" y="12465">221</text>
+<text class="dim-text small" x="9302" y="12644">13,5</text>
 <text class="dim-text" x="10982" y="12465">322,5</text>
 <text class="dim-text small" x="12795" y="12465">40</text>
 <line class="dim" x1="-150" y1="12965" x2="13145" y2="12965"/>
@@ -219,26 +223,16 @@
 <line class="dim-tick" x1="340" y1="13025" x2="460" y2="12905"/>
 <line class="dim-tick" x1="4780" y1="13025" x2="4900" y2="12905"/>
 <line class="dim-tick" x1="4955" y1="13025" x2="5075" y2="12905"/>
-<line class="dim-tick" x1="5965" y1="13025" x2="6085" y2="12905"/>
-<line class="dim-tick" x1="6085" y1="13025" x2="6205" y2="12905"/>
-<line class="dim-tick" x1="6885" y1="13025" x2="7005" y2="12905"/>
-<line class="dim-tick" x1="7005" y1="13025" x2="7125" y2="12905"/>
-<line class="dim-tick" x1="8820" y1="13025" x2="8940" y2="12905"/>
-<line class="dim-tick" x1="8940" y1="13025" x2="9060" y2="12905"/>
 <line class="dim-tick" x1="9175" y1="13025" x2="9295" y2="12905"/>
 <line class="dim-tick" x1="9310" y1="13025" x2="9430" y2="12905"/>
-<line class="dim-tick" x1="10565" y1="13025" x2="10685" y2="12905"/>
 <line class="dim-tick" x1="12535" y1="13025" x2="12655" y2="12905"/>
 <line class="dim-tick" x1="12935" y1="13025" x2="13055" y2="12905"/>
 <text class="dim-text small" x="200" y="12915">40</text>
 <text class="dim-text" x="2620" y="12915">444</text>
-<text class="dim-text small" x="4928" y="12915">17,5</text>
-<text class="dim-text" x="5520" y="12915">101</text>
-<text class="dim-text" x="6545" y="12915">80</text>
-<text class="dim-text" x="7972" y="12915">181,5</text>
-<text class="dim-text small" x="9118" y="12915">23,5</text>
-<text class="dim-text" x="9998" y="12915">125,5</text>
-<text class="dim-text" x="11610" y="12915">197</text>
+<text class="dim-text small" x="4928" y="13094">17,5</text>
+<text class="dim-text" x="7125" y="12915">422</text>
+<text class="dim-text small" x="9302" y="13094">13,5</text>
+<text class="dim-text" x="10982" y="12915">322,5</text>
 <text class="dim-text small" x="12795" y="12915">40</text>
 <line class="dim" x1="-150" y1="13415" x2="13145" y2="13415"/>
 <line class="dim-tick" x1="-60" y1="13475" x2="60" y2="13355"/>
@@ -247,63 +241,77 @@
 <line class="dim" x1="-150" y1="-700" x2="13145" y2="-700"/>
 <line class="dim-tick" x1="-60" y1="-640" x2="60" y2="-760"/>
 <line class="dim-tick" x1="340" y1="-640" x2="460" y2="-760"/>
+<line class="dim-tick" x1="4780" y1="-640" x2="4900" y2="-760"/>
+<line class="dim-tick" x1="4955" y1="-640" x2="5075" y2="-760"/>
+<line class="dim-tick" x1="5965" y1="-640" x2="6085" y2="-760"/>
+<line class="dim-tick" x1="6085" y1="-640" x2="6205" y2="-760"/>
+<line class="dim-tick" x1="6885" y1="-640" x2="7005" y2="-760"/>
+<line class="dim-tick" x1="7005" y1="-640" x2="7125" y2="-760"/>
+<line class="dim-tick" x1="7125" y1="-640" x2="7245" y2="-760"/>
+<line class="dim-tick" x1="7885" y1="-640" x2="8005" y2="-760"/>
+<line class="dim-tick" x1="8820" y1="-640" x2="8940" y2="-760"/>
+<line class="dim-tick" x1="8940" y1="-640" x2="9060" y2="-760"/>
+<line class="dim-tick" x1="9175" y1="-640" x2="9295" y2="-760"/>
+<line class="dim-tick" x1="9310" y1="-640" x2="9430" y2="-760"/>
+<line class="dim-tick" x1="10565" y1="-640" x2="10685" y2="-760"/>
 <line class="dim-tick" x1="12535" y1="-640" x2="12655" y2="-760"/>
 <line class="dim-tick" x1="12935" y1="-640" x2="13055" y2="-760"/>
 <text class="dim-text small" x="200" y="-750">40</text>
-<text class="dim-text" x="6498" y="-750">1219,5</text>
+<text class="dim-text" x="2620" y="-750">444</text>
+<text class="dim-text small" x="4928" y="-571">17,5</text>
+<text class="dim-text" x="5520" y="-750">101</text>
+<text class="dim-text small" x="6085" y="-571">12</text>
+<text class="dim-text" x="6545" y="-750">80</text>
+<text class="dim-text small" x="7005" y="-571">12</text>
+<text class="dim-text small" x="7125" y="-750">12</text>
+<text class="dim-text" x="7565" y="-750">76</text>
+<text class="dim-text" x="8412" y="-750">93,5</text>
+<text class="dim-text small" x="8940" y="-571">12</text>
+<text class="dim-text small" x="9118" y="-750">23,5</text>
+<text class="dim-text small" x="9302" y="-571">13,5</text>
+<text class="dim-text" x="9998" y="-750">125,5</text>
+<text class="dim-text" x="11610" y="-750">197</text>
 <text class="dim-text small" x="12795" y="-750">40</text>
 <line class="dim" x1="-150" y1="-1150" x2="13145" y2="-1150"/>
 <line class="dim-tick" x1="-60" y1="-1090" x2="60" y2="-1210"/>
-<line class="dim-tick" x1="340" y1="-1090" x2="460" y2="-1210"/>
-<line class="dim-tick" x1="4780" y1="-1090" x2="4900" y2="-1210"/>
-<line class="dim-tick" x1="4955" y1="-1090" x2="5075" y2="-1210"/>
-<line class="dim-tick" x1="5965" y1="-1090" x2="6085" y2="-1210"/>
-<line class="dim-tick" x1="6085" y1="-1090" x2="6205" y2="-1210"/>
-<line class="dim-tick" x1="6885" y1="-1090" x2="7005" y2="-1210"/>
-<line class="dim-tick" x1="7005" y1="-1090" x2="7125" y2="-1210"/>
-<line class="dim-tick" x1="8820" y1="-1090" x2="8940" y2="-1210"/>
-<line class="dim-tick" x1="8940" y1="-1090" x2="9060" y2="-1210"/>
-<line class="dim-tick" x1="9175" y1="-1090" x2="9295" y2="-1210"/>
-<line class="dim-tick" x1="9310" y1="-1090" x2="9430" y2="-1210"/>
-<line class="dim-tick" x1="10565" y1="-1090" x2="10685" y2="-1210"/>
-<line class="dim-tick" x1="12535" y1="-1090" x2="12655" y2="-1210"/>
 <line class="dim-tick" x1="12935" y1="-1090" x2="13055" y2="-1210"/>
-<text class="dim-text small" x="200" y="-1200">40</text>
-<text class="dim-text" x="2620" y="-1200">444</text>
-<text class="dim-text small" x="4928" y="-1200">17,5</text>
-<text class="dim-text" x="5520" y="-1200">101</text>
-<text class="dim-text" x="6545" y="-1200">80</text>
-<text class="dim-text" x="7972" y="-1200">181,5</text>
-<text class="dim-text small" x="9118" y="-1200">23,5</text>
-<text class="dim-text" x="9998" y="-1200">125,5</text>
-<text class="dim-text" x="11610" y="-1200">197</text>
-<text class="dim-text small" x="12795" y="-1200">40</text>
-<line class="dim" x1="-150" y1="-1600" x2="13145" y2="-1600"/>
-<line class="dim-tick" x1="-60" y1="-1540" x2="60" y2="-1660"/>
-<line class="dim-tick" x1="12935" y1="-1540" x2="13055" y2="-1660"/>
-<text class="dim-text" x="6498" y="-1650">1299,5</text>
+<text class="dim-text" x="6498" y="-1200">1299,5</text>
 <line class="dim" x1="-700" y1="11965" x2="-700" y2="-150"/>
 <line class="dim-tick" x1="-760" y1="11875" x2="-640" y2="11755"/>
 <line class="dim-tick" x1="-760" y1="11475" x2="-640" y2="11355"/>
-<line class="dim-tick" x1="-760" y1="8145" x2="-640" y2="8025"/>
+<line class="dim-tick" x1="-760" y1="7330" x2="-640" y2="7210"/>
+<line class="dim-tick" x1="-760" y1="7170" x2="-640" y2="7050"/>
+<line class="dim-tick" x1="-760" y1="7020" x2="-640" y2="6900"/>
 <line class="dim-tick" x1="-760" y1="6135" x2="-640" y2="6015"/>
 <line class="dim-tick" x1="-760" y1="6075" x2="-640" y2="5955"/>
 <line class="dim-tick" x1="-760" y1="5955" x2="-640" y2="5835"/>
-<line class="dim-tick" x1="-760" y1="5895" x2="-640" y2="5775"/>
-<line class="dim-tick" x1="-760" y1="3885" x2="-640" y2="3765"/>
+<line class="dim-tick" x1="-760" y1="5860" x2="-640" y2="5740"/>
+<line class="dim-tick" x1="-760" y1="5040" x2="-640" y2="4920"/>
+<line class="dim-tick" x1="-760" y1="4975" x2="-640" y2="4855"/>
+<line class="dim-tick" x1="-760" y1="4370" x2="-640" y2="4250"/>
+<line class="dim-tick" x1="-760" y1="4250" x2="-640" y2="4130"/>
+<line class="dim-tick" x1="-760" y1="3300" x2="-640" y2="3180"/>
+<line class="dim-tick" x1="-760" y1="3180" x2="-640" y2="3060"/>
 <line class="dim-tick" x1="-760" y1="1425" x2="-640" y2="1305"/>
 <line class="dim-tick" x1="-760" y1="1305" x2="-640" y2="1185"/>
 <line class="dim-tick" x1="-760" y1="460" x2="-640" y2="340"/>
 <line class="dim-tick" x1="-760" y1="60" x2="-640" y2="-60"/>
 <text class="dim-text small" x="-750" y="11615" transform="rotate(-90 -750 11615)">40</text>
-<text class="dim-text" x="-750" y="9750" transform="rotate(-90 -750 9750)">333</text>
-<text class="dim-text" x="-750" y="7080" transform="rotate(-90 -750 7080)">201</text>
-<text class="dim-text small" x="-750" y="6045" transform="rotate(-90 -750 6045)">6</text>
+<text class="dim-text" x="-750" y="9342" transform="rotate(-90 -750 9342)">414,5</text>
+<text class="dim-text small" x="-571" y="7190" transform="rotate(-90 -571 7190)">16</text>
+<text class="dim-text small" x="-750" y="7035" transform="rotate(-90 -750 7035)">15</text>
+<text class="dim-text" x="-750" y="6518" transform="rotate(-90 -750 6518)">88,5</text>
+<text class="dim-text small" x="-571" y="6045" transform="rotate(-90 -571 6045)">6</text>
 <text class="dim-text small" x="-750" y="5955" transform="rotate(-90 -750 5955)">12</text>
-<text class="dim-text small" x="-750" y="5865" transform="rotate(-90 -750 5865)">6</text>
-<text class="dim-text" x="-750" y="4830" transform="rotate(-90 -750 4830)">201</text>
-<text class="dim-text" x="-750" y="2595" transform="rotate(-90 -750 2595)">246</text>
-<text class="dim-text small" x="-750" y="1305" transform="rotate(-90 -750 1305)">12</text>
+<text class="dim-text small" x="-571" y="5848" transform="rotate(-90 -571 5848)">9,5</text>
+<text class="dim-text" x="-750" y="5390" transform="rotate(-90 -750 5390)">82</text>
+<text class="dim-text small" x="-571" y="4948" transform="rotate(-90 -571 4948)">6,5</text>
+<text class="dim-text" x="-750" y="4612" transform="rotate(-90 -750 4612)">60,5</text>
+<text class="dim-text small" x="-571" y="4250" transform="rotate(-90 -571 4250)">12</text>
+<text class="dim-text" x="-750" y="3715" transform="rotate(-90 -750 3715)">95</text>
+<text class="dim-text small" x="-571" y="3180" transform="rotate(-90 -571 3180)">12</text>
+<text class="dim-text" x="-750" y="2242" transform="rotate(-90 -750 2242)">175,5</text>
+<text class="dim-text small" x="-571" y="1305" transform="rotate(-90 -571 1305)">12</text>
 <text class="dim-text" x="-750" y="822" transform="rotate(-90 -750 822)">84,5</text>
 <text class="dim-text small" x="-750" y="200" transform="rotate(-90 -750 200)">40</text>
 <line class="dim" x1="-1150" y1="11965" x2="-1150" y2="-150"/>
@@ -317,44 +325,23 @@
 <line class="dim-tick" x1="-1210" y1="60" x2="-1090" y2="-60"/>
 <text class="dim-text small" x="-1200" y="11615" transform="rotate(-90 -1200 11615)">40</text>
 <text class="dim-text" x="-1200" y="8715" transform="rotate(-90 -1200 8715)">540</text>
-<text class="dim-text small" x="-1200" y="5955" transform="rotate(-90 -1200 5955)">12</text>
+<text class="dim-text small" x="-1021" y="5955" transform="rotate(-90 -1021 5955)">12</text>
 <text class="dim-text" x="-1200" y="3630" transform="rotate(-90 -1200 3630)">453</text>
-<text class="dim-text small" x="-1200" y="1305" transform="rotate(-90 -1200 1305)">12</text>
+<text class="dim-text small" x="-1021" y="1305" transform="rotate(-90 -1021 1305)">12</text>
 <text class="dim-text" x="-1200" y="822" transform="rotate(-90 -1200 822)">84,5</text>
 <text class="dim-text small" x="-1200" y="200" transform="rotate(-90 -1200 200)">40</text>
 <line class="dim" x1="-1600" y1="11965" x2="-1600" y2="-150"/>
 <line class="dim-tick" x1="-1660" y1="11875" x2="-1540" y2="11755"/>
-<line class="dim-tick" x1="-1660" y1="11510" x2="-1540" y2="11390"/>
-<line class="dim-tick" x1="-1660" y1="11475" x2="-1540" y2="11355"/>
-<line class="dim-tick" x1="-1660" y1="10305" x2="-1540" y2="10185"/>
-<line class="dim-tick" x1="-1660" y1="10185" x2="-1540" y2="10065"/>
-<line class="dim-tick" x1="-1660" y1="7330" x2="-1540" y2="7210"/>
-<line class="dim-tick" x1="-1660" y1="7170" x2="-1540" y2="7050"/>
-<line class="dim-tick" x1="-1660" y1="6075" x2="-1540" y2="5955"/>
-<line class="dim-tick" x1="-1660" y1="5955" x2="-1540" y2="5835"/>
-<line class="dim-tick" x1="-1660" y1="5040" x2="-1540" y2="4920"/>
-<line class="dim-tick" x1="-1660" y1="4920" x2="-1540" y2="4800"/>
-<line class="dim-tick" x1="-1660" y1="4820" x2="-1540" y2="4700"/>
-<line class="dim-tick" x1="-1660" y1="4370" x2="-1540" y2="4250"/>
-<line class="dim-tick" x1="-1660" y1="4310" x2="-1540" y2="4190"/>
-<line class="dim-tick" x1="-1660" y1="4250" x2="-1540" y2="4130"/>
-<line class="dim-tick" x1="-1660" y1="3300" x2="-1540" y2="3180"/>
-<line class="dim-tick" x1="-1660" y1="3180" x2="-1540" y2="3060"/>
-<line class="dim-tick" x1="-1660" y1="1425" x2="-1540" y2="1305"/>
-<line class="dim-tick" x1="-1660" y1="1305" x2="-1540" y2="1185"/>
-<line class="dim-tick" x1="-1660" y1="460" x2="-1540" y2="340"/>
+<line class="dim-tick" x1="-1660" y1="8145" x2="-1540" y2="8025"/>
+<line class="dim-tick" x1="-1660" y1="6135" x2="-1540" y2="6015"/>
+<line class="dim-tick" x1="-1660" y1="5895" x2="-1540" y2="5775"/>
+<line class="dim-tick" x1="-1660" y1="3885" x2="-1540" y2="3765"/>
 <line class="dim-tick" x1="-1660" y1="60" x2="-1540" y2="-60"/>
-<text class="dim-text small" x="-1650" y="11632" transform="rotate(-90 -1650 11632)">36,5</text>
-<text class="dim-text" x="-1650" y="10830" transform="rotate(-90 -1650 10830)">117</text>
-<text class="dim-text" x="-1650" y="8698" transform="rotate(-90 -1650 8698)">285,5</text>
-<text class="dim-text small" x="-1650" y="7190" transform="rotate(-90 -1650 7190)">16</text>
-<text class="dim-text" x="-1650" y="6562" transform="rotate(-90 -1650 6562)">109,5</text>
-<text class="dim-text" x="-1650" y="5438" transform="rotate(-90 -1650 5438)">91,5</text>
-<text class="dim-text small" x="-1650" y="4535" transform="rotate(-90 -1650 4535)">45</text>
-<text class="dim-text" x="-1650" y="3715" transform="rotate(-90 -1650 3715)">95</text>
-<text class="dim-text" x="-1650" y="2242" transform="rotate(-90 -1650 2242)">175,5</text>
-<text class="dim-text" x="-1650" y="822" transform="rotate(-90 -1650 822)">84,5</text>
-<text class="dim-text small" x="-1650" y="200" transform="rotate(-90 -1650 200)">40</text>
+<text class="dim-text" x="-1650" y="9950" transform="rotate(-90 -1650 9950)">373</text>
+<text class="dim-text" x="-1650" y="7080" transform="rotate(-90 -1650 7080)">201</text>
+<text class="dim-text small" x="-1650" y="5955" transform="rotate(-90 -1650 5955)">24</text>
+<text class="dim-text" x="-1650" y="4830" transform="rotate(-90 -1650 4830)">201</text>
+<text class="dim-text" x="-1650" y="1912" transform="rotate(-90 -1650 1912)">382,5</text>
 <line class="dim" x1="-2050" y1="11965" x2="-2050" y2="-150"/>
 <line class="dim-tick" x1="-2110" y1="11875" x2="-1990" y2="11755"/>
 <line class="dim-tick" x1="-2110" y1="60" x2="-1990" y2="-60"/>
@@ -364,24 +351,40 @@
 <line class="dim-tick" x1="13635" y1="11475" x2="13755" y2="11355"/>
 <line class="dim-tick" x1="13635" y1="10305" x2="13755" y2="10185"/>
 <line class="dim-tick" x1="13635" y1="10185" x2="13755" y2="10065"/>
-<line class="dim-tick" x1="13635" y1="7270" x2="13755" y2="7150"/>
+<line class="dim-tick" x1="13635" y1="7330" x2="13755" y2="7210"/>
+<line class="dim-tick" x1="13635" y1="7170" x2="13755" y2="7050"/>
+<line class="dim-tick" x1="13635" y1="7020" x2="13755" y2="6900"/>
 <line class="dim-tick" x1="13635" y1="6135" x2="13755" y2="6015"/>
 <line class="dim-tick" x1="13635" y1="6075" x2="13755" y2="5955"/>
 <line class="dim-tick" x1="13635" y1="5955" x2="13755" y2="5835"/>
-<line class="dim-tick" x1="13635" y1="5895" x2="13755" y2="5775"/>
-<line class="dim-tick" x1="13635" y1="4760" x2="13755" y2="4640"/>
+<line class="dim-tick" x1="13635" y1="5050" x2="13755" y2="4930"/>
+<line class="dim-tick" x1="13635" y1="4920" x2="13755" y2="4800"/>
+<line class="dim-tick" x1="13635" y1="4820" x2="13755" y2="4700"/>
+<line class="dim-tick" x1="13635" y1="4370" x2="13755" y2="4250"/>
+<line class="dim-tick" x1="13635" y1="4310" x2="13755" y2="4190"/>
+<line class="dim-tick" x1="13635" y1="4250" x2="13755" y2="4130"/>
+<line class="dim-tick" x1="13635" y1="3300" x2="13755" y2="3180"/>
+<line class="dim-tick" x1="13635" y1="3180" x2="13755" y2="3060"/>
 <line class="dim-tick" x1="13635" y1="460" x2="13755" y2="340"/>
 <line class="dim-tick" x1="13635" y1="60" x2="13755" y2="-60"/>
 <text class="dim-text small" x="13645" y="11615" transform="rotate(-90 13645 11615)">40</text>
 <text class="dim-text" x="13645" y="10830" transform="rotate(-90 13645 10830)">117</text>
-<text class="dim-text small" x="13645" y="10185" transform="rotate(-90 13645 10185)">12</text>
-<text class="dim-text" x="13645" y="8668" transform="rotate(-90 13645 8668)">291,5</text>
-<text class="dim-text" x="13645" y="6642" transform="rotate(-90 13645 6642)">113,5</text>
-<text class="dim-text small" x="13645" y="6045" transform="rotate(-90 13645 6045)">6</text>
+<text class="dim-text small" x="13824" y="10185" transform="rotate(-90 13824 10185)">12</text>
+<text class="dim-text" x="13645" y="8698" transform="rotate(-90 13645 8698)">285,5</text>
+<text class="dim-text small" x="13824" y="7190" transform="rotate(-90 13824 7190)">16</text>
+<text class="dim-text small" x="13645" y="7035" transform="rotate(-90 13645 7035)">15</text>
+<text class="dim-text" x="13645" y="6518" transform="rotate(-90 13645 6518)">88,5</text>
+<text class="dim-text small" x="13824" y="6045" transform="rotate(-90 13824 6045)">6</text>
 <text class="dim-text small" x="13645" y="5955" transform="rotate(-90 13645 5955)">12</text>
-<text class="dim-text small" x="13645" y="5865" transform="rotate(-90 13645 5865)">6</text>
-<text class="dim-text" x="13645" y="5268" transform="rotate(-90 13645 5268)">113,5</text>
-<text class="dim-text" x="13645" y="2550" transform="rotate(-90 13645 2550)">430</text>
+<text class="dim-text" x="13645" y="5442" transform="rotate(-90 13645 5442)">90,5</text>
+<text class="dim-text small" x="13824" y="4925" transform="rotate(-90 13824 4925)">13</text>
+<text class="dim-text small" x="13645" y="4810" transform="rotate(-90 13645 4810)">10</text>
+<text class="dim-text small" x="13645" y="4535" transform="rotate(-90 13645 4535)">45</text>
+<text class="dim-text small" x="13824" y="4280" transform="rotate(-90 13824 4280)">6</text>
+<text class="dim-text small" x="13645" y="4220" transform="rotate(-90 13645 4220)">6</text>
+<text class="dim-text" x="13645" y="3715" transform="rotate(-90 13645 3715)">95</text>
+<text class="dim-text small" x="13824" y="3180" transform="rotate(-90 13824 3180)">12</text>
+<text class="dim-text" x="13645" y="1760" transform="rotate(-90 13645 1760)">272</text>
 <text class="dim-text small" x="13645" y="200" transform="rotate(-90 13645 200)">40</text>
 <line class="dim" x1="14145" y1="11965" x2="14145" y2="-150"/>
 <line class="dim-tick" x1="14085" y1="11875" x2="14205" y2="11755"/>
@@ -394,44 +397,23 @@
 <line class="dim-tick" x1="14085" y1="60" x2="14205" y2="-60"/>
 <text class="dim-text small" x="14095" y="11615" transform="rotate(-90 14095 11615)">40</text>
 <text class="dim-text" x="14095" y="10830" transform="rotate(-90 14095 10830)">117</text>
-<text class="dim-text small" x="14095" y="10185" transform="rotate(-90 14095 10185)">12</text>
+<text class="dim-text small" x="14274" y="10185" transform="rotate(-90 14274 10185)">12</text>
 <text class="dim-text" x="14095" y="8070" transform="rotate(-90 14095 8070)">411</text>
-<text class="dim-text small" x="14095" y="5955" transform="rotate(-90 14095 5955)">12</text>
+<text class="dim-text small" x="14274" y="5955" transform="rotate(-90 14274 5955)">12</text>
 <text class="dim-text" x="14095" y="3148" transform="rotate(-90 14095 3148)">549,5</text>
 <text class="dim-text small" x="14095" y="200" transform="rotate(-90 14095 200)">40</text>
 <line class="dim" x1="14595" y1="11965" x2="14595" y2="-150"/>
 <line class="dim-tick" x1="14535" y1="11875" x2="14655" y2="11755"/>
-<line class="dim-tick" x1="14535" y1="11510" x2="14655" y2="11390"/>
-<line class="dim-tick" x1="14535" y1="11475" x2="14655" y2="11355"/>
-<line class="dim-tick" x1="14535" y1="10305" x2="14655" y2="10185"/>
-<line class="dim-tick" x1="14535" y1="10185" x2="14655" y2="10065"/>
-<line class="dim-tick" x1="14535" y1="7330" x2="14655" y2="7210"/>
-<line class="dim-tick" x1="14535" y1="7170" x2="14655" y2="7050"/>
-<line class="dim-tick" x1="14535" y1="6075" x2="14655" y2="5955"/>
-<line class="dim-tick" x1="14535" y1="5955" x2="14655" y2="5835"/>
-<line class="dim-tick" x1="14535" y1="5040" x2="14655" y2="4920"/>
-<line class="dim-tick" x1="14535" y1="4920" x2="14655" y2="4800"/>
-<line class="dim-tick" x1="14535" y1="4820" x2="14655" y2="4700"/>
-<line class="dim-tick" x1="14535" y1="4370" x2="14655" y2="4250"/>
-<line class="dim-tick" x1="14535" y1="4310" x2="14655" y2="4190"/>
-<line class="dim-tick" x1="14535" y1="4250" x2="14655" y2="4130"/>
-<line class="dim-tick" x1="14535" y1="3300" x2="14655" y2="3180"/>
-<line class="dim-tick" x1="14535" y1="3180" x2="14655" y2="3060"/>
-<line class="dim-tick" x1="14535" y1="1425" x2="14655" y2="1305"/>
-<line class="dim-tick" x1="14535" y1="1305" x2="14655" y2="1185"/>
-<line class="dim-tick" x1="14535" y1="460" x2="14655" y2="340"/>
+<line class="dim-tick" x1="14535" y1="7270" x2="14655" y2="7150"/>
+<line class="dim-tick" x1="14535" y1="6135" x2="14655" y2="6015"/>
+<line class="dim-tick" x1="14535" y1="5895" x2="14655" y2="5775"/>
+<line class="dim-tick" x1="14535" y1="4760" x2="14655" y2="4640"/>
 <line class="dim-tick" x1="14535" y1="60" x2="14655" y2="-60"/>
-<text class="dim-text small" x="14545" y="11632" transform="rotate(-90 14545 11632)">36,5</text>
-<text class="dim-text" x="14545" y="10830" transform="rotate(-90 14545 10830)">117</text>
-<text class="dim-text" x="14545" y="8698" transform="rotate(-90 14545 8698)">285,5</text>
-<text class="dim-text small" x="14545" y="7190" transform="rotate(-90 14545 7190)">16</text>
-<text class="dim-text" x="14545" y="6562" transform="rotate(-90 14545 6562)">109,5</text>
-<text class="dim-text" x="14545" y="5438" transform="rotate(-90 14545 5438)">91,5</text>
-<text class="dim-text small" x="14545" y="4535" transform="rotate(-90 14545 4535)">45</text>
-<text class="dim-text" x="14545" y="3715" transform="rotate(-90 14545 3715)">95</text>
-<text class="dim-text" x="14545" y="2242" transform="rotate(-90 14545 2242)">175,5</text>
-<text class="dim-text" x="14545" y="822" transform="rotate(-90 14545 822)">84,5</text>
-<text class="dim-text small" x="14545" y="200" transform="rotate(-90 14545 200)">40</text>
+<text class="dim-text" x="14545" y="9512" transform="rotate(-90 14545 9512)">460,5</text>
+<text class="dim-text" x="14545" y="6642" transform="rotate(-90 14545 6642)">113,5</text>
+<text class="dim-text small" x="14545" y="5955" transform="rotate(-90 14545 5955)">24</text>
+<text class="dim-text" x="14545" y="5268" transform="rotate(-90 14545 5268)">113,5</text>
+<text class="dim-text" x="14545" y="2350" transform="rotate(-90 14545 2350)">470</text>
 <line class="dim" x1="15045" y1="11965" x2="15045" y2="-150"/>
 <line class="dim-tick" x1="14985" y1="11875" x2="15105" y2="11755"/>
 <line class="dim-tick" x1="14985" y1="60" x2="15105" y2="-60"/>
