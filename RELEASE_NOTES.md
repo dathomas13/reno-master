@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.70.1 – Möbel im Plan einrichten
+
+- Im 3D-Plan unter „Einrichten“ Möbel einfügen: WC, Dusche, Badewanne, Küche, Sofa, Esstisch, Stühle, Betten, Schränke und mehr.
+- Antippen wählt, mit einem Finger ziehen verschiebt, an Wänden rastet es ein; drehen, Maße ändern, kopieren, rückgängig.
+- Eigene 3D-Modelle (.glb) lassen sich laden und genauso platzieren.
+
 ## 0.69.0 – Zweiteilige Schiebetüren und Durchbrüche
 
 - Schiebetüren können zweiteilig sein, die Blätter gehen nach beiden Seiten auf.

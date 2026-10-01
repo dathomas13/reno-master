@@ -12,6 +12,8 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
+  FieldPath,
   orderBy,
   where,
   limit,
@@ -67,6 +69,42 @@ export async function patchDoc(
     updatedAt: serverTimestamp(),
     updatedBy: actor(),
   });
+}
+
+/**
+ * Writes entries of map fields (`items.<key>`), each replaced as a whole, and creates the
+ * document when it does not exist yet. Everything else in the document stays as it is -
+ * two devices changing different entries do not overwrite each other.
+ */
+export async function setMapEntries(
+  collectionName: string,
+  id: string,
+  entries: { field: string; key: string; value: Record<string, unknown> }[],
+): Promise<void> {
+  const data: Record<string, unknown> = { updatedAt: serverTimestamp(), updatedBy: actor() };
+  const paths = [new FieldPath('updatedAt'), new FieldPath('updatedBy')];
+  for (const entry of entries) {
+    const map = (data[entry.field] ?? {}) as Record<string, unknown>;
+    map[entry.key] = entry.value;
+    data[entry.field] = map;
+    paths.push(new FieldPath(entry.field, entry.key));
+  }
+  await setDoc(doc(db, collectionName, id), data, { mergeFields: paths });
+}
+
+/** removes entries of map fields written by setMapEntries */
+export async function removeMapEntries(
+  collectionName: string,
+  id: string,
+  entries: { field: string; key: string }[],
+): Promise<void> {
+  const data: Record<string, unknown> = { updatedAt: serverTimestamp(), updatedBy: actor() };
+  for (const entry of entries) {
+    const map = (data[entry.field] ?? {}) as Record<string, unknown>;
+    map[entry.key] = deleteField();
+    data[entry.field] = map;
+  }
+  await setDoc(doc(db, collectionName, id), data, { merge: true });
 }
 
 export async function removeDoc(collectionName: string, id: string): Promise<void> {

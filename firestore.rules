@@ -35,7 +35,8 @@ service cloud.firestore {
     match /plans/{doc}    { allow read, write: if allowed(); }
     // meta traegt auch die veroeffentlichten 3D-Modelle (model-ist, model-soll): Version,
     // Notiz und die Szene als JSON-Text, unter 1 MiB pro Dokument. Keine eigene Regel
-    // noetig - wer die App benutzen darf, darf auch das Modell austauschen.
+    // noetig - wer die App benutzen darf, darf auch das Modell austauschen. Ebenso die
+    // Moebel des Plans (moebel-soll), deshalb auch dafuer keine Aenderung in der Konsole.
     match /meta/{doc}     { allow read, write: if allowed(); }
 
     // anything not listed above stays closed

@@ -146,6 +146,13 @@ function matchers(actual, negate) {
       check(Math.abs(actual - want) < Math.pow(10, -digits) / 2, `expected ~${want}, got ${actual}`),
     toBeGreaterThan: (want) => check(actual > want, `expected > ${want}, got ${actual}`),
     toBeLessThan: (want) => check(actual < want, `expected < ${want}, got ${actual}`),
+    toBeGreaterThanOrEqual: (want) => check(actual >= want, `expected >= ${want}, got ${actual}`),
+    toBeLessThanOrEqual: (want) => check(actual <= want, `expected <= ${want}, got ${actual}`),
+    toMatchObject: (want) =>
+      check(
+        actual !== null && typeof actual === 'object' && Object.keys(want).every((k) => equal(actual[k], want[k])),
+        `expected ${JSON.stringify(actual)} to match ${JSON.stringify(want)}`,
+      ),
     toHaveLength: (want) => check(actual?.length === want, `expected length ${want}, got ${actual?.length}`),
     // spies, so a test can state what was not done either
     toHaveBeenCalled: () => check((actual?.mock?.calls.length ?? 0) > 0, 'expected the function to be called'),

@@ -290,11 +290,31 @@ Die gebündelten SVGs werden beim Seed als `source:'bundled'` eingetragen (bzw. 
 photos/{photoId}.jpg, photos/{photoId}_thumb.jpg
 receipts/{costId}/{photoId}.(jpg|pdf)
 plans/{planId}.(pdf|png|jpg)
+moebel/{modelId}.(glb|gltf)      // eigene 3D-Modelle für die Möbel des Plans (5.13)
 ```
 Metadaten `contentType` korrekt setzen; `cacheControl: public, max-age=31536000` (Dateien sind unveränderlich, neue Version = neue ID).
 
 ### 5.12 Indizes (`firestore.indexes.json`)
 `diary(date desc)`, `diary(roomIds array, date desc)`, `costs(date desc)`, `costs(category, date desc)`, `tasks(status, due)`, `photos(entryId)`, `photos(costId)`.
+
+### 5.13 `meta/moebel-soll` – Möbel des Plans (ein Dokument)
+```ts
+{ items:  { [id]: { type: string          // Katalogtyp (src/modules/furniture/catalog.ts) oder 'model'
+                    modelId?: string      // nur bei 'model'
+                    name?: string         // statt der Katalogbezeichnung
+                    floor: 'KG'|'EG'|'OG'|'GAR'
+                    x: number; y: number  // Mitte der Grundfläche, mm, Koordinaten der Hausdatei
+                    z: number             // Unterkante über dem Geschossboden (Hängeschrank 1450)
+                    rot: number           // Grad gegen den Uhrzeigersinn von oben, 0 = Front nach Süden
+                    w: number; d: number; h: number } }   // Außenmaße mm
+  models: { [id]: { name, storagePath, w, d, h, bytes, uploadState } }  // eigene glTF-Dateien, Standardgröße mm
+  updatedAt, updatedBy }
+```
+Bewusst **nicht in der Hausdatei**: einen Stuhl zu verschieben ist keine neue Modellversion, und die Python-Builder
+müssen davon nichts wissen. Jedes Möbel ist ein Map-Eintrag und wird als Ganzes geschrieben
+(`setMapEntries` mit `mergeFields`), so richten zwei Telefone gleichzeitig verschiedene Räume ein, ohne sich zu
+überschreiben. Keine neue Regel nötig, `meta` ist schon freigegeben. Was beim Lesen keinen Sinn ergibt (fehlendes
+Geschoss, Maß 0, gelöschtes Modell), lässt `parseFurnitureDoc` Stück für Stück weg.
 
 ---
 
@@ -390,6 +410,19 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Performance: `setPixelRatio(min(dpr, 2))`, Rendering nur bei Änderung (`invalidate()`-Pattern statt dauerhaftem RAF-Loop, um Akku zu schonen), Szene beim Verlassen der Route disposen.
 - Modell laden: über `loadScene(variant)` – die in IndexedDB liegende Fassung, wenn sie mindestens so neu ist wie die gebündelte, sonst `fetch(`${base}models/${variant}.json`)` (≈95 KB, 132 Bauteile, 4512 Dreiecke – unkritisch). Ladefehler offline → Meldung "Modell noch nicht heruntergeladen – einmal online öffnen". Ein Modell, das während der Ansicht ankommt, meldet sich über das Fenster-Ereignis `reno:model`; der Viewer baut die Szene dann neu.
 - **Die Ansicht bleibt stehen.** Kamera (theta, phi, Abstand, Ziel), sichtbare Geschosse, Tragwand-Modus, Raum-Overlay, gewählte Ansicht und der offene Raum werden beim Verlassen des Bildschirms gemerkt (`viewerState.ts`: im Modul für den Weg zu einem anderen Bildschirm, in `localStorage` für den Weg durch eine geschlossene App, gesichert auch bei `pagehide`/`visibilitychange`). Beim Aufbau gewinnt der gemerkte Blick über die Standardansicht – auch beim Wechsel Bestand/Zielzustand, damit das Haus nicht unter dem Finger springt. Nur `?raum=<id>` sticht ihn, das ist ja eine Ansage. Was aus dem Speicher kommt, geht durch `parseViewerState`: ein einziges NaN stellt die Kamera sonst ins Nichts und der Bildschirm bleibt schwarz.
+- **Möbel (nur im Plan).** Die Möbel aus 5.13 hängen in der Gruppe ihres Geschosses, ein ausgeblendetes Geschoss
+  blendet sie mit aus; „Möbel“ schaltet alle. Katalogmöbel sind aus Quadern (mit abgerundeten Kanten), Zylindern,
+  Drehkörpern und Kugeln gebaut, **aus den Maßen berechnet statt gestreckt**: eine längere Küchenzeile bekommt mehr
+  Schränke, ein breiteres Sofa mehr Sitzkissen. „Einrichten“ öffnet den Editor: Antippen wählt, nur das gewählte
+  Möbel lässt sich mit einem Finger ziehen (sonst dreht der Finger wie immer das Haus), es rastet innerhalb von
+  12 cm an den Innenkanten seines Raums ein und läuft sonst auf einem 1-cm-Raster. Drehen in 15°/90°, Maße in cm,
+  Kopie, Löschen, Rückgängig (50 Schritte, nur in der Sitzung). Neue Möbel kommen in den offenen Raum, sonst in
+  die Mitte der Ansicht, auf das eine sichtbare Geschoss (sonst EG). Ragt ein Möbel aus seinem Raum, wird der
+  Rahmen rot. Eigene Modelle: glTF (.glb, oder .gltf ohne Nachbardateien), bis 30 MB, Meshopt geht, Draco nicht;
+  die Einheit (m/cm/mm) wird aus der Größe geraten und ist vor dem Speichern korrigierbar. Die Datei geht über die
+  Outbox nach R2 und kommt über denselben Cache zurück, gesehen ist sie also auch offline da. Farben und Texturen
+  aus glTF werden auf die Farbbehandlung des Viewers (ohne Farbmanagement, lineare Ausgabe) umgerechnet, sonst
+  wären sie viel zu dunkel. In den 2D-Plänen und im Modell-Export stehen die Möbel (noch) nicht.
 - **Alles Untere ist ein Stapel**: Bauteil-Info, Raumfenster und die Schalter-Chips stehen in *einem* Container über der Bottom-Navigation (`bottom-[calc(64px+env(safe-area-inset-bottom))]`), nicht als drei Einblendungen mit eigenen Abständen. Sonst liegt das Raumfenster am Telefon hinter der Navigation und unter den Chips – die Kachelleiste war dort zur Hälfte unsichtbar.
 
 ### 8.4 Pläne
