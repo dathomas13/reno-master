@@ -41,7 +41,7 @@ type Obj = Record<string, unknown>;
  * ignored (neither applied nor dropped). Throws only when the text is not a JSON object.
  */
 export function applyRoomEdits(sourceText: string, edits: RoomEdit[], variant: RoomVariant): AppliedEdits {
-  const doc = JSON.parse(sourceText.replace(/^﻿/, '')) as Obj;
+  const doc = JSON.parse(sourceText.replace(/^\uFEFF/, '')) as Obj;
   if (doc === null || typeof doc !== 'object' || Array.isArray(doc)) {
     throw new Error('Die Hausdatei ist kein JSON-Objekt.');
   }

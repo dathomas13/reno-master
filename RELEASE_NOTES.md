@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.72.1 – Voreinstellungen auch im Browser
+
+- Das Untermenü „Voreinstellungen“ steht jetzt auch in der Webansicht bereit.
+
 ## 0.72.0 – Voreinstellungen in den Einstellungen
 
 - Neues Untermenü „Voreinstellungen“: Personen, Wetter, Kategorien, Bereiche, Rollen und Gewerke selbst pflegen – umbenennen, sortieren, löschen mit Rückgängig.
