@@ -4,8 +4,6 @@
  * ISO strings in local time, so sorting and display work offline without timezone math.
  */
 
-import { LEGACY_LABELS } from './options';
-
 export type Iso = string; // 'YYYY-MM-DD'
 export type IsoDateTime = string; // 'YYYY-MM-DDTHH:mm:ss'
 export type Floor = 'KG' | 'EG' | 'OG' | 'DACH' | 'GAR';
@@ -35,12 +33,10 @@ export function createdAtMillis(value: unknown): number {
 }
 
 /**
- * The values below are ids of an option set (see options.ts), stored as strings. The
- * constant arrays further down are the old display texts, kept only until every consumer
- * reads from `useOptions`.
+ * The values below are ids of an option set (see options.ts), stored as strings; the
+ * names to show come from `useOptions`. Records written before the switch may still hold
+ * the old display text, which `resolveOption` reads as well.
  */
-/** @deprecated old display texts; use the `weather` option set */
-export const WEATHER: readonly string[] = LEGACY_LABELS.weather;
 export type Weather = string;
 
 export interface DiaryEntry extends BaseDoc {
@@ -86,16 +82,10 @@ export interface Photo extends BaseDoc {
   uploadState: 'pending' | 'uploaded' | 'failed';
 }
 
-/** @deprecated old stored texts; use the `paymentStatus` option set */
-export const PAYMENT_STATUS: readonly string[] = LEGACY_LABELS.paymentStatus;
 export type PaymentStatus = string;
 
-/** @deprecated old display texts; use the `payers` option set */
-export const PAID_BY: readonly string[] = LEGACY_LABELS.payers;
 export type PaidBy = string;
 
-/** @deprecated old display texts; use the `paymentMethods` option set */
-export const PAYMENT_METHOD: readonly string[] = LEGACY_LABELS.paymentMethods;
 export type PaymentMethod = string;
 
 export interface CostExtraction {
@@ -126,16 +116,10 @@ export interface Cost extends BaseDoc {
   notes?: string;
 }
 
-/** @deprecated old display texts; use the `taskStatus` option set */
-export const TASK_STATUS: readonly string[] = LEGACY_LABELS.taskStatus;
 export type TaskStatus = string;
 
-/** @deprecated old display texts; use the `priority` option set */
-export const PRIORITY: readonly string[] = LEGACY_LABELS.priority;
 export type Priority = string;
 
-/** @deprecated old display texts; assignees are ids of the `people` option set now */
-export const ASSIGNEES: readonly string[] = ['Thomas', 'Sarah', 'Handwerker', 'Beide'];
 export type Assignee = string;
 
 export interface Task extends BaseDoc {
@@ -162,8 +146,6 @@ export interface Note extends BaseDoc {
   pinned: boolean;
 }
 
-/** @deprecated old display texts; use the `contactStatus` option set */
-export const CONTACT_STATUS: readonly string[] = LEGACY_LABELS.contactStatus;
 export type ContactStatus = string;
 
 export interface Contact extends BaseDoc {
@@ -180,8 +162,6 @@ export interface Contact extends BaseDoc {
   notes?: string;
 }
 
-/** @deprecated old display texts; use the `contactChannels` option set */
-export const CONTACT_LOG_CHANNELS: readonly string[] = LEGACY_LABELS.contactChannels;
 export type ContactLogChannel = string;
 
 /** one dated entry of a Gesprächsprotokoll; several belong to one contact via `contactId` */
@@ -192,8 +172,6 @@ export interface ContactLog extends BaseDoc {
   text: string;
 }
 
-/** @deprecated old display texts; use the `tradeStatus` option set */
-export const TRADE_STATUS: readonly string[] = LEGACY_LABELS.tradeStatus;
 export type TradeStatus = string;
 
 export interface Trade extends BaseDoc {
@@ -207,8 +185,6 @@ export interface Trade extends BaseDoc {
   archived?: boolean;
 }
 
-/** @deprecated old display texts; use the `phaseStatus` option set */
-export const PHASE_STATUS: readonly string[] = LEGACY_LABELS.phaseStatus;
 export type PhaseStatus = string;
 
 export interface Phase extends BaseDoc {

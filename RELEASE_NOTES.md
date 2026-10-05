@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.73.0 – Alles umbenennen: Phasen, Status und Listen
+
+- In den Voreinstellungen lassen sich jetzt auch Phasen, Status, Prioritäten, Zahlungsarten und Gesprächsarten pflegen – Umbenennen wirkt sofort überall.
+- „Zuständig“ wählt aus der Personenliste; der Filter in den Aufgaben zeigt die Personen, die vorkommen.
+- Beim ersten Start stellt die App die vorhandenen Einträge einmalig um.
+
 ## 0.72.1 – Voreinstellungen auch im Browser
 
 - Das Untermenü „Voreinstellungen“ steht jetzt auch in der Webansicht bereit.
