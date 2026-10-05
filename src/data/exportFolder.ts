@@ -13,6 +13,7 @@
  * and a test has neither a gallery nor a storage bucket.
  */
 import type { ExportFile, ExportPlan } from './exportArchive';
+import type { Photo } from './types';
 
 export type SourceKind = 'gallery' | 'cloud' | 'text';
 
@@ -56,8 +57,54 @@ export function sourceFor(file: ExportFile, thisDevice: string): SourceKind {
 export function alreadyThere(file: ExportFile, index: FolderIndex, source: SourceKind): boolean {
   const written = index[file.name];
   if (written === undefined) return false;
-  if (source === 'gallery') return written > 0;
+  if (source === 'gallery') {
+    // an earlier run may have put the downsized cloud copy there; its size is exactly what
+    // the plan expects of the working copy, so that one has to be replaced by the original
+    return written > 0 && (file.original === true || written !== file.bytes);
+  }
   return written === file.bytes;
+}
+
+/** the part of a gallery entry the matching needs */
+export interface GalleryCandidate {
+  uri: string;
+  name: string;
+  takenAt: string;
+  bytes: number;
+}
+
+const MATCH_WINDOW_MS = 60_000;
+
+/**
+ * Finds the original of a photo in the gallery of this phone.
+ *
+ * Photos that came through the system picker or camera carry no gallery reference, but
+ * they are still in the gallery. The size of the picked file is the size of the original,
+ * so an exact byte match is enough; a matching name together with a matching time covers
+ * the case where the picker handed over a re-encoded copy.
+ */
+export function matchGalleryOriginal(
+  photo: Pick<Photo, 'originalName' | 'originalBytes' | 'takenAt'>,
+  candidates: readonly GalleryCandidate[],
+): GalleryCandidate | undefined {
+  const taken = photo.takenAt ? Date.parse(photo.takenAt) : Number.NaN;
+  const distance = (candidate: GalleryCandidate) => {
+    const other = Date.parse(candidate.takenAt);
+    return Number.isNaN(taken) || Number.isNaN(other) ? Number.POSITIVE_INFINITY : Math.abs(taken - other);
+  };
+  const byDistance = (a: GalleryCandidate, b: GalleryCandidate) => distance(a) - distance(b);
+
+  if (photo.originalBytes) {
+    const sameSize = candidates.filter((candidate) => candidate.bytes === photo.originalBytes);
+    if (sameSize.length > 0) {
+      const sameName = sameSize.filter((candidate) => candidate.name === photo.originalName);
+      return (sameName.length > 0 ? sameName : sameSize).sort(byDistance)[0];
+    }
+  }
+  if (!photo.originalName) return undefined;
+  return candidates
+    .filter((candidate) => candidate.name === photo.originalName && distance(candidate) <= MATCH_WINDOW_MS)
+    .sort(byDistance)[0];
 }
 
 /** the texts change with every export, so they are always rewritten */

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
 import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type Task, type Trade } from '@/data/types';
@@ -8,6 +8,7 @@ import {
   runFolderExport,
   sourceFor,
   INDEX_PATH,
+  matchGalleryOriginal,
   type FolderIndex,
   type FolderProgress,
 } from '@/data/exportFolder';
@@ -18,6 +19,7 @@ import {
   readFromFolder,
   writeIntoFolder,
 } from '@/platform/fileExport';
+import { listGalleryPhotosForDay } from '@/platform/photos';
 import { readFromStorage } from '@/data/exportFiles';
 import { deviceId } from '@/lib/ids';
 import { SettingsHeading } from './SettingsHelp';
@@ -45,23 +47,60 @@ export function FolderExportSection() {
   const [running, setRunning] = useState(false);
 
   const { sets } = useOptions();
+  const device = deviceId();
+
+  // Photos from the system picker or camera carry no gallery reference, yet their originals
+  // are in this phone's gallery: look them up so the export does not fall back to 1600 px.
+  const [found, setFound] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (photos.loading || !folderExportAvailable()) return;
+    let active = true;
+    void (async () => {
+      const open = photos.data.filter(
+        (photo) => photo.kind === 'photo' && !(photo.sourceUri && photo.deviceId === device) && photo.takenAt,
+      );
+      const days = [...new Set(open.map((photo) => photo.takenAt!.slice(0, 10)))];
+      const matches: Record<string, string> = {};
+      for (const day of days) {
+        const candidates = await listGalleryPhotosForDay(day, 1000);
+        if (!active) return;
+        for (const photo of open.filter((entry) => entry.takenAt!.slice(0, 10) === day)) {
+          const hit = matchGalleryOriginal(photo, candidates);
+          if (hit) matches[photo.id] = hit.uri;
+        }
+      }
+      if (active) setFound(matches);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [photos.data, photos.loading, device]);
+
+  const resolvedPhotos = useMemo(
+    () =>
+      photos.data.map((photo) =>
+        found[photo.id] ? { ...photo, sourceUri: found[photo.id], deviceId: device } : photo,
+      ),
+    [photos.data, found, device],
+  );
+
   const plan = useMemo(
     () =>
       planExport({
         entries: entries.data,
-        photos: photos.data,
+        photos: resolvedPhotos,
         costs: costs.data,
         tasks: tasks.data,
         contacts: contacts.data,
         trades: trades.data,
         sets,
       }),
-    [entries.data, photos.data, costs.data, tasks.data, contacts.data, trades.data, sets],
+    [entries.data, resolvedPhotos, costs.data, tasks.data, contacts.data, trades.data, sets],
   );
 
-  const device = deviceId();
   const fromGallery = plan.files.filter((file) => sourceFor(file, device) === 'gallery').length;
-  const fromCloud = plan.files.filter((file) => sourceFor(file, device) === 'cloud').length;
+  const cloudFull = plan.files.filter((file) => sourceFor(file, device) === 'cloud' && file.original).length;
+  const fromCloud = plan.files.filter((file) => sourceFor(file, device) === 'cloud' && !file.original).length;
 
   if (!folderExportAvailable()) {
     return (
@@ -143,6 +182,8 @@ export function FolderExportSection() {
           <dd>{entries.data.length}</dd>
           <dt className="text-muted">aus der Galerie</dt>
           <dd>{fromGallery} in voller Auflösung</dd>
+          <dt className="text-muted">aus der Cloud (Original)</dt>
+          <dd>{cloudFull} in voller Auflösung</dd>
           <dt className="text-muted">aus der Cloud</dt>
           <dd>{fromCloud} verkleinert</dd>
         </dl>
