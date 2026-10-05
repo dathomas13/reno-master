@@ -106,6 +106,14 @@ und 0.1 (Technikraum). Damit Geräte mit einer alten Kopie ihn übernehmen, hei�
 Nummern jetzt 0.0.23 und 0.0.24 (`legacySollVersion` in `modelRelease.ts`, einmal je
 Gerät umbenannt in `renumberLegacySoll`, `modelSync.ts`). 0.0.x liegt zwischen 0.0 und 0.1.
 
+**Zweiter Weg: Namen und Zuordnung in der App.** Raumnamen (Bestand und Planung), neue
+Planungsräume ohne Fläche und die Zuordnung Bestand → Planung (`roomMap`) lassen sich unter
+Einstellungen → Voreinstellungen → Räume / Zuordnung ändern. Die App ändert dabei die
+Hausdatei selbst (`src/data/roomEdits.ts`, nie eine Raum-id, Ausgabe über `formatSource`),
+sammelt die Änderungen als Entwurf und veröffentlicht sie über denselben Weg wie „Modell
+importieren“, mit Änderungsbericht und neuer Versionsnummer. Ein umbenannter Bestandsraum
+wird auch in `haus-aktuell` umbenannt, wenn die id dort vorkommt.
+
 Der Umzug in die Datenbank ist abgeschlossen (Ist v0.27, Soll 0.0); die Einmal-Knöpfe
 dafür sind wieder ausgebaut.
 

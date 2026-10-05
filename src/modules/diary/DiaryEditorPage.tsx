@@ -6,7 +6,8 @@ import { RoomPicker, TradePicker, PeoplePicker } from '@/components/Pickers';
 import { PhotoAttach } from './PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
-import { COL, WEATHER, type DiaryEntry, type Phase, type Photo, type Weather } from '@/data/types';
+import { withStored } from '@/data/presetLists';
+import { COL, type DiaryEntry, type Phase, type Photo, type Weather } from '@/data/types';
 import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
@@ -202,7 +203,7 @@ export default function DiaryEditorPage() {
             onChange={(event) => update({ weather: (event.target.value || undefined) as Weather | undefined })}
           >
             <option value="">kein Wetter</option>
-            {(lists.weather.length ? lists.weather : WEATHER).map((weather) => (
+            {withStored(lists.weather, entry.weather).map((weather) => (
               <option key={weather} value={weather}>{weather}</option>
             ))}
           </select>
@@ -210,7 +211,7 @@ export default function DiaryEditorPage() {
 
         <Field label="Anwesend">
           <PeoplePicker
-            options={lists.people}
+            options={withStored(lists.people, entry.present)}
             value={entry.present}
             onChange={(value) => update({ present: value })}
             onAdd={() => {

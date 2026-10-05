@@ -202,6 +202,32 @@ export async function patchTrade(id: string, patch: Partial<Trade>): Promise<voi
   await patchDoc(COL.trades, id, patch as Record<string, unknown>);
 }
 
+/** creates a trade in the Firestore queue (offline safe, does not wait for the server) */
+export function createTrade(name: string): string {
+  const id = newId();
+  void saveDoc<Trade>(COL.trades, { id, name: name.trim(), status: 'Noch offen', priority: 'Mittel' }).catch(() => {
+    /* queued write failed locally; the snapshot simply never shows the trade */
+  });
+  return id;
+}
+
+/** an explicitly undefined field means "remove it" */
+export function saveTrade(id: string, patch: Partial<Omit<Trade, 'id'>>): void {
+  const value: Record<string, unknown> = { ...patch };
+  for (const key of Object.keys(value)) {
+    if (value[key] === undefined) value[key] = deleteField();
+  }
+  void patchDoc(COL.trades, id, value).catch(() => undefined);
+}
+
+export function setTradeArchived(id: string, archived: boolean): void {
+  void patchDoc(COL.trades, id, { archived }).catch(() => undefined);
+}
+
+export function deleteTrade(id: string): void {
+  void removeDoc(COL.trades, id).catch(() => undefined);
+}
+
 export async function patchPhase(id: string, patch: Partial<Phase>): Promise<void> {
   // Firestore rejects `undefined`; an explicitly unset field means "remove it"
   const value: Record<string, unknown> = { ...patch };

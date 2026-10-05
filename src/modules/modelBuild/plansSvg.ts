@@ -9,7 +9,9 @@
  * The SVG uses the model coordinate system in mm (y flipped so north is up) and carries
  * data-room-id on every room area, so rooms are tappable in the plan as in the 3D view.
  * Drawn like a paper plan: walls with a black outline, openings with width/height, room
- * stamps with area and clear dimensions, dimension chains in cm on all four sides.
+ * stamps with area and clear dimensions, dimension chains in cm on all four sides: from
+ * the outside in overall, outer wall, walls meeting the facade, and the inside of the half of
+ * the house next to that side (walls, free wall ends, doors, stairs).
  */
 import { pyRound } from './pyRound';
 import { alongX, slideLeaves, type HouseSource, type HouseVariant, type SourceOpening, type SourceWall } from './source';
@@ -20,6 +22,7 @@ export const PLAN_FLOORS: PlanFloor[] = ['KG', 'EG', 'OG'];
 
 const CHAIN_GAP = 700; // mm from the building to the first dimension chain
 const CHAIN_STEP = 450; // mm between two chains
+const SLIVER = 40; // mm: closer edges of the inner chain are not both shown
 const CHAIN_ZONE = CHAIN_GAP + 3 * CHAIN_STEP + 350; // room for four chains and their text
 const TITLE_ZONE = 1100; // mm above the chains for the title
 const FOOT_ZONE = 1000; // mm below the chains for scale bar and legend
@@ -346,7 +349,9 @@ export function buildPlanSvg(
   out.push(...labels);
   add('</g>');
 
-  // ---- dimension chains on all four sides: openings, walls, overall - like a paper plan
+  // ---- dimension chains on all four sides, from the outside in: overall, the outer wall of
+  // that side, the walls meeting it, and then the inside of the half of the house next to it
+  // (the upper chain shows the northern half, the lower one the southern half)
   add('<g id="dimensions">');
   const band = tOut + 200; // how far into the house a wall may start and still meet the facade
 
@@ -367,43 +372,98 @@ export function buildPlanSvg(
     const horizontal = side === 'S' || side === 'N';
     const [lo, hi] = horizontal ? [bx0, bx1] : [by0, by1];
     const edge = { S: by0, N: by1, W: bx0, E: bx1 }[side];
-    /** does the wall reach within dist of this facade */
-    const near = (w: SourceWall, dist: number) => {
-      if (side === 'S') return w.y0 <= edge + dist;
-      if (side === 'N') return w.y1 >= edge - dist;
-      if (side === 'W') return w.x0 <= edge + dist;
-      return w.x1 >= edge - dist;
-    };
-    const span = (w: SourceWall) => (horizontal ? [w.x0, w.x1] : [w.y0, w.y1]);
+    const mid = horizontal ? midY : midX;
+    const outward = side === 'N' || side === 'E' ? 1 : -1; // direction from the middle to this side
 
-    const roomPts = [lo, hi];
-    for (const w of walls) {
-      if (alongX(w) !== horizontal && near(w, band)) roomPts.push(...span(w));
+    /** a wall coordinate across the chain: y for a chain along x, x otherwise */
+    const d0 = (w: SourceWall) => (horizontal ? w.y0 : w.x0);
+    const d1 = (w: SourceWall) => (horizontal ? w.y1 : w.x1);
+    /** does the wall reach within dist of this facade */
+    const near = (w: SourceWall, dist: number) => (outward < 0 ? d0(w) <= edge + dist : d1(w) >= edge - dist);
+    const span = (w: SourceWall): [number, number] => (horizontal ? [w.x0, w.x1] : [w.y0, w.y1]);
+    const openingsOf = (w: SourceWall): number[] => {
+      const start = span(w)[0];
+      const pts: number[] = [];
+      for (const o of w.openings ?? []) {
+        const a0 = o.from - start;
+        pts.push(start + a0, start + a0 + (o.to - o.from));
+      }
+      return pts;
+    };
+
+    const across = walls.filter((w) => alongX(w) !== horizontal); // cut by the chain
+    const parallel = walls.filter((w) => alongX(w) === horizontal);
+    const facade = parallel.filter((w) => near(w, tOut));
+
+    /** the outer face of a wall on this side */
+    const face = (w: SourceWall) => (outward > 0 ? d1(w) : d0(w));
+    /** a wall across the chain that is part of this facade: a corner piece, or a wall that
+     * stands out in front of the outer wall - not one that only runs into it */
+    const onFacade = (w: SourceWall) => {
+      if (!near(w, tOut)) return false;
+      const [a0, a1] = span(w);
+      const behind = facade.filter((f) => span(f)[0] < a1 && span(f)[1] > a0);
+      return behind.every((f) => (face(w) - face(f)) * outward > 0);
+    };
+    /** does the stretch a..b across the chain reach into this half of the house */
+    const inHalf = (a: number, b: number) => (outward > 0 ? b > mid : a < mid);
+    /** is a point across the chain in this half (the middle line counts to N and E) */
+    const onSide = (c: number) => (outward > 0 ? c >= mid : c < mid);
+
+    // the outer wall of this side: where it starts and ends, steps forward or back, and its
+    // openings; pieces that continue each other in one line count as one
+    const pieces: [number, number, number][] = [
+      ...facade.map((w): [number, number, number] => [...span(w), face(w)]),
+      ...across.filter(onFacade).map((w): [number, number, number] => [...span(w), face(w)]),
+    ].sort((p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]);
+    const runs: [number, number, number][] = [];
+    for (const [a0, a1, f] of pieces) {
+      const last = runs[runs.length - 1];
+      if (last && a0 <= last[1] + 1 && Math.abs(f - last[2]) < 1) last[1] = Math.max(last[1], a1);
+      else runs.push([a0, a1, f]);
     }
-    const openPts = [...roomPts];
-    for (const w of walls) {
-      if (alongX(w) === horizontal && near(w, tOut)) {
-        openPts.push(...span(w));
-        const start = horizontal ? w.x0 : w.y0;
-        for (const o of w.openings ?? []) {
-          const a0 = o.from - start;
-          openPts.push(start + a0, start + a0 + (o.to - o.from));
-        }
+    const facadePts = [lo, hi];
+    for (const [a0, a1] of runs) facadePts.push(a0, a1);
+    for (const w of facade) facadePts.push(...openingsOf(w));
+    // every wall that meets this facade - none but the two outer walls is nothing to show
+    let wallsPts = [lo, hi];
+    for (const w of across) if (near(w, band)) wallsPts.push(...span(w));
+    if (mergePoints(wallsPts).length <= 4) wallsPts = [lo, hi];
+    // the inside of this half: every wall, the free ends of the walls along the chain, the
+    // doors in them and the stairs - so every door can be found from the wall next to it.
+    // Each edge carries how far its part lies from this facade.
+    const remote = (a: number, b: number) => Math.max(0, outward > 0 ? edge - b : a - edge);
+    const inner: [number, number][] = [[-1, lo], [-1, hi]];
+    for (const w of across) {
+      if (inHalf(d0(w), d1(w))) for (const e of span(w)) inner.push([remote(d0(w), d1(w)), e]);
+    }
+    for (const w of parallel) {
+      if (facade.includes(w) || !onSide((d0(w) + d1(w)) / 2)) continue;
+      const r = remote(d0(w), d1(w));
+      // an end that runs into a wall across says nothing new; a free end does
+      for (const e of span(w)) {
+        const meets = across.some((c) => span(c)[0] - 1 <= e && e <= span(c)[1] + 1
+          && d0(c) <= d1(w) + 1 && d1(c) >= d0(w) - 1);
+        if (!meets) inner.push([r, e]);
+      }
+      for (const e of openingsOf(w)) inner.push([r, e]);
+    }
+    for (const [x0, y0, x1, y1] of stairBoxes) {
+      const [a0, a1, b0, b1] = horizontal ? [x0, x1, y0, y1] : [y0, y1, x0, x1];
+      if (onSide((b0 + b1) / 2)) inner.push([remote(b0, b1), a0], [remote(b0, b1), a1]);
+    }
+    // rows of rooms at different depths are rarely in line to the millimetre: of two edges
+    // closer than SLIVER the one nearer this facade stays, so the chain shows no splinters
+    const innerPts: number[] = [];
+    for (const [, e] of inner.sort((p, q) => p[0] - q[0] || p[1] - q[1])) {
+      if (lo <= e && e <= hi && innerPts.every((q) => Math.abs(e - q) < 1 || Math.abs(e - q) >= SLIVER)) {
+        innerPts.push(e);
       }
     }
-    // every edge of every wall and stair, so no clear width or wall thickness is missing
-    const detailPts = [...roomPts];
-    for (const w of walls) detailPts.push(...span(w));
-    for (const [x0, y0, x1, y1] of stairBoxes) detailPts.push(...(horizontal ? [x0, x1] : [y0, y1]));
-    return [
-      mergePoints(openPts),
-      mergePoints(roomPts),
-      mergePoints(detailPts.filter((p) => p >= lo && p <= hi)),
-      [lo, hi],
-    ];
+    return [mergePoints(innerPts), mergePoints(wallsPts), mergePoints(facadePts), [lo, hi]];
   };
 
-  const drawChain = (side: Side, level: number, pts: number[], minLabel = 0) => {
+  const drawChain = (side: Side, level: number, pts: number[]) => {
     let pos: number;
     if (side === 'S') pos = fy(by0) + CHAIN_GAP + level * CHAIN_STEP;
     else if (side === 'N') pos = fy(by1) - CHAIN_GAP - level * CHAIN_STEP;
@@ -411,28 +471,33 @@ export function buildPlanSvg(
     else pos = bx1 + CHAIN_GAP + level * CHAIN_STEP;
     const first = pts[0];
     const last = pts[pts.length - 1];
-    if (side === 'S' || side === 'N') {
+    const horizontal = side === 'S' || side === 'N';
+    if (horizontal) {
       line(first - 150, pos, last + 150, pos, 'dim');
       for (const p of pts) line(p - 60, pos + 60, p + 60, pos - 60, 'dim-tick');
-      for (let i = 0; i + 1 < pts.length; i += 1) {
-        const a = pts[i];
-        const b = pts[i + 1];
-        if (b - a < minLabel) continue;
-        const small = b - a < 600 ? ' small' : '';
-        add(`<text class="dim-text${small}" x="${f0((a + b) / 2)}" y="${f0(pos - 50)}">${cm(b - a)}</text>`);
-      }
     } else {
       line(pos, fy(first) + 150, pos, fy(last) - 150, 'dim');
       for (const p of pts) line(pos - 60, fy(p) + 60, pos + 60, fy(p) - 60, 'dim-tick');
-      for (let i = 0; i + 1 < pts.length; i += 1) {
-        const a = pts[i];
-        const b = pts[i + 1];
-        if (b - a < minLabel) continue;
-        const small = b - a < 600 ? ' small' : '';
-        const tx = pos - 50;
+    }
+    // a text too wide for its stretch goes to the other side of the line; several narrow
+    // ones in a row take turns, so neighbours do not overlap
+    let flip = false;
+    for (let i = 0; i + 1 < pts.length; i += 1) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      const text = cm(b - a);
+      const size = b - a < 600 ? 110 : 150;
+      const narrow = 0.56 * size * text.length + 40 > b - a;
+      flip = narrow && !flip;
+      const small = size === 110 ? ' small' : '';
+      const off = flip ? 50 + 0.72 * size : -50;
+      if (horizontal) {
+        add(`<text class="dim-text${small}" x="${f0((a + b) / 2)}" y="${f0(pos + off)}">${text}</text>`);
+      } else {
+        const tx = pos + off;
         const ty = fy((a + b) / 2);
         add(`<text class="dim-text${small}" x="${f0(tx)}" y="${f0(ty)}" `
-          + `transform="rotate(-90 ${f0(tx)} ${f0(ty)})">${cm(b - a)}</text>`);
+          + `transform="rotate(-90 ${f0(tx)} ${f0(ty)})">${text}</text>`);
       }
     }
   };
@@ -440,19 +505,16 @@ export function buildPlanSvg(
   const same = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => v === b[i]);
   if (walls.length > 0) {
     for (const side of ['S', 'N', 'W', 'E'] as const) {
-      const [openingChain, roomChain, detailChain, totalChain] = chainPoints(side);
+      const [innerChain, wallChain, facadeChain, totalChain] = chainPoints(side);
       let level = 0;
-      for (const pts of [openingChain, roomChain]) {
+      const drawn: number[][] = [];
+      for (const pts of [innerChain, wallChain, facadeChain]) {
         // a chain that shows nothing new is left out
-        if (pts.length > 2 && (pts === roomChain || !same(pts, roomChain))) {
+        if (pts.length > 2 && !drawn.some((d) => same(d, pts))) {
           drawChain(side, level, pts);
+          drawn.push(pts);
           level += 1;
         }
-      }
-      // all wall edges and stairs; segments too short for their text stay unlabelled
-      if (detailChain.length > 2 && !same(detailChain, openingChain) && !same(detailChain, roomChain)) {
-        drawChain(side, level, detailChain, 150);
-        level += 1;
       }
       drawChain(side, level, totalChain);
     }

@@ -1,5 +1,6 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import SettingsPage from './SettingsPage';
 
 const mocks = vi.hoisted(() => ({ native: false, activeExtractor: vi.fn().mockResolvedValue(null) }));
@@ -43,11 +44,21 @@ beforeEach(() => {
 afterEach(cleanup);
 
 async function openSettings() {
-  render(<SettingsPage />);
+  render(
+    <MemoryRouter>
+      <SettingsPage />
+    </MemoryRouter>,
+  );
   await act(async () => {});
 }
 
 describe('settings disclosure', () => {
+  it('links to the presets right after the account card', async () => {
+    await openSettings();
+    const link = screen.getByRole('link', { name: /Voreinstellungen/ });
+    expect(link).toHaveAttribute('href', '/einstellungen/voreinstellungen');
+  });
+
   it('shows only the matching export and OCR options per platform', async () => {
     await openSettings();
     expect(screen.getByRole('heading', { name: 'Archiv exportieren' })).toBeInTheDocument();

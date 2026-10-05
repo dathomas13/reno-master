@@ -6,6 +6,7 @@ import { Field, ChipSelect, EmptyState } from '@/components/Fields';
 import { TradePicker, RolePicker } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
+import { withStored } from '@/data/presetLists';
 import { COL, CONTACT_STATUS, type Contact, type ContactStatus } from '@/data/types';
 import { contactRoleNames } from '@/data/contactRoles';
 import { emptyContact, saveContact, deleteContact } from '@/data/repos';
@@ -203,7 +204,7 @@ function ContactSheet({
         </Field>
         <Field label="Rollen">
           <RolePicker
-            options={roles}
+            options={withStored(roles, contactRoleNames(draft))}
             value={contactRoleNames(draft)}
             onChange={(value) => update({ roles: value })}
             onAdd={() => {

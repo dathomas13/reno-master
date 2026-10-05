@@ -6,6 +6,7 @@ import { RoomPicker, TradeSelect } from '@/components/Pickers';
 import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
+import { withStored } from '@/data/presetLists';
 import {
   COL, PAID_BY, PAYMENT_METHOD, PAYMENT_STATUS,
   type Cost, type PaidBy, type PaymentMethod, type PaymentStatus, type Photo,
@@ -307,7 +308,7 @@ function CostEditor() {
 
         <Field label="Kategorie">
           <ChipSelect
-            options={lists.costCategories}
+            options={withStored(lists.costCategories, cost.category)}
             value={cost.category ? [cost.category] : []}
             multiple={false}
             onChange={(value) => update({ category: value[0] ?? '' })}

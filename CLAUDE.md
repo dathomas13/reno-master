@@ -166,6 +166,19 @@ Steht:
   `testdata/plans/ist-EG-schiebetuer.svg`. Zweiteilig (0.69.0) mit `split` statt `open`
   (Treffpunkt der Blätter); `leaf: false` macht aus einer Tür einen Durchbruch ohne Blatt
   (Referenz: `noLeaf` in derselben Datei).
+- **Möbel im Plan** (0.70.1): Viewer → Plan → „Einrichten“. Katalog mit 37 Stücken
+  (`src/modules/furniture/catalog.ts`, aus Teilen berechnet, nicht gestreckt), Ziehen mit
+  Einrasten an den Raumkanten, eigene glTF-Modelle über R2. Die Möbel stehen **nicht in der
+  Hausdatei**, sondern in `meta/moebel-soll` (Format in `PLAN.md`, 5.13) – keine Modellversion,
+  kein Python. 2D-Pläne und Export kennen sie noch nicht.
+- **Maßketten der Grundrisse** (0.71.0): je Seite von außen nach innen Gesamtmaß, Außenwand,
+  anstoßende Wände, Innenkette nur der Haushälfte an dieser Seite (mit Innentüren und Treppen).
+  Regeln in `PLAN.md` beim Abschnitt zu `build_plans_svg.py`; beide Builder müssen byte-gleich
+  bleiben, Referenzen in `tools/model/testdata/plans` (Schiebetür-Referenz: siehe Test).
+- **Voreinstellungen** (0.72.0): Einstellungen → Voreinstellungen pflegt Auswahllisten
+  (`meta/lists`), Gewerke (ausblenden statt löschen) sowie Raumnamen und `roomMap` – Letztere
+  über die Hausdatei und eine neue Modellversion, nie über Overrides. Registry
+  `src/data/presets.ts`, Details in `PLAN.md` 5.7 und 8.8.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

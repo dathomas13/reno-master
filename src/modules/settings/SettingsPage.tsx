@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
 import { useAuth } from '@/auth/AuthContext';
@@ -88,6 +89,19 @@ export default function SettingsPage() {
             Abmelden
           </button>
         </section>
+
+        <Link to="/einstellungen/voreinstellungen" className="card p-4 min-h-16 flex items-center gap-3 text-ink">
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Voreinstellungen</span>
+            <span className="block text-sm text-muted">
+              Räume, Gewerke, Personen, Wetter und weitere Auswahllisten · für alle Geräte
+            </span>
+          </span>
+          <svg viewBox="0 0 24 24" className="w-5 h-5 text-muted shrink-0" fill="none" stroke="currentColor"
+            strokeWidth="1.8" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
 
         <section className="card p-4">
           <h2 className="font-semibold mb-3">Abend-Erinnerung</h2>
