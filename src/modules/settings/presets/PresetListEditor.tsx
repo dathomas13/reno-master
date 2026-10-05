@@ -2,68 +2,75 @@ import { useState, type ReactNode } from 'react';
 import { EmptyState } from '@/components/Fields';
 import { Sheet } from '@/components/Sheet';
 import { UndoBar } from '@/components/UndoBar';
-import { findDuplicate, moveEntry, normalizeEntry, sortAlpha } from '@/data/presetLists';
+import { findDuplicate, normalizeEntry } from '@/data/presetLists';
+import { isFixedSet, type OptionEntry, type OptionSetKey } from '@/data/options';
 import { OrderList } from '../OrderList';
 import { PresetRow } from './PresetRow';
-import { RenameSpreadSheet } from './RenameSpreadSheet';
 
 export interface PresetListEditorProps {
-  items: string[];
-  /** records per value, when known */
+  setKey: OptionSetKey;
+  /** every entry of the set in order, hidden ones included */
+  entries: OptionEntry[];
+  /** records per entry id, when known */
   usage?: Map<string, number>;
   singular: string;
   placeholder: string;
   maxLength?: number;
-  /** number of default values, named in the reset confirmation */
-  seedCount?: number;
-  onAdd(value: string): void;
-  /** `everywhere`: carry the new name into the entries that use the old one */
-  onRename(from: string, to: string, everywhere: boolean): void;
-  /** resolves with the old index of the value (for undo), -1 when it was not there */
-  onRemove(value: string): Promise<number>;
-  onRestore?(value: string, index: number): void;
-  onReorder(next: string[]): void;
-  onReset?(): void;
-  leading?(value: string): ReactNode;
+  /** returns the id of the new (or shown again) entry, '' when refused */
+  onAdd(label: string): string;
+  onRename(id: string, label: string): void;
+  /** returns the old position (for undo), -1 when refused */
+  onArchive(id: string): number;
+  onUnarchive(id: string): void;
+  onMove(id: string, delta: -1 | 1): void;
+  onSortAlpha(): void;
+  onReset(): void;
+  leading?(entry: OptionEntry): ReactNode;
   /** the ⋯ sheet is opened by the page's top bar */
   menuOpen?: boolean;
   onMenuClose?(): void;
 }
 
-interface Removed {
-  value: string;
-  index: number;
+interface Hidden {
+  id: string;
   message: string;
 }
 
 function usedBy(count: number): string {
-  return count === 1 ? ' 1 Eintrag behält den Wert.' : ` ${count} Einträge behalten den Wert.`;
+  return count === 1 ? ' 1 Eintrag zeigt ihn weiter.' : ` ${count} Einträge zeigen ihn weiter.`;
 }
 
-/** the generic editor of one pick list: add, rename in place, remove with undo, sort */
+/**
+ * The editor of one option set: add, rename in place (the label only), hide with undo,
+ * sort. Fixed sets (the app's logic depends on their ids) can only be renamed and sorted.
+ */
 export function PresetListEditor({
-  items,
+  setKey,
+  entries,
   usage,
   singular,
   placeholder,
   maxLength = 60,
-  seedCount,
   onAdd,
   onRename,
-  onRemove,
-  onRestore,
-  onReorder,
+  onArchive,
+  onUnarchive,
+  onMove,
+  onSortAlpha,
   onReset,
   leading,
   menuOpen = false,
   onMenuClose,
 }: PresetListEditorProps) {
+  const fixed = isFixedSet(setKey);
   const [mode, setMode] = useState<'edit' | 'sort'>('edit');
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
-  const [removed, setRemoved] = useState<Removed | null>(null);
+  const [hiddenNote, setHiddenNote] = useState<Hidden | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  const visible = entries.filter((entry) => !entry.archived);
+  const hidden = entries.filter((entry) => entry.archived);
 
   function closeMenu() {
     onMenuClose?.();
@@ -73,75 +80,98 @@ export function PresetListEditor({
     event.preventDefault();
     const clean = normalizeEntry(draft, maxLength);
     if (!clean) return;
-    const duplicate = findDuplicate(items, clean);
+    const duplicate = findDuplicate(
+      visible.map((entry) => entry.label),
+      clean,
+    );
     if (duplicate) {
       setError(`„${duplicate}“ steht schon in der Liste.`);
       return;
     }
-    onAdd(clean);
+    if (!onAdd(clean)) {
+      setError('Der Name ist nicht möglich.');
+      return;
+    }
     setDraft('');
     setError(null);
   }
 
-  function validateRename(from: string, candidate: string): string | null {
+  function validateRename(entry: OptionEntry, candidate: string): string | null {
     if (!normalizeEntry(candidate, maxLength)) return `Der Name darf nicht leer sein (höchstens ${maxLength} Zeichen).`;
-    const duplicate = findDuplicate(items, candidate, from);
+    const duplicate = findDuplicate(
+      entries.filter((other) => other.id !== entry.id).map((other) => other.label),
+      candidate,
+    );
     return duplicate ? `„${duplicate}“ steht schon in der Liste.` : null;
   }
 
-  function rename(from: string, to: string) {
-    if ((usage?.get(from) ?? 0) > 0) setPending({ from, to });
-    else onRename(from, to, false);
+  function hide(entry: OptionEntry) {
+    const count = usage?.get(entry.id) ?? 0;
+    if (onArchive(entry.id) < 0) return;
+    setHiddenNote({ id: entry.id, message: `„${entry.label}“ ausgeblendet.${count > 0 ? usedBy(count) : ''}` });
   }
 
-  async function remove(value: string) {
-    const count = usage?.get(value) ?? 0;
-    const index = await onRemove(value);
-    if (index < 0) return;
-    setRemoved({ value, index, message: `„${value}“ entfernt.${count > 0 ? usedBy(count) : ''}` });
+  function row(entry: OptionEntry) {
+    return (
+      <PresetRow
+        key={entry.id}
+        entry={entry}
+        singular={singular}
+        count={usage?.get(entry.id)}
+        leading={leading?.(entry)}
+        maxLength={maxLength}
+        canHide={!fixed}
+        validate={(candidate) => validateRename(entry, candidate)}
+        onRename={(next) => onRename(entry.id, next)}
+        onHide={() => hide(entry)}
+        onShow={() => onUnarchive(entry.id)}
+      />
+    );
   }
 
-  function move(value: string, delta: -1 | 1) {
-    onReorder(moveEntry(items, items.indexOf(value), delta));
-  }
-
-  const hasItems = items.length > 0;
+  const indexOfVisible = (id: string) => visible.findIndex((entry) => entry.id === id);
 
   return (
     <div>
-      <form onSubmit={submit} className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 bg-bg px-3 pt-3 pb-2">
-        <div className="flex gap-2">
-          <input
-            className="field flex-1 min-w-0"
-            value={draft}
-            maxLength={maxLength}
-            placeholder={placeholder}
-            aria-label={`${singular} hinzufügen`}
-            aria-invalid={error ? true : undefined}
-            enterKeyHint="done"
-            onChange={(event) => {
-              setDraft(event.target.value);
-              setError(null);
-            }}
-          />
-          <button
-            type="submit"
-            className="btn btn-primary w-11 px-0 text-xl"
-            aria-label={`${singular} hinzufügen`}
-            disabled={!draft.trim()}
-          >
-            ＋
-          </button>
-        </div>
-        {error && (
-          <p role="alert" className="text-sm text-bad mt-1.5">
-            {error}
-          </p>
-        )}
-      </form>
+      {fixed ? (
+        <p className="px-4 pt-3 pb-1 text-sm text-muted">
+          Die App braucht diese Zustände – sie lassen sich umbenennen, aber nicht löschen.
+        </p>
+      ) : (
+        <form onSubmit={submit} className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 bg-bg px-3 pt-3 pb-2">
+          <div className="flex gap-2">
+            <input
+              className="field flex-1 min-w-0"
+              value={draft}
+              maxLength={maxLength}
+              placeholder={placeholder}
+              aria-label={`${singular} hinzufügen`}
+              aria-invalid={error ? true : undefined}
+              enterKeyHint="done"
+              onChange={(event) => {
+                setDraft(event.target.value);
+                setError(null);
+              }}
+            />
+            <button
+              type="submit"
+              className="btn btn-primary w-11 px-0 text-xl"
+              aria-label={`${singular} hinzufügen`}
+              disabled={!draft.trim()}
+            >
+              ＋
+            </button>
+          </div>
+          {error && (
+            <p role="alert" className="text-sm text-bad mt-1.5">
+              {error}
+            </p>
+          )}
+        </form>
+      )}
 
-      {hasItems && (
-        <div className="px-3 pb-2">
+      {visible.length > 1 && (
+        <div className="px-3 py-2">
           <div role="group" aria-label="Ansicht" className="grid grid-cols-2 rounded-xl border border-line overflow-hidden">
             {(['edit', 'sort'] as const).map((value) => (
               <button
@@ -158,87 +188,70 @@ export function PresetListEditor({
         </div>
       )}
 
-      {!hasItems ? (
+      {visible.length === 0 ? (
         <EmptyState
-          title="Noch keine Einträge"
-          hint="Oben einen Namen eintragen."
+          title={hidden.length > 0 ? 'Alles ausgeblendet' : 'Noch keine Einträge'}
+          hint={hidden.length > 0 ? 'Unten wieder anzeigen.' : 'Oben einen Namen eintragen.'}
           action={
-            onReset && (
+            hidden.length === 0 && (
               <button type="button" className="btn mt-2" onClick={onReset}>
                 Standardwerte übernehmen
               </button>
             )
           }
         />
-      ) : mode === 'edit' ? (
-        <ul className="mx-3 card overflow-hidden">
-          {items.map((value) => (
-            <PresetRow
-              key={value}
-              value={value}
-              singular={singular}
-              count={usage?.get(value)}
-              leading={leading?.(value)}
-              maxLength={maxLength}
-              validate={(candidate) => validateRename(value, candidate)}
-              onRename={(next) => rename(value, next)}
-              onRemove={() => void remove(value)}
-            />
-          ))}
-        </ul>
+      ) : mode === 'edit' || visible.length < 2 ? (
+        <ul className="mx-3 card overflow-hidden">{visible.map(row)}</ul>
       ) : (
-        <div className="mx-3 flex flex-col gap-3">
-          <div className="card px-4 py-1">
-            <OrderList
-              items={items.map((value) => ({ id: value, label: value }))}
-              canMove={(id, delta) => {
-                const target = items.indexOf(id) + delta;
-                return target >= 0 && target < items.length;
-              }}
-              onMove={move}
-            />
-          </div>
-          <button type="button" className="btn" onClick={() => onReorder(sortAlpha(items))}>
-            Alphabetisch sortieren
-          </button>
+        <div className="mx-3 card px-4 py-1">
+          <OrderList
+            items={visible.map((entry) => ({ id: entry.id, label: entry.label }))}
+            canMove={(id, delta) => {
+              const target = indexOfVisible(id) + delta;
+              return target >= 0 && target < visible.length;
+            }}
+            onMove={onMove}
+          />
         </div>
       )}
 
-      {pending && (
-        <RenameSpreadSheet
-          open
-          from={pending.from}
-          to={pending.to}
-          count={usage?.get(pending.from) ?? 0}
-          onClose={() => setPending(null)}
-          onEverywhere={() => {
-            onRename(pending.from, pending.to, true);
-            setPending(null);
-          }}
-          onListOnly={() => {
-            onRename(pending.from, pending.to, false);
-            setPending(null);
-          }}
-        />
+      {hidden.length > 0 && (
+        <>
+          <h2 className="section-title">AUSGEBLENDET</h2>
+          <ul className="mx-3 card overflow-hidden">{hidden.map(row)}</ul>
+        </>
       )}
 
       <Sheet open={menuOpen && !confirmReset} onClose={closeMenu} title="Liste" doneLabel="Abbrechen">
         <div className="p-4 flex flex-col gap-3">
-          <button
-            type="button"
-            className="btn"
-            disabled={items.length < 2}
-            onClick={() => {
-              onReorder(sortAlpha(items));
-              closeMenu();
-            }}
-          >
-            Alphabetisch sortieren
-          </button>
-          {onReset && (
-            <button type="button" className="btn" onClick={() => setConfirmReset(true)}>
-              Auf Standard zurücksetzen …
+          {fixed ? (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                onReset();
+                closeMenu();
+              }}
+            >
+              Standardnamen wiederherstellen
             </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn"
+                disabled={visible.length < 2}
+                onClick={() => {
+                  onSortAlpha();
+                  closeMenu();
+                }}
+              >
+                Alphabetisch sortieren
+              </button>
+              <button type="button" className="btn" onClick={() => setConfirmReset(true)}>
+                Auf Standard zurücksetzen …
+              </button>
+            </>
           )}
         </div>
       </Sheet>
@@ -251,13 +264,14 @@ export function PresetListEditor({
       >
         <div className="p-4 flex flex-col gap-3">
           <p>
-            {`Die Liste wird durch die ${seedCount === undefined ? '' : `${seedCount} `}Standardwerte ersetzt. Bestehende Einträge behalten ihre Werte.`}
+            Die Startwerte erscheinen wieder mit ihren Startnamen und in der Startreihenfolge. Eigene Einträge
+            werden ausgeblendet. Bestehende Einträge in der App behalten ihren Wert.
           </p>
           <button
             type="button"
             className="btn btn-danger"
             onClick={() => {
-              onReset?.();
+              onReset();
               setConfirmReset(false);
               closeMenu();
             }}
@@ -270,11 +284,11 @@ export function PresetListEditor({
         </div>
       </Sheet>
 
-      {removed && (
+      {hiddenNote && (
         <UndoBar
-          message={removed.message}
-          onAction={() => onRestore?.(removed.value, removed.index)}
-          onClose={() => setRemoved(null)}
+          message={hiddenNote.message}
+          onAction={() => onUnarchive(hiddenNote.id)}
+          onClose={() => setHiddenNote(null)}
         />
       )}
     </div>

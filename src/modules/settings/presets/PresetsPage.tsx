@@ -3,11 +3,9 @@ import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { useCollection } from '@/data/hooks';
 import { loadRoomMap, loadRooms, MODEL_EVENT } from '@/data/models';
-import { PRESETS, type PresetDef, type PresetSection } from '@/data/presets';
-import { useLists } from '@/data/useLists';
-import { COL, type Trade } from '@/data/types';
-
-const SECTIONS: PresetSection[] = ['Haus', 'Bautagebuch', 'Projekt', 'Kosten', 'Aufgaben', 'Kontakte'];
+import { PRESETS, PRESET_SECTIONS, type PresetDef } from '@/data/presets';
+import { useOptions } from '@/data/useOptions';
+import { COL, type Phase, type Trade } from '@/data/types';
 const NO_MODEL = 'Noch kein Modell auf diesem Gerät';
 
 interface RoomFacts {
@@ -74,17 +72,27 @@ function Row({ to, title, count, preview }: { to: string; title: string; count?:
 }
 
 export default function PresetsPage() {
-  const { lists } = useLists();
+  const { active } = useOptions();
   const { data: trades } = useCollection<Trade>(COL.trades);
+  const { data: phases } = useCollection<Phase>(COL.phases);
   const { facts, ready } = useRoomFacts();
   const activeTrades = useMemo(() => trades.filter((trade) => trade.archived !== true), [trades]);
+  const activePhases = useMemo(
+    () => phases.filter((phase) => phase.archived !== true).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [phases],
+  );
 
   function describe(preset: PresetDef): { count?: string; preview?: string } {
     switch (preset.kind) {
-      case 'strings': {
-        const items = preset.listKey ? lists[preset.listKey] : [];
-        return { count: String(items.length), preview: items.slice(0, 6).join(', ') };
+      case 'options': {
+        const items = preset.setKey ? active(preset.setKey) : [];
+        return { count: String(items.length), preview: items.slice(0, 6).map((entry) => entry.label).join(', ') };
       }
+      case 'phases':
+        return {
+          count: String(activePhases.length),
+          preview: activePhases.slice(0, 4).map((phase) => phase.name).join(', '),
+        };
       case 'trades':
         return {
           count: String(activeTrades.length),
@@ -109,7 +117,7 @@ export default function PresetsPage() {
     <>
       <TopBar title="Voreinstellungen" subtitle="Gelten für beide Konten" back="/einstellungen" />
       <div className="max-w-2xl pb-6">
-        {SECTIONS.map((section) => {
+        {PRESET_SECTIONS.map((section) => {
           const presets = PRESETS.filter((preset) => preset.section === section);
           if (presets.length === 0) return null;
           return (

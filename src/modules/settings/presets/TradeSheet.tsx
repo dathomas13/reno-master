@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@/components/Sheet';
-import { ChipSelect, Field } from '@/components/Fields';
-import { PRIORITY, TRADE_STATUS, type Priority, type Trade, type TradeStatus } from '@/data/types';
+import { Field } from '@/components/Fields';
+import { OptionChips } from '@/components/OptionFields';
+import { PRIORITY_MEDIUM, TRADE_STATUS_DEFAULT } from '@/data/options';
+import type { Trade } from '@/data/types';
 import { deleteTrade, saveTrade, setTradeArchived } from '@/data/repos';
 import { findDuplicate, normalizeEntry } from '@/data/presetLists';
 import { formatAmount, parseAmount, round2 } from '@/lib/money';
@@ -21,8 +23,8 @@ function amountText(value: number | undefined): string {
 /** edit one trade; "Fertig" saves, hiding and deleting act at once */
 export default function TradeSheet({ trade, trades, usage, onClose }: TradeSheetProps) {
   const [name, setName] = useState('');
-  const [status, setStatus] = useState<TradeStatus>('Noch offen');
-  const [priority, setPriority] = useState<Priority>('Mittel');
+  const [status, setStatus] = useState<string | undefined>(TRADE_STATUS_DEFAULT);
+  const [priority, setPriority] = useState<string | undefined>(PRIORITY_MEDIUM);
   const [budget, setBudget] = useState('');
   const [offer, setOffer] = useState('');
   const [notes, setNotes] = useState('');
@@ -63,8 +65,8 @@ export default function TradeSheet({ trade, trades, usage, onClose }: TradeSheet
     }
     saveTrade(trade.id, {
       name: clean,
-      status,
-      priority,
+      status: status ?? trade.status,
+      priority: priority ?? trade.priority,
       budgetPlanned: budgetValue == null ? undefined : round2(budgetValue),
       offer: offerValue == null ? undefined : round2(offerValue),
       notes: notes.trim() || undefined,
@@ -106,22 +108,10 @@ export default function TradeSheet({ trade, trades, usage, onClose }: TradeSheet
           </p>
         )}
         <Field label="Status">
-          <ChipSelect
-            options={[...TRADE_STATUS]}
-            value={[status]}
-            multiple={false}
-            allowEmpty={false}
-            onChange={(value) => value[0] && setStatus(value[0])}
-          />
+          <OptionChips setKey="tradeStatus" value={status} allowEmpty={false} onChange={setStatus} />
         </Field>
         <Field label="Priorität">
-          <ChipSelect
-            options={[...PRIORITY]}
-            value={[priority]}
-            multiple={false}
-            allowEmpty={false}
-            onChange={(value) => value[0] && setPriority(value[0])}
-          />
+          <OptionChips setKey="priority" value={priority} allowEmpty={false} onChange={setPriority} />
         </Field>
         <div className="flex gap-3">
           <div className="flex-1">
