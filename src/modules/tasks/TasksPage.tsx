@@ -6,6 +6,7 @@ import { Field, ChipSelect, EmptyState } from '@/components/Fields';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useLists } from '@/data/useLists';
+import { withStored } from '@/data/presetLists';
 import {
   COL,
   ASSIGNEES,
@@ -346,7 +347,7 @@ function TaskSheet({
         </Field>
         <Field label="Bereich">
           <ChipSelect
-            options={areas}
+            options={withStored(areas, draft.area)}
             value={draft.area ? [draft.area] : []}
             multiple={false}
             onChange={(value) => update({ area: value[0] })}

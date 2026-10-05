@@ -201,6 +201,8 @@ export interface Trade extends BaseDoc {
   budgetPlanned?: number;
   offer?: number;
   notes?: string;
+  /** hidden from the pickers, kept for entries that still point at it */
+  archived?: boolean;
 }
 
 export const PHASE_STATUS = ['Geplant', 'In Arbeit', 'Abgeschlossen', 'Blockiert'] as const;
@@ -221,6 +223,8 @@ export interface Lists {
   taskAreas: string[];
   contactRoles: string[];
 }
+
+export type ListKey = keyof Lists;
 
 export interface Plan extends BaseDoc {
   title: string;
