@@ -20,6 +20,12 @@ import { beginSession, debugLog, endSession } from '@/platform/debugLog';
 export { MIGRATION_VERSION } from './migrationPlan';
 
 const SCOPE = 'optionen';
+
+/**
+ * Paused until the run keeps a backup of the old values and waits for both accounts to be
+ * on a version that reads ids. The app reads old texts as well, so it works without it.
+ */
+export const AUTO_MIGRATION_ENABLED = false;
 const DONE_KEY = 'reno-options-migrated';
 
 export type MigrationOutcome = 'migrated' | 'current' | 'offline' | 'failed';
@@ -116,7 +122,7 @@ async function migrate(): Promise<MigrationOutcome> {
  */
 export function useOptionsMigration(enabled: boolean): void {
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!enabled || !AUTO_MIGRATION_ENABLED) return undefined;
     let cancelled = false;
     let waiting = false;
     const start = () => {

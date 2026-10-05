@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.73.1 – Umstellung angehalten
+
+- Die einmalige Umstellung der Einträge läuft vorerst nicht; alles andere aus 0.73.0 bleibt.
+
 ## 0.73.0 – Alles umbenennen: Phasen, Status und Listen
 
 - In den Voreinstellungen lassen sich jetzt auch Phasen, Status, Prioritäten, Zahlungsarten und Gesprächsarten pflegen – Umbenennen wirkt sofort überall.
