@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
@@ -32,7 +32,7 @@ export default function CostsPage() {
   const costs = useMemo(() => sortNewestFirst(rawCosts), [rawCosts]);
   const { data: trades } = useCollection<Trade>(COL.trades);
   const { shortLabel: roomLabel, matches } = useRooms();
-  const { sets, label, resolve } = useOptions();
+  const { sets, label } = useOptions();
   const [tab, setTab] = useState<Tab>('liste');
   const [search, setSearch] = useState('');
 
@@ -40,18 +40,12 @@ export default function CostsPage() {
   const categoryFilter = params.get('kategorie');
   const tradeFilter = params.get('gewerk');
 
-  // the filter carries an id; an old text in the address or in a record resolves to the same one
-  const categoryKey = categoryFilter ? (resolve('costCategories', categoryFilter)?.id ?? categoryFilter) : null;
-  const categoryId = useCallback(
-    (stored: string) => (stored.trim() ? (resolve('costCategories', stored)?.id ?? stored) : NO_CATEGORY),
-    [resolve],
-  );
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return costs.filter((cost) => {
       if (roomFilter && !matches(cost.roomIds, roomFilter)) return false;
-      if (categoryKey && categoryId(cost.category) !== categoryKey) return false;
+      if (categoryFilter && (cost.category.trim() || NO_CATEGORY) !== categoryFilter) return false;
       if (tradeFilter && cost.tradeId !== tradeFilter) return false;
       if (!needle) return true;
       return [cost.vendor, cost.description, label('costCategories', cost.category), cost.invoiceNumber]
@@ -59,7 +53,7 @@ export default function CostsPage() {
         .toLowerCase()
         .includes(needle);
     });
-  }, [costs, search, roomFilter, categoryKey, tradeFilter, matches, categoryId, label]);
+  }, [costs, search, roomFilter, categoryFilter, tradeFilter, matches, label]);
 
   const total = sumGross(filtered);
   const thisMonth = totalForMonth(costs, monthKey(today()));
@@ -160,7 +154,7 @@ export default function CostsPage() {
                   </div>
                   <div className="text-right shrink-0">
                     <div>{formatEuro(cost.amountGross)}</div>
-                    {!isPaid(cost, sets) && (
+                    {!isPaid(cost) && (
                       <div className="text-[11px] text-warn">{label('paymentStatus', cost.paymentStatus)}</div>
                     )}
                   </div>

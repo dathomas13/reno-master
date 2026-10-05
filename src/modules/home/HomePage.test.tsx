@@ -7,11 +7,11 @@ import type { Phase, Task } from '@/data/types';
 const patchPhase = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 const phases: Phase[] = [
-  { id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'In Arbeit', start: '2026-06-15', order: 2 },
-  { id: 'phase-3', name: 'Phase 3: Rohbau & Keller', status: 'Geplant', order: 3 },
+  { id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'in-arbeit', start: '2026-06-15', order: 2 },
+  { id: 'phase-3', name: 'Phase 3: Rohbau & Keller', status: 'geplant', order: 3 },
 ];
 const tasks: Task[] = [
-  { id: 'task-1', title: 'Fenster pruefen', status: 'Offen', priority: 'Hoch', assignees: [], roomIds: [] },
+  { id: 'task-1', title: 'Fenster pruefen', status: 'offen', priority: 'hoch', assignees: [], roomIds: [] },
 ];
 
 vi.mock('@/components/PhotoView', () => ({ PhotoImage: () => null }));
@@ -29,7 +29,6 @@ vi.mock('@/data/useOptions', async () => {
     useOptions: () => ({
       sets,
       label: (key: string, stored: string) => options.labelOf(sets[key as keyof typeof sets], stored),
-      resolve: (key: string, stored: string) => options.resolveOption(sets[key as keyof typeof sets], stored),
       active: (key: string) => options.activeEntries(sets[key as keyof typeof sets]),
       add: () => '',
     }),

@@ -34,8 +34,7 @@ export function createdAtMillis(value: unknown): number {
 
 /**
  * The values below are ids of an option set (see options.ts), stored as strings; the
- * names to show come from `useOptions`. Records written before the switch may still hold
- * the old display text, which `resolveOption` reads as well.
+ * names to show come from `useOptions`.
  */
 export type Weather = string;
 
@@ -151,8 +150,6 @@ export type ContactStatus = string;
 export interface Contact extends BaseDoc {
   name: string;
   company?: string;
-  /** @deprecated replaced by `roles`; only read for contacts saved before that change */
-  role?: string;
   roles: string[];
   phone?: string;
   email?: string;
@@ -196,16 +193,6 @@ export interface Phase extends BaseDoc {
   /** hidden from the pickers, kept for entries that still point at it */
   archived?: boolean;
 }
-
-export interface Lists {
-  people: string[];
-  weather: string[];
-  costCategories: string[];
-  taskAreas: string[];
-  contactRoles: string[];
-}
-
-export type ListKey = keyof Lists;
 
 export interface Plan extends BaseDoc {
   title: string;

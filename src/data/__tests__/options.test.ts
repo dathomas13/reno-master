@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_OPTIONS, FIXED_SETS, PAYMENT_PAID, PHASE_ACTIVE, TASK_DONE, activeEntries, addOption, archiveOption,
   hasAssignee, isFixedSet, isHighPriority, isPaid, isPhaseActive, isTaskDone, labelOf, moveOption,
-  normalizeSets, renameOption, resetOptions, resolveOption, slugify, sortOptionsAlpha, uniqueId,
+  normalizeSets, renameOption, resetOptions, findOptionByName, optionById, slugify, sortOptionsAlpha, uniqueId,
   unarchiveOption, type OptionEntry,
 } from '@/data/options';
 
@@ -46,37 +46,41 @@ describe('defaults', () => {
   });
 });
 
-describe('resolveOption and labelOf', () => {
+describe('optionById, findOptionByName and labelOf', () => {
   const set = DEFAULT_OPTIONS.taskStatus;
 
-  it('resolves by id, by slug of an old text and by label', () => {
-    expect(resolveOption(set, 'in-arbeit')?.id).toBe('in-arbeit');
-    expect(resolveOption(set, 'Wartet auf')?.id).toBe('wartet-auf');
-    const renamed = [{ id: 'erledigt', label: 'Fertig' }];
-    expect(resolveOption(renamed, 'fertig')?.id).toBe('erledigt');
-    expect(resolveOption(renamed, 'FERTIG')?.id).toBe('erledigt');
-    expect(resolveOption(set, 'unbekannt')).toBeUndefined();
-    expect(resolveOption(set, undefined)).toBeUndefined();
-    expect(resolveOption(set, '  ')).toBeUndefined();
+  it('optionById only knows ids', () => {
+    expect(optionById(set, 'in-arbeit')?.label).toBe('In Arbeit');
+    expect(optionById(set, 'In Arbeit')).toBeUndefined();
+    expect(optionById(set, undefined)).toBeUndefined();
   });
 
-  it('falls back to the raw text and never throws', () => {
+  it('findOptionByName finds by label or by the slug of a spelling', () => {
+    expect(findOptionByName(set, 'Wartet auf')?.id).toBe('wartet-auf');
+    expect(findOptionByName(set, 'wartet-auf')?.id).toBe('wartet-auf');
+    const renamed = [{ id: 'erledigt', label: 'Fertig' }];
+    expect(findOptionByName(renamed, 'FERTIG')?.id).toBe('erledigt');
+    expect(findOptionByName(set, 'unbekannt')).toBeUndefined();
+    expect(findOptionByName(set, undefined)).toBeUndefined();
+    expect(findOptionByName(set, '  ')).toBeUndefined();
+  });
+
+  it('labelOf falls back to the id and never throws', () => {
     expect(labelOf(set, 'erledigt')).toBe('Erledigt');
-    expect(labelOf(set, 'Irgendwas')).toBe('Irgendwas');
+    expect(labelOf(set, 'irgendwas')).toBe('irgendwas');
     expect(labelOf(set, undefined)).toBe('');
   });
 });
 
 describe('normalizeSets', () => {
-  it('falls back to the old lists, then to the start values', () => {
-    const sets = normalizeSets(null, { people: ['Anna', 'Bernd'] });
-    expect(sets.people).toEqual([{ id: 'anna', label: 'Anna' }, { id: 'bernd', label: 'Bernd' }]);
+  it('falls back to the start values for a missing set', () => {
+    const sets = normalizeSets(null);
+    expect(sets.people).toEqual(DEFAULT_OPTIONS.people);
     expect(sets.weather).toEqual(DEFAULT_OPTIONS.weather);
-    expect(sets.costCategories).toEqual(DEFAULT_OPTIONS.costCategories);
   });
 
   it('prefers the stored set and keeps an empty one empty', () => {
-    const sets = normalizeSets({ weather: [], people: [{ id: 'x', label: 'X', archived: true }] }, { people: ['Anna'] });
+    const sets = normalizeSets({ weather: [], people: [{ id: 'x', label: 'X', archived: true }] });
     expect(sets.weather).toEqual([]);
     expect(sets.people).toEqual([{ id: 'x', label: 'X', archived: true }]);
   });
@@ -106,34 +110,20 @@ describe('normalizeSets', () => {
 });
 
 describe('logic helpers', () => {
-  it('read old texts and ids alike, with or without sets', () => {
-    expect(isTaskDone({ status: 'Erledigt' })).toBe(true);
+  it('compare ids', () => {
     expect(isTaskDone({ status: TASK_DONE })).toBe(true);
-    expect(isTaskDone({ status: 'Offen' })).toBe(false);
+    expect(isTaskDone({ status: 'offen' })).toBe(false);
     expect(isTaskDone({})).toBe(false);
-    expect(isPhaseActive({ status: 'In Arbeit' })).toBe(true);
     expect(isPhaseActive({ status: PHASE_ACTIVE })).toBe(true);
-    expect(isPhaseActive({ status: 'Geplant' })).toBe(false);
-    expect(isHighPriority('Hoch')).toBe(true);
+    expect(isPhaseActive({ status: 'geplant' })).toBe(false);
     expect(isHighPriority('hoch')).toBe(true);
     expect(isHighPriority('mittel')).toBe(false);
-    expect(isPaid({ paymentStatus: 'bezahlt' })).toBe(true);
     expect(isPaid({ paymentStatus: PAYMENT_PAID })).toBe(true);
     expect(isPaid({ paymentStatus: 'offen' })).toBe(false);
   });
 
-  it('still work after the user renamed a state', () => {
-    const sets = normalizeSets({ taskStatus: [{ id: 'erledigt', label: 'Fertig' }] });
-    expect(isTaskDone({ status: 'erledigt' }, sets)).toBe(true);
-    expect(isTaskDone({ status: 'Fertig' }, sets)).toBe(true);
-    expect(isTaskDone({ status: 'Erledigt' }, sets)).toBe(true);
-  });
-
-  it('count the old Beide for Thomas and Sarah', () => {
-    expect(hasAssignee({ assignees: ['Beide'] }, 'thomas')).toBe(true);
-    expect(hasAssignee({ assignees: ['Beide'] }, 'sarah')).toBe(true);
-    expect(hasAssignee({ assignees: ['Beide'] }, 'handwerker')).toBe(false);
-    expect(hasAssignee({ assignees: ['Thomas'] }, 'thomas')).toBe(true);
+  it('hasAssignee compares ids', () => {
+    expect(hasAssignee({ assignees: ['thomas'] }, 'thomas')).toBe(true);
     expect(hasAssignee({ assignees: ['sarah'] }, 'thomas')).toBe(false);
     expect(hasAssignee({}, 'thomas')).toBe(false);
   });

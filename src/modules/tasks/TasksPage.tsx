@@ -40,7 +40,7 @@ function formatReminder(value: string | undefined): string {
 export default function TasksPage() {
   const [params, setParams] = useSearchParams();
   const { data: tasks } = useCollection<Task>(COL.tasks);
-  const { sets, label, resolve } = useOptions();
+  const { sets, label } = useOptions();
   const { shortLabel: roomLabel, matches, writeId } = useRooms();
   const [filter, setFilter] = useState<'offen' | 'alle' | 'erledigt'>('offen');
   const [assignee, setAssignee] = useState<string | null>(null);
@@ -79,29 +79,29 @@ export default function TasksPage() {
     setParams(next, { replace: true });
   }
 
-  // the people who appear in tasks, as filter chips (an old "Beide" counts for Thomas and Sarah)
+  // the people who appear in tasks, as filter chips
   const assigneeChips = useMemo(
     () =>
       sets.people
-        .filter((person) => tasks.some((task) => hasAssignee(task, person.id, sets)))
+        .filter((person) => tasks.some((task) => hasAssignee(task, person.id)))
         .map((person) => ({ id: person.id, label: person.label })),
-    [tasks, sets],
+    [tasks, sets.people],
   );
 
   const visible = useMemo(() => {
     return viewTasks.filter((task) => {
       if (roomFilter && !matches(task.roomIds, roomFilter)) return false;
-      if (assignee && !hasAssignee(task, assignee, sets)) return false;
-      if (filter === 'offen') return !isTaskDone(task, sets);
-      if (filter === 'erledigt') return isTaskDone(task, sets);
+      if (assignee && !hasAssignee(task, assignee)) return false;
+      if (filter === 'offen') return !isTaskDone(task);
+      if (filter === 'erledigt') return isTaskDone(task);
       return true;
     });
-  }, [viewTasks, filter, assignee, roomFilter, matches, sets]);
+  }, [viewTasks, filter, assignee, roomFilter, matches]);
 
   const grouped = useMemo(() => {
     const map = new Map<DueBucket, Task[]>();
     for (const task of visible) {
-      const bucket = isTaskDone(task, sets) ? 'none' : dueBucket(task.due);
+      const bucket = isTaskDone(task) ? 'none' : dueBucket(task.due);
       map.set(bucket, [...(map.get(bucket) ?? []), task]);
     }
     for (const [, rows] of map) {
@@ -110,7 +110,7 @@ export default function TasksPage() {
       );
     }
     return map;
-  }, [visible, sets]);
+  }, [visible]);
 
   async function addQuick() {
     const title = quick.trim();
@@ -125,7 +125,7 @@ export default function TasksPage() {
   }
 
   async function toggleDone(task: Task) {
-    const nextStatus = isTaskDone(task, sets) ? TASK_OPEN : TASK_DONE;
+    const nextStatus = isTaskDone(task) ? TASK_OPEN : TASK_DONE;
     setPendingTasks((current) => ({ ...current, [task.id]: { status: nextStatus } }));
     setEditing((current) => (current?.id === task.id ? { ...current, status: nextStatus } : current));
     try {
@@ -204,22 +204,22 @@ export default function TasksPage() {
                 <li key={task.id} className="list-row">
                   <button
                     type="button"
-                    aria-label={isTaskDone(task, sets) ? 'Wieder öffnen' : 'Erledigt'}
+                    aria-label={isTaskDone(task) ? 'Wieder öffnen' : 'Erledigt'}
                     className={`w-6 h-6 rounded-md border shrink-0 ${
-                      isTaskDone(task, sets) ? 'bg-accent border-accent text-bg' : 'border-line'
+                      isTaskDone(task) ? 'bg-accent border-accent text-bg' : 'border-line'
                     }`}
                     onClick={() => void toggleDone(task)}
                   >
-                    {isTaskDone(task, sets) ? '✓' : ''}
+                    {isTaskDone(task) ? '✓' : ''}
                   </button>
                   <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(task)}>
                     <span
-                      className={`block truncate ${isTaskDone(task, sets) ? 'line-through text-muted' : ''}`}
+                      className={`block truncate ${isTaskDone(task) ? 'line-through text-muted' : ''}`}
                     >
                       {task.title}
                     </span>
                     <span className="block text-xs text-muted truncate">
-                      <span className={PRIORITY_COLOR[resolve('priority', task.priority)?.id ?? ''] ?? 'text-muted'}>
+                      <span className={PRIORITY_COLOR[task.priority] ?? 'text-muted'}>
                         {label('priority', task.priority)}
                       </span>
                       {task.area ? ` · ${label('taskAreas', task.area)}` : ''}

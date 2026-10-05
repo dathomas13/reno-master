@@ -53,7 +53,7 @@ vi.mock('@/data/hooks', () => ({
     loading: false,
   }),
   useCollection: (collection: string) => ({
-    data: collection === 'diary' ? entries : collection === 'photos' ? photoState.rows : collection === 'phases' ? [{ id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'In Arbeit', order: 2 }] : emptyRows,
+    data: collection === 'diary' ? entries : collection === 'photos' ? photoState.rows : collection === 'phases' ? [{ id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'in-arbeit', order: 2 }] : emptyRows,
     loading: false,
   }),
 }));
@@ -64,7 +64,6 @@ vi.mock('@/data/useOptions', async () => {
     useOptions: () => ({
       sets,
       label: (key: string, stored: string) => options.labelOf(sets[key as keyof typeof sets], stored),
-      resolve: (key: string, stored: string) => options.resolveOption(sets[key as keyof typeof sets], stored),
       active: (key: string) => options.activeEntries(sets[key as keyof typeof sets]),
       add: () => '',
     }),

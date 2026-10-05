@@ -214,7 +214,9 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
 - **Kennung speichern, Namen anzeigen.** Datensätze tragen nie Anzeigetexte, sondern die
   Kennung eines Optionssets (`src/data/options.ts`, `useOptions`) bzw. die id eines Objekts.
-  Logik vergleicht nie gegen Text, sondern über die Helfer dort (`isTaskDone` …). Neue
+  Logik vergleicht nie gegen Text, sondern über die Helfer dort (`isTaskDone` …); aus einem
+  Namen wird nur dort eine Kennung, wo ein Mensch oder eine Engine einen Namen liefert
+  (`findOptionByName`). Neue
   Auswahlwerte kommen als Set in `options.ts` und in die Voreinstellungen, nicht als
   Konstanten-Array. Details in `PLAN.md` 5.7.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.

@@ -1,7 +1,5 @@
-import type { Lists } from '@/data/types';
-
-/** editable pick lists; seeded from what the project already used */
-export const SEED_LISTS: Lists = {
+/** names of the start entries of the free pick lists; options.ts turns them into ids */
+export const SEED_LISTS: Record<'people' | 'weather' | 'costCategories' | 'taskAreas' | 'contactRoles', string[]> = {
   people: [
     'Thomas', 'Sarah', 'Wolfgang', 'Christine', 'Laura', 'Matze', 'Julia', 'Tom',
     'Jonas', 'Joni', 'Andre', 'Peter', 'Hannes', 'Robert', 'Sabi', 'Handwerker',

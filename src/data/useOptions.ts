@@ -1,14 +1,12 @@
 /**
- * The option sets (KENNUNGEN.md): live from `meta/options`, with `meta/lists` as the
- * fallback for the five old lists until the migration has copied them over
- * (and deleted `meta/lists`).
+ * The option sets (PLAN.md 5.7): live from `meta/options`.
  *
  * Every write replaces just the one set field and is queued locally; nothing here waits
  * for the server, so editing a list works offline.
  */
 import { useMemo } from 'react';
 import { useDocument } from './hooks';
-import { COL, type Lists } from './types';
+import { COL } from './types';
 import {
   activeEntries,
   addOption,
@@ -19,7 +17,6 @@ import {
   normalizeSets,
   renameOption,
   resetOptions,
-  resolveOption,
   sortOptionsAlpha,
   unarchiveOption,
   type OptionEntry,
@@ -30,9 +27,8 @@ import { setField } from '@/firebase/db';
 
 export interface UseOptions {
   sets: OptionSets;
-  /** the label to show for a stored value (id, old slug or old text); the raw text when unknown */
+  /** the label to show for a stored id; the id itself when unknown */
   label(key: OptionSetKey, stored: string | undefined | null): string;
-  resolve(key: OptionSetKey, stored: string | undefined | null): OptionEntry | undefined;
   /** the entries that are not hidden, in order */
   active(key: OptionSetKey): OptionEntry[];
   /** adds an entry (or shows a hidden one with that name again) and returns its id, '' when refused */
@@ -57,8 +53,7 @@ function toStored(key: OptionSetKey, entries: readonly OptionEntry[]): OptionEnt
 
 export function useOptions(): UseOptions {
   const { data } = useDocument<Partial<Record<OptionSetKey, unknown>>>(COL.meta, 'options');
-  const { data: legacy } = useDocument<Partial<Lists>>(COL.meta, 'lists');
-  const sets = useMemo(() => normalizeSets(data, legacy), [data, legacy]);
+  const sets = useMemo(() => normalizeSets(data), [data]);
 
   return useMemo<UseOptions>(() => {
     /** queue a write without waiting for the server; failures surface in the sync badge */
@@ -69,7 +64,6 @@ export function useOptions(): UseOptions {
     return {
       sets,
       label: (key, stored) => labelOf(sets[key], stored),
-      resolve: (key, stored) => resolveOption(sets[key], stored),
       active: (key) => activeEntries(sets[key]),
       add(key, label) {
         if (isFixedSet(key)) return '';

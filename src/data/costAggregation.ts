@@ -4,7 +4,7 @@
  * with, a wrong sum here is worse than a wrong pixel anywhere else.
  */
 import { createdAtMillis, type Cost, type Trade } from './types';
-import { DEFAULT_OPTIONS, labelOf, resolveOption, type OptionSets } from './options';
+import { DEFAULT_OPTIONS, labelOf, type OptionSets } from './options';
 import { monthKey } from '@/lib/date';
 import { round2 } from '@/lib/money';
 
@@ -47,17 +47,12 @@ function group(costs: Cost[], keyOf: (cost: Cost) => string): Bucket[] {
 }
 
 /**
- * Biggest category first, that is the order the overview shows. Grouped by the resolved
- * id, so a cost with an old text and one with the id land in the same bucket; `key` is
- * that id (the stored text for a category the set does not know), `label` what to show.
+ * Biggest category first, that is the order the overview shows. Grouped by the stored
+ * category id; `label` is what to show for it.
  */
 export function byCategory(costs: Cost[], sets: OptionSets = DEFAULT_OPTIONS): Bucket[] {
   const entries = sets.costCategories;
-  return group(costs, (cost) => {
-    const stored = cost.category?.trim();
-    if (!stored) return NO_CATEGORY;
-    return resolveOption(entries, stored)?.id ?? stored;
-  })
+  return group(costs, (cost) => cost.category?.trim() || NO_CATEGORY)
     .map((bucket) => ({ ...bucket, label: bucket.key === NO_CATEGORY ? NO_CATEGORY : labelOf(entries, bucket.key) }))
     .sort((a, b) => b.total - a.total);
 }

@@ -6,7 +6,7 @@ import PhotosPage from './PhotosPage';
 
 const phases: Phase[] = [
   { id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'Abgeschlossen', order: 2 },
-  { id: 'phase-3', name: 'Phase 3: Rohbau & Keller', status: 'In Arbeit', order: 3 },
+  { id: 'phase-3', name: 'Phase 3: Rohbau & Keller', status: 'in-arbeit', order: 3 },
 ];
 const entries: DiaryEntry[] = [
   { id: 'entry-1', date: '2026-09-17', title: 'Rückbau', text: '', present: [], defects: false, phaseId: 'phase-2', tradeIds: [], roomIds: [], photoIds: [] },

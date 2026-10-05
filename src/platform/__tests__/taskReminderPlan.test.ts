@@ -11,8 +11,8 @@ function task(patch: Partial<Task>): Task {
   return {
     id: 'task-1',
     title: 'Fenster pruefen',
-    status: 'Offen',
-    priority: 'Mittel',
+    status: 'offen',
+    priority: 'mittel',
     assignees: [],
     roomIds: [],
     ...patch,
@@ -25,7 +25,7 @@ describe('task reminder plan', () => {
       [
         task({ id: 'future', reminderAt: '2026-09-19T08:00:00' }),
         task({ id: 'past', reminderAt: '2026-09-17T08:00:00' }),
-        task({ id: 'done', status: 'Erledigt', reminderAt: '2026-09-20T08:00:00' }),
+        task({ id: 'done', status: 'erledigt', reminderAt: '2026-09-20T08:00:00' }),
         task({ id: 'done-id', status: 'erledigt', reminderAt: '2026-09-20T08:00:00' }),
         task({ id: 'none', reminderAt: undefined }),
       ],

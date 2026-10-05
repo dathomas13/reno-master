@@ -6,11 +6,6 @@ import {
   collection,
   doc,
   getDocs,
-  getDocFromServer,
-  getDocsFromServer,
-  arrayUnion,
-  arrayRemove,
-  writeBatch,
   onSnapshot,
   query,
   serverTimestamp,
@@ -150,7 +145,7 @@ export async function isEmpty(collectionName: string): Promise<boolean> {
 
 /**
  * Writes one field of a document, creating the document when it is not there yet.
- * `{ merge: true }` leaves every other field alone. The value may be `arrayUnion(...)`.
+ * `{ merge: true }` leaves every other field alone.
  */
 export async function setField(
   collectionName: string,
@@ -163,102 +158,4 @@ export async function setField(
     { [field]: value, updatedAt: serverTimestamp(), updatedBy: actor() },
     { merge: true },
   );
-}
-
-/** adds a value to an array field without touching the other entries */
-export function addToArrayField(collectionName: string, id: string, field: string, value: string): Promise<void> {
-  return setField(collectionName, id, field, arrayUnion(value));
-}
-
-/** removes a value from an array field without touching the other entries */
-export function removeFromArrayField(collectionName: string, id: string, field: string, value: string): Promise<void> {
-  return setField(collectionName, id, field, arrayRemove(value));
-}
-
-/** every document of a collection, read from the server (rejects offline, never answers from the cache) */
-export async function readCollectionFromServer(collectionName: string): Promise<(DocumentData & { id: string })[]> {
-  const snapshot = await getDocsFromServer(collection(db, collectionName));
-  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
-}
-
-/** one document read from the server, null when it does not exist */
-export async function readDocFromServer(collectionName: string, id: string): Promise<DocumentData | null> {
-  const snapshot = await getDocFromServer(doc(db, collectionName, id));
-  return snapshot.exists() ? snapshot.data() : null;
-}
-
-/**
- * Merges fields into a document and waits for the server; for one-off jobs that must know it
- * arrived. `removeFields` are deleted from the document.
- */
-export async function mergeDocConfirmed(
-  collectionName: string,
-  id: string,
-  data: Record<string, unknown>,
-  removeFields: readonly string[] = [],
-): Promise<void> {
-  const removals: Record<string, unknown> = {};
-  for (const field of removeFields) removals[field] = deleteField();
-  await setDoc(
-    doc(db, collectionName, id),
-    { ...data, ...removals, updatedAt: serverTimestamp(), updatedBy: actor() },
-    { merge: true },
-  );
-}
-
-/** replaces a whole document and waits for the server */
-export async function replaceDocConfirmed(collectionName: string, id: string, data: Record<string, unknown>): Promise<void> {
-  await setDoc(doc(db, collectionName, id), { ...data, updatedAt: serverTimestamp(), updatedBy: actor() });
-}
-
-/**
- * Merges fields into a document and adds values to one array field without touching the
- * entries other devices put there; waits for the server.
- */
-export async function mergeDocWithArrayUnionConfirmed(
-  collectionName: string,
-  id: string,
-  data: Record<string, unknown>,
-  arrayField: string,
-  values: readonly string[],
-): Promise<void> {
-  await setDoc(
-    doc(db, collectionName, id),
-    { ...data, [arrayField]: arrayUnion(...values), updatedAt: serverTimestamp(), updatedBy: actor() },
-    { merge: true },
-  );
-}
-
-export interface PatchOp {
-  col: string;
-  id: string;
-  patch: Record<string, unknown>;
-}
-
-/**
- * Applies patches in batches of at most 400 and waits for each batch to be confirmed.
- * `removeMarker` values in a patch become deleteField(). The audit fields stay as they are:
- * a data migration is not an edit by anybody. Resolves with the number of documents written.
- */
-export async function commitPatches(
-  ops: readonly PatchOp[],
-  removeMarker: unknown,
-  onBatch?: (done: number, total: number) => void,
-): Promise<number> {
-  let done = 0;
-  for (let start = 0; start < ops.length; start += 400) {
-    const slice = ops.slice(start, start + 400);
-    const batch = writeBatch(db);
-    for (const op of slice) {
-      const patch: Record<string, unknown> = {};
-      for (const [field, value] of Object.entries(op.patch)) {
-        patch[field] = value === removeMarker ? deleteField() : value;
-      }
-      batch.update(doc(db, op.col, op.id), patch);
-    }
-    await batch.commit();
-    done += slice.length;
-    onBatch?.(done, ops.length);
-  }
-  return done;
 }

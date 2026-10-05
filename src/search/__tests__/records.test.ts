@@ -9,7 +9,7 @@ const diary: DiaryEntry = {
   date: '2026-09-09',
   title: 'Estrich im OG',
   text: 'Estrich gegossen, trocknet bis Freitag.',
-  present: ['Thomas', 'Herr Weber'],
+  present: ['thomas', 'Herr Weber'],
   defects: true,
   tradeIds: ['t1'],
   roomIds: ['og-bad'],
@@ -33,9 +33,9 @@ const cost: Cost = {
 const task: Task = {
   id: 'a1',
   title: 'Angebot Heizung einholen',
-  status: 'Offen',
-  priority: 'Hoch',
-  assignees: ['Sarah'],
+  status: 'offen',
+  priority: 'hoch',
+  assignees: ['sarah'],
   roomIds: [],
 };
 
@@ -43,7 +43,7 @@ const contact: Contact = {
   id: 'k1',
   name: 'Sanitär Schröder',
   company: 'Schröder GmbH',
-  roles: ['Sanitär'],
+  roles: ['sanitaer'],
   tradeIds: ['t1'],
   notes: 'Telefonat 10.09.: kommt nach dem Estrich.',
 };
@@ -56,7 +56,7 @@ const contactLog: ContactLog = {
   text: 'Kommt nach dem Estrich vorbei.',
 };
 
-const trade: Trade = { id: 't1', name: 'Fliesenarbeiten', status: 'Beauftragt', priority: 'Hoch' };
+const trade: Trade = { id: 't1', name: 'Fliesenarbeiten', status: 'beauftragt', priority: 'hoch' };
 
 const records = buildRecords({
   diary: [diary],

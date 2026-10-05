@@ -21,7 +21,7 @@ export default function HomePage() {
   const { data: tasks } = useCollection<Task>(COL.tasks);
   const { data: notes } = useCollection<Note>(COL.notes);
   const { data: phases } = useCollection<Phase>(COL.phases);
-  const { sets, label } = useOptions();
+  const { label } = useOptions();
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [phaseBusy, setPhaseBusy] = useState(false);
   // read on mount: the layout only changes on the settings screen, and coming back remounts this page
@@ -30,14 +30,14 @@ export default function HomePage() {
   const todayEntry = entries.find((entry) => entry.date === today());
   const recent = entries.slice(0, 3);
   const orderedPhases = useMemo(() => [...phases].sort((a, b) => a.order - b.order), [phases]);
-  const phase = orderedPhases.find((item) => isPhaseActive(item, sets));
+  const phase = orderedPhases.find((item) => isPhaseActive(item));
   const total = costs.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const thisMonth = costs
     .filter((cost) => monthKey(cost.date) === monthKey(today()))
     .reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const openTasks = tasks
-    .filter((task) => !isTaskDone(task, sets))
-    .filter((task) => isHighPriority(task.priority, sets) || (task.due && task.due <= today()))
+    .filter((task) => !isTaskDone(task))
+    .filter((task) => isHighPriority(task.priority) || (task.due && task.due <= today()))
     .slice(0, 5);
 
   const pinnedNotes = notes
@@ -56,7 +56,7 @@ export default function HomePage() {
     try {
       await Promise.all([
         ...orderedPhases
-          .filter((item) => isPhaseActive(item, sets) && item.id !== next.id)
+          .filter((item) => isPhaseActive(item) && item.id !== next.id)
           .map((item) => patchPhase(item.id, { status: PHASE_DONE, end: item.end ?? date })),
         patchPhase(next.id, { status: PHASE_ACTIVE, start: next.start ?? date, end: undefined }),
       ]);

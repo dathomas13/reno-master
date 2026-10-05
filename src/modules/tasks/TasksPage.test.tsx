@@ -26,7 +26,6 @@ vi.mock('@/data/useOptions', async () => {
     useOptions: () => ({
       sets,
       label: (key: string, stored: string) => options.labelOf(sets[key as keyof typeof sets], stored),
-      resolve: (key: string, stored: string) => options.resolveOption(sets[key as keyof typeof sets], stored),
       active: (key: string) => options.activeEntries(sets[key as keyof typeof sets]),
       add: () => '',
     }),
@@ -60,7 +59,7 @@ beforeEach(() => {
     {
       id: 'task-1',
       title: 'Fenster pruefen',
-      status: 'Offen',
+      status: 'offen',
       priority: 'Mittel',
       assignees: [],
       roomIds: [],

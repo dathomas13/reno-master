@@ -7,7 +7,7 @@
  * reach the cost form, and a wrong value here would be booked as a real expense.
  */
 import { parseAmount, round2 } from '@/lib/money';
-import { entriesFromLabels, resolveOption } from '@/data/options';
+import { entriesFromLabels, findOptionByName } from '@/data/options';
 import type { ReceiptFields } from './types';
 
 /** the engines that answer with JSON and therefore come through here */
@@ -83,7 +83,7 @@ export function validateReceiptFields(
   const category = asText(raw.category, 60);
   if (category) {
     // the model names a label (or something that slugs to one); keep our spelling of it
-    const known = resolveOption(entriesFromLabels(categories), category);
+    const known = findOptionByName(entriesFromLabels(categories), category);
     if (known) fields.category = known.label;
     else if (categories.length === 0) fields.category = category;
   }

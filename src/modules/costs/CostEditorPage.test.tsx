@@ -41,7 +41,6 @@ vi.mock('@/data/useOptions', async () => {
   const value = {
     sets,
     label: (key: keyof typeof sets, stored: string) => options.labelOf(sets[key], stored),
-    resolve: (key: keyof typeof sets, stored: string) => options.resolveOption(sets[key], stored),
     active: (key: keyof typeof sets) => options.activeEntries(sets[key]),
     add: () => '',
   };

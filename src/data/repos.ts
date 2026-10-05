@@ -164,9 +164,6 @@ export function emptyContact(): Contact {
 
 export async function saveContact(contact: Contact): Promise<string> {
   const value = clean(contact as unknown as Record<string, unknown>);
-  // the role picker only ever writes `roles` now; drop the old single-value field so a
-  // contact never carries both and shows a stale role somewhere that still reads it
-  value.role = deleteField();
   return saveDoc<Contact>(COL.contacts, value as unknown as Contact);
 }
 

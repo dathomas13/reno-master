@@ -6,7 +6,7 @@ import { RoomPicker, TradeSelect } from '@/components/Pickers';
 import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
-import { PAYMENT_OPEN } from '@/data/options';
+import { findOptionByName, PAYMENT_OPEN } from '@/data/options';
 import { OptionChips, OptionSelect } from '@/components/OptionFields';
 import { COL, type Cost, type Photo } from '@/data/types';
 import { emptyCost, saveCost, deleteCost } from '@/data/repos';
@@ -124,7 +124,7 @@ function CostEditor() {
         patch.description = fields.description;
         filled.description = true;
       }
-      const category = fields.category ? options.resolve('costCategories', fields.category) : undefined;
+      const category = fields.category ? findOptionByName(options.sets.costCategories, fields.category) : undefined;
       if (category && !cost.category) {
         patch.category = category.id;
         filled.category = true;

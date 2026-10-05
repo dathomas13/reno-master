@@ -1,13 +1,13 @@
 /**
- * Pick lists whose values are stored as ids, never as display texts (see KENNUNGEN.md).
+ * Pick lists whose values are stored as ids, never as display texts (see PLAN.md 5.7).
  * Pure: no Firebase, no React, so it tests without either and the reminder planner can
  * use the helpers without a hook.
  *
  * A record carries the id of an entry ("erledigt"); the label ("Erledigt") is looked up
- * when it is shown, so renaming an entry never touches a record. Reading is tolerant:
- * records written before the switch still carry the old German text and resolve too.
+ * when it is shown, so renaming an entry never touches a record. Records are read by id
+ * only; a name is turned into an id (`findOptionByName`) only where a person or an
+ * engine supplies a name.
  */
-import type { Lists } from './types';
 import { SEED_LISTS } from './seed/lists';
 import { findDuplicate, normalizeEntry } from './presetLists';
 
@@ -74,7 +74,7 @@ export function uniqueId(label: string, existing: readonly (OptionEntry | string
 
 // ------------------------------------------------------------------ defaults
 
-/** the old display texts, in the old order; the source of the ids */
+/** the start names, in order; the source of the start ids */
 const TASK_STATUS_LABELS = ['Offen', 'In Arbeit', 'Wartet auf', 'Erledigt'];
 const PHASE_STATUS_LABELS = ['Geplant', 'In Arbeit', 'Abgeschlossen', 'Blockiert'];
 const PRIORITY_LABELS = ['Hoch', 'Mittel', 'Niedrig'];
@@ -113,20 +113,6 @@ export function entriesFromLabels(labels: readonly string[]): OptionEntry[] {
   return entries;
 }
 
-/** the old texts, for the deprecated constant arrays in types.ts */
-export const LEGACY_LABELS = {
-  taskStatus: TASK_STATUS_LABELS,
-  phaseStatus: PHASE_STATUS_LABELS,
-  priority: PRIORITY_LABELS,
-  paymentStatus: ['offen', 'bezahlt', 'erstattet'],
-  weather: WEATHER_LABELS,
-  paymentMethods: PAYMENT_METHOD_LABELS,
-  payers: PAYER_LABELS,
-  contactChannels: CONTACT_CHANNEL_LABELS,
-  tradeStatus: TRADE_STATUS_LABELS,
-  contactStatus: CONTACT_STATUS_LABELS,
-} as const;
-
 /** the start values of every set; fixed sets are also their code definition */
 export const DEFAULT_OPTIONS: OptionSets = {
   taskStatus: entriesFromLabels(TASK_STATUS_LABELS),
@@ -157,9 +143,6 @@ export const PAYMENT_PAID = 'bezahlt';
 /** default status of a new trade */
 export const TRADE_STATUS_DEFAULT = 'noch-offen';
 
-/** the sets that used to live in `meta/lists` as plain strings */
-export const LEGACY_LIST_KEYS = ['people', 'weather', 'costCategories', 'taskAreas', 'contactRoles'] as const;
-
 function cloneEntries(entries: readonly OptionEntry[]): OptionEntry[] {
   return entries.map((entry) => ({ ...entry }));
 }
@@ -182,15 +165,6 @@ function cleanStored(raw: unknown): OptionEntry[] {
   const seen = new Set<string>();
   const result: OptionEntry[] = [];
   for (const item of raw) {
-    if (typeof item === 'string') {
-      // a plain list, e.g. `meta/lists`
-      const label = normalizeEntry(item);
-      if (!label || result.some((e) => same(e.label, label))) continue;
-      const id = uniqueId(label, result);
-      seen.add(id);
-      result.push({ id, label });
-      continue;
-    }
     if (!isEntry(item) || seen.has(item.id)) continue;
     seen.add(item.id);
     result.push(item.archived === true ? { id: item.id, label: item.label, archived: true } : { id: item.id, label: item.label });
@@ -215,48 +189,45 @@ function mergeFixed(key: FixedSetKey, raw: unknown): OptionEntry[] {
 }
 
 /**
- * The sets as the app uses them. A set missing from `stored` falls back to the old
- * `meta/lists` (the five legacy ones) and then to the start values; fixed sets are
- * merged with their code definition.
+ * The sets as the app uses them. A set missing from `stored` falls back to the start
+ * values; fixed sets are merged with their code definition.
  */
-export function normalizeSets(
-  stored?: Partial<Record<OptionSetKey, unknown>> | null,
-  legacyLists?: Partial<Lists> | null,
-): OptionSets {
+export function normalizeSets(stored?: Partial<Record<OptionSetKey, unknown>> | null): OptionSets {
   const sets = {} as OptionSets;
   for (const key of OPTION_SET_KEYS) {
     const raw = stored?.[key];
     if (isFixedSet(key)) {
       sets[key] = mergeFixed(key, raw);
-      continue;
+    } else {
+      sets[key] = Array.isArray(raw) ? cleanStored(raw) : cloneEntries(DEFAULT_OPTIONS[key]);
     }
-    if (Array.isArray(raw)) {
-      sets[key] = cleanStored(raw);
-      continue;
-    }
-    const legacy = (legacyLists as Record<string, unknown> | null | undefined)?.[key];
-    sets[key] = Array.isArray(legacy) ? cleanStored(legacy) : cloneEntries(DEFAULT_OPTIONS[key]);
   }
   return sets;
 }
 
-/** the entry a stored value points at: by id, by the slug of an old text, by label */
-export function resolveOption(entries: readonly OptionEntry[], stored: string | undefined | null): OptionEntry | undefined {
-  if (typeof stored !== 'string') return undefined;
-  const text = stored.trim();
-  if (!text) return undefined;
-  const byId = entries.find((entry) => entry.id === text);
-  if (byId) return byId;
-  const slug = slugify(text);
-  const bySlug = entries.find((entry) => entry.id === slug);
-  if (bySlug) return bySlug;
-  return entries.find((entry) => same(entry.label, text));
+/** the entry with this id */
+export function optionById(entries: readonly OptionEntry[], id: string | undefined | null): OptionEntry | undefined {
+  if (typeof id !== 'string' || !id) return undefined;
+  return entries.find((entry) => entry.id === id);
 }
 
-/** what to show for a stored value: the label, else the raw text; never throws, never empty for a value */
+/**
+ * The entry a NAME belongs to (label, or a spelling that slugs to its id). Only for input
+ * that is a name by nature: what a receipt engine reads off a document, what a person types
+ * into an "add" field. Stored records are never looked up this way.
+ */
+export function findOptionByName(entries: readonly OptionEntry[], name: string | undefined | null): OptionEntry | undefined {
+  if (typeof name !== 'string') return undefined;
+  const text = name.trim();
+  if (!text) return undefined;
+  const slug = slugify(text);
+  return entries.find((entry) => same(entry.label, text)) ?? entries.find((entry) => entry.id === slug);
+}
+
+/** what to show for a stored id: the label, else the id itself; never throws, never empty for a value */
 export function labelOf(entries: readonly OptionEntry[], stored: string | undefined | null): string {
   if (typeof stored !== 'string') return '';
-  return resolveOption(entries, stored)?.label ?? stored;
+  return optionById(entries, stored)?.label ?? stored;
 }
 
 export function activeEntries(entries: readonly OptionEntry[]): OptionEntry[] {
@@ -265,41 +236,24 @@ export function activeEntries(entries: readonly OptionEntry[]): OptionEntry[] {
 
 // ------------------------------------------------------------------ logic helpers
 
-function idOf(key: OptionSetKey, stored: string | undefined | null, sets?: OptionSets): string | undefined {
-  return resolveOption(sets?.[key] ?? DEFAULT_OPTIONS[key], stored)?.id;
+export function isTaskDone(task: { status?: string }): boolean {
+  return task.status === TASK_DONE;
 }
 
-/** `sets` is optional: without it the check runs against the start values, which is what a plain function needs */
-export function isTaskDone(task: { status?: string }, sets?: OptionSets): boolean {
-  return idOf('taskStatus', task.status, sets) === TASK_DONE;
+export function isPhaseActive(phase: { status?: string }): boolean {
+  return phase.status === PHASE_ACTIVE;
 }
 
-export function isPhaseActive(phase: { status?: string }, sets?: OptionSets): boolean {
-  return idOf('phaseStatus', phase.status, sets) === PHASE_ACTIVE;
+export function isHighPriority(value: string | undefined | null): boolean {
+  return value === PRIORITY_HIGH;
 }
 
-export function isHighPriority(value: string | undefined | null, sets?: OptionSets): boolean {
-  return idOf('priority', value, sets) === PRIORITY_HIGH;
+export function isPaid(cost: { paymentStatus?: string }): boolean {
+  return cost.paymentStatus === PAYMENT_PAID;
 }
 
-export function isPaid(cost: { paymentStatus?: string }, sets?: OptionSets): boolean {
-  return idOf('paymentStatus', cost.paymentStatus, sets) === PAYMENT_PAID;
-}
-
-/** the old "Beide" counts for Thomas and Sarah */
-export function hasAssignee(task: { assignees?: readonly string[] }, personId: string, sets?: OptionSets): boolean {
-  const people = sets?.people ?? DEFAULT_OPTIONS.people;
-  const wanted = resolveOption(people, personId)?.id ?? personId;
-  for (const assignee of task.assignees ?? []) {
-    if (typeof assignee !== 'string') continue;
-    if (slugify(assignee) === 'beide' && !resolveOption(people, assignee)) {
-      if (wanted === 'thomas' || wanted === 'sarah') return true;
-      continue;
-    }
-    const id = resolveOption(people, assignee)?.id ?? assignee;
-    if (id === wanted) return true;
-  }
-  return false;
+export function hasAssignee(task: { assignees?: readonly string[] }, personId: string): boolean {
+  return (task.assignees ?? []).includes(personId);
 }
 
 // ------------------------------------------------------------------ editing (pure)
@@ -314,7 +268,7 @@ export interface AddResult {
 export function addOption(set: readonly OptionEntry[], label: string): AddResult {
   const clean = normalizeEntry(label);
   if (!clean) return { entries: cloneEntries(set), id: '' };
-  const duplicate = set.find((entry) => same(entry.label, clean));
+  const duplicate = findOptionByName(set, clean);
   if (duplicate) {
     return { entries: duplicate.archived ? unarchiveOption(set, duplicate.id) : cloneEntries(set), id: duplicate.id };
   }

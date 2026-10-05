@@ -3,25 +3,20 @@ import { useOptions } from '@/data/useOptions';
 import type { OptionEntry, OptionSetKey } from '@/data/options';
 import { MultiPicker } from './Pickers';
 
-type Resolve = (stored: string) => OptionEntry | undefined;
-
 /**
  * What a picker offers for one option set: the visible entries plus whatever the record
  * already holds that is hidden or unknown, so a stored value never silently vanishes from
- * the form. Stored values are mapped to ids (old texts included) before they are compared.
+ * the form.
  */
 function useChoices(setKey: OptionSetKey, stored: readonly string[]) {
-  const { active, resolve, add } = useOptions();
+  const { active, label, add } = useOptions();
   const visible = active(setKey);
-  const resolveIn: Resolve = (value) => resolve(setKey, value);
-  const selected = stored.map((value) => resolveIn(value)?.id ?? value);
   const extra: OptionEntry[] = [];
-  stored.forEach((value, index) => {
-    const id = selected[index];
-    if (visible.some((entry) => entry.id === id) || extra.some((entry) => entry.id === id)) return;
-    extra.push({ id, label: resolveIn(value)?.label ?? value, archived: true });
-  });
-  return { choices: [...visible, ...extra], selected, add: (label: string) => add(setKey, label) };
+  for (const id of stored) {
+    if (visible.some((entry) => entry.id === id) || extra.some((entry) => entry.id === id)) continue;
+    extra.push({ id, label: label(setKey, id), archived: true });
+  }
+  return { choices: [...visible, ...extra], selected: stored, add: (name: string) => add(setKey, name) };
 }
 
 interface OptionChipsProps {

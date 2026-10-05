@@ -207,7 +207,7 @@ function ContactSheet({
             setKey="contactRoles"
             label="Rollen"
             value={contactRoleNames(draft)}
-            onChange={(value) => update({ roles: value, role: undefined })}
+            onChange={(value) => update({ roles: value })}
             emptyLabel="keine Rolle"
             addLabel="Rolle hinzufügen"
           />
