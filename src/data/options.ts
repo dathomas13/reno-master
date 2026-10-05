@@ -149,6 +149,7 @@ export const DEFAULT_OPTIONS: OptionSets = {
 export const TASK_OPEN = 'offen';
 export const TASK_DONE = 'erledigt';
 export const PHASE_ACTIVE = 'in-arbeit';
+export const PHASE_DONE = 'abgeschlossen';
 export const PRIORITY_HIGH = 'hoch';
 export const PRIORITY_MEDIUM = 'mittel';
 export const PAYMENT_OPEN = 'offen';

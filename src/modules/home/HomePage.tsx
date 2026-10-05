@@ -7,15 +7,12 @@ import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
 import { patchPhase } from '@/data/repos';
 import { useOptions } from '@/data/useOptions';
-import { isHighPriority, isPhaseActive, isTaskDone, PHASE_ACTIVE } from '@/data/options';
+import { isHighPriority, isPhaseActive, isTaskDone, PHASE_ACTIVE, PHASE_DONE } from '@/data/options';
 import { orderBy, limit } from '@/firebase/db';
 import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib/date';
 import { formatEuro } from '@/lib/money';
 import { loadSettings } from '@/lib/settings';
 import { normalizeHomeLayout, visibleHomeBlocks } from '@/lib/homeLayout';
-
-/** id of "Abgeschlossen" in the fixed phase status set */
-const PHASE_DONE = 'abgeschlossen';
 
 export default function HomePage() {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(20)]);
