@@ -5,6 +5,7 @@ import { COL, type Trade } from '@/data/types';
 import { createTrade } from '@/data/repos';
 import { findDuplicate, normalizeEntry } from '@/data/presetLists';
 import { useTradeUsage } from '@/data/tradeUsage';
+import { useOptions } from '@/data/useOptions';
 import { formatEuroShort } from '@/lib/money';
 import TradeSheet from './TradeSheet';
 
@@ -15,6 +16,7 @@ function byName(a: Trade, b: Trade): number {
 export default function TradesEditor() {
   const { data: trades } = useCollection<Trade>(COL.trades);
   const usage = useTradeUsage();
+  const { label } = useOptions();
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
   const [editId, setEditId] = useState<string | null>(null);
@@ -37,8 +39,8 @@ export default function TradesEditor() {
 
   function row(trade: Trade, muted: boolean) {
     const parts = [
-      trade.status,
-      trade.priority,
+      label('tradeStatus', trade.status),
+      label('priority', trade.priority),
       typeof trade.budgetPlanned === 'number' ? formatEuroShort(trade.budgetPlanned) : null,
       `${usage.get(trade.id) ?? 0}×`,
     ].filter(Boolean);

@@ -6,16 +6,22 @@ afterEach(cleanup);
 
 function setup(over: Partial<PresetListEditorProps> = {}) {
   const props: PresetListEditorProps = {
-    items: ['Thomas', 'Sarah', 'Matze'],
-    usage: new Map([['Matze', 14]]),
+    setKey: 'people',
+    entries: [
+      { id: 'thomas', label: 'Thomas' },
+      { id: 'sarah', label: 'Sarah' },
+      { id: 'matze', label: 'Matze' },
+      { id: 'jonas', label: 'Jonas', archived: true },
+    ],
+    usage: new Map([['matze', 14]]),
     singular: 'Person',
     placeholder: 'Person hinzufügen …',
-    seedCount: 16,
-    onAdd: vi.fn(),
+    onAdd: vi.fn().mockReturnValue('neu'),
     onRename: vi.fn(),
-    onRemove: vi.fn().mockResolvedValue(1),
-    onRestore: vi.fn(),
-    onReorder: vi.fn(),
+    onArchive: vi.fn().mockReturnValue(2),
+    onUnarchive: vi.fn(),
+    onMove: vi.fn(),
+    onSortAlpha: vi.fn(),
     onReset: vi.fn(),
     ...over,
   };
@@ -24,7 +30,7 @@ function setup(over: Partial<PresetListEditorProps> = {}) {
 }
 
 describe('PresetListEditor', () => {
-  it('adds a trimmed value and refuses a duplicate', () => {
+  it('adds a trimmed name and refuses a visible duplicate', () => {
     const props = setup();
     const input = screen.getByPlaceholderText('Person hinzufügen …');
     fireEvent.change(input, { target: { value: '  sarah ' } });
@@ -32,53 +38,87 @@ describe('PresetListEditor', () => {
     expect(props.onAdd).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('„Sarah“ steht schon in der Liste.');
 
-    fireEvent.change(input, { target: { value: ' Jonas ' } });
+    fireEvent.change(input, { target: { value: ' Paul ' } });
     fireEvent.submit(input.closest('form')!);
-    expect(props.onAdd).toHaveBeenCalledWith('Jonas');
+    expect(props.onAdd).toHaveBeenCalledWith('Paul');
   });
 
-  it('renames without a question when nothing uses the value', () => {
+  it('lets a hidden name through, the add shows it again', () => {
     const props = setup();
-    fireEvent.click(screen.getByRole('button', { name: 'Thomas umbenennen' }));
-    const field = screen.getByRole('textbox', { name: 'Thomas umbenennen' });
-    fireEvent.change(field, { target: { value: 'Tom' } });
-    fireEvent.keyDown(field, { key: 'Enter' });
-    expect(props.onRename).toHaveBeenCalledWith('Thomas', 'Tom', false);
+    const input = screen.getByPlaceholderText('Person hinzufügen …');
+    fireEvent.change(input, { target: { value: 'jonas' } });
+    fireEvent.submit(input.closest('form')!);
+    expect(props.onAdd).toHaveBeenCalledWith('jonas');
   });
 
-  it('asks before renaming a value that entries use', () => {
+  it('renames by id without any question, even for a used entry', () => {
     const props = setup();
     fireEvent.click(screen.getByRole('button', { name: 'Matze umbenennen' }));
     const field = screen.getByRole('textbox', { name: 'Matze umbenennen' });
     fireEvent.change(field, { target: { value: 'Matthias' } });
     fireEvent.keyDown(field, { key: 'Enter' });
-    expect(props.onRename).not.toHaveBeenCalled();
-    const dialog = screen.getByRole('dialog');
-    expect(dialog).toHaveTextContent('„Matze“ steht in 14 Einträgen.');
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Überall umbenennen' }));
-    expect(props.onRename).toHaveBeenCalledWith('Matze', 'Matthias', true);
+    expect(props.onRename).toHaveBeenCalledWith('matze', 'Matthias');
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('removes at once and offers undo', async () => {
+  it('hides at once and offers undo', () => {
     const props = setup();
-    fireEvent.click(screen.getByRole('button', { name: 'Matze löschen' }));
-    const bar = await screen.findByRole('status');
-    expect(bar).toHaveTextContent('„Matze“ entfernt. 14 Einträge behalten den Wert.');
+    fireEvent.click(screen.getByRole('button', { name: 'Matze ausblenden' }));
+    expect(props.onArchive).toHaveBeenCalledWith('matze');
+    const bar = screen.getByRole('status');
+    expect(bar).toHaveTextContent('„Matze“ ausgeblendet.');
     fireEvent.click(within(bar).getByRole('button', { name: 'Rückgängig' }));
-    expect(props.onRestore).toHaveBeenCalledWith('Matze', 1);
+    expect(props.onUnarchive).toHaveBeenCalledWith('matze');
   });
 
-  it('sorts with the arrows and alphabetically', () => {
+  it('lists hidden entries apart and shows them again', () => {
     const props = setup();
-    fireEvent.click(screen.getByRole('button', { name: 'Sortieren' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sarah nach oben' }));
-    expect(props.onReorder).toHaveBeenCalledWith(['Sarah', 'Thomas', 'Matze']);
+    expect(screen.getByText('AUSGEBLENDET')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Jonas wieder anzeigen' }));
+    expect(props.onUnarchive).toHaveBeenCalledWith('jonas');
+  });
+
+  it('sorts the visible entries with the arrows, and alphabetically from the menu', () => {
+    const props = setup({ menuOpen: true });
     fireEvent.click(screen.getByRole('button', { name: 'Alphabetisch sortieren' }));
-    expect(props.onReorder).toHaveBeenLastCalledWith(['Matze', 'Sarah', 'Thomas']);
+    expect(props.onSortAlpha).toHaveBeenCalled();
+    cleanup();
+    const second = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Sortieren' }));
+    expect(screen.queryByRole('button', { name: 'Jonas nach oben' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Sarah nach oben' }));
+    expect(second.onMove).toHaveBeenCalledWith('sarah', -1);
+  });
+
+  it('resets a free list only after a confirmation', () => {
+    const props = setup({ menuOpen: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Auf Standard zurücksetzen …' }));
+    expect(props.onReset).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Zurücksetzen' }));
+    expect(props.onReset).toHaveBeenCalled();
+  });
+
+  it('a fixed set can be renamed but neither extended nor hidden', () => {
+    const props = setup({
+      setKey: 'taskStatus',
+      entries: [
+        { id: 'offen', label: 'Offen' },
+        { id: 'erledigt', label: 'Erledigt' },
+      ],
+      usage: undefined,
+      menuOpen: true,
+    });
+    expect(screen.getByText(/Die App braucht diese Zustände/)).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('Person hinzufügen …')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Offen ausblenden' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Auf Standard zurücksetzen …' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Standardnamen wiederherstellen' }));
+    expect(props.onReset).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Offen umbenennen' })).toBeInTheDocument();
   });
 
   it('offers the defaults when the list is empty', () => {
-    const props = setup({ items: [] });
+    const props = setup({ entries: [] });
     expect(screen.getByText('Noch keine Einträge')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Standardwerte übernehmen' }));
     expect(props.onReset).toHaveBeenCalled();

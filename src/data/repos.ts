@@ -237,3 +237,37 @@ export async function patchPhase(id: string, patch: Partial<Phase>): Promise<voi
   }
   await patchDoc(COL.phases, id, value);
 }
+
+// ------------------------------------------------------------------ phases (settings)
+
+/** creates a phase at the end of the list (offline safe, does not wait for the server) */
+export function createPhase(name: string, order: number): string {
+  const id = newId();
+  void saveDoc<Phase>(COL.phases, { id, name: name.trim(), status: 'geplant', order }).catch(() => {
+    /* queued write failed locally; the snapshot simply never shows the phase */
+  });
+  return id;
+}
+
+/** an explicitly undefined field (start, end) means "remove it" */
+export function savePhase(id: string, patch: Partial<Omit<Phase, 'id'>>): void {
+  void patchPhase(id, patch).catch(() => undefined);
+}
+
+export function setPhaseArchived(id: string, archived: boolean): void {
+  void patchDoc(COL.phases, id, { archived }).catch(() => undefined);
+}
+
+export function deletePhase(id: string): void {
+  void removeDoc(COL.phases, id).catch(() => undefined);
+}
+
+/**
+ * Swaps the position of two neighbours; `first` is the one that comes first in the list
+ * now. Two phases with the same `order` still end up in the new sequence.
+ */
+export function swapPhaseOrder(first: Pick<Phase, 'id' | 'order'>, second: Pick<Phase, 'id' | 'order'>): void {
+  const tie = first.order === second.order;
+  void patchDoc(COL.phases, first.id, { order: tie ? second.order + 1 : second.order }).catch(() => undefined);
+  void patchDoc(COL.phases, second.id, { order: first.order }).catch(() => undefined);
+}
