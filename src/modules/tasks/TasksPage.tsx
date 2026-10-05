@@ -2,30 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
-import { Field, ChipSelect, EmptyState } from '@/components/Fields';
+import { Field, EmptyState } from '@/components/Fields';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
-import { useLists } from '@/data/useLists';
-import { withStored } from '@/data/presetLists';
-import {
-  COL,
-  ASSIGNEES,
-  PRIORITY,
-  TASK_STATUS,
-  type Assignee,
-  type Priority,
-  type Task,
-  type TaskStatus,
-} from '@/data/types';
+import { useOptions } from '@/data/useOptions';
+import { hasAssignee, isTaskDone, PRIORITY_MEDIUM, TASK_DONE, TASK_OPEN } from '@/data/options';
+import { OptionChips, OptionMultiChips } from '@/components/OptionFields';
+import { COL, type Task } from '@/data/types';
 import { emptyTask, saveTask, toggleTaskDone, deleteTask } from '@/data/repos';
 import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, type DueBucket } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
 
 const BUCKETS: DueBucket[] = ['overdue', 'today', 'week', 'later', 'none'];
-const PRIORITY_COLOR: Record<Priority, string> = {
-  Hoch: 'text-bad',
-  Mittel: 'text-warn',
-  Niedrig: 'text-muted',
+const PRIORITY_COLOR: Record<string, string> = {
+  hoch: 'text-bad',
+  mittel: 'text-warn',
+  niedrig: 'text-muted',
 };
 
 function toDateTimeInput(value: string | undefined): string {
@@ -48,10 +40,10 @@ function formatReminder(value: string | undefined): string {
 export default function TasksPage() {
   const [params, setParams] = useSearchParams();
   const { data: tasks } = useCollection<Task>(COL.tasks);
-  const { lists } = useLists();
+  const { sets, label, resolve } = useOptions();
   const { shortLabel: roomLabel, matches, writeId } = useRooms();
   const [filter, setFilter] = useState<'offen' | 'alle' | 'erledigt'>('offen');
-  const [assignee, setAssignee] = useState<Assignee | null>(null);
+  const [assignee, setAssignee] = useState<string | null>(null);
   const [quick, setQuick] = useState('');
   const [editing, setEditing] = useState<Task | null>(null);
   const [pendingTasks, setPendingTasks] = useState<Record<string, Partial<Task>>>({});
@@ -87,20 +79,29 @@ export default function TasksPage() {
     setParams(next, { replace: true });
   }
 
+  // the people who appear in tasks, as filter chips (an old "Beide" counts for Thomas and Sarah)
+  const assigneeChips = useMemo(
+    () =>
+      sets.people
+        .filter((person) => tasks.some((task) => hasAssignee(task, person.id, sets)))
+        .map((person) => ({ id: person.id, label: person.label })),
+    [tasks, sets],
+  );
+
   const visible = useMemo(() => {
     return viewTasks.filter((task) => {
       if (roomFilter && !matches(task.roomIds, roomFilter)) return false;
-      if (assignee && !task.assignees.includes(assignee) && !task.assignees.includes('Beide')) return false;
-      if (filter === 'offen') return task.status !== 'Erledigt';
-      if (filter === 'erledigt') return task.status === 'Erledigt';
+      if (assignee && !hasAssignee(task, assignee, sets)) return false;
+      if (filter === 'offen') return !isTaskDone(task, sets);
+      if (filter === 'erledigt') return isTaskDone(task, sets);
       return true;
     });
-  }, [viewTasks, filter, assignee, roomFilter, matches]);
+  }, [viewTasks, filter, assignee, roomFilter, matches, sets]);
 
   const grouped = useMemo(() => {
     const map = new Map<DueBucket, Task[]>();
     for (const task of visible) {
-      const bucket = task.status === 'Erledigt' ? 'none' : dueBucket(task.due);
+      const bucket = isTaskDone(task, sets) ? 'none' : dueBucket(task.due);
       map.set(bucket, [...(map.get(bucket) ?? []), task]);
     }
     for (const [, rows] of map) {
@@ -109,7 +110,7 @@ export default function TasksPage() {
       );
     }
     return map;
-  }, [visible]);
+  }, [visible, sets]);
 
   async function addQuick() {
     const title = quick.trim();
@@ -124,7 +125,7 @@ export default function TasksPage() {
   }
 
   async function toggleDone(task: Task) {
-    const nextStatus: TaskStatus = task.status === 'Erledigt' ? 'Offen' : 'Erledigt';
+    const nextStatus = isTaskDone(task, sets) ? TASK_OPEN : TASK_DONE;
     setPendingTasks((current) => ({ ...current, [task.id]: { status: nextStatus } }));
     setEditing((current) => (current?.id === task.id ? { ...current, status: nextStatus } : current));
     try {
@@ -170,14 +171,14 @@ export default function TasksPage() {
             </button>
           ))}
           <span className="w-px bg-line mx-1" />
-          {(['Thomas', 'Sarah'] as Assignee[]).map((person) => (
+          {assigneeChips.map((person) => (
             <button
-              key={person}
+              key={person.id}
               type="button"
-              className={`chip ${assignee === person ? 'chip-on' : ''}`}
-              onClick={() => setAssignee(assignee === person ? null : person)}
+              className={`chip ${assignee === person.id ? 'chip-on' : ''}`}
+              onClick={() => setAssignee(assignee === person.id ? null : person.id)}
             >
-              {person}
+              {person.label}
             </button>
           ))}
           {roomFilter && (
@@ -203,24 +204,28 @@ export default function TasksPage() {
                 <li key={task.id} className="list-row">
                   <button
                     type="button"
-                    aria-label={task.status === 'Erledigt' ? 'Wieder öffnen' : 'Erledigt'}
+                    aria-label={isTaskDone(task, sets) ? 'Wieder öffnen' : 'Erledigt'}
                     className={`w-6 h-6 rounded-md border shrink-0 ${
-                      task.status === 'Erledigt' ? 'bg-accent border-accent text-bg' : 'border-line'
+                      isTaskDone(task, sets) ? 'bg-accent border-accent text-bg' : 'border-line'
                     }`}
                     onClick={() => void toggleDone(task)}
                   >
-                    {task.status === 'Erledigt' ? '✓' : ''}
+                    {isTaskDone(task, sets) ? '✓' : ''}
                   </button>
                   <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(task)}>
                     <span
-                      className={`block truncate ${task.status === 'Erledigt' ? 'line-through text-muted' : ''}`}
+                      className={`block truncate ${isTaskDone(task, sets) ? 'line-through text-muted' : ''}`}
                     >
                       {task.title}
                     </span>
                     <span className="block text-xs text-muted truncate">
-                      <span className={PRIORITY_COLOR[task.priority]}>{task.priority}</span>
-                      {task.area ? ` · ${task.area}` : ''}
-                      {task.assignees.length ? ` · ${task.assignees.join(', ')}` : ''}
+                      <span className={PRIORITY_COLOR[resolve('priority', task.priority)?.id ?? ''] ?? 'text-muted'}>
+                        {label('priority', task.priority)}
+                      </span>
+                      {task.area ? ` · ${label('taskAreas', task.area)}` : ''}
+                      {task.assignees.length
+                        ? ` · ${task.assignees.map((person) => label('people', person)).join(', ')}`
+                        : ''}
                       {task.due ? ` · ${formatRelativeDay(task.due)}` : ''}
                       {task.reminderAt ? ` · Erinnerung ${formatReminder(task.reminderAt)}` : ''}
                     </span>
@@ -234,7 +239,6 @@ export default function TasksPage() {
 
       <TaskSheet
         task={editing}
-        areas={lists.taskAreas}
         onClose={() => {
           setEditing(null);
           dropWanted();
@@ -256,13 +260,11 @@ export default function TasksPage() {
 
 function TaskSheet({
   task,
-  areas,
   onClose,
   onSave,
   onDelete,
 }: {
   task: Task | null;
-  areas: string[];
   onClose(): void;
   onSave(task: Task): Promise<void>;
   onDelete(task: Task): Promise<void>;
@@ -301,28 +303,26 @@ function TaskSheet({
           />
         </Field>
         <Field label="Status">
-          <ChipSelect
-            options={TASK_STATUS}
-            value={[draft.status]}
-            multiple={false}
+          <OptionChips
+            setKey="taskStatus"
+            value={draft.status}
             allowEmpty={false}
-            onChange={(value) => update({ status: (value[0] ?? 'Offen') as TaskStatus })}
+            onChange={(value) => update({ status: value ?? TASK_OPEN })}
           />
         </Field>
         <Field label="Priorität">
-          <ChipSelect
-            options={PRIORITY}
-            value={[draft.priority]}
-            multiple={false}
+          <OptionChips
+            setKey="priority"
+            value={draft.priority}
             allowEmpty={false}
-            onChange={(value) => update({ priority: (value[0] ?? 'Mittel') as Priority })}
+            onChange={(value) => update({ priority: value ?? PRIORITY_MEDIUM })}
           />
         </Field>
         <Field label="Zuständig">
-          <ChipSelect
-            options={ASSIGNEES}
+          <OptionMultiChips
+            setKey="people"
             value={draft.assignees}
-            onChange={(value) => update({ assignees: value as Assignee[] })}
+            onChange={(value) => update({ assignees: value })}
           />
         </Field>
         <Field label="Fällig am">
@@ -346,12 +346,7 @@ function TaskSheet({
           </p>
         </Field>
         <Field label="Bereich">
-          <ChipSelect
-            options={withStored(areas, draft.area)}
-            value={draft.area ? [draft.area] : []}
-            multiple={false}
-            onChange={(value) => update({ area: value[0] })}
-          />
+          <OptionChips setKey="taskAreas" value={draft.area} onChange={(value) => update({ area: value })} />
         </Field>
         <Field label="Gewerk">
           <TradeSelect value={draft.tradeId} onChange={(value) => update({ tradeId: value })} />

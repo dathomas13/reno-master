@@ -6,11 +6,16 @@ import { Sheet } from '@/components/Sheet';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
 import { patchPhase } from '@/data/repos';
+import { useOptions } from '@/data/useOptions';
+import { isHighPriority, isPhaseActive, isTaskDone, PHASE_ACTIVE } from '@/data/options';
 import { orderBy, limit } from '@/firebase/db';
 import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib/date';
 import { formatEuro } from '@/lib/money';
 import { loadSettings } from '@/lib/settings';
 import { normalizeHomeLayout, visibleHomeBlocks } from '@/lib/homeLayout';
+
+/** id of "Abgeschlossen" in the fixed phase status set */
+const PHASE_DONE = 'abgeschlossen';
 
 export default function HomePage() {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(20)]);
@@ -19,6 +24,7 @@ export default function HomePage() {
   const { data: tasks } = useCollection<Task>(COL.tasks);
   const { data: notes } = useCollection<Note>(COL.notes);
   const { data: phases } = useCollection<Phase>(COL.phases);
+  const { sets, label } = useOptions();
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [phaseBusy, setPhaseBusy] = useState(false);
   // read on mount: the layout only changes on the settings screen, and coming back remounts this page
@@ -27,14 +33,14 @@ export default function HomePage() {
   const todayEntry = entries.find((entry) => entry.date === today());
   const recent = entries.slice(0, 3);
   const orderedPhases = useMemo(() => [...phases].sort((a, b) => a.order - b.order), [phases]);
-  const phase = orderedPhases.find((item) => item.status === 'In Arbeit');
+  const phase = orderedPhases.find((item) => isPhaseActive(item, sets));
   const total = costs.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const thisMonth = costs
     .filter((cost) => monthKey(cost.date) === monthKey(today()))
     .reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const openTasks = tasks
-    .filter((task) => task.status !== 'Erledigt')
-    .filter((task) => task.priority === 'Hoch' || (task.due && task.due <= today()))
+    .filter((task) => !isTaskDone(task, sets))
+    .filter((task) => isHighPriority(task.priority, sets) || (task.due && task.due <= today()))
     .slice(0, 5);
 
   const pinnedNotes = notes
@@ -53,9 +59,9 @@ export default function HomePage() {
     try {
       await Promise.all([
         ...orderedPhases
-          .filter((item) => item.status === 'In Arbeit' && item.id !== next.id)
-          .map((item) => patchPhase(item.id, { status: 'Abgeschlossen', end: item.end ?? date })),
-        patchPhase(next.id, { status: 'In Arbeit', start: next.start ?? date, end: undefined }),
+          .filter((item) => isPhaseActive(item, sets) && item.id !== next.id)
+          .map((item) => patchPhase(item.id, { status: PHASE_DONE, end: item.end ?? date })),
+        patchPhase(next.id, { status: PHASE_ACTIVE, start: next.start ?? date, end: undefined }),
       ]);
       setPhaseOpen(false);
     } finally {
@@ -245,7 +251,7 @@ export default function HomePage() {
                   >
                     <span className="flex-1 min-w-0">
                       <span className="block truncate">{item.name}</span>
-                      <span className="block text-xs text-muted">{item.status}</span>
+                      <span className="block text-xs text-muted">{label('phaseStatus', item.status)}</span>
                     </span>
                     {item.id === phase?.id && <span className="text-accent text-sm">Aktuell</span>}
                   </button>

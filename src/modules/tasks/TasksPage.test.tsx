@@ -19,7 +19,19 @@ vi.mock('@/components/Pickers', () => ({
 vi.mock('@/data/hooks', () => ({
   useCollection: () => ({ data: mocks.tasks, loading: false }),
 }));
-vi.mock('@/data/useLists', () => ({ useLists: () => ({ lists: { taskAreas: [] } }) }));
+vi.mock('@/data/useOptions', async () => {
+  const options = await vi.importActual<typeof import('@/data/options')>('@/data/options');
+  const sets = options.normalizeSets();
+  return {
+    useOptions: () => ({
+      sets,
+      label: (key: string, stored: string) => options.labelOf(sets[key as keyof typeof sets], stored),
+      resolve: (key: string, stored: string) => options.resolveOption(sets[key as keyof typeof sets], stored),
+      active: (key: string) => options.activeEntries(sets[key as keyof typeof sets]),
+      add: () => '',
+    }),
+  };
+});
 vi.mock('@/data/RoomsContext', () => ({
   useRooms: () => ({
     name: (id: string) => id,
@@ -33,8 +45,8 @@ vi.mock('@/data/repos', () => ({
   emptyTask: () => ({
     id: 'new-task',
     title: '',
-    status: 'Offen',
-    priority: 'Mittel',
+    status: 'offen',
+    priority: 'mittel',
     assignees: [],
     roomIds: [],
   }),
@@ -96,7 +108,7 @@ describe('tasks page', () => {
       fireEvent.click(within(dialog).getByRole('button', { name: 'Fertig' }));
     });
     expect(mocks.saveTask).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'task-1', status: 'Erledigt' }),
+      expect.objectContaining({ id: 'task-1', status: 'erledigt' }),
     );
   });
 
