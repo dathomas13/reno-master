@@ -14,8 +14,7 @@ import { clearPreview } from '@/data/models';
 import { VARIANT_LABEL } from '@/data/modelRelease';
 import type { ImportResult } from '@/modules/modelBuild';
 import { handOverFile } from '@/platform/shareFile';
-
-const SHOWN_CHANGES = 12;
+import { ModelChangeList } from './ModelChangeList';
 
 type Built = Extract<ImportResult, { ok: true }>;
 
@@ -169,12 +168,7 @@ export function ModelExchange({ signedIn }: { signedIn: boolean }) {
                   wird v{result.version} · beruht auf v{result.basedOn} · {result.scene.prims.length} Bauteile
                   {result.note && ` · „${result.note}“`}
                 </p>
-                <ul className="list-disc pl-5 text-xs mt-2 space-y-0.5">
-                  {result.changes.slice(0, SHOWN_CHANGES).map((line) => <li key={line}>{line}</li>)}
-                  {result.changes.length > SHOWN_CHANGES && (
-                    <li className="text-muted">… und {result.changes.length - SHOWN_CHANGES} weitere</li>
-                  )}
-                </ul>
+                <ModelChangeList changes={result.changes} />
               </>
             )}
 
