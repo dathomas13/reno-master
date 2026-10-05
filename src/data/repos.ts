@@ -14,7 +14,7 @@ import {
   type Trade,
   type Phase,
 } from './types';
-import { TASK_DONE, TASK_OPEN, PRIORITY_MEDIUM, TRADE_STATUS_DEFAULT, isTaskDone } from './options';
+import { PAYMENT_PAID, TASK_DONE, TASK_OPEN, PRIORITY_MEDIUM, TRADE_STATUS_DEFAULT, isTaskDone } from './options';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
 import { deleteField } from 'firebase/firestore';
 import { newId } from '@/lib/ids';
@@ -72,7 +72,7 @@ export function emptyCost(date = today()): Cost {
     amountGross: 0,
     category: '',
     roomIds: [],
-    paymentStatus: 'bezahlt',
+    paymentStatus: PAYMENT_PAID,
     receiptPhotoIds: [],
   };
 }

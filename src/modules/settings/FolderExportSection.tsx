@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCollection } from '@/data/hooks';
+import { useOptions } from '@/data/useOptions';
 import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type Task, type Trade } from '@/data/types';
 import { formatSize, planExport } from '@/data/exportArchive';
 import {
@@ -43,6 +44,7 @@ export function FolderExportSection() {
   const [error, setError] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
 
+  const { sets } = useOptions();
   const plan = useMemo(
     () =>
       planExport({
@@ -52,8 +54,9 @@ export function FolderExportSection() {
         tasks: tasks.data,
         contacts: contacts.data,
         trades: trades.data,
+        sets,
       }),
-    [entries.data, photos.data, costs.data, tasks.data, contacts.data, trades.data],
+    [entries.data, photos.data, costs.data, tasks.data, contacts.data, trades.data, sets],
   );
 
   const device = deviceId();

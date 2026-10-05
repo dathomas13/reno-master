@@ -1,9 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type Trade } from '@/data/types';
+import { useOptions } from '@/data/useOptions';
+import { isPaid } from '@/data/options';
 import { orderBy } from '@/firebase/db';
 import { formatEuro, formatAmount } from '@/lib/money';
 import { formatDate, monthKey, today } from '@/lib/date';
@@ -15,11 +17,14 @@ import {
   totalForMonth,
   budgetPerTrade,
   toCsv,
+  NO_CATEGORY,
   sortNewestFirst,
 } from '@/data/costAggregation';
 import { isNative } from '@/platform';
 
 type Tab = 'liste' | 'uebersicht';
+/** key, sum, text to show */
+type BarRow = [string, number, string];
 
 export default function CostsPage() {
   const [params, setParams] = useSearchParams();
@@ -27,6 +32,7 @@ export default function CostsPage() {
   const costs = useMemo(() => sortNewestFirst(rawCosts), [rawCosts]);
   const { data: trades } = useCollection<Trade>(COL.trades);
   const { shortLabel: roomLabel, matches } = useRooms();
+  const { sets, label, resolve } = useOptions();
   const [tab, setTab] = useState<Tab>('liste');
   const [search, setSearch] = useState('');
 
@@ -34,29 +40,36 @@ export default function CostsPage() {
   const categoryFilter = params.get('kategorie');
   const tradeFilter = params.get('gewerk');
 
+  // the filter carries an id; an old text in the address or in a record resolves to the same one
+  const categoryKey = categoryFilter ? (resolve('costCategories', categoryFilter)?.id ?? categoryFilter) : null;
+  const categoryId = useCallback(
+    (stored: string) => (stored.trim() ? (resolve('costCategories', stored)?.id ?? stored) : NO_CATEGORY),
+    [resolve],
+  );
+
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return costs.filter((cost) => {
       if (roomFilter && !matches(cost.roomIds, roomFilter)) return false;
-      if (categoryFilter && cost.category !== categoryFilter) return false;
+      if (categoryKey && categoryId(cost.category) !== categoryKey) return false;
       if (tradeFilter && cost.tradeId !== tradeFilter) return false;
       if (!needle) return true;
-      return [cost.vendor, cost.description, cost.category, cost.invoiceNumber]
+      return [cost.vendor, cost.description, label('costCategories', cost.category), cost.invoiceNumber]
         .join(' ')
         .toLowerCase()
         .includes(needle);
     });
-  }, [costs, search, roomFilter, categoryFilter, tradeFilter, matches]);
+  }, [costs, search, roomFilter, categoryKey, tradeFilter, matches, categoryId, label]);
 
   const total = sumGross(filtered);
   const thisMonth = totalForMonth(costs, monthKey(today()));
-  const categories = useMemo(() => byCategory(filtered), [filtered]);
+  const categories = useMemo(() => byCategory(filtered, sets), [filtered, sets]);
   const months = useMemo(() => byMonth(filtered), [filtered]);
   const tradeBudgets = useMemo(() => budgetPerTrade(filtered, trades), [filtered, trades]);
   const canDownloadCsv = !isNative();
 
   function exportCsv() {
-    const blob = new Blob([toCsv(filtered, formatAmount)], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob([toCsv(filtered, formatAmount, sets)], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -108,7 +121,7 @@ export default function CostsPage() {
               ? roomLabel(roomFilter)
               : tradeFilter
                 ? (trades.find((trade) => trade.id === tradeFilter)?.name ?? 'Gewerk')
-                : categoryFilter}{' '}
+                : label('costCategories', categoryFilter ?? '')}{' '}
             ×
           </button>
         </div>
@@ -141,14 +154,14 @@ export default function CostsPage() {
                       {cost.receiptPhotoIds.length > 0 && <span className="text-muted text-xs">📎</span>}
                     </div>
                     <div className="text-xs text-muted truncate">
-                      {formatDate(cost.date)} · {cost.category || 'ohne Kategorie'}
+                      {formatDate(cost.date)} · {cost.category ? label('costCategories', cost.category) : 'ohne Kategorie'}
                       {cost.description ? ` · ${cost.description}` : ''}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <div>{formatEuro(cost.amountGross)}</div>
-                    {cost.paymentStatus !== 'bezahlt' && (
-                      <div className="text-[11px] text-warn">{cost.paymentStatus}</div>
+                    {!isPaid(cost, sets) && (
+                      <div className="text-[11px] text-warn">{label('paymentStatus', cost.paymentStatus)}</div>
                     )}
                   </div>
                 </Link>
@@ -168,10 +181,10 @@ export default function CostsPage() {
 
           <Bars
             title="Nach Kategorie"
-            rows={categories.map((bucket) => [bucket.key, bucket.total] as [string, number])}
+            rows={categories.map((bucket) => [bucket.key, bucket.total, bucket.label ?? bucket.key] as BarRow)}
             onPick={(key) => setParams({ kategorie: key })}
           />
-          <Bars title="Nach Monat" rows={months.map((bucket) => [bucket.key, bucket.total] as [string, number])} />
+          <Bars title="Nach Monat" rows={months.map((bucket) => [bucket.key, bucket.total, bucket.key] as BarRow)} />
 
           {tradeBudgets.length > 0 && (
             <div className="card p-4">
@@ -213,7 +226,7 @@ function Bars({
   onPick,
 }: {
   title: string;
-  rows: [string, number][];
+  rows: BarRow[];
   onPick?: (key: string) => void;
 }) {
   if (rows.length === 0) return null;
@@ -222,7 +235,7 @@ function Bars({
     <div className="card p-4">
       <h3 className="text-sm text-muted uppercase tracking-wide mb-3">{title}</h3>
       <ul className="flex flex-col gap-2">
-        {rows.map(([key, value]) => (
+        {rows.map(([key, value, text]) => (
           <li key={key}>
             <button
               type="button"
@@ -231,7 +244,7 @@ function Bars({
               disabled={!onPick}
             >
               <div className="flex justify-between text-sm">
-                <span className="truncate pr-2">{key}</span>
+                <span className="truncate pr-2">{text}</span>
                 <span className="text-muted shrink-0">{formatEuro(value)}</span>
               </div>
               <div className="h-1.5 bg-panel2 rounded mt-1">

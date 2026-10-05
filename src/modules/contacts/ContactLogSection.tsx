@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { where } from '@/firebase/db';
 import { useCollection } from '@/data/hooks';
-import { COL, CONTACT_LOG_CHANNELS, type Contact, type ContactLog, type ContactLogChannel } from '@/data/types';
+import { useOptions } from '@/data/useOptions';
+import { OptionChips } from '@/components/OptionFields';
+import { COL, type Contact, type ContactLog } from '@/data/types';
 import { emptyContactLog, saveContactLog, deleteContactLog } from '@/data/repos';
-import { Field, ChipSelect } from '@/components/Fields';
+import { Field } from '@/components/Fields';
 import { Sheet } from '@/components/Sheet';
 import { formatDateTime } from '@/lib/date';
 
@@ -12,6 +14,7 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
   const { data } = useCollection<ContactLog>(COL.contactLogs, [where('contactId', '==', contactId)], [contactId]);
   const logs = useMemo(() => [...data].sort((a, b) => b.at.localeCompare(a.at)), [data]);
   const [open, setOpen] = useState<ContactLog | null>(null);
+  const { label } = useOptions();
 
   return (
     <Field label="Gesprächsprotokoll">
@@ -24,7 +27,7 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
                 <span className="flex-1 min-w-0">
                   <span className="block text-xs text-muted">
                     {formatDateTime(log.at)}
-                    {log.channel ? ` · ${log.channel}` : ''}
+                    {log.channel ? ` · ${label('contactChannels', log.channel)}` : ''}
                   </span>
                   <span className="block line-clamp-3">{logPreview(log.text)}</span>
                 </span>
@@ -133,12 +136,7 @@ export function ContactLogEditor({
           />
         </Field>
         <Field label="Art">
-          <ChipSelect
-            options={CONTACT_LOG_CHANNELS}
-            value={draft.channel ? [draft.channel] : []}
-            multiple={false}
-            onChange={(value) => update({ channel: value[0] as ContactLogChannel | undefined })}
-          />
+          <OptionChips setKey="contactChannels" value={draft.channel} onChange={(value) => update({ channel: value })} />
         </Field>
         <Field label="Notiz">
           <textarea

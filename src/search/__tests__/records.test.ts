@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildRecords, KINDS, KIND_LABEL } from '../records';
 import { buildIndex, search } from '../engine';
+import { DEFAULT_OPTIONS } from '@/data/options';
 import type { Contact, ContactLog, Cost, DiaryEntry, Task, Trade } from '@/data/types';
 
 const diary: DiaryEntry = {
@@ -116,6 +117,23 @@ describe('buildRecords', () => {
 
   it('labels every kind', () => {
     for (const kind of KINDS) expect(KIND_LABEL[kind].length > 0).toBe(true);
+  });
+});
+
+describe('buildRecords - option ids', () => {
+  const sets = {
+    ...DEFAULT_OPTIONS,
+    taskStatus: DEFAULT_OPTIONS.taskStatus.map((entry) => (entry.id === 'offen' ? { ...entry, label: 'Zu tun' } : entry)),
+  };
+  const byId = buildRecords({
+    tasks: [{ id: 'a2', title: 'Fenster messen', status: 'offen', priority: 'hoch', assignees: ['thomas'], roomIds: [] }],
+    sets,
+  });
+  const idIndex = buildIndex(byId);
+
+  it('finds by the current name, shows the name and not the id', () => {
+    expect(search(idIndex, 'zu tun').map((hit) => hit.record.id)).toEqual(['task:a2']);
+    expect(byId[0]?.subtitle).toBe('Zu tun · Hoch');
   });
 });
 
