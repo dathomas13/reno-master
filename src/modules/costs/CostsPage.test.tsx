@@ -16,6 +16,17 @@ vi.mock('@/components/TopBar', () => ({
 vi.mock('@/data/hooks', () => ({
   useCollection: () => ({ data: [], loading: false }),
 }));
+vi.mock('@/data/useOptions', async () => {
+  const options = await import('@/data/options');
+  const { DEFAULT_OPTIONS: sets } = options;
+  const value = {
+    sets,
+    label: (key: keyof typeof sets, stored: string) => options.labelOf(sets[key], stored),
+    active: (key: keyof typeof sets) => options.activeEntries(sets[key]),
+    add: () => '',
+  };
+  return { useOptions: () => value };
+});
 vi.mock('@/firebase/db', () => ({ orderBy: vi.fn() }));
 vi.mock('@/data/RoomsContext', () => ({
   useRooms: () => ({

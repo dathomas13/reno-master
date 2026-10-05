@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useCollection } from '@/data/hooks';
+import { isTaskDone } from '@/data/options';
 import { useRooms } from '@/data/RoomsContext';
 import { COL, type Cost, type DiaryEntry, type Note, type Photo, type Task } from '@/data/types';
 import { photosForRoom } from '@/data/photoRooms';
@@ -32,7 +33,7 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
   // or the receipt it hangs on, never from itself (see photoRooms.ts)
   const { data: photos } = useCollection<Photo>(COL.photos);
 
-  const openTasks = tasks.filter((task) => task.status !== 'Erledigt');
+  const openTasks = tasks.filter((task) => !isTaskDone(task));
   const total = costs.reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const roomPhotos = useMemo(
     () => photosForRoom(roomIds, { photos, entries, costs }),

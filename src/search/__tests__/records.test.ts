@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildRecords, KINDS, KIND_LABEL } from '../records';
 import { buildIndex, search } from '../engine';
+import { DEFAULT_OPTIONS } from '@/data/options';
 import type { Contact, ContactLog, Cost, DiaryEntry, Task, Trade } from '@/data/types';
 
 const diary: DiaryEntry = {
@@ -8,7 +9,7 @@ const diary: DiaryEntry = {
   date: '2026-09-09',
   title: 'Estrich im OG',
   text: 'Estrich gegossen, trocknet bis Freitag.',
-  present: ['Thomas', 'Herr Weber'],
+  present: ['thomas', 'Herr Weber'],
   defects: true,
   tradeIds: ['t1'],
   roomIds: ['og-bad'],
@@ -32,9 +33,9 @@ const cost: Cost = {
 const task: Task = {
   id: 'a1',
   title: 'Angebot Heizung einholen',
-  status: 'Offen',
-  priority: 'Hoch',
-  assignees: ['Sarah'],
+  status: 'offen',
+  priority: 'hoch',
+  assignees: ['sarah'],
   roomIds: [],
 };
 
@@ -42,7 +43,7 @@ const contact: Contact = {
   id: 'k1',
   name: 'Sanitär Schröder',
   company: 'Schröder GmbH',
-  roles: ['Sanitär'],
+  roles: ['sanitaer'],
   tradeIds: ['t1'],
   notes: 'Telefonat 10.09.: kommt nach dem Estrich.',
 };
@@ -55,7 +56,7 @@ const contactLog: ContactLog = {
   text: 'Kommt nach dem Estrich vorbei.',
 };
 
-const trade: Trade = { id: 't1', name: 'Fliesenarbeiten', status: 'Beauftragt', priority: 'Hoch' };
+const trade: Trade = { id: 't1', name: 'Fliesenarbeiten', status: 'beauftragt', priority: 'hoch' };
 
 const records = buildRecords({
   diary: [diary],
@@ -116,6 +117,23 @@ describe('buildRecords', () => {
 
   it('labels every kind', () => {
     for (const kind of KINDS) expect(KIND_LABEL[kind].length > 0).toBe(true);
+  });
+});
+
+describe('buildRecords - option ids', () => {
+  const sets = {
+    ...DEFAULT_OPTIONS,
+    taskStatus: DEFAULT_OPTIONS.taskStatus.map((entry) => (entry.id === 'offen' ? { ...entry, label: 'Zu tun' } : entry)),
+  };
+  const byId = buildRecords({
+    tasks: [{ id: 'a2', title: 'Fenster messen', status: 'offen', priority: 'hoch', assignees: ['thomas'], roomIds: [] }],
+    sets,
+  });
+  const idIndex = buildIndex(byId);
+
+  it('finds by the current name, shows the name and not the id', () => {
+    expect(search(idIndex, 'zu tun').map((hit) => hit.record.id)).toEqual(['task:a2']);
+    expect(byId[0]?.subtitle).toBe('Zu tun · Hoch');
   });
 });
 

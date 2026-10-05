@@ -156,7 +156,7 @@ interface DiaryEntry {
   title: string;             // Default "Tagebuch DD.MM."
   text: string;              // Markdown-light (Absätze, Listen); Editor = Textarea
   weather?: 'Sonnig'|'Bewölkt'|'Regen'|'Frost'|'Schnee';
-  present: string[];         // Namen aus meta/lists.people (frei erweiterbar)
+  present: string[];         // Kennungen aus meta/options.people (frei erweiterbar)
   defects: boolean;          // "Mängel"
   phaseId?: string;
   tradeIds: string[];        // Gewerke
@@ -196,7 +196,7 @@ interface Cost {
   description: string;
   amountGross: number;       // EUR, Pflicht
   amountNet?: number; vatRate?: 19|7|0|null; vatAmount?: number;
-  category: string;          // aus meta/lists.costCategories
+  category: string;          // Kennung aus meta/options.costCategories
   tradeId?: string;          // Gewerk
   roomIds: string[];
   paymentStatus: 'offen'|'bezahlt'|'erstattet';
@@ -254,14 +254,19 @@ Seed (im Repo unter `src/data/seed/`, beim ersten App-Start eines eingeloggten N
 - **trades** (18): Außenanlagen (Zufahrt/Garten/Terrasse), Dachsanierung (Aufdachdämmung), Elektrik komplett, Entkernung / Rückbau, Estrich / Bodenbeläge, Fassade / WDVS, Fenster & Türen, Fliesen (Bäder / Küche), Gaube Nordseite (optional), Heizung (Sole-Wasser-WP + Flächenkollektor), Innentüren, Kellersanierung (Boden + Feuchtigkeit), Loggia-Umbau (Einhausung), Lüftungsanlage, Malerarbeiten, PV-Anlage (~12 kWp) [Geplant, Budget 15000, Hoch], Sanitär / Wasser / Abwasser, Trockenbau / Innenausbau. Prioritäten (Hoch: Dach, Elektrik, Entkernung, Fassade, Fenster, Heizung, Keller, PV; Mittel: Estrich, Fliesen, Loggia, Lüftung, Sanitär, Trockenbau; Niedrig: Außenanlagen, Gaube, Innentüren, Maler). Status alle "Noch offen" außer Dachsanierung "Angebot einholen", PV "Geplant".
 - **phases** (10, order 0–9): Phase 0: Kaufabwicklung (Abgeschlossen, 2026-04-01–2026-06-15), Phase 1: Planung & Förderanträge (Abgeschlossen, 2026-04-01–2026-06-05), Phase 2: Entkernung & Rückbau (In Arbeit, ab 2026-06-15), Phase 3: Rohbau & Keller, Phase 4: Dach & Fassade, Phase 5: Haustechnik, Phase 6: Innenausbau, Phase 7: PV-Anlage, Phase 8: Außenanlagen, Phase 9: Einzug (alle "Geplant").
 
-### 5.7 `meta/lists` (ein Dokument)
+### 5.7 Auswahlwerte: `meta/options` (Kennung speichern, Namen anzeigen)
+**Grundregel:** In einem Datensatz steht nie ein Anzeigetext, sondern immer eine feste Kennung. Der Name kommt beim Anzeigen aus `meta/options` (`useOptions().label`). Umbenennen ändert daher nie einen Datensatz.
 ```ts
-{ people: string[]   // Seed: Thomas, Sarah, Laura, Matze, Christine, Julia, Tom, Jonas, Joni, Andre, Peter, Hannes, Wolfgang, Robert, Sabi, Handwerker
-  weather: string[]  // Sonnig, Bewölkt, Regen, Frost, Schnee
-  costCategories: string[] // Seed: Abriss/Entsorgung, Außendämmung/Fassade, Baustellenequipment, Bäder, Dach, Elektrik, Energieberater/Baubegleitung, Estrich, Fenster, Fußbodenheizung, Heizungsmontage, Wärmepumpe, Innenausbau, Küche, Lüftungsanlage, PV-Anlage, Werkzeug, Material allgemein, Verpflegung Helfer, Sonstiges
-  taskAreas: string[]; contactRoles: string[] }
+// meta/options – je Set eine geordnete Liste
+{ [set: OptionSetKey]: { id: string; label: string; archived?: boolean }[] }
 ```
-Editierbar unter Einstellungen → Voreinstellungen. Ein Feld fällt nur auf den Seed zurück, wenn es fehlt – ein leeres Array ist eine gewollt leere Liste. Geschrieben wird immer nur das eine Feld (Hinzufügen/Entfernen über `arrayUnion`/`arrayRemove`), nie das ganze Dokument. Gespeichert wird in den Datensätzen der Text: Umbenennen kann ihn auf Wunsch in alle Einträge nachziehen (`presetRename.ts`), Löschen ändert nie Datensätze – Editoren hängen nicht mehr gelistete, aber gespeicherte Werte über `withStored` an.
+- **Kennung = Slug des Namens bei der Anlage** (`slugify`: klein, ä→ae, ß→ss, sonst `-`; Kollision `-2`, `-3`). Danach ändert sie sich nie, auch wenn der Eintrag umbenannt wird.
+- **Feste Sets** (die App rechnet mit ihnen): `taskStatus` (offen, in-arbeit, wartet-auf, erledigt), `phaseStatus` (geplant, in-arbeit, abgeschlossen, blockiert), `priority` (hoch, mittel, niedrig – Aufgaben und Gewerke), `paymentStatus` (offen, bezahlt, erstattet). Nur umbenennen und sortieren. Logik vergleicht ausschließlich über die Helfer und Konstanten in `src/data/options.ts` (`isTaskDone`, `isPhaseActive`, `isHighPriority`, `isPaid`, `hasAssignee`, `TASK_DONE` …), nie gegen Text.
+- **Freie Sets**: `people` (auch „Zuständig“), `weather`, `costCategories`, `taskAreas`, `contactRoles`, `paymentMethods`, `payers`, `contactChannels`, `tradeStatus`, `contactStatus`. Hinzufügen, umbenennen, sortieren, ausblenden (`archived`) statt löschen.
+- **Eigene Objekte** (Räume, Gewerke, Phasen, Kontakte) sind über ihre Dokument-id verknüpft; Löschen heißt dort ebenfalls ausblenden, endgültig nur ohne Verwendung.
+- **Lesen nur über die id**: `labelOf(entries, id)` zeigt den Namen (bei unbekannter id die id selbst), Gruppieren, Zählen und Filtern geschieht über die gespeicherte id. Ausgeblendete oder unbekannte gespeicherte Werte bleiben in den Auswahlfeldern sichtbar.
+- **Namen zu Kennung** (`findOptionByName`: Name oder dessen Slug) gibt es nur dort, wo ein Mensch oder eine Engine einen Namen liefert: das Beleg-Auslesen (Kategorie aus Text) und die Prüfung auf Duplikate beim Hinzufügen.
+- Ein frisches Projekt bekommt `meta/options` mit den Startwerten (`DEFAULT_OPTIONS`, Namen aus `src/data/seed/lists.ts`); fehlt ein Set im Dokument, gilt dessen Startwert.
 
 ### 5.8 `plans` – Pläne
 ```ts
@@ -383,7 +388,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 - **Liste**: chronologisch absteigend, gruppiert nach Monat; Karte je Eintrag: Datum (Wochentag), Titel, Wetter-Icon, Anwesend-Chips, erste 3 Thumbnails, Mängel-Marker. Suchfeld (Volltext clientseitig über `title`+`text`+`present`). Filter-Chips: Phase, Gewerk, Raum, "mit Fotos", "Mängel".
 - **Detail**: Text, Fotogrid (Tippen → Vollbild-Lightbox mit Wischen; Info-Button zeigt Originalname/Aufnahmezeit/Größe und – APK – "Original in Galerie öffnen"), Metadaten-Chips, Bearbeiten/Löschen.
 - **Editor** (auch für Nachträge an anderen Tagen):
-  - Datum (Default heute; `?date=` aus Shortcut/Erinnerung), Titel (auto "Tagebuch DD.MM.", editierbar), Text (Textarea, autogrow, Markdown-light), Wetter (Select), Anwesend (kompakter Mehrfach-Picker aus `meta/lists.people` + Person hinzufügen), Mängel (Toggle), Phase (automatisch gesetztes Info-Tag aus der aktuellen Phase), Gewerke (bewusst wählbarer Mehrfach-Picker), Räume (Mehrfach-Picker, gruppiert nach Geschoss).
+  - Datum (Default heute; `?date=` aus Shortcut/Erinnerung), Titel (auto "Tagebuch DD.MM.", editierbar), Text (Textarea, autogrow, Markdown-light), Wetter (Select), Anwesend (kompakter Mehrfach-Picker aus `meta/options.people` + Person hinzufügen), Mängel (Toggle), Phase (automatisch gesetztes Info-Tag aus der aktuellen Phase), Gewerke (bewusst wählbarer Mehrfach-Picker), Räume (Mehrfach-Picker, gruppiert nach Geschoss).
   - **Fotos**: Button "Fotos hinzufügen" → `platform/photos.pickPhotos({ suggestDate: entry.date })`.
     - PWA: `<input type="file" accept="image/*" multiple>`; nach Auswahl EXIF-Datum lesen; Fotos, deren Aufnahmedatum ≠ Eintragsdatum, bekommen ein gelbes Badge "anderes Datum (DD.MM.)" mit Möglichkeit, sie zu entfernen. Hinweistext im Picker: "Die Galerie ist nach Datum sortiert – wähle die Fotos von heute."
     - APK: eigener Picker-Screen: Raster der Galerie-Fotos **des Eintragsdatums** (MediaStore-Abfrage), Button "Andere Tage" öffnet Datumsnavigation bzw. den System-Picker. Mehrfachauswahl, dann Übernahme.
@@ -459,7 +464,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Editor mit allen Feldern. **Rollen sind mehrfach wählbar und erweiterbar**: der Picker ist derselbe
   Sheet-mit-Checkliste wie „Anwesend“ im Tagebuch (`RolePicker`/`MultiPicker` in `src/components/Pickers.tsx`),
   nicht mehr eine flache Chip-Reihe – neue Rollen kommen über „Rolle hinzufügen“ direkt in die gemeinsame
-  Liste `meta/lists.contactRoles`. Kontakte, die noch das alte einzelne `role`-Feld tragen, werden beim
+  Set `meta/options.contactRoles`. Kontakte, die noch das alte einzelne `role`-Feld tragen, werden beim
   nächsten Speichern automatisch auf `roles: string[]` migriert (`contactRoleNames()` in
   `src/data/contactRoles.ts` liest beide Formen).
 - **Import aus dem Adressbuch**: Button „Importieren“ neben „Neu“. Woher die Auswahl kommt, hängt an der
@@ -533,9 +538,9 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen". Darunter `ModelExchange`: "Modell exportieren" (ZIP mit Anleitung, Hausdateien, DXF – im Browser als Download, in der App über den Teilen-Dialog) und "Modell importieren" (Hausdatei oder ZIP → prüfen, bauen, Änderungsbericht, "Im 3D ansehen" als Vorschau, angemeldet "Als vX veröffentlichen"; entfallende Raum-ids müssen bestätigt werden). Der alte Upload einer fertigen Szene steht als "Fertige Szene hochladen (erweitert)" darunter.
 - Voreinstellungen (Untermenü `/einstellungen/voreinstellungen`, Registry `src/data/presets.ts`), gilt für beide Konten:
   - Haus: Räume (Namen in Bestand/Planung, Planungsraum ohne Fläche anlegen) und Zuordnung Bestand → Planung (`roomMap`). Ändert die Hausdatei selbst: Entwurf im localStorage (`useRoomDraft`), angewendet auf die neueste Fassung (`roomEdits.ts`) und veröffentlicht wie ein Import (`prepareModelImport` → `publishImport`, neue Version). Raum-ids bleiben unberührt.
-  - Listen: Anwesende Personen, Wetter, Kosten-Kategorien, Aufgaben-Bereiche, Kontakt-Rollen – hinzufügen, umbenennen (optional in alle Einträge), löschen mit Rückgängig, sortieren, auf Standard zurücksetzen; mit Verwendungszähler.
-  - Gewerke: anlegen, Name/Status/Priorität/Budget/Angebot/Notizen; Ausblenden statt Löschen (`archived`), endgültig löschen nur ohne Verwendung.
-  - Nicht editierbar sind Werte, mit denen der Code vergleicht (Aufgaben-/Zahlungs-/Phasen-Status, Priorität, Zuständig).
+  - Gruppen: Haus · Bautagebuch (Personen, Wetter) · Projekt (Phasen, Phasenstatus, Gewerke, Gewerkstatus) · Kosten (Kategorien, Zahlungsarten, Bezahlt von, Zahlungsstatus) · Aufgaben (Bereiche, Status, Priorität) · Kontakte (Rollen, Status, Gesprächsarten). Alle Sets nach 5.7.
+  - Freie Listen: hinzufügen, umbenennen, sortieren, ausblenden mit Rückgängig, „Wieder anzeigen“, auf Standard zurücksetzen; Verwendungszähler nach Kennung. Feste Sets: nur umbenennen, sortieren, „Standardnamen wiederherstellen“.
+  - Phasen und Gewerke: eigene Editoren (Name, Status, Start/Ende bzw. Budget/Angebot, Reihenfolge); Ausblenden statt Löschen (`archived`), endgültig löschen nur ohne Verwendung.
 - Offline: belegter Speicher (StorageManager.estimate), ausstehende Uploads, "Alle Thumbnails jetzt laden", "Cache leeren".
 - App-Version (Git-SHA + Build-Datum), "Nach Update suchen".
 

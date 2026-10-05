@@ -77,80 +77,6 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
   );
 }
 
-interface StringMultiPickerProps {
-  label: string;
-  value: string[];
-  options: string[];
-  onChange(value: string[]): void;
-  onAdd(): void;
-  emptyLabel: string;
-  addLabel: string;
-}
-
-/** a `MultiPicker` over a flat, editable list of names rather than ids - roles, people */
-function StringMultiPicker({ label, value, options, onChange, onAdd, emptyLabel, addLabel }: StringMultiPickerProps) {
-  return (
-    <MultiPicker
-      label={label}
-      value={value}
-      onChange={onChange}
-      options={options.map((name) => ({ id: name, name }))}
-      emptyLabel={emptyLabel}
-      onAdd={onAdd}
-      addLabel={addLabel}
-    />
-  );
-}
-
-export function PeoplePicker({
-  value,
-  options,
-  onChange,
-  onAdd,
-}: {
-  value: string[];
-  options: string[];
-  onChange(value: string[]): void;
-  onAdd(): void;
-}) {
-  return (
-    <StringMultiPicker
-      label="Anwesend"
-      value={value}
-      options={options}
-      onChange={onChange}
-      onAdd={onAdd}
-      emptyLabel="niemand ausgewählt"
-      addLabel="Person hinzufügen"
-    />
-  );
-}
-
-/** a contact's roles/Gewerke, e.g. "Elektriker" - erweiterbar: new roles are added inline */
-export function RolePicker({
-  value,
-  options,
-  onChange,
-  onAdd,
-}: {
-  value: string[];
-  options: string[];
-  onChange(value: string[]): void;
-  onAdd(): void;
-}) {
-  return (
-    <StringMultiPicker
-      label="Rollen"
-      value={value}
-      options={options}
-      onChange={onChange}
-      onAdd={onAdd}
-      emptyLabel="keine Rolle"
-      addLabel="Rolle hinzufügen"
-    />
-  );
-}
-
 /**
  * `value`/`onChange` operate on stored room ids, which may predate the active naming
  * (an old entry keeps its Ist id even once the picker offers Soll rooms). MultiPicker
@@ -205,7 +131,8 @@ export function TradePicker({ value, onChange }: { value: string[]; onChange(val
 
 export function PhaseSelect({ value, onChange }: { value?: string; onChange(value: string | undefined): void }) {
   const { data } = useCollection<Phase>(COL.phases);
-  const phases = [...data].sort((a, b) => a.order - b.order);
+  // hidden phases are no longer offered, but one that is already chosen stays visible
+  const phases = data.filter((phase) => !phase.archived || phase.id === value).sort((a, b) => a.order - b.order);
   return (
     <select className="field" value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
       <option value="">keine Phase</option>

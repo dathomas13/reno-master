@@ -32,8 +32,11 @@ export function createdAtMillis(value: unknown): number {
   return Number.POSITIVE_INFINITY;
 }
 
-export const WEATHER = ['Sonnig', 'Bewölkt', 'Regen', 'Frost', 'Schnee'] as const;
-export type Weather = (typeof WEATHER)[number];
+/**
+ * The values below are ids of an option set (see options.ts), stored as strings; the
+ * names to show come from `useOptions`.
+ */
+export type Weather = string;
 
 export interface DiaryEntry extends BaseDoc {
   date: Iso;
@@ -78,14 +81,11 @@ export interface Photo extends BaseDoc {
   uploadState: 'pending' | 'uploaded' | 'failed';
 }
 
-export const PAYMENT_STATUS = ['offen', 'bezahlt', 'erstattet'] as const;
-export type PaymentStatus = (typeof PAYMENT_STATUS)[number];
+export type PaymentStatus = string;
 
-export const PAID_BY = ['Thomas', 'Sarah', 'Gemeinsam'] as const;
-export type PaidBy = (typeof PAID_BY)[number];
+export type PaidBy = string;
 
-export const PAYMENT_METHOD = ['Karte', 'Bar', 'Überweisung', 'PayPal'] as const;
-export type PaymentMethod = (typeof PAYMENT_METHOD)[number];
+export type PaymentMethod = string;
 
 export interface CostExtraction {
   /** stays in step with ReceiptFields['engine'] in platform/ocr/types.ts */
@@ -115,14 +115,11 @@ export interface Cost extends BaseDoc {
   notes?: string;
 }
 
-export const TASK_STATUS = ['Offen', 'In Arbeit', 'Wartet auf', 'Erledigt'] as const;
-export type TaskStatus = (typeof TASK_STATUS)[number];
+export type TaskStatus = string;
 
-export const PRIORITY = ['Hoch', 'Mittel', 'Niedrig'] as const;
-export type Priority = (typeof PRIORITY)[number];
+export type Priority = string;
 
-export const ASSIGNEES = ['Thomas', 'Sarah', 'Handwerker', 'Beide'] as const;
-export type Assignee = (typeof ASSIGNEES)[number];
+export type Assignee = string;
 
 export interface Task extends BaseDoc {
   title: string;
@@ -130,6 +127,7 @@ export interface Task extends BaseDoc {
   status: TaskStatus;
   priority: Priority;
   due?: Iso;
+  /** ids of the `people` option set */
   assignees: Assignee[];
   area?: string;
   tradeId?: string;
@@ -147,21 +145,11 @@ export interface Note extends BaseDoc {
   pinned: boolean;
 }
 
-export const CONTACT_STATUS = [
-  'Angefragt',
-  'Angebot erhalten',
-  'Beauftragt',
-  'Aktiv',
-  'Abgeschlossen',
-  'Abgelehnt',
-] as const;
-export type ContactStatus = (typeof CONTACT_STATUS)[number];
+export type ContactStatus = string;
 
 export interface Contact extends BaseDoc {
   name: string;
   company?: string;
-  /** @deprecated replaced by `roles`; only read for contacts saved before that change */
-  role?: string;
   roles: string[];
   phone?: string;
   email?: string;
@@ -171,8 +159,7 @@ export interface Contact extends BaseDoc {
   notes?: string;
 }
 
-export const CONTACT_LOG_CHANNELS = ['Anruf', 'Termin', 'E-Mail', 'Nachricht', 'Sonstiges'] as const;
-export type ContactLogChannel = (typeof CONTACT_LOG_CHANNELS)[number];
+export type ContactLogChannel = string;
 
 /** one dated entry of a Gesprächsprotokoll; several belong to one contact via `contactId` */
 export interface ContactLog extends BaseDoc {
@@ -182,17 +169,7 @@ export interface ContactLog extends BaseDoc {
   text: string;
 }
 
-export const TRADE_STATUS = [
-  'Noch offen',
-  'Geplant',
-  'Angebot einholen',
-  'Angebote vergleichen',
-  'Beauftragt',
-  'In Arbeit',
-  'Abnahme',
-  'Fertig',
-] as const;
-export type TradeStatus = (typeof TRADE_STATUS)[number];
+export type TradeStatus = string;
 
 export interface Trade extends BaseDoc {
   name: string;
@@ -205,8 +182,7 @@ export interface Trade extends BaseDoc {
   archived?: boolean;
 }
 
-export const PHASE_STATUS = ['Geplant', 'In Arbeit', 'Abgeschlossen', 'Blockiert'] as const;
-export type PhaseStatus = (typeof PHASE_STATUS)[number];
+export type PhaseStatus = string;
 
 export interface Phase extends BaseDoc {
   name: string;
@@ -214,17 +190,9 @@ export interface Phase extends BaseDoc {
   start?: Iso;
   end?: Iso;
   order: number;
+  /** hidden from the pickers, kept for entries that still point at it */
+  archived?: boolean;
 }
-
-export interface Lists {
-  people: string[];
-  weather: string[];
-  costCategories: string[];
-  taskAreas: string[];
-  contactRoles: string[];
-}
-
-export type ListKey = keyof Lists;
 
 export interface Plan extends BaseDoc {
   title: string;

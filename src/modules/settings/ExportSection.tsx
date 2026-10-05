@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useCollection } from '@/data/hooks';
+import { useOptions } from '@/data/useOptions';
 import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type Task, type Trade } from '@/data/types';
 import { archiveName, formatSize, planExport } from '@/data/exportArchive';
 import { canStreamToDisk, pickFileTarget, writeArchive, type ExportProgress } from '@/data/runExport';
@@ -29,6 +30,7 @@ export function ExportSection() {
   const loading =
     entries.loading || photos.loading || costs.loading || tasks.loading || contacts.loading || trades.loading;
 
+  const { sets } = useOptions();
   const plan = useMemo(
     () =>
       planExport({
@@ -38,8 +40,9 @@ export function ExportSection() {
         tasks: tasks.data,
         contacts: contacts.data,
         trades: trades.data,
+        sets,
       }),
-    [entries.data, photos.data, costs.data, tasks.data, contacts.data, trades.data],
+    [entries.data, photos.data, costs.data, tasks.data, contacts.data, trades.data, sets],
   );
 
   const streams = canStreamToDisk();

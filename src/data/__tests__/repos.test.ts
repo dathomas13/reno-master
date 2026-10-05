@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { deleteField } from 'firebase/firestore';
-import { saveContact, saveDiaryEntry, saveTask, toggleTaskDone } from '@/data/repos';
-import { COL, type Contact, type DiaryEntry, type Task } from '@/data/types';
+import { saveDiaryEntry, saveTask, toggleTaskDone } from '@/data/repos';
+import type { DiaryEntry, Task } from '@/data/types';
 
 const saveDoc = vi.hoisted(() => vi.fn());
 const rememberDiaryReminderDate = vi.hoisted(() => vi.fn());
@@ -33,8 +32,8 @@ const entry: DiaryEntry = {
 const task: Task = {
   id: 'task-1',
   title: 'Fenster pruefen',
-  status: 'Offen',
-  priority: 'Mittel',
+  status: 'offen',
+  priority: 'mittel',
   assignees: [],
   roomIds: [],
   reminderAt: '2026-09-19T08:00:00',
@@ -48,20 +47,6 @@ describe('diary repository', () => {
 
     expect(rememberDiaryReminderDate).toHaveBeenCalledWith('2026-09-18');
     expect(cancelDiaryReminderForDate).toHaveBeenCalledWith('2026-09-18');
-  });
-});
-
-describe('contact repository', () => {
-  it('clears the legacy single-value role field once a contact carries the roles array', async () => {
-    saveDoc.mockResolvedValue('contact-1');
-    const contact: Contact = { id: 'contact-1', name: 'Elektro Beispiel', roles: ['Elektriker'], tradeIds: [] };
-
-    await saveContact(contact);
-
-    expect(saveDoc).toHaveBeenCalledWith(
-      COL.contacts,
-      expect.objectContaining({ roles: ['Elektriker'], role: deleteField() }),
-    );
   });
 });
 

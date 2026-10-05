@@ -14,6 +14,7 @@ import {
   type Trade,
   type Phase,
 } from './types';
+import { PAYMENT_PAID, TASK_DONE, TASK_OPEN, PRIORITY_MEDIUM, TRADE_STATUS_DEFAULT, isTaskDone } from './options';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
 import { deleteField } from 'firebase/firestore';
 import { newId } from '@/lib/ids';
@@ -71,7 +72,7 @@ export function emptyCost(date = today()): Cost {
     amountGross: 0,
     category: '',
     roomIds: [],
-    paymentStatus: 'bezahlt',
+    paymentStatus: PAYMENT_PAID,
     receiptPhotoIds: [],
   };
 }
@@ -96,8 +97,8 @@ export function emptyTask(): Task {
   return {
     id: newId(),
     title: '',
-    status: 'Offen',
-    priority: 'Mittel',
+    status: TASK_OPEN,
+    priority: PRIORITY_MEDIUM,
     assignees: [],
     roomIds: [],
   };
@@ -120,10 +121,10 @@ export async function patchTask(id: string, patch: Partial<Task>): Promise<void>
 }
 
 export async function toggleTaskDone(task: Task): Promise<void> {
-  const done = task.status !== 'Erledigt';
+  const done = !isTaskDone(task);
   if (done) void cancelTaskReminderForTask(task.id);
   await patchTask(task.id, {
-    status: done ? 'Erledigt' : 'Offen',
+    status: done ? TASK_DONE : TASK_OPEN,
     doneAt: done ? toIsoDateTime() : deleteField(),
     ...(done ? { reminderAt: deleteField() } : {}),
   } as unknown as Partial<Task>);
@@ -132,7 +133,7 @@ export async function toggleTaskDone(task: Task): Promise<void> {
 export async function markTaskDone(id: string): Promise<void> {
   void cancelTaskReminderForTask(id);
   await patchDoc(COL.tasks, id, {
-    status: 'Erledigt',
+    status: TASK_DONE,
     doneAt: toIsoDateTime(),
     reminderAt: deleteField(),
   });
@@ -163,9 +164,6 @@ export function emptyContact(): Contact {
 
 export async function saveContact(contact: Contact): Promise<string> {
   const value = clean(contact as unknown as Record<string, unknown>);
-  // the role picker only ever writes `roles` now; drop the old single-value field so a
-  // contact never carries both and shows a stale role somewhere that still reads it
-  value.role = deleteField();
   return saveDoc<Contact>(COL.contacts, value as unknown as Contact);
 }
 
@@ -205,7 +203,7 @@ export async function patchTrade(id: string, patch: Partial<Trade>): Promise<voi
 /** creates a trade in the Firestore queue (offline safe, does not wait for the server) */
 export function createTrade(name: string): string {
   const id = newId();
-  void saveDoc<Trade>(COL.trades, { id, name: name.trim(), status: 'Noch offen', priority: 'Mittel' }).catch(() => {
+  void saveDoc<Trade>(COL.trades, { id, name: name.trim(), status: TRADE_STATUS_DEFAULT, priority: PRIORITY_MEDIUM }).catch(() => {
     /* queued write failed locally; the snapshot simply never shows the trade */
   });
   return id;
@@ -235,4 +233,38 @@ export async function patchPhase(id: string, patch: Partial<Phase>): Promise<voi
     if (value[key] === undefined) value[key] = deleteField();
   }
   await patchDoc(COL.phases, id, value);
+}
+
+// ------------------------------------------------------------------ phases (settings)
+
+/** creates a phase at the end of the list (offline safe, does not wait for the server) */
+export function createPhase(name: string, order: number): string {
+  const id = newId();
+  void saveDoc<Phase>(COL.phases, { id, name: name.trim(), status: 'geplant', order }).catch(() => {
+    /* queued write failed locally; the snapshot simply never shows the phase */
+  });
+  return id;
+}
+
+/** an explicitly undefined field (start, end) means "remove it" */
+export function savePhase(id: string, patch: Partial<Omit<Phase, 'id'>>): void {
+  void patchPhase(id, patch).catch(() => undefined);
+}
+
+export function setPhaseArchived(id: string, archived: boolean): void {
+  void patchDoc(COL.phases, id, { archived }).catch(() => undefined);
+}
+
+export function deletePhase(id: string): void {
+  void removeDoc(COL.phases, id).catch(() => undefined);
+}
+
+/**
+ * Swaps the position of two neighbours; `first` is the one that comes first in the list
+ * now. Two phases with the same `order` still end up in the new sequence.
+ */
+export function swapPhaseOrder(first: Pick<Phase, 'id' | 'order'>, second: Pick<Phase, 'id' | 'order'>): void {
+  const tie = first.order === second.order;
+  void patchDoc(COL.phases, first.id, { order: tie ? second.order + 1 : second.order }).catch(() => undefined);
+  void patchDoc(COL.phases, second.id, { order: first.order }).catch(() => undefined);
 }

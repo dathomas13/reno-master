@@ -8,6 +8,32 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.74.2 – Schneller Start auch im Browser
+
+- Die aufgeräumte Fassung steht jetzt auch in der Webansicht bereit.
+
+## 0.74.1 – Schneller Start
+
+- Die App startet ohne die Prüfungen aus der Umstellung.
+
+## 0.74.0 – Aufgeräumt
+
+- Die Sicherung der Umstellung wird gelöscht; die App prüft beim Start nicht mehr darauf.
+
+## 0.73.2 – Einmalige Umstellung mit Sicherung
+
+- Vorhandene Einträge werden beim ersten Start einmalig umgestellt; vorher legt die App eine Sicherung an.
+
+## 0.73.1 – Umstellung angehalten
+
+- Die einmalige Umstellung der Einträge läuft vorerst nicht; alles andere aus 0.73.0 bleibt.
+
+## 0.73.0 – Alles umbenennen: Phasen, Status und Listen
+
+- In den Voreinstellungen lassen sich jetzt auch Phasen, Status, Prioritäten, Zahlungsarten und Gesprächsarten pflegen – Umbenennen wirkt sofort überall.
+- „Zuständig“ wählt aus der Personenliste; der Filter in den Aufgaben zeigt die Personen, die vorkommen.
+- Beim ersten Start stellt die App die vorhandenen Einträge einmalig um.
+
 ## 0.72.1 – Voreinstellungen auch im Browser
 
 - Das Untermenü „Voreinstellungen“ steht jetzt auch in der Webansicht bereit.

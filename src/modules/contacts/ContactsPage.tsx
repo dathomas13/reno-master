@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
-import { Field, ChipSelect, EmptyState } from '@/components/Fields';
-import { TradePicker, RolePicker } from '@/components/Pickers';
+import { Field, EmptyState } from '@/components/Fields';
+import { TradePicker } from '@/components/Pickers';
+import { OptionChips, OptionMultiPicker } from '@/components/OptionFields';
 import { useCollection } from '@/data/hooks';
-import { useLists } from '@/data/useLists';
-import { withStored } from '@/data/presetLists';
-import { COL, CONTACT_STATUS, type Contact, type ContactStatus } from '@/data/types';
-import { contactRoleNames } from '@/data/contactRoles';
+import { useOptions } from '@/data/useOptions';
+import { COL, type Contact } from '@/data/types';
+import { contactRoleLabels, contactRoleNames } from '@/data/contactRoles';
 import { emptyContact, saveContact, deleteContact } from '@/data/repos';
 import { ContactImportSheet } from './ContactImportSheet';
 import { ContactLogSection } from './ContactLogSection';
@@ -25,7 +25,7 @@ function whatsappHref(phone: string): string {
 export default function ContactsPage() {
   const [params, setParams] = useSearchParams();
   const { data: contacts } = useCollection<Contact>(COL.contacts);
-  const { lists, addTo } = useLists();
+  const { label } = useOptions();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Contact | null>(null);
   const [importing, setImporting] = useState(false);
@@ -48,18 +48,20 @@ export default function ContactsPage() {
     }
   }
 
+  const roleLabel = useCallback((stored: string) => label('contactRoles', stored), [label]);
+
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     const rows = needle
       ? contacts.filter((contact) =>
-          [contact.name, contact.company, ...contactRoleNames(contact), contact.notes]
+          [contact.name, contact.company, ...contactRoleLabels(contact, roleLabel), contact.notes]
             .join(' ')
             .toLowerCase()
             .includes(needle),
         )
       : contacts;
     return [...rows].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'de'));
-  }, [contacts, search]);
+  }, [contacts, search, roleLabel]);
 
   return (
     <>
@@ -102,7 +104,11 @@ export default function ContactsPage() {
                 {contact.name || '(ohne Namen)'}
               </span>
               <span className="block text-xs text-muted truncate">
-                {[contactRoleNames(contact).join(', '), contact.company, contact.status]
+                {[
+                  contactRoleLabels(contact, roleLabel).join(', '),
+                  contact.company,
+                  contact.status ? label('contactStatus', contact.status) : '',
+                ]
                   .filter(Boolean)
                   .join(' · ')}
               </span>
@@ -135,8 +141,6 @@ export default function ContactsPage() {
         <ContactSheet
           contact={editing}
           isNew={!contacts.some((item) => item.id === editing.id)}
-          roles={lists.contactRoles}
-          onAddRole={(role) => void addTo('contactRoles', role)}
           onClose={close}
           onSave={async (contact) => {
             await saveContact(contact);
@@ -162,16 +166,12 @@ export default function ContactsPage() {
 function ContactSheet({
   contact,
   isNew,
-  roles,
-  onAddRole,
   onClose,
   onSave,
   onDelete,
 }: {
   contact: Contact;
   isNew: boolean;
-  roles: string[];
-  onAddRole(role: string): void;
   onClose(): void;
   onSave(contact: Contact): Promise<void>;
   onDelete(contact: Contact): Promise<void>;
@@ -203,16 +203,13 @@ function ContactSheet({
           />
         </Field>
         <Field label="Rollen">
-          <RolePicker
-            options={withStored(roles, contactRoleNames(draft))}
+          <OptionMultiPicker
+            setKey="contactRoles"
+            label="Rollen"
             value={contactRoleNames(draft)}
             onChange={(value) => update({ roles: value })}
-            onAdd={() => {
-              const role = prompt('Neue Rolle?')?.trim();
-              if (!role) return;
-              onAddRole(role);
-              update({ roles: [...contactRoleNames(draft), role] });
-            }}
+            emptyLabel="keine Rolle"
+            addLabel="Rolle hinzufügen"
           />
         </Field>
         <Field label="Telefon">
@@ -233,12 +230,7 @@ function ContactSheet({
           />
         </Field>
         <Field label="Status">
-          <ChipSelect
-            options={CONTACT_STATUS}
-            value={draft.status ? [draft.status] : []}
-            multiple={false}
-            onChange={(value) => update({ status: value[0] as ContactStatus | undefined })}
-          />
+          <OptionChips setKey="contactStatus" value={draft.status} onChange={(value) => update({ status: value })} />
         </Field>
         <Field label="Bewertung">
           <div className="flex gap-1">

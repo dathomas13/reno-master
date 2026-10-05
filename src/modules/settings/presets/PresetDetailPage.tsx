@@ -1,32 +1,32 @@
 import { useState } from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { useLists } from '@/data/useLists';
+import { useOptions } from '@/data/useOptions';
 import { findPreset, type PresetDef } from '@/data/presets';
 import { usePresetUsage } from '@/data/presetUsage';
-import { renameEverywhere } from '@/data/presetRename';
-import { SEED_LISTS } from '@/data/seed/lists';
-import type { ListKey } from '@/data/types';
+import { activeEntries, type OptionSetKey } from '@/data/options';
 import { WEATHER_ICON } from '@/modules/diary/weatherIcons';
 import { PresetListEditor } from './PresetListEditor';
 import TradesEditor from './TradesEditor';
+import PhasesEditor from './PhasesEditor';
 import RoomsEditor from './RoomsEditor';
 import RoomMapEditor from './RoomMapEditor';
 
 const OVERVIEW = '/einstellungen/voreinstellungen';
 
-function StringListPage({ preset, listKey }: { preset: PresetDef; listKey: ListKey }) {
-  const { lists, add, rename, remove, restore, setOrder, reset } = useLists();
-  const usage = usePresetUsage(listKey);
+function OptionsPage({ preset, setKey }: { preset: PresetDef; setKey: OptionSetKey }) {
+  const options = useOptions();
+  const usage = usePresetUsage(setKey);
   const [menuOpen, setMenuOpen] = useState(false);
-  const items = lists[listKey];
+  const entries = options.sets[setKey];
+  const visible = activeEntries(entries).length;
 
   return (
     <>
       <TopBar
         title={preset.title}
         back={OVERVIEW}
-        subtitle={`${preset.section} · ${items.length === 1 ? '1 Eintrag' : `${items.length} Einträge`}`}
+        subtitle={`${preset.section} · ${visible === 1 ? '1 Eintrag' : `${visible} Einträge`}`}
         action={
           <button
             type="button"
@@ -40,22 +40,20 @@ function StringListPage({ preset, listKey }: { preset: PresetDef; listKey: ListK
       />
       <div className="max-w-2xl pb-24">
         <PresetListEditor
-          items={items}
+          setKey={setKey}
+          entries={entries}
           usage={usage}
           singular={preset.singular}
           placeholder={preset.placeholder}
           maxLength={preset.maxLength}
-          seedCount={SEED_LISTS[listKey].length}
-          onAdd={(value) => void add(listKey, value)}
-          onRename={(from, to, everywhere) => {
-            void rename(listKey, from, to);
-            if (everywhere) void renameEverywhere(listKey, from, to).catch(() => undefined);
-          }}
-          onRemove={(value) => remove(listKey, value)}
-          onRestore={(value, index) => void restore(listKey, value, index)}
-          onReorder={(next) => void setOrder(listKey, next)}
-          onReset={() => void reset(listKey)}
-          leading={listKey === 'weather' ? (value) => <span aria-hidden>{WEATHER_ICON[value] ?? '·'}</span> : undefined}
+          onAdd={(label) => options.add(setKey, label)}
+          onRename={(id, label) => options.rename(setKey, id, label)}
+          onArchive={(id) => options.archive(setKey, id)}
+          onUnarchive={(id) => options.unarchive(setKey, id)}
+          onMove={(id, delta) => options.move(setKey, id, delta)}
+          onSortAlpha={() => options.sortAlpha(setKey)}
+          onReset={() => options.reset(setKey)}
+          leading={setKey === 'weather' ? (entry) => <span aria-hidden>{WEATHER_ICON[entry.id] ?? '·'}</span> : undefined}
           menuOpen={menuOpen}
           onMenuClose={() => setMenuOpen(false)}
         />
@@ -71,13 +69,15 @@ export default function PresetDetailPage() {
   switch (preset.kind) {
     case 'trades':
       return <TradesEditor />;
+    case 'phases':
+      return <PhasesEditor />;
     case 'rooms':
       return <RoomsEditor />;
     case 'roomMap':
       return <RoomMapEditor />;
-    case 'strings':
-      return preset.listKey ? (
-        <StringListPage key={preset.key} preset={preset} listKey={preset.listKey} />
+    case 'options':
+      return preset.setKey ? (
+        <OptionsPage key={preset.key} preset={preset} setKey={preset.setKey} />
       ) : (
         <Navigate to={OVERVIEW} replace />
       );

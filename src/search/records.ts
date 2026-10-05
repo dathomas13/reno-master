@@ -24,6 +24,7 @@ import type {
 } from '@/data/types';
 import type { SearchKind, SearchRecord } from './engine';
 import { contactRoleNames } from '@/data/contactRoles';
+import { DEFAULT_OPTIONS, labelOf, type OptionSetKey, type OptionSets } from '@/data/options';
 import { formatDate, formatDateLong, formatDateWithWeekday } from '@/lib/date';
 import { formatEuro } from '@/lib/money';
 
@@ -53,6 +54,8 @@ export interface SearchSource {
   plans?: Plan[];
   photos?: Photo[];
   rooms?: RoomLike[];
+  /** the option sets, to search and show names instead of ids; the start values when missing */
+  sets?: OptionSets;
 }
 
 export const KIND_LABEL: Record<SearchKind, string> = {
@@ -128,6 +131,12 @@ function amountWords(amount?: number): string[] {
 }
 
 export function buildRecords(source: SearchSource): SearchRecord[] {
+  const sets = source.sets ?? DEFAULT_OPTIONS;
+  /** the name of a stored option value, '' for none */
+  const name = (key: OptionSetKey, stored: string | undefined | null): string => labelOf(sets[key], stored);
+  const nameAll = (key: OptionSetKey, stored: readonly string[] | undefined): string[] =>
+    (stored ?? []).map((value) => name(key, value)).filter(Boolean);
+
   const roomName = new Map((source.rooms ?? []).map((room) => [room.id, room.name]));
   const roomAliases = new Map((source.rooms ?? []).map((room) => [room.id, room.aliases ?? []]));
   const tradeName = new Map((source.trades ?? []).map((trade) => [trade.id, trade.name]));
@@ -145,9 +154,9 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       body: entry.text,
       meta: [
         ...dateWords(entry.date),
-        entry.weather ?? '',
+        name('weather', entry.weather),
         entry.defects ? 'Mängel' : '',
-        ...(entry.present ?? []),
+        ...nameAll('people', entry.present),
         ...roomWords(entry.roomIds, roomName, roomAliases),
         ...names(entry.tradeIds, tradeName),
         phaseName.get(entry.phaseId ?? '') ?? '',
@@ -163,18 +172,18 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       id: `cost:${cost.id}`,
       kind: 'cost',
       title: cost.vendor || cost.description || 'Beleg',
-      subtitle: [formatDate(cost.date), cost.category, cost.description]
+      subtitle: [formatDate(cost.date), name('costCategories', cost.category), cost.description]
         .filter(Boolean)
         .join(' · '),
       // the text the receipt scan pulled out of the photo is searchable as well
       body: [cost.description, cost.notes, cost.extraction?.rawText].filter(Boolean).join('\n'),
       meta: [
         ...dateWords(cost.date),
-        cost.category,
+        name('costCategories', cost.category),
         cost.invoiceNumber ?? '',
-        cost.paymentStatus,
-        cost.paidBy ?? '',
-        cost.paymentMethod ?? '',
+        name('paymentStatus', cost.paymentStatus),
+        name('payers', cost.paidBy),
+        name('paymentMethods', cost.paymentMethod),
         ...amountWords(cost.amountGross),
         tradeName.get(cost.tradeId ?? '') ?? '',
         ...roomWords(cost.roomIds, roomName, roomAliases),
@@ -191,15 +200,15 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       id: `task:${task.id}`,
       kind: 'task',
       title: task.title,
-      subtitle: [task.status, task.priority, task.area, task.due ? formatDate(task.due) : '']
+      subtitle: [name('taskStatus', task.status), name('priority', task.priority), name('taskAreas', task.area), task.due ? formatDate(task.due) : '']
         .filter(Boolean)
         .join(' · '),
       body: task.notes ?? '',
       meta: [
-        task.status,
-        task.priority,
-        task.area ?? '',
-        ...(task.assignees ?? []),
+        name('taskStatus', task.status),
+        name('priority', task.priority),
+        name('taskAreas', task.area),
+        ...nameAll('people', task.assignees),
         ...dateWords(task.due),
         tradeName.get(task.tradeId ?? '') ?? '',
         phaseName.get(task.phaseId ?? '') ?? '',
@@ -233,19 +242,19 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
   // ------------------------------------------------------------------ Kontakte
   const contactName = new Map((source.contacts ?? []).map((contact) => [contact.id, contact.name]));
   for (const contact of source.contacts ?? []) {
-    const roles = contactRoleNames(contact);
+    const roles = nameAll('contactRoles', contactRoleNames(contact));
     records.push({
       id: `contact:${contact.id}`,
       kind: 'contact',
       title: contact.name,
-      subtitle: [roles.join(', '), contact.company, contact.status].filter(Boolean).join(' · '),
+      subtitle: [roles.join(', '), contact.company, name('contactStatus', contact.status)].filter(Boolean).join(' · '),
       body: contact.notes ?? '',
       meta: [
         contact.company ?? '',
         ...roles,
         contact.phone ?? '',
         contact.email ?? '',
-        contact.status ?? '',
+        name('contactStatus', contact.status),
         ...names(contact.tradeIds, tradeName),
       ].filter(Boolean),
       to: `/kontakte?kontakt=${contact.id}`,
@@ -260,9 +269,9 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       id: `contactLog:${log.id}`,
       kind: 'contactLog',
       title: firstLine,
-      subtitle: [person, log.channel ?? '', ...dateWords(log.at.slice(0, 10))].filter(Boolean).join(' · '),
+      subtitle: [person, name('contactChannels', log.channel), ...dateWords(log.at.slice(0, 10))].filter(Boolean).join(' · '),
       body: log.text,
-      meta: [person, log.channel ?? '', ...dateWords(log.at.slice(0, 10))].filter(Boolean),
+      meta: [person, name('contactChannels', log.channel), ...dateWords(log.at.slice(0, 10))].filter(Boolean),
       date: log.at.slice(0, 10),
       to: `/gespraeche?eintrag=${log.id}`,
     });
@@ -274,11 +283,11 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       id: `trade:${trade.id}`,
       kind: 'trade',
       title: trade.name,
-      subtitle: [trade.status, trade.priority].filter(Boolean).join(' · '),
+      subtitle: [name('tradeStatus', trade.status), name('priority', trade.priority)].filter(Boolean).join(' · '),
       body: trade.notes ?? '',
       meta: [
-        trade.status,
-        trade.priority,
+        name('tradeStatus', trade.status),
+        name('priority', trade.priority),
         ...amountWords(trade.budgetPlanned),
         ...amountWords(trade.offer),
       ].filter(Boolean),
@@ -293,8 +302,8 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       id: `phase:${phase.id}`,
       kind: 'phase',
       title: phase.name,
-      subtitle: [phase.status, phase.start ? formatDate(phase.start) : ''].filter(Boolean).join(' · '),
-      meta: [phase.status, ...dateWords(phase.start), ...dateWords(phase.end)].filter(Boolean),
+      subtitle: [name('phaseStatus', phase.status), phase.start ? formatDate(phase.start) : ''].filter(Boolean).join(' · '),
+      meta: [name('phaseStatus', phase.status), ...dateWords(phase.start), ...dateWords(phase.end)].filter(Boolean),
       date: phase.start,
       to: `/tagebuch?phase=${phase.id}`,
     });

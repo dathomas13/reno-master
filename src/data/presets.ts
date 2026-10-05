@@ -1,13 +1,13 @@
-import type { ListKey } from './types';
+import type { OptionSetKey } from './options';
 
-export type PresetKind = 'strings' | 'trades' | 'rooms' | 'roomMap';
+export type PresetKind = 'options' | 'trades' | 'phases' | 'rooms' | 'roomMap';
 export type PresetSection = 'Haus' | 'Bautagebuch' | 'Projekt' | 'Kosten' | 'Aufgaben' | 'Kontakte';
 
 export interface PresetDef {
   /** route segment under /einstellungen/voreinstellungen */
   key: string;
-  /** the field of meta/lists, for kind 'strings' */
-  listKey?: ListKey;
+  /** the option set, for kind 'options' */
+  setKey?: OptionSetKey;
   kind: PresetKind;
   section: PresetSection;
   title: string;
@@ -16,6 +16,21 @@ export interface PresetDef {
   placeholder: string;
   maxLength: number;
 }
+
+function options(
+  key: string,
+  setKey: OptionSetKey,
+  section: PresetSection,
+  title: string,
+  subtitle: string,
+  singular: string,
+  placeholder = `${singular} hinzufügen …`,
+): PresetDef {
+  return { key, setKey, kind: 'options', section, title, subtitle, singular, placeholder, maxLength: 60 };
+}
+
+/** the groups in the order the overview shows them */
+export const PRESET_SECTIONS: PresetSection[] = ['Haus', 'Bautagebuch', 'Projekt', 'Kosten', 'Aufgaben', 'Kontakte'];
 
 export const PRESETS: PresetDef[] = [
   {
@@ -28,36 +43,30 @@ export const PRESETS: PresetDef[] = [
     subtitle: 'Wohin alte Einträge wandern', singular: 'Zuordnung',
     placeholder: '', maxLength: 40,
   },
+  options('personen', 'people', 'Bautagebuch', 'Anwesende Personen', 'Auswahl im Bautagebuch, auch „Zuständig“', 'Person'),
+  options('wetter', 'weather', 'Bautagebuch', 'Wetter', 'Auswahl im Bautagebuch', 'Wetter'),
+  {
+    key: 'phasen', kind: 'phases', section: 'Projekt', title: 'Phasen',
+    subtitle: 'Bauphasen mit Reihenfolge und Zeitraum', singular: 'Phase',
+    placeholder: 'Neue Phase …', maxLength: 80,
+  },
+  options('phasenstatus', 'phaseStatus', 'Projekt', 'Phasenstatus', 'Zustände einer Phase', 'Status'),
   {
     key: 'gewerke', kind: 'trades', section: 'Projekt', title: 'Gewerke',
     subtitle: 'Gewerke des Projekts', singular: 'Gewerk',
     placeholder: 'Neues Gewerk …', maxLength: 60,
   },
-  {
-    key: 'personen', listKey: 'people', kind: 'strings', section: 'Bautagebuch', title: 'Anwesende Personen',
-    subtitle: 'Auswahl im Bautagebuch', singular: 'Person',
-    placeholder: 'Person hinzufügen …', maxLength: 60,
-  },
-  {
-    key: 'wetter', listKey: 'weather', kind: 'strings', section: 'Bautagebuch', title: 'Wetter',
-    subtitle: 'Auswahl im Bautagebuch', singular: 'Wetter',
-    placeholder: 'Wetter hinzufügen …', maxLength: 60,
-  },
-  {
-    key: 'kategorien', listKey: 'costCategories', kind: 'strings', section: 'Kosten', title: 'Kategorien',
-    subtitle: 'Kostenkategorien', singular: 'Kategorie',
-    placeholder: 'Kategorie hinzufügen …', maxLength: 60,
-  },
-  {
-    key: 'bereiche', listKey: 'taskAreas', kind: 'strings', section: 'Aufgaben', title: 'Bereiche',
-    subtitle: 'Bereiche der Aufgaben', singular: 'Bereich',
-    placeholder: 'Bereich hinzufügen …', maxLength: 60,
-  },
-  {
-    key: 'rollen', listKey: 'contactRoles', kind: 'strings', section: 'Kontakte', title: 'Rollen',
-    subtitle: 'Rollen der Kontakte', singular: 'Rolle',
-    placeholder: 'Rolle hinzufügen …', maxLength: 60,
-  },
+  options('gewerkstatus', 'tradeStatus', 'Projekt', 'Gewerkstatus', 'Zustände eines Gewerks', 'Status'),
+  options('kategorien', 'costCategories', 'Kosten', 'Kategorien', 'Kostenkategorien', 'Kategorie'),
+  options('zahlungsarten', 'paymentMethods', 'Kosten', 'Zahlungsarten', 'Wie bezahlt wurde', 'Zahlungsart'),
+  options('bezahlt-von', 'payers', 'Kosten', 'Bezahlt von', 'Wer bezahlt hat', 'Eintrag'),
+  options('zahlungsstatus', 'paymentStatus', 'Kosten', 'Zahlungsstatus', 'Zustände einer Zahlung', 'Status'),
+  options('bereiche', 'taskAreas', 'Aufgaben', 'Bereiche', 'Bereiche der Aufgaben', 'Bereich'),
+  options('aufgabenstatus', 'taskStatus', 'Aufgaben', 'Status', 'Zustände einer Aufgabe', 'Status'),
+  options('prioritaet', 'priority', 'Aufgaben', 'Priorität', 'Auch für Gewerke', 'Priorität'),
+  options('rollen', 'contactRoles', 'Kontakte', 'Rollen', 'Rollen der Kontakte', 'Rolle'),
+  options('kontaktstatus', 'contactStatus', 'Kontakte', 'Status', 'Zustände eines Kontakts', 'Status'),
+  options('gespraechsarten', 'contactChannels', 'Kontakte', 'Gesprächsarten', 'Art eines Gesprächsprotokolls', 'Gesprächsart'),
 ];
 
 export function findPreset(key: string | undefined): PresetDef | undefined {

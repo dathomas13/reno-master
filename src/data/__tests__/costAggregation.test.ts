@@ -10,6 +10,7 @@ import {
   NO_CATEGORY,
 } from '@/data/costAggregation';
 import { formatAmount } from '@/lib/money';
+import { DEFAULT_OPTIONS } from '@/data/options';
 import type { Cost, Trade } from '@/data/types';
 
 function cost(partial: Partial<Cost>): Cost {
@@ -19,7 +20,7 @@ function cost(partial: Partial<Cost>): Cost {
     vendor: 'Bauhaus',
     description: '',
     amountGross: 100,
-    category: 'Material allgemein',
+    category: 'material-allgemein',
     roomIds: [],
     paymentStatus: 'bezahlt',
     receiptPhotoIds: [],
@@ -27,7 +28,7 @@ function cost(partial: Partial<Cost>): Cost {
   };
 }
 
-const TRADE: Trade = { id: 't1', name: 'Dach', status: 'Noch offen', priority: 'Hoch', budgetPlanned: 1000 };
+const TRADE: Trade = { id: 't1', name: 'Dach', status: 'noch-offen', priority: 'hoch', budgetPlanned: 1000 };
 
 describe('sumGross', () => {
   it('adds up and rounds to cents', () => {
@@ -43,12 +44,26 @@ describe('sumGross', () => {
 describe('byCategory', () => {
   it('groups, counts and sorts by size', () => {
     const rows = byCategory([
-      cost({ category: 'Dach', amountGross: 50 }),
-      cost({ category: 'Werkzeug', amountGross: 200 }),
-      cost({ category: 'Dach', amountGross: 25 }),
+      cost({ category: 'dach', amountGross: 50 }),
+      cost({ category: 'werkzeug', amountGross: 200 }),
+      cost({ category: 'dach', amountGross: 25 }),
     ]);
-    expect(rows[0]).toEqual({ key: 'Werkzeug', total: 200, count: 1 });
-    expect(rows[1]).toEqual({ key: 'Dach', total: 75, count: 2 });
+    expect(rows[0]).toEqual({ key: 'werkzeug', label: 'Werkzeug', total: 200, count: 1 });
+    expect(rows[1]).toEqual({ key: 'dach', label: 'Dach', total: 75, count: 2 });
+  });
+
+  it('names a group from the sets', () => {
+    const sets = {
+      ...DEFAULT_OPTIONS,
+      costCategories: [{ id: 'dach', label: 'Dachdeckung' }],
+    };
+    const rows = byCategory([cost({ category: 'dach', amountGross: 10 }), cost({ category: 'dach', amountGross: 5 })], sets);
+    expect(rows).toEqual([{ key: 'dach', label: 'Dachdeckung', total: 15, count: 2 }]);
+  });
+
+  it('keeps an unknown text as its own group', () => {
+    const rows = byCategory([cost({ category: 'weltraum', amountGross: 1 })]);
+    expect(rows[0]).toMatchObject({ key: 'weltraum', label: 'weltraum' });
   });
 
   it('collects entries without a category', () => {
@@ -122,7 +137,7 @@ describe('budgetPerTrade', () => {
   });
 
   it('drops trades without budget and without spending', () => {
-    const empty: Trade = { id: 't2', name: 'Maler', status: 'Noch offen', priority: 'Niedrig' };
+    const empty: Trade = { id: 't2', name: 'Maler', status: 'noch-offen', priority: 'niedrig' };
     expect(budgetPerTrade([], [empty])).toHaveLength(0);
   });
 });

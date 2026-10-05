@@ -76,6 +76,11 @@ describe('validateReceiptFields', () => {
     expect(fields.amountNet).toBeUndefined();
   });
 
+  it('takes a category by label or slug, in our spelling', () => {
+    expect(validateReceiptFields({ category: 'werkzeug' }, 'claude', CATEGORIES).category).toBe('Werkzeug');
+    expect(validateReceiptFields({ category: 'material-allgemein' }, 'claude', CATEGORIES).category).toBe('Material allgemein');
+  });
+
   it('drops a category the app does not know', () => {
     expect(validateReceiptFields({ category: 'Weltraumfahrt' }, 'claude', CATEGORIES).category).toBeUndefined();
   });

@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { Field, ChipSelect, Spinner } from '@/components/Fields';
+import { Field, Spinner } from '@/components/Fields';
 import { RoomPicker, TradeSelect } from '@/components/Pickers';
 import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
-import { useLists } from '@/data/useLists';
-import { withStored } from '@/data/presetLists';
-import {
-  COL, PAID_BY, PAYMENT_METHOD, PAYMENT_STATUS,
-  type Cost, type PaidBy, type PaymentMethod, type PaymentStatus, type Photo,
-} from '@/data/types';
+import { useOptions } from '@/data/useOptions';
+import { findOptionByName, PAYMENT_OPEN } from '@/data/options';
+import { OptionChips, OptionSelect } from '@/components/OptionFields';
+import { COL, type Cost, type Photo } from '@/data/types';
 import { emptyCost, saveCost, deleteCost } from '@/data/repos';
 import { parseAmount, formatAmount, splitGross, round2 } from '@/lib/money';
 import { toIsoDateTime, today } from '@/lib/date';
@@ -32,7 +30,7 @@ function CostEditor() {
   const isNew = !id;
 
   const { data: existing, loading } = useDocument<Cost>(COL.costs, id);
-  const { lists } = useLists();
+  const options = useOptions();
   const [cost, setCost] = useState<Cost>(() => emptyCost(today()));
   const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
@@ -91,7 +89,7 @@ function CostEditor() {
       const fields: ReceiptFields = await extractor.extract({
         file,
         contentType,
-        categories: lists.costCategories,
+        categories: options.active('costCategories').map((entry) => entry.label),
       });
       const filled: AutoFilled = {};
       const patch: Partial<Cost> = {};
@@ -126,8 +124,9 @@ function CostEditor() {
         patch.description = fields.description;
         filled.description = true;
       }
-      if (fields.category && !cost.category && lists.costCategories.includes(fields.category)) {
-        patch.category = fields.category;
+      const category = fields.category ? findOptionByName(options.sets.costCategories, fields.category) : undefined;
+      if (category && !cost.category) {
+        patch.category = category.id;
         filled.category = true;
       }
       patch.extraction = {
@@ -307,11 +306,11 @@ function CostEditor() {
         </Field>
 
         <Field label="Kategorie">
-          <ChipSelect
-            options={withStored(lists.costCategories, cost.category)}
-            value={cost.category ? [cost.category] : []}
-            multiple={false}
-            onChange={(value) => update({ category: value[0] ?? '' })}
+          <OptionSelect
+            setKey="costCategories"
+            value={cost.category || undefined}
+            emptyLabel="ohne Kategorie"
+            onChange={(value) => update({ category: value ?? '' })}
           />
           {autoMark('category')}
         </Field>
@@ -337,30 +336,23 @@ function CostEditor() {
         </Field>
 
         <Field label="Status">
-          <ChipSelect
-            options={PAYMENT_STATUS}
-            value={[cost.paymentStatus]}
-            multiple={false}
+          <OptionChips
+            setKey="paymentStatus"
+            value={cost.paymentStatus}
             allowEmpty={false}
-            onChange={(value) => update({ paymentStatus: (value[0] ?? 'bezahlt') as PaymentStatus })}
+            onChange={(value) => update({ paymentStatus: value ?? PAYMENT_OPEN })}
           />
         </Field>
 
         <Field label="Bezahlt von">
-          <ChipSelect
-            options={PAID_BY}
-            value={cost.paidBy ? [cost.paidBy] : []}
-            multiple={false}
-            onChange={(value) => update({ paidBy: value[0] as PaidBy | undefined })}
-          />
+          <OptionChips setKey="payers" value={cost.paidBy} onChange={(value) => update({ paidBy: value })} />
         </Field>
 
         <Field label="Zahlungsart">
-          <ChipSelect
-            options={PAYMENT_METHOD}
-            value={cost.paymentMethod ? [cost.paymentMethod] : []}
-            multiple={false}
-            onChange={(value) => update({ paymentMethod: value[0] as PaymentMethod | undefined })}
+          <OptionChips
+            setKey="paymentMethods"
+            value={cost.paymentMethod}
+            onChange={(value) => update({ paymentMethod: value })}
           />
         </Field>
 

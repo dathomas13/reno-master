@@ -175,10 +175,10 @@ Steht:
   anstoßende Wände, Innenkette nur der Haushälfte an dieser Seite (mit Innentüren und Treppen).
   Regeln in `PLAN.md` beim Abschnitt zu `build_plans_svg.py`; beide Builder müssen byte-gleich
   bleiben, Referenzen in `tools/model/testdata/plans` (Schiebetür-Referenz: siehe Test).
-- **Voreinstellungen** (0.72.0): Einstellungen → Voreinstellungen pflegt Auswahllisten
-  (`meta/lists`), Gewerke (ausblenden statt löschen) sowie Raumnamen und `roomMap` – Letztere
-  über die Hausdatei und eine neue Modellversion, nie über Overrides. Registry
-  `src/data/presets.ts`, Details in `PLAN.md` 5.7 und 8.8.
+- **Voreinstellungen** (0.72.0, 0.73.0): Einstellungen → Voreinstellungen pflegt alle
+  Auswahlwerte (`meta/options`), Phasen und Gewerke (ausblenden statt löschen) sowie
+  Raumnamen und `roomMap` – Letztere über die Hausdatei und eine neue Modellversion, nie über
+  Overrides. Registry `src/data/presets.ts`, Details in `PLAN.md` 5.7 und 8.8.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
@@ -212,6 +212,13 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   `claude/kontakte-ueberarbeiten`. Gibt die Umgebung einen Fantasienamen vor, zuerst einen
   sprechenden anlegen und dort arbeiten.
 - Komponenten sprechen nie direkt mit Firestore, sondern über `src/data/*`.
+- **Kennung speichern, Namen anzeigen.** Datensätze tragen nie Anzeigetexte, sondern die
+  Kennung eines Optionssets (`src/data/options.ts`, `useOptions`) bzw. die id eines Objekts.
+  Logik vergleicht nie gegen Text, sondern über die Helfer dort (`isTaskDone` …); aus einem
+  Namen wird nur dort eine Kennung, wo ein Mensch oder eine Engine einen Namen liefert
+  (`findOptionByName`). Neue
+  Auswahlwerte kommen als Set in `options.ts` und in die Voreinstellungen, nicht als
+  Konstanten-Array. Details in `PLAN.md` 5.7.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - **Zum Debuggen `src/platform/debugLog.ts` benutzen, nicht `console.log`.** Auf dem Telefon
   gibt es keine Konsole. `debugLog('<bereich>', '…')` schreibt sofort in den localStorage und

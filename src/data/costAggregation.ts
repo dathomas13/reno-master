@@ -4,6 +4,7 @@
  * with, a wrong sum here is worse than a wrong pixel anywhere else.
  */
 import { createdAtMillis, type Cost, type Trade } from './types';
+import { DEFAULT_OPTIONS, labelOf, type OptionSets } from './options';
 import { monthKey } from '@/lib/date';
 import { round2 } from '@/lib/money';
 
@@ -11,6 +12,8 @@ export interface Bucket {
   key: string;
   total: number;
   count: number;
+  /** what to show instead of the key, when the key is an id */
+  label?: string;
 }
 
 export const NO_CATEGORY = 'ohne Kategorie';
@@ -43,9 +46,15 @@ function group(costs: Cost[], keyOf: (cost: Cost) => string): Bucket[] {
   return [...map.values()].map((bucket) => ({ ...bucket, total: round2(bucket.total) }));
 }
 
-/** biggest category first, that is the order the overview shows */
-export function byCategory(costs: Cost[]): Bucket[] {
-  return group(costs, (cost) => cost.category?.trim() || NO_CATEGORY).sort((a, b) => b.total - a.total);
+/**
+ * Biggest category first, that is the order the overview shows. Grouped by the stored
+ * category id; `label` is what to show for it.
+ */
+export function byCategory(costs: Cost[], sets: OptionSets = DEFAULT_OPTIONS): Bucket[] {
+  const entries = sets.costCategories;
+  return group(costs, (cost) => cost.category?.trim() || NO_CATEGORY)
+    .map((bucket) => ({ ...bucket, label: bucket.key === NO_CATEGORY ? NO_CATEGORY : labelOf(entries, bucket.key) }))
+    .sort((a, b) => b.total - a.total);
 }
 
 /** chronological, so the bars read left to right */
@@ -89,7 +98,11 @@ export function budgetPerTrade(costs: Cost[], trades: Trade[]): TradeBudget[] {
 }
 
 /** German CSV: semicolon separated, comma as the decimal mark, BOM for Excel */
-export function toCsv(costs: Cost[], formatAmount: (value: number) => string): string {
+export function toCsv(
+  costs: Cost[],
+  formatAmount: (value: number) => string,
+  sets: OptionSets = DEFAULT_OPTIONS,
+): string {
   const header = [
     'Datum', 'Händler', 'Beschreibung', 'Kategorie', 'Brutto', 'Netto', 'MwSt-Satz', 'Status', 'Rechnungsnummer',
   ];
@@ -97,11 +110,11 @@ export function toCsv(costs: Cost[], formatAmount: (value: number) => string): s
     cost.date,
     cost.vendor,
     cost.description,
-    cost.category,
+    labelOf(sets.costCategories, cost.category),
     formatAmount(cost.amountGross),
     cost.amountNet !== undefined ? formatAmount(cost.amountNet) : '',
     cost.vatRate ?? '',
-    cost.paymentStatus,
+    labelOf(sets.paymentStatus, cost.paymentStatus),
     cost.invoiceNumber ?? '',
   ]);
   const escape = (cell: unknown) => `"${String(cell ?? '').replace(/"/g, '""')}"`;

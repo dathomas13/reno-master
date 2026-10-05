@@ -8,7 +8,8 @@ import { COL, type DiaryEntry, type Phase, type Photo } from '@/data/types';
 import { orderBy } from '@/firebase/db';
 import { formatDateWithWeekday, formatMonth, monthKey, today } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
-import { WEATHER_ICON } from './weatherIcons';
+import { useOptions } from '@/data/useOptions';
+import { weatherIcon } from './weatherIcons';
 
 export default function DiaryListPage() {
   const [params, setParams] = useSearchParams();
@@ -16,6 +17,7 @@ export default function DiaryListPage() {
   const { data: photos } = useCollection<Photo>(COL.photos);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { shortLabel: roomLabel, matches } = useRooms();
+  const { label } = useOptions();
   const [search, setSearch] = useState('');
 
   // the room panel in the 3D view and the search link here with a filter
@@ -40,9 +42,9 @@ export default function DiaryListPage() {
       if (roomFilter && !matches(entry.roomIds, roomFilter)) return false;
       if (phaseFilter && entry.phaseId !== phaseFilter) return false;
       if (!needle) return true;
-      return [entry.title, entry.text, ...entry.present].join(' ').toLowerCase().includes(needle);
+      return [entry.title, entry.text, ...entry.present.map((person) => label('people', person))].join(' ').toLowerCase().includes(needle);
     });
-  }, [entries, search, roomFilter, phaseFilter, matches]);
+  }, [entries, search, roomFilter, phaseFilter, matches, label]);
 
   const hasToday = entries.some((entry) => entry.date === today());
 
@@ -116,13 +118,13 @@ export default function DiaryListPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium truncate">{entry.title}</span>
-                    {entry.weather && <span aria-hidden>{WEATHER_ICON[entry.weather]}</span>}
+                    {entry.weather && <span aria-hidden>{weatherIcon(entry.weather)}</span>}
                     {entry.defects && <span className="text-bad text-xs">Mängel</span>}
                   </div>
                   <div className="text-xs text-muted">{formatDateWithWeekday(entry.date)}</div>
                   {entry.text && <p className="text-sm text-muted truncate mt-0.5">{entry.text.split('\n')[0]}</p>}
                   {entry.present.length > 0 && (
-                    <div className="text-xs text-muted mt-1 truncate">{entry.present.join(' · ')}</div>
+                    <div className="text-xs text-muted mt-1 truncate">{entry.present.map((person) => label('people', person)).join(' · ')}</div>
                   )}
                 </div>
                 {entryPhotos.length > 0 && (

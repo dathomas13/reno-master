@@ -38,7 +38,7 @@ vi.mock('@/components/TopBar', () => ({ TopBar: () => null }));
 vi.mock('@/components/Pickers', () => ({
   RoomPicker: () => null,
   TradePicker: () => null,
-  PeoplePicker: () => <button type="button">Anwesend auswählen</button>,
+  MultiPicker: ({ label }: { label: string }) => <button type="button">{label} auswählen</button>,
 }));
 vi.mock('./PhotoAttach', () => ({ PhotoAttach: ({ photos, onAdded, onBusyChange }: {
   photos: Photo[]; onAdded(photo: Photo): void; onBusyChange(busy: boolean): void;
@@ -53,13 +53,22 @@ vi.mock('@/data/hooks', () => ({
     loading: false,
   }),
   useCollection: (collection: string) => ({
-    data: collection === 'diary' ? entries : collection === 'photos' ? photoState.rows : collection === 'phases' ? [{ id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'In Arbeit', order: 2 }] : emptyRows,
+    data: collection === 'diary' ? entries : collection === 'photos' ? photoState.rows : collection === 'phases' ? [{ id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'in-arbeit', order: 2 }] : emptyRows,
     loading: false,
   }),
 }));
-vi.mock('@/data/useLists', () => ({
-  useLists: () => ({ lists: { weather: [], people: [] }, addTo: vi.fn() }),
-}));
+vi.mock('@/data/useOptions', async () => {
+  const options = await vi.importActual<typeof import('@/data/options')>('@/data/options');
+  const sets = options.normalizeSets();
+  return {
+    useOptions: () => ({
+      sets,
+      label: (key: string, stored: string) => options.labelOf(sets[key as keyof typeof sets], stored),
+      active: (key: string) => options.activeEntries(sets[key as keyof typeof sets]),
+      add: () => '',
+    }),
+  };
+});
 vi.mock('@/firebase/db', () => ({ where: vi.fn() }));
 vi.mock('@/data/repos', () => ({
   emptyDiaryEntry: (date = '2026-09-18') => ({

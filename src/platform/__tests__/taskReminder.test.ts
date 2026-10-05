@@ -107,7 +107,7 @@ describe('task reminder notifications', () => {
     setLocalNotifications(api);
 
     await applyTaskReminderForTask({
-      id: 'task-1', title: 'Fenster pruefen', status: 'Offen', priority: 'Mittel', assignees: [], roomIds: [],
+      id: 'task-1', title: 'Fenster pruefen', status: 'offen', priority: 'mittel', assignees: [], roomIds: [],
       reminderAt: '2099-09-19T08:00:00',
     });
 
@@ -128,7 +128,7 @@ describe('task reminder notifications', () => {
     setLocalNotifications(api);
 
     await applyTaskReminderForTask({
-      id: 'task-1', title: 'Fenster pruefen', status: 'Offen', priority: 'Mittel', assignees: [], roomIds: [],
+      id: 'task-1', title: 'Fenster pruefen', status: 'offen', priority: 'mittel', assignees: [], roomIds: [],
       reminderAt: '2099-09-19T08:00:00',
     });
 
