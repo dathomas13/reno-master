@@ -1,6 +1,7 @@
 /**
  * The option sets (KENNUNGEN.md): live from `meta/options`, with `meta/lists` as the
- * fallback for the five old lists until the migration has copied them over.
+ * fallback for the five old lists until the migration has copied them over
+ * (and deleted `meta/lists`).
  *
  * Every write replaces just the one set field and is queued locally; nothing here waits
  * for the server, so editing a list works offline.

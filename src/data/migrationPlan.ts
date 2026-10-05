@@ -18,9 +18,6 @@ import {
 } from './options';
 import { normalizeEntry } from './presetLists';
 
-/** bump when the plan changes; `meta/options.migrated` below it triggers a new run */
-export const MIGRATION_VERSION = 1;
-
 /** patch value that means "delete this field"; the executor turns it into deleteField() */
 export const REMOVE_FIELD: { readonly remove: true } = Object.freeze({ remove: true as const });
 

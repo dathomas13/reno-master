@@ -187,9 +187,46 @@ export async function readDocFromServer(collectionName: string, id: string): Pro
   return snapshot.exists() ? snapshot.data() : null;
 }
 
-/** merges fields into a document and waits for the server; for one-off jobs that must know it arrived */
-export async function mergeDocConfirmed(collectionName: string, id: string, data: Record<string, unknown>): Promise<void> {
-  await setDoc(doc(db, collectionName, id), { ...data, updatedAt: serverTimestamp(), updatedBy: actor() }, { merge: true });
+/**
+ * Merges fields into a document and waits for the server; for one-off jobs that must know it
+ * arrived. `removeFields` are deleted from the document.
+ */
+export async function mergeDocConfirmed(
+  collectionName: string,
+  id: string,
+  data: Record<string, unknown>,
+  removeFields: readonly string[] = [],
+): Promise<void> {
+  const removals: Record<string, unknown> = {};
+  for (const field of removeFields) removals[field] = deleteField();
+  await setDoc(
+    doc(db, collectionName, id),
+    { ...data, ...removals, updatedAt: serverTimestamp(), updatedBy: actor() },
+    { merge: true },
+  );
+}
+
+/** replaces a whole document and waits for the server */
+export async function replaceDocConfirmed(collectionName: string, id: string, data: Record<string, unknown>): Promise<void> {
+  await setDoc(doc(db, collectionName, id), { ...data, updatedAt: serverTimestamp(), updatedBy: actor() });
+}
+
+/**
+ * Merges fields into a document and adds values to one array field without touching the
+ * entries other devices put there; waits for the server.
+ */
+export async function mergeDocWithArrayUnionConfirmed(
+  collectionName: string,
+  id: string,
+  data: Record<string, unknown>,
+  arrayField: string,
+  values: readonly string[],
+): Promise<void> {
+  await setDoc(
+    doc(db, collectionName, id),
+    { ...data, [arrayField]: arrayUnion(...values), updatedAt: serverTimestamp(), updatedBy: actor() },
+    { merge: true },
+  );
 }
 
 export interface PatchOp {
