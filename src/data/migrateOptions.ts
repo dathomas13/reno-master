@@ -159,21 +159,21 @@ let cleaning: Promise<BackupCleanupOutcome> | null = null;
  * Deletes the backup once it is older than BACKUP_RETENTION_DAYS and the switch is finished
  * (`meta/lists` is gone). Anything else leaves it alone. No screen, no message: log only.
  */
-export function cleanupOptionsBackup(): Promise<BackupCleanupOutcome> {
+export function cleanupOptionsBackup(force = false): Promise<BackupCleanupOutcome> {
   if (!cleaning) {
-    cleaning = cleanup().finally(() => {
+    cleaning = cleanup(force).finally(() => {
       cleaning = null;
     });
   }
   return cleaning;
 }
 
-async function cleanup(): Promise<BackupCleanupOutcome> {
+async function cleanup(force = false): Promise<BackupCleanupOutcome> {
   if (isOffline()) return 'offline';
   try {
     const index = await readDocFromServer(COL.meta, BACKUP_INDEX);
     if (!index) return 'none';
-    if (!isBackupExpired(index.createdAt, new Date())) return 'kept';
+    if (!force && !isBackupExpired(index.createdAt, new Date())) return 'kept';
     if (await readDocFromServer(COL.meta, 'lists')) {
       debugLog(SCOPE, 'Sicherung bleibt: Umstellung nicht abgeschlossen');
       return 'kept';
@@ -226,20 +226,46 @@ export async function restoreOptionsBackup(): Promise<number> {
  * Runs the switch once after login, as soon as the device is online, and then looks after
  * the backup. A failed run is not retried until the next start.
  */
+/** set on a device once the last pass below went through; then the app never asks again */
+const FINAL_PASS_KEY = 'reno-umstellung-abgeschlossen';
+
+function finalPassDone(): boolean {
+  try {
+    return localStorage.getItem(FINAL_PASS_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markFinalPassDone(): void {
+  try {
+    localStorage.setItem(FINAL_PASS_KEY, '1');
+  } catch {
+    // without storage the pass repeats on the next start, which is harmless
+  }
+}
+
+/**
+ * The last pass, once per device: converts anything an old app version may still have
+ * written, then deletes the backup right away (both accounts run a version that stores
+ * ids). After that the device never checks again; the next release removes all of this.
+ */
 export function useOptionsMigration(enabled: boolean): void {
   useEffect(() => {
-    if (!enabled) return undefined;
+    if (!enabled || finalPassDone()) return undefined;
     let cancelled = false;
     let waiting = false;
     const start = () => {
       void runOptionsMigration()
-        .then((outcome) => {
-          if (cancelled) return undefined;
+        .then(async (outcome) => {
+          if (cancelled) return;
           if (outcome === 'offline') {
             wait();
-            return undefined;
+            return;
           }
-          return cleanupOptionsBackup();
+          if (outcome === 'failed') return;
+          const cleaned = await cleanupOptionsBackup(true);
+          if (cleaned === 'deleted' || cleaned === 'none') markFinalPassDone();
         })
         .catch(() => undefined);
     };
