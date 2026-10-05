@@ -10,6 +10,8 @@ import { deleteDiaryEntry } from '@/data/repos';
 import { formatDateWithWeekday, formatDate } from '@/lib/date';
 import { formatBytes } from '@/lib/image';
 import { useRooms } from '@/data/RoomsContext';
+import { useOptions } from '@/data/useOptions';
+import { weatherIcon } from './weatherIcons';
 import { openOriginalInGallery } from '@/platform/photos';
 
 export default function DiaryDetailPage() {
@@ -20,6 +22,7 @@ export default function DiaryDetailPage() {
   const { data: trades } = useCollection<Trade>(COL.trades);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { shortLabels } = useRooms();
+  const { label } = useOptions();
   const [lightbox, setLightbox] = useState<number | null>(null);
 
   const ordered = useMemo(() => {
@@ -80,13 +83,16 @@ export default function DiaryDetailPage() {
           {entry.weather && (
             <div className="flex gap-2">
               <dt className="text-muted w-28">Wetter</dt>
-              <dd>{entry.weather}</dd>
+              <dd>
+                {weatherIcon(entry.weather) ? `${weatherIcon(entry.weather)} ` : ''}
+                {label('weather', entry.weather)}
+              </dd>
             </div>
           )}
           {entry.present.length > 0 && (
             <div className="flex gap-2">
               <dt className="text-muted w-28">Anwesend</dt>
-              <dd>{entry.present.join(', ')}</dd>
+              <dd>{entry.present.map((person) => label('people', person)).join(', ')}</dd>
             </div>
           )}
           {entry.roomIds.length > 0 && (

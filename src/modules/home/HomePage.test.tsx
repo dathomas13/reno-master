@@ -22,6 +22,19 @@ vi.mock('@/data/hooks', () => ({
   }),
 }));
 vi.mock('@/data/repos', () => ({ patchPhase }));
+vi.mock('@/data/useOptions', async () => {
+  const options = await vi.importActual<typeof import('@/data/options')>('@/data/options');
+  const sets = options.normalizeSets();
+  return {
+    useOptions: () => ({
+      sets,
+      label: (key: string, stored: string) => options.labelOf(sets[key as keyof typeof sets], stored),
+      resolve: (key: string, stored: string) => options.resolveOption(sets[key as keyof typeof sets], stored),
+      active: (key: string) => options.activeEntries(sets[key as keyof typeof sets]),
+      add: () => '',
+    }),
+  };
+});
 vi.mock('@/firebase/db', () => ({ orderBy: vi.fn(), limit: vi.fn() }));
 
 beforeEach(() => {
@@ -46,8 +59,8 @@ describe('home phase', () => {
     fireEvent.click(screen.getByRole('button', { name: /Phase 3: Rohbau & Keller/ }));
 
     await waitFor(() => expect(patchPhase).toHaveBeenCalledTimes(2));
-    expect(patchPhase).toHaveBeenCalledWith('phase-2', expect.objectContaining({ status: 'Abgeschlossen' }));
-    expect(patchPhase).toHaveBeenCalledWith('phase-3', expect.objectContaining({ status: 'In Arbeit' }));
+    expect(patchPhase).toHaveBeenCalledWith('phase-2', expect.objectContaining({ status: 'abgeschlossen' }));
+    expect(patchPhase).toHaveBeenCalledWith('phase-3', expect.objectContaining({ status: 'in-arbeit' }));
   });
 
   it('links urgent tasks to their task sheet', () => {

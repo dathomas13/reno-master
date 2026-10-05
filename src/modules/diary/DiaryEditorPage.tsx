@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Field, Spinner } from '@/components/Fields';
-import { RoomPicker, TradePicker, PeoplePicker } from '@/components/Pickers';
+import { RoomPicker, TradePicker } from '@/components/Pickers';
+import { OptionMultiPicker, OptionSelect } from '@/components/OptionFields';
 import { PhotoAttach } from './PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
-import { useLists } from '@/data/useLists';
-import { withStored } from '@/data/presetLists';
-import { COL, type DiaryEntry, type Phase, type Photo, type Weather } from '@/data/types';
+import { isPhaseActive } from '@/data/options';
+import { COL, type DiaryEntry, type Phase, type Photo } from '@/data/types';
 import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
@@ -25,8 +25,7 @@ export default function DiaryEditorPage() {
   const { data: existing, loading } = useDocument<DiaryEntry>(COL.diary, id);
   const { data: allEntries } = useCollection<DiaryEntry>(COL.diary);
   const { data: phases } = useCollection<Phase>(COL.phases);
-  const { lists, addTo } = useLists();
-  const activePhase = phases.find((phase) => phase.status === 'In Arbeit');
+  const activePhase = phases.find((phase) => isPhaseActive(phase));
 
   const [entry, setEntry] = useState<DiaryEntry>(() => loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
   const entryPhase = phases.find((phase) => phase.id === entry.phaseId);
@@ -196,30 +195,23 @@ export default function DiaryEditorPage() {
         </Field>
 
         <Field label="Wetter">
-          <select
-            className="field"
-            aria-label="Wetter"
-            value={entry.weather ?? ''}
-            onChange={(event) => update({ weather: (event.target.value || undefined) as Weather | undefined })}
-          >
-            <option value="">kein Wetter</option>
-            {withStored(lists.weather, entry.weather).map((weather) => (
-              <option key={weather} value={weather}>{weather}</option>
-            ))}
-          </select>
+          <OptionSelect
+            setKey="weather"
+            ariaLabel="Wetter"
+            emptyLabel="kein Wetter"
+            value={entry.weather}
+            onChange={(value) => update({ weather: value })}
+          />
         </Field>
 
         <Field label="Anwesend">
-          <PeoplePicker
-            options={withStored(lists.people, entry.present)}
+          <OptionMultiPicker
+            setKey="people"
+            label="Anwesend"
+            emptyLabel="niemand ausgewählt"
+            addLabel="Person hinzufügen"
             value={entry.present}
             onChange={(value) => update({ present: value })}
-            onAdd={() => {
-              const name = prompt('Wer war dabei?')?.trim();
-              if (!name) return;
-              void addTo('people', name);
-              update({ present: [...entry.present, name] });
-            }}
           />
         </Field>
 
