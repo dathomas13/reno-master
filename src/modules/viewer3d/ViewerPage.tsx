@@ -23,6 +23,33 @@ import { VARIANT_LABEL, VARIANTS, type ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings } from '@/lib/settings';
 import { Spinner } from '@/components/Fields';
+import { newId } from '@/lib/ids';
+import { debugLog } from '@/platform/debugLog';
+import { deleteFurnitureItem, readModelFile, saveFurnitureItem } from '@/data/furniture';
+import { createFurnitureLayer, type FurnitureLayer } from '@/modules/furniture/furnitureScene';
+import {
+  FLOOR_Z,
+  FURNITURE_FLOORS,
+  newItem,
+  roomAt,
+  roomCentre,
+  snapPosition,
+  sticksOut,
+  type FurnitureFloor,
+  type FurnitureItem,
+  type FurnitureModel,
+  type FurnitureState,
+} from '@/modules/furniture/placement';
+import { useFurniture } from '@/modules/furniture/useFurniture';
+import { FurnitureCatalog } from '@/modules/furniture/FurnitureCatalog';
+import { FurnitureItemPanel } from '@/modules/furniture/FurnitureItemPanel';
+
+/** one step the editor can take back: the piece before and after, null where there was none */
+interface UndoStep {
+  before: FurnitureItem | null;
+  after: FurnitureItem | null;
+}
+const UNDO_LIMIT = 50;
 
 export default function ViewerPage() {
   const [params, setParams] = useSearchParams();
@@ -49,6 +76,30 @@ export default function ViewerPage() {
   const [showRooms, setShowRooms] = useState(saved?.showRooms ?? false);
   const [selected, setSelected] = useState<Picked | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+
+  // ---------------------------------------------------------------- furniture (Plan only)
+  const isPlan = variant === 'soll';
+  const furniture = useFurniture(isPlan);
+  const furnitureRef = useRef<FurnitureState>(furniture);
+  furnitureRef.current = furniture;
+  const furnitureLayerRef = useRef<FurnitureLayer | null>(null);
+  /** the rooms of the scene on screen, which the furniture snaps to */
+  const roomsRef = useRef<Room[]>([]);
+  const [showFurniture, setShowFurniture] = useState(true);
+  const showFurnitureRef = useRef(showFurniture);
+  showFurnitureRef.current = showFurniture;
+  const [editing, setEditing] = useState(false);
+  const [pieceId, setPieceId] = useState<string | null>(null);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const undoRef = useRef<UndoStep[]>([]);
+  const [undoCount, setUndoCount] = useState(0);
+  /** the piece under the finger, moved locally until it is let go */
+  const dragRef = useRef<{ before: FurnitureItem; current: FurnitureItem; dx: number; dy: number } | null>(null);
+  /** set below, once commit exists; the drag handlers live in the scene effect and call it from there */
+  const commitRef = useRef<(before: FurnitureItem | null, after: FurnitureItem | null) => void>(() => undefined);
+  const editRef = useRef({ editing, pieceId });
+  editRef.current = { editing, pieceId };
+  const piece = furniture.items.find((item) => item.id === pieceId) ?? null;
 
   /**
    * What the switches say right now. The scene effect only runs again on a variant
@@ -189,8 +240,20 @@ export default function ViewerPage() {
         ),
         camera,
       );
-      const targets = [...house.roomPickables.filter(isVisible), ...house.pickables.filter(isVisible)];
+      const layer = furnitureLayerRef.current;
+      const furnitureTargets = layer ? layer.pickables.filter(isVisible) : [];
+      const targets = [...furnitureTargets, ...house.roomPickables.filter(isVisible), ...house.pickables.filter(isVisible)];
       const hits = raycaster.intersectObjects(targets, false);
+      const pieceHit = hits.length && layer ? layer.resolve(hits[0]!.object) : null;
+      setPieceId(pieceHit);
+      if (pieceHit) {
+        house.setSelected(null);
+        house.highlightRoom(null);
+        setSelected(null);
+        setRoom(null);
+        invalidate();
+        return;
+      }
       const found = hits.length ? house.resolve(hits[0]!.object) : null;
       house.setSelected(found?.type === 'part' ? hits[0]!.object : null);
       house.highlightRoom(found?.type === 'room' ? found.room.id : null);
@@ -199,12 +262,87 @@ export default function ViewerPage() {
       invalidate();
     };
 
+    /** where a ray through the screen point meets the horizontal plane at `heightMm` - model mm */
+    const planePoint = (clientX: number, clientY: number, heightMm: number) => {
+      const rect = canvas.getBoundingClientRect();
+      raycaster.setFromCamera(
+        new THREE.Vector2(
+          ((clientX - rect.left) / rect.width) * 2 - 1,
+          -((clientY - rect.top) / rect.height) * 2 + 1,
+        ),
+        camera,
+      );
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -heightMm * 0.001);
+      const hit = raycaster.ray.intersectPlane(plane, new THREE.Vector3());
+      return hit ? { x: hit.x / 0.001, y: -hit.z / 0.001 } : null;
+    };
+
+    // only the chosen piece can be dragged, and only in the editor - anywhere else one
+    // finger turns the house as always
+    const grab = (clientX: number, clientY: number): boolean => {
+      const layer = furnitureLayerRef.current;
+      const { editing: isEditing, pieceId: chosen } = editRef.current;
+      if (!layer || !isEditing || !chosen) return false;
+      const rect = canvas.getBoundingClientRect();
+      raycaster.setFromCamera(
+        new THREE.Vector2(
+          ((clientX - rect.left) / rect.width) * 2 - 1,
+          -((clientY - rect.top) / rect.height) * 2 + 1,
+        ),
+        camera,
+      );
+      const hits = raycaster.intersectObjects(layer.pickables.filter(isVisible), false);
+      if (!hits.length || layer.resolve(hits[0]!.object) !== chosen) return false;
+      const item = furnitureRef.current.items.find((candidate) => candidate.id === chosen);
+      if (!item) return false;
+      const at = planePoint(clientX, clientY, FLOOR_Z[item.floor] + item.z);
+      if (!at) return false;
+      dragRef.current = { before: item, current: item, dx: item.x - at.x, dy: item.y - at.y };
+      return true;
+    };
+
+    const drag = (clientX: number, clientY: number) => {
+      const state = dragRef.current;
+      const layer = furnitureLayerRef.current;
+      if (!state || !layer) return;
+      const item = state.before;
+      const at = planePoint(clientX, clientY, FLOOR_Z[item.floor] + item.z);
+      if (!at) return;
+      const target = snapPosition(item, at.x + state.dx, at.y + state.dy, roomsRef.current);
+      state.current = { ...item, x: target.x, y: target.y };
+      layer.move(state.current);
+      layer.select(item.id, sticksOut(state.current, roomsRef.current));
+      invalidate();
+    };
+
+    const release = (moved: boolean) => {
+      const state = dragRef.current;
+      dragRef.current = null;
+      if (!state || !moved) return;
+      if (state.current.x === state.before.x && state.current.y === state.before.y) return;
+      commitRef.current(state.before, state.current);
+    };
+
     void (async () => {
       try {
         const [doc, rooms, roomMap] = await Promise.all([loadScene(variant), loadRooms(variant), loadRoomMap()]);
         if (disposed) return;
         const house = buildHouse(THREE, scene, doc, { rooms });
         houseRef.current = house;
+        roomsRef.current = rooms.rooms;
+
+        // the furniture belongs to the plan; the other models stay as they are. Whatever
+        // goes wrong with it must not cost the house itself.
+        if (variant === 'soll') {
+          try {
+            const layer = createFurnitureLayer(THREE, house.groups, { readModel: readModelFile, onChange: invalidate });
+            furnitureLayerRef.current = layer;
+            layer.sync(furnitureRef.current.items, furnitureRef.current.models);
+            layer.setVisible(showFurnitureRef.current);
+          } catch (cause) {
+            debugLog('moebel', `Möbel nicht aufgebaut: ${cause instanceof Error ? cause.message : String(cause)}`);
+          }
+        }
 
         // the view the user left behind wins over the default one; on a variant change
         // this is the view of a moment ago, so the house does not jump under the finger
@@ -227,7 +365,7 @@ export default function ViewerPage() {
                 distance: preset.distance,
                 target: new THREE.Vector3(...preset.target),
               },
-          { onChange: invalidate, onTap: pick },
+          { onChange: invalidate, onTap: pick, onGrab: grab, onDrag: drag, onRelease: release },
         );
 
         house.setStructuralMode(structural);
@@ -282,6 +420,9 @@ export default function ViewerPage() {
       window.removeEventListener('resize', resize);
       controlsRef.current?.dispose();
       controlsRef.current = null;
+      furnitureLayerRef.current?.dispose();
+      furnitureLayerRef.current = null;
+      dragRef.current = null;
       houseRef.current?.dispose();
       houseRef.current = null;
       renderer.dispose();
@@ -301,10 +442,111 @@ export default function ViewerPage() {
     });
   }
 
+  // ---------------------------------------------------------------- furniture
+
+  // the stored furniture changed (here, on the other phone, or by undo)
+  useEffect(() => {
+    const layer = furnitureLayerRef.current;
+    if (!layer) return;
+    try {
+      layer.sync(furniture.items, furniture.models);
+      // a piece being dragged keeps following the finger, whatever arrived meanwhile
+      if (dragRef.current) layer.move(dragRef.current.current);
+    } catch (cause) {
+      debugLog('moebel', `Möbel nicht aktualisiert: ${cause instanceof Error ? cause.message : String(cause)}`);
+    }
+    renderRef.current?.();
+  }, [furniture]);
+
+  useEffect(() => {
+    const layer = furnitureLayerRef.current;
+    if (!layer) return;
+    layer.select(piece?.id ?? null, piece ? sticksOut(piece, roomsRef.current) : false);
+    renderRef.current?.();
+  }, [piece]);
+
+  const pushUndo = (step: UndoStep) => {
+    undoRef.current = [...undoRef.current.slice(-(UNDO_LIMIT - 1)), step];
+    setUndoCount(undoRef.current.length);
+  };
+
+  /** stores a changed piece; null `before` adds it, null `after` removes it */
+  const commit = (before: FurnitureItem | null, after: FurnitureItem | null) => {
+    if (after) saveFurnitureItem(after);
+    else if (before) deleteFurnitureItem(before.id);
+    pushUndo({ before, after });
+  };
+  commitRef.current = commit;
+
+  function undo() {
+    const step = undoRef.current.pop();
+    setUndoCount(undoRef.current.length);
+    if (!step) return;
+    if (step.before) saveFurnitureItem(step.before);
+    else if (step.after) deleteFurnitureItem(step.after.id);
+    setPieceId(step.before?.id ?? null);
+  }
+
+  /** the storey a new piece goes on: the open room's, or the one floor plan on screen */
+  function targetFloor(): FurnitureFloor {
+    if (room && (FURNITURE_FLOORS as readonly string[]).includes(room.floor)) return room.floor as FurnitureFloor;
+    const visible = (['KG', 'EG', 'OG'] as const).filter((layer) => layerState[layer]);
+    return visible.length === 1 ? visible[0]! : 'EG';
+  }
+
+  function addPiece(type: string, model?: FurnitureModel) {
+    setCatalogOpen(false);
+    const floor = targetFloor();
+    const target = controlsRef.current?.state.target;
+    let at = target ? { x: target.x / 0.001, y: -target.z / 0.001 } : { x: 6500, y: 5900 };
+    const inRoom = room?.floor === floor ? room : roomAt(roomsRef.current, floor, at.x, at.y);
+    const centre = inRoom ? roomCentre(inRoom) : null;
+    if (centre) at = centre;
+    const dims = model ? { w: model.w, d: model.d, h: model.h } : undefined;
+    const item = newItem(newId(), type, floor, at, dims, model?.id);
+    commit(null, item);
+    setPieceId(item.id);
+    setEditing(true);
+    setShowFurniture(true);
+    furnitureLayerRef.current?.setVisible(true);
+  }
+
+  function changePiece(next: FurnitureItem) {
+    if (!piece) return;
+    commit(piece, next);
+  }
+
+  function duplicatePiece() {
+    if (!piece) return;
+    const copy: FurnitureItem = { ...piece, id: newId(), x: piece.x + 200, y: piece.y - 200 };
+    commit(null, copy);
+    setPieceId(copy.id);
+  }
+
+  function deletePiece() {
+    if (!piece) return;
+    commit(piece, null);
+    setPieceId(null);
+  }
+
+  function toggleFurniture() {
+    const next = !showFurniture;
+    setShowFurniture(next);
+    furnitureLayerRef.current?.setVisible(next);
+    if (!next) {
+      setEditing(false);
+      setPieceId(null);
+    }
+    renderRef.current?.();
+  }
+
   // only this view: the Bestand/Plan setting (which also names the rooms in all
   // forms) stays as it is - it is changed in the settings, nowhere else
   function switchVariant(next: Variant) {
     setVariant(next);
+    setEditing(false);
+    setPieceId(null);
+    setCatalogOpen(false);
     const nextParams = new URLSearchParams(params);
     nextParams.set('variant', next);
     setParams(nextParams, { replace: true });
@@ -394,7 +636,21 @@ export default function ViewerPage() {
           </div>
         )}
 
-        {room && (
+        {piece && (
+          <FurnitureItemPanel
+            item={piece}
+            models={furniture.models}
+            rooms={roomsRef.current}
+            editing={editing}
+            onChange={changePiece}
+            onDuplicate={duplicatePiece}
+            onDelete={deletePiece}
+            onEdit={() => setEditing(true)}
+            onClose={() => setPieceId(null)}
+          />
+        )}
+
+        {room && !piece && (
           <RoomPanel
             room={room}
             onClose={() => {
@@ -403,6 +659,34 @@ export default function ViewerPage() {
               renderRef.current?.();
             }}
           />
+        )}
+
+        {editing && (
+          <div className="card p-2 pointer-events-auto">
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" className="chip chip-on" onClick={() => setCatalogOpen(true)}>
+                + Möbel
+              </button>
+              <button type="button" className="chip" disabled={undoCount === 0} onClick={undo}>
+                Rückgängig
+              </button>
+              <button
+                type="button"
+                className="chip ml-auto"
+                onClick={() => {
+                  setEditing(false);
+                  setPieceId(null);
+                }}
+              >
+                Fertig
+              </button>
+            </div>
+            <p className="text-[11px] text-muted mt-1.5">
+              {piece
+                ? 'Das gewählte Möbel mit einem Finger ziehen – an Wänden rastet es ein.'
+                : 'Ein Möbel antippen, um es zu wählen. Neue kommen in den offenen Raum oder die Mitte der Ansicht.'}
+            </p>
+          </div>
         )}
 
         {/* controls */}
@@ -429,6 +713,23 @@ export default function ViewerPage() {
           >
             Tragwände
           </button>
+          {isPlan && (
+            <button type="button" className={`chip ${showFurniture ? 'chip-on' : ''}`} onClick={toggleFurniture}>
+              Möbel
+            </button>
+          )}
+          {isPlan && !editing && (
+            <button
+              type="button"
+              className="chip"
+              onClick={() => {
+                setEditing(true);
+                if (!showFurniture) toggleFurniture();
+              }}
+            >
+              Einrichten
+            </button>
+          )}
           <button
             type="button"
             className={`chip ${showRooms ? 'chip-on' : ''}`}
@@ -454,6 +755,14 @@ export default function ViewerPage() {
           </select>
         </div>
       </div>
+
+      <FurnitureCatalog
+        open={catalogOpen}
+        onClose={() => setCatalogOpen(false)}
+        models={furniture.models}
+        items={furniture.items}
+        onPick={addPiece}
+      />
     </div>
   );
 }

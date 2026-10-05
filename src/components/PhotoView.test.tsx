@@ -30,7 +30,11 @@ beforeEach(() => {
     promise: Promise.resolve({ numPages: 2, getPage: mocks.getPage }),
     destroy: mocks.destroy,
   }));
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D);
+  // getContext is overloaded, and which overload is last (the one vitest types the mock by)
+  // depends on the DOM typings in play - three's WebGPU types add one
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+    {} as unknown as ReturnType<HTMLCanvasElement['getContext']>,
+  );
   vi.stubGlobal('ResizeObserver', class {
     observe() {}
     disconnect() {}

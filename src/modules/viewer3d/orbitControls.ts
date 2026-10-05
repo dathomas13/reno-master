@@ -21,6 +21,15 @@ export interface OrbitOptions {
   onChange?: () => void;
   /** called on a tap or click that did not move the camera */
   onTap?: (clientX: number, clientY: number) => void;
+  /**
+   * Asked when one finger goes down. Returning true hands this finger to the caller: its
+   * moves go to onDrag instead of turning the camera, until onRelease. A second finger
+   * ends the drag and pinches as usual.
+   */
+  onGrab?: (clientX: number, clientY: number) => boolean;
+  onDrag?: (clientX: number, clientY: number) => void;
+  /** `moved` is false when the finger went up where it came down - that is still a tap */
+  onRelease?: (moved: boolean) => void;
 }
 
 export interface OrbitControls {
@@ -39,7 +48,7 @@ export function createOrbitControls(
   initial: OrbitState,
   options: OrbitOptions = {},
 ): OrbitControls {
-  const { minDistance = 4, maxDistance = 120, onChange, onTap } = options;
+  const { minDistance = 4, maxDistance = 120, onChange, onTap, onGrab, onDrag, onRelease } = options;
   const state: OrbitState = {
     theta: initial.theta,
     phi: initial.phi,
@@ -51,6 +60,14 @@ export function createOrbitControls(
   let lastPinch = 0;
   let lastMid: { x: number; y: number } | null = null;
   let moved = false;
+  /** the pointer that drags an object instead of the camera */
+  let dragging: number | null = null;
+
+  const endDrag = () => {
+    if (dragging === null) return;
+    dragging = null;
+    onRelease?.(moved);
+  };
 
   const apply = () => {
     const { theta, phi, distance, target } = state;
@@ -77,12 +94,18 @@ export function createOrbitControls(
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     moved = false;
     canvas.setPointerCapture(event.pointerId);
+    if (pointers.size === 1 && event.button === 0 && onGrab?.(event.clientX, event.clientY)) {
+      dragging = event.pointerId;
+    } else if (pointers.size > 1) {
+      endDrag();
+    }
   };
 
   const onPointerUp = (event: PointerEvent) => {
     pointers.delete(event.pointerId);
     lastMid = null;
     lastPinch = 0;
+    endDrag();
     if (!moved) onTap?.(event.clientX, event.clientY);
   };
 
@@ -90,6 +113,7 @@ export function createOrbitControls(
     pointers.delete(event.pointerId);
     lastMid = null;
     lastPinch = 0;
+    endDrag();
   };
 
   const onPointerMove = (event: PointerEvent) => {
@@ -99,6 +123,11 @@ export function createOrbitControls(
     const dy = event.clientY - previous.y;
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (Math.abs(dx) + Math.abs(dy) > MOVE_THRESHOLD) moved = true;
+
+    if (dragging === event.pointerId) {
+      if (moved) onDrag?.(event.clientX, event.clientY);
+      return;
+    }
 
     if (pointers.size === 1) {
       if (event.shiftKey || event.buttons === 2 || event.buttons === 4) {
@@ -153,6 +182,7 @@ export function createOrbitControls(
       canvas.removeEventListener('wheel', onWheel);
       canvas.removeEventListener('contextmenu', onContextMenu);
       pointers.clear();
+      dragging = null;
     },
   };
 }
