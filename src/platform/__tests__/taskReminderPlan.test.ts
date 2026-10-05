@@ -26,6 +26,7 @@ describe('task reminder plan', () => {
         task({ id: 'future', reminderAt: '2026-09-19T08:00:00' }),
         task({ id: 'past', reminderAt: '2026-09-17T08:00:00' }),
         task({ id: 'done', status: 'Erledigt', reminderAt: '2026-09-20T08:00:00' }),
+        task({ id: 'done-id', status: 'erledigt', reminderAt: '2026-09-20T08:00:00' }),
         task({ id: 'none', reminderAt: undefined }),
       ],
       new Date('2026-09-18T12:00:00'),

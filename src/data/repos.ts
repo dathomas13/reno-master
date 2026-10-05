@@ -14,6 +14,7 @@ import {
   type Trade,
   type Phase,
 } from './types';
+import { TASK_DONE, TASK_OPEN, PRIORITY_MEDIUM, TRADE_STATUS_DEFAULT, isTaskDone } from './options';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
 import { deleteField } from 'firebase/firestore';
 import { newId } from '@/lib/ids';
@@ -96,8 +97,8 @@ export function emptyTask(): Task {
   return {
     id: newId(),
     title: '',
-    status: 'Offen',
-    priority: 'Mittel',
+    status: TASK_OPEN,
+    priority: PRIORITY_MEDIUM,
     assignees: [],
     roomIds: [],
   };
@@ -120,10 +121,10 @@ export async function patchTask(id: string, patch: Partial<Task>): Promise<void>
 }
 
 export async function toggleTaskDone(task: Task): Promise<void> {
-  const done = task.status !== 'Erledigt';
+  const done = !isTaskDone(task);
   if (done) void cancelTaskReminderForTask(task.id);
   await patchTask(task.id, {
-    status: done ? 'Erledigt' : 'Offen',
+    status: done ? TASK_DONE : TASK_OPEN,
     doneAt: done ? toIsoDateTime() : deleteField(),
     ...(done ? { reminderAt: deleteField() } : {}),
   } as unknown as Partial<Task>);
@@ -132,7 +133,7 @@ export async function toggleTaskDone(task: Task): Promise<void> {
 export async function markTaskDone(id: string): Promise<void> {
   void cancelTaskReminderForTask(id);
   await patchDoc(COL.tasks, id, {
-    status: 'Erledigt',
+    status: TASK_DONE,
     doneAt: toIsoDateTime(),
     reminderAt: deleteField(),
   });
@@ -205,7 +206,7 @@ export async function patchTrade(id: string, patch: Partial<Trade>): Promise<voi
 /** creates a trade in the Firestore queue (offline safe, does not wait for the server) */
 export function createTrade(name: string): string {
   const id = newId();
-  void saveDoc<Trade>(COL.trades, { id, name: name.trim(), status: 'Noch offen', priority: 'Mittel' }).catch(() => {
+  void saveDoc<Trade>(COL.trades, { id, name: name.trim(), status: TRADE_STATUS_DEFAULT, priority: PRIORITY_MEDIUM }).catch(() => {
     /* queued write failed locally; the snapshot simply never shows the trade */
   });
   return id;

@@ -7,6 +7,8 @@ import {
   doc,
   getDocs,
   getDocsFromCache,
+  getDocFromServer,
+  getDocsFromServer,
   arrayUnion,
   arrayRemove,
   writeBatch,
@@ -232,4 +234,55 @@ export async function replaceFieldValue(
   // queued locally at once; the promises settle when the server confirms
   void Promise.allSettled(commits);
   return ids.length;
+}
+
+/** every document of a collection, read from the server (rejects offline, never answers from the cache) */
+export async function readCollectionFromServer(collectionName: string): Promise<(DocumentData & { id: string })[]> {
+  const snapshot = await getDocsFromServer(collection(db, collectionName));
+  return snapshot.docs.map((d) => ({ ...d.data(), id: d.id }));
+}
+
+/** one document read from the server, null when it does not exist */
+export async function readDocFromServer(collectionName: string, id: string): Promise<DocumentData | null> {
+  const snapshot = await getDocFromServer(doc(db, collectionName, id));
+  return snapshot.exists() ? snapshot.data() : null;
+}
+
+/** merges fields into a document and waits for the server; for one-off jobs that must know it arrived */
+export async function mergeDocConfirmed(collectionName: string, id: string, data: Record<string, unknown>): Promise<void> {
+  await setDoc(doc(db, collectionName, id), { ...data, updatedAt: serverTimestamp(), updatedBy: actor() }, { merge: true });
+}
+
+export interface PatchOp {
+  col: string;
+  id: string;
+  patch: Record<string, unknown>;
+}
+
+/**
+ * Applies patches in batches of at most 400 and waits for each batch to be confirmed.
+ * `removeMarker` values in a patch become deleteField(). The audit fields stay as they are:
+ * a data migration is not an edit by anybody. Resolves with the number of documents written.
+ */
+export async function commitPatches(
+  ops: readonly PatchOp[],
+  removeMarker: unknown,
+  onBatch?: (done: number, total: number) => void,
+): Promise<number> {
+  let done = 0;
+  for (let start = 0; start < ops.length; start += 400) {
+    const slice = ops.slice(start, start + 400);
+    const batch = writeBatch(db);
+    for (const op of slice) {
+      const patch: Record<string, unknown> = {};
+      for (const [field, value] of Object.entries(op.patch)) {
+        patch[field] = value === removeMarker ? deleteField() : value;
+      }
+      batch.update(doc(db, op.col, op.id), patch);
+    }
+    await batch.commit();
+    done += slice.length;
+    onBatch?.(done, ops.length);
+  }
+  return done;
 }

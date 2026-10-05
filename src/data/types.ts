@@ -4,6 +4,8 @@
  * ISO strings in local time, so sorting and display work offline without timezone math.
  */
 
+import { LEGACY_LABELS } from './options';
+
 export type Iso = string; // 'YYYY-MM-DD'
 export type IsoDateTime = string; // 'YYYY-MM-DDTHH:mm:ss'
 export type Floor = 'KG' | 'EG' | 'OG' | 'DACH' | 'GAR';
@@ -32,8 +34,14 @@ export function createdAtMillis(value: unknown): number {
   return Number.POSITIVE_INFINITY;
 }
 
-export const WEATHER = ['Sonnig', 'Bewölkt', 'Regen', 'Frost', 'Schnee'] as const;
-export type Weather = (typeof WEATHER)[number];
+/**
+ * The values below are ids of an option set (see options.ts), stored as strings. The
+ * constant arrays further down are the old display texts, kept only until every consumer
+ * reads from `useOptions`.
+ */
+/** @deprecated old display texts; use the `weather` option set */
+export const WEATHER: readonly string[] = LEGACY_LABELS.weather;
+export type Weather = string;
 
 export interface DiaryEntry extends BaseDoc {
   date: Iso;
@@ -78,14 +86,17 @@ export interface Photo extends BaseDoc {
   uploadState: 'pending' | 'uploaded' | 'failed';
 }
 
-export const PAYMENT_STATUS = ['offen', 'bezahlt', 'erstattet'] as const;
-export type PaymentStatus = (typeof PAYMENT_STATUS)[number];
+/** @deprecated old stored texts; use the `paymentStatus` option set */
+export const PAYMENT_STATUS: readonly string[] = LEGACY_LABELS.paymentStatus;
+export type PaymentStatus = string;
 
-export const PAID_BY = ['Thomas', 'Sarah', 'Gemeinsam'] as const;
-export type PaidBy = (typeof PAID_BY)[number];
+/** @deprecated old display texts; use the `payers` option set */
+export const PAID_BY: readonly string[] = LEGACY_LABELS.payers;
+export type PaidBy = string;
 
-export const PAYMENT_METHOD = ['Karte', 'Bar', 'Überweisung', 'PayPal'] as const;
-export type PaymentMethod = (typeof PAYMENT_METHOD)[number];
+/** @deprecated old display texts; use the `paymentMethods` option set */
+export const PAYMENT_METHOD: readonly string[] = LEGACY_LABELS.paymentMethods;
+export type PaymentMethod = string;
 
 export interface CostExtraction {
   /** stays in step with ReceiptFields['engine'] in platform/ocr/types.ts */
@@ -115,14 +126,17 @@ export interface Cost extends BaseDoc {
   notes?: string;
 }
 
-export const TASK_STATUS = ['Offen', 'In Arbeit', 'Wartet auf', 'Erledigt'] as const;
-export type TaskStatus = (typeof TASK_STATUS)[number];
+/** @deprecated old display texts; use the `taskStatus` option set */
+export const TASK_STATUS: readonly string[] = LEGACY_LABELS.taskStatus;
+export type TaskStatus = string;
 
-export const PRIORITY = ['Hoch', 'Mittel', 'Niedrig'] as const;
-export type Priority = (typeof PRIORITY)[number];
+/** @deprecated old display texts; use the `priority` option set */
+export const PRIORITY: readonly string[] = LEGACY_LABELS.priority;
+export type Priority = string;
 
-export const ASSIGNEES = ['Thomas', 'Sarah', 'Handwerker', 'Beide'] as const;
-export type Assignee = (typeof ASSIGNEES)[number];
+/** @deprecated old display texts; assignees are ids of the `people` option set now */
+export const ASSIGNEES: readonly string[] = ['Thomas', 'Sarah', 'Handwerker', 'Beide'];
+export type Assignee = string;
 
 export interface Task extends BaseDoc {
   title: string;
@@ -130,6 +144,7 @@ export interface Task extends BaseDoc {
   status: TaskStatus;
   priority: Priority;
   due?: Iso;
+  /** ids of the `people` option set */
   assignees: Assignee[];
   area?: string;
   tradeId?: string;
@@ -147,15 +162,9 @@ export interface Note extends BaseDoc {
   pinned: boolean;
 }
 
-export const CONTACT_STATUS = [
-  'Angefragt',
-  'Angebot erhalten',
-  'Beauftragt',
-  'Aktiv',
-  'Abgeschlossen',
-  'Abgelehnt',
-] as const;
-export type ContactStatus = (typeof CONTACT_STATUS)[number];
+/** @deprecated old display texts; use the `contactStatus` option set */
+export const CONTACT_STATUS: readonly string[] = LEGACY_LABELS.contactStatus;
+export type ContactStatus = string;
 
 export interface Contact extends BaseDoc {
   name: string;
@@ -171,8 +180,9 @@ export interface Contact extends BaseDoc {
   notes?: string;
 }
 
-export const CONTACT_LOG_CHANNELS = ['Anruf', 'Termin', 'E-Mail', 'Nachricht', 'Sonstiges'] as const;
-export type ContactLogChannel = (typeof CONTACT_LOG_CHANNELS)[number];
+/** @deprecated old display texts; use the `contactChannels` option set */
+export const CONTACT_LOG_CHANNELS: readonly string[] = LEGACY_LABELS.contactChannels;
+export type ContactLogChannel = string;
 
 /** one dated entry of a Gesprächsprotokoll; several belong to one contact via `contactId` */
 export interface ContactLog extends BaseDoc {
@@ -182,17 +192,9 @@ export interface ContactLog extends BaseDoc {
   text: string;
 }
 
-export const TRADE_STATUS = [
-  'Noch offen',
-  'Geplant',
-  'Angebot einholen',
-  'Angebote vergleichen',
-  'Beauftragt',
-  'In Arbeit',
-  'Abnahme',
-  'Fertig',
-] as const;
-export type TradeStatus = (typeof TRADE_STATUS)[number];
+/** @deprecated old display texts; use the `tradeStatus` option set */
+export const TRADE_STATUS: readonly string[] = LEGACY_LABELS.tradeStatus;
+export type TradeStatus = string;
 
 export interface Trade extends BaseDoc {
   name: string;
@@ -205,8 +207,9 @@ export interface Trade extends BaseDoc {
   archived?: boolean;
 }
 
-export const PHASE_STATUS = ['Geplant', 'In Arbeit', 'Abgeschlossen', 'Blockiert'] as const;
-export type PhaseStatus = (typeof PHASE_STATUS)[number];
+/** @deprecated old display texts; use the `phaseStatus` option set */
+export const PHASE_STATUS: readonly string[] = LEGACY_LABELS.phaseStatus;
+export type PhaseStatus = string;
 
 export interface Phase extends BaseDoc {
   name: string;
@@ -214,6 +217,8 @@ export interface Phase extends BaseDoc {
   start?: Iso;
   end?: Iso;
   order: number;
+  /** hidden from the pickers, kept for entries that still point at it */
+  archived?: boolean;
 }
 
 export interface Lists {

@@ -1,4 +1,5 @@
 import type { Task } from '@/data/types';
+import { isTaskDone } from '@/data/options';
 
 const TASK_REMINDER_ID_BASE = 8_000_000;
 const TASK_REMINDER_ID_SPAN = 1_000_000;
@@ -31,7 +32,7 @@ export function parseTaskReminderAt(value: string | undefined): Date | null {
 export function planTaskReminders(tasks: readonly Task[], now = new Date()): PlannedTaskReminder[] {
   return tasks
     .flatMap((task): PlannedTaskReminder[] => {
-      if (task.status === 'Erledigt') return [];
+      if (isTaskDone(task)) return [];
       const at = parseTaskReminderAt(task.reminderAt);
       if (!at || at.getTime() <= now.getTime()) return [];
       return [{ id: taskReminderId(task.id), taskId: task.id, title: task.title, at }];

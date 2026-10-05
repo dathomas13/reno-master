@@ -9,6 +9,7 @@ import { startOutboxWorker } from '@/offline/outbox';
 import { startModelSync } from '@/data/modelSync';
 import { useDiaryReminder } from '@/data/useReminder';
 import { useTaskReminders } from '@/data/useTaskReminders';
+import { useOptionsMigration } from '@/data/migrateOptions';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import LoginPage from '@/modules/auth/LoginPage';
 import HomePage from '@/modules/home/HomePage';
@@ -42,6 +43,8 @@ function Protected() {
   // the evening reminder: planned on the device, so it also fires with no connection
   useDiaryReminder();
   useTaskReminders(!!user);
+  // one-off switch from display texts to ids; runs online, once per project
+  useOptionsMigration(!!user);
 
   if (!ready) return <Spinner label="Wird geladen…" />;
 
