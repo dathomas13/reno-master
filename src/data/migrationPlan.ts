@@ -147,7 +147,9 @@ export function planMigration(input: MigrationInput): MigrationPlan {
   each(records.contacts, COL.contacts, (patch, record) => {
     const hasLegacy = record.role !== undefined;
     if (Array.isArray(record.roles) || hasLegacy) {
-      const raw: unknown[] = [...(Array.isArray(record.roles) ? record.roles : []), ...(hasLegacy ? [record.role] : [])];
+      // same rule as contactRoleNames: the old single role only counts while `roles` is empty
+      const current: unknown[] = Array.isArray(record.roles) ? record.roles : [];
+      const raw: unknown[] = current.length ? current : hasLegacy ? [record.role] : [];
       const ids = toIds('contactRoles', raw);
       if (hasLegacy || !sameList(ids, Array.isArray(record.roles) ? record.roles : [])) patch.roles = ids;
     }

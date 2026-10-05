@@ -72,7 +72,7 @@ describe('planMigration', () => {
     expect(byId.k1.roles).toEqual(['dachdecker']);
     expect(byId.k1.role).toBe(REMOVE_FIELD);
     expect(byId.k1.status).toBe('aktiv');
-    expect(byId.k2.roles).toEqual(['dachdecker', 'maler']);
+    expect(byId.k2.roles).toEqual(['dachdecker']); // the old role is ignored while roles is set
     expect(byId.k3.roles).toEqual(['statiker']);
     expect(byId.k3.role).toBeUndefined();
   });
