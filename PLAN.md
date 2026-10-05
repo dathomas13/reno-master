@@ -261,7 +261,7 @@ Seed (im Repo unter `src/data/seed/`, beim ersten App-Start eines eingeloggten N
   costCategories: string[] // Seed: Abriss/Entsorgung, Außendämmung/Fassade, Baustellenequipment, Bäder, Dach, Elektrik, Energieberater/Baubegleitung, Estrich, Fenster, Fußbodenheizung, Heizungsmontage, Wärmepumpe, Innenausbau, Küche, Lüftungsanlage, PV-Anlage, Werkzeug, Material allgemein, Verpflegung Helfer, Sonstiges
   taskAreas: string[]; contactRoles: string[] }
 ```
-In den Einstellungen editierbar (hinzufügen/umbenennen).
+Editierbar unter Einstellungen → Voreinstellungen. Ein Feld fällt nur auf den Seed zurück, wenn es fehlt – ein leeres Array ist eine gewollt leere Liste. Geschrieben wird immer nur das eine Feld (Hinzufügen/Entfernen über `arrayUnion`/`arrayRemove`), nie das ganze Dokument. Gespeichert wird in den Datensätzen der Text: Umbenennen kann ihn auf Wunsch in alle Einträge nachziehen (`presetRename.ts`), Löschen ändert nie Datensätze – Editoren hängen nicht mehr gelistete, aber gespeicherte Werte über `withStored` an.
 
 ### 5.8 `plans` – Pläne
 ```ts
@@ -531,7 +531,11 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Erinnerung: an/aus, Uhrzeit (Default 20:00), „Benachrichtigungen erlauben“, „Testbenachrichtigung“; darunter die nächste fällige Erinnerung im Klartext („Nächste Erinnerung: morgen um 20:00.“) und der Hinweis, ob das Gerät sie selbst stellt (App) oder nur die offene Seite (Browser).
 - Beleg-Auslesen: Verfahren (Automatisch = ML Kit → Gemini → Claude, oder eines davon erzwingen, oder aus), darunter je ein Block für Gemini und Claude mit API-Key (Passwortfeld, nur lokal) und Modell. Beide Schlüssel liegen ausschließlich im localStorage des Geräts.
 - Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen". Darunter `ModelExchange`: "Modell exportieren" (ZIP mit Anleitung, Hausdateien, DXF – im Browser als Download, in der App über den Teilen-Dialog) und "Modell importieren" (Hausdatei oder ZIP → prüfen, bauen, Änderungsbericht, "Im 3D ansehen" als Vorschau, angemeldet "Als vX veröffentlichen"; entfallende Raum-ids müssen bestätigt werden). Der alte Upload einer fertigen Szene steht als "Fertige Szene hochladen (erweitert)" darunter.
-- Listen: Personen (Anwesend), Kosten-Kategorien, Aufgaben-Bereiche, Kontakt-Rollen – hinzufügen/umbenennen.
+- Voreinstellungen (Untermenü `/einstellungen/voreinstellungen`, Registry `src/data/presets.ts`), gilt für beide Konten:
+  - Haus: Räume (Namen in Bestand/Planung, Planungsraum ohne Fläche anlegen) und Zuordnung Bestand → Planung (`roomMap`). Ändert die Hausdatei selbst: Entwurf im localStorage (`useRoomDraft`), angewendet auf die neueste Fassung (`roomEdits.ts`) und veröffentlicht wie ein Import (`prepareModelImport` → `publishImport`, neue Version). Raum-ids bleiben unberührt.
+  - Listen: Anwesende Personen, Wetter, Kosten-Kategorien, Aufgaben-Bereiche, Kontakt-Rollen – hinzufügen, umbenennen (optional in alle Einträge), löschen mit Rückgängig, sortieren, auf Standard zurücksetzen; mit Verwendungszähler.
+  - Gewerke: anlegen, Name/Status/Priorität/Budget/Angebot/Notizen; Ausblenden statt Löschen (`archived`), endgültig löschen nur ohne Verwendung.
+  - Nicht editierbar sind Werte, mit denen der Code vergleicht (Aufgaben-/Zahlungs-/Phasen-Status, Priorität, Zuständig).
 - Offline: belegter Speicher (StorageManager.estimate), ausstehende Uploads, "Alle Thumbnails jetzt laden", "Cache leeren".
 - App-Version (Git-SHA + Build-Datum), "Nach Update suchen".
 

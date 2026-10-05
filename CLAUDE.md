@@ -175,6 +175,10 @@ Steht:
   anstoßende Wände, Innenkette nur der Haushälfte an dieser Seite (mit Innentüren und Treppen).
   Regeln in `PLAN.md` beim Abschnitt zu `build_plans_svg.py`; beide Builder müssen byte-gleich
   bleiben, Referenzen in `tools/model/testdata/plans` (Schiebetür-Referenz: siehe Test).
+- **Voreinstellungen** (0.72.0): Einstellungen → Voreinstellungen pflegt Auswahllisten
+  (`meta/lists`), Gewerke (ausblenden statt löschen) sowie Raumnamen und `roomMap` – Letztere
+  über die Hausdatei und eine neue Modellversion, nie über Overrides. Registry
+  `src/data/presets.ts`, Details in `PLAN.md` 5.7 und 8.8.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
