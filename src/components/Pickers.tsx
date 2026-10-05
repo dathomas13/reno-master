@@ -195,7 +195,9 @@ export function RoomPicker({ value, onChange }: { value: string[]; onChange(valu
 
 export function TradePicker({ value, onChange }: { value: string[]; onChange(value: string[]): void }) {
   const { data } = useCollection<Trade>(COL.trades);
-  const options = [...data]
+  // hidden trades are no longer offered, but one that is already picked stays visible
+  const options = data
+    .filter((trade) => !trade.archived || value.includes(trade.id))
     .sort((a, b) => a.name.localeCompare(b.name, 'de'))
     .map((trade) => ({ id: trade.id, name: trade.name }));
   return <MultiPicker label="Gewerke" value={value} onChange={onChange} options={options} emptyLabel="kein Gewerk" />;
@@ -218,7 +220,9 @@ export function PhaseSelect({ value, onChange }: { value?: string; onChange(valu
 
 export function TradeSelect({ value, onChange }: { value?: string; onChange(value: string | undefined): void }) {
   const { data } = useCollection<Trade>(COL.trades);
-  const trades = [...data].sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  const trades = data
+    .filter((trade) => !trade.archived || trade.id === value)
+    .sort((a, b) => a.name.localeCompare(b.name, 'de'));
   return (
     <select className="field" value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
       <option value="">kein Gewerk</option>
