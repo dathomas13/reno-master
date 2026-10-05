@@ -9,7 +9,7 @@ import { orderBy } from '@/firebase/db';
 import { formatDateWithWeekday, formatMonth, monthKey, today } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
 
-const WEATHER_ICON: Record<string, string> = {
+export const WEATHER_ICON: Record<string, string> = {
   Sonnig: '☀️',
   Bewölkt: '⛅',
   Regen: '🌧️',

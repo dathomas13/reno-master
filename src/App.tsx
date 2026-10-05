@@ -29,6 +29,8 @@ import FilesPage from '@/modules/files/FilesPage';
 import PhotosPage from '@/modules/photos/PhotosPage';
 import ReceiptsPage from '@/modules/receipts/ReceiptsPage';
 import SettingsPage from '@/modules/settings/SettingsPage';
+import PresetsPage from '@/modules/settings/presets/PresetsPage';
+import PresetDetailPage from '@/modules/settings/presets/PresetDetailPage';
 
 function Protected() {
   const { user, ready } = useAuth();
@@ -75,6 +77,8 @@ function Protected() {
           <Route path="/fotos" element={<PhotosPage />} />
           <Route path="/belege" element={<ReceiptsPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
+          <Route path="/einstellungen/voreinstellungen" element={<PresetsPage />} />
+          <Route path="/einstellungen/voreinstellungen/:key" element={<PresetDetailPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AppShell>
