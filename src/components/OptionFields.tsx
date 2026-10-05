@@ -16,7 +16,7 @@ function useChoices(setKey: OptionSetKey, stored: readonly string[]) {
     if (visible.some((entry) => entry.id === id) || extra.some((entry) => entry.id === id)) continue;
     extra.push({ id, label: label(setKey, id), archived: true });
   }
-  return { choices: [...visible, ...extra], selected: stored, add: (name: string) => add(setKey, name) };
+  return { choices: [...visible, ...extra], selected: [...stored], add: (name: string) => add(setKey, name) };
 }
 
 interface OptionChipsProps {
