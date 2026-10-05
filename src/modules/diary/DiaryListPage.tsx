@@ -8,14 +8,7 @@ import { COL, type DiaryEntry, type Phase, type Photo } from '@/data/types';
 import { orderBy } from '@/firebase/db';
 import { formatDateWithWeekday, formatMonth, monthKey, today } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
-
-export const WEATHER_ICON: Record<string, string> = {
-  Sonnig: '☀️',
-  Bewölkt: '⛅',
-  Regen: '🌧️',
-  Frost: '❄️',
-  Schnee: '🌨️',
-};
+import { WEATHER_ICON } from './weatherIcons';
 
 export default function DiaryListPage() {
   const [params, setParams] = useSearchParams();

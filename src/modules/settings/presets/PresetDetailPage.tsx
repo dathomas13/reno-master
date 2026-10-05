@@ -7,7 +7,7 @@ import { usePresetUsage } from '@/data/presetUsage';
 import { renameEverywhere } from '@/data/presetRename';
 import { SEED_LISTS } from '@/data/seed/lists';
 import type { ListKey } from '@/data/types';
-import { WEATHER_ICON } from '@/modules/diary/DiaryListPage';
+import { WEATHER_ICON } from '@/modules/diary/weatherIcons';
 import { PresetListEditor } from './PresetListEditor';
 import TradesEditor from './TradesEditor';
 import RoomsEditor from './RoomsEditor';
