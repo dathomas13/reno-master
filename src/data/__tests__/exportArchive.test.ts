@@ -153,6 +153,15 @@ describe('diaryToMarkdown', () => {
     expect(markdown).toContain('- fotos/2026-09-14/01_kabel.jpg');
   });
 
+  it('writes names for the stored weather and people ids', () => {
+    const markdown = diaryToMarkdown(
+      { ...empty, entries: [entry({ id: 'e1', date: '2026-09-14', weather: 'bewoelkt', present: ['thomas', 'Herr Weber'] })] },
+      new Map(),
+    );
+    expect(markdown).toContain('Wetter: Bewölkt');
+    expect(markdown).toContain('Anwesend: Thomas, Herr Weber');
+  });
+
   it('names the weekday, because that is how a site remembers a day', () => {
     const markdown = diaryToMarkdown({ ...empty, entries: [entry({ id: 'e1', date: '2026-09-14' })] }, new Map());
     expect(markdown).toContain('## Mo, 14.09.2026');

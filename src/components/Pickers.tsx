@@ -126,31 +126,6 @@ export function PeoplePicker({
   );
 }
 
-/** a contact's roles/Gewerke, e.g. "Elektriker" - erweiterbar: new roles are added inline */
-export function RolePicker({
-  value,
-  options,
-  onChange,
-  onAdd,
-}: {
-  value: string[];
-  options: string[];
-  onChange(value: string[]): void;
-  onAdd(): void;
-}) {
-  return (
-    <StringMultiPicker
-      label="Rollen"
-      value={value}
-      options={options}
-      onChange={onChange}
-      onAdd={onAdd}
-      emptyLabel="keine Rolle"
-      addLabel="Rolle hinzufügen"
-    />
-  );
-}
-
 /**
  * `value`/`onChange` operate on stored room ids, which may predate the active naming
  * (an old entry keeps its Ist id even once the picker offers Soll rooms). MultiPicker

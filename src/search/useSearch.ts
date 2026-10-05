@@ -10,6 +10,7 @@
 import { useMemo } from 'react';
 import { useCollection } from '@/data/hooks';
 import { useRooms } from '@/data/RoomsContext';
+import { useOptions } from '@/data/useOptions';
 import {
   COL,
   type Contact,
@@ -41,6 +42,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   // both room tables, each room with all its linked names: the search finds "Heizung",
   // "Öllager" and "Technikraum" whichever naming is set (roomsWithLinkedNames)
   const { searchRooms } = useRooms();
+  const { sets } = useOptions();
 
   const roomsForSearch = useMemo<RoomLike[]>(
     () =>
@@ -69,6 +71,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
         plans: plans.data,
         photos: photos.data,
         rooms: roomsForSearch,
+        sets,
       }),
     [
       diary.data,
@@ -82,6 +85,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
       plans.data,
       photos.data,
       roomsForSearch,
+      sets,
     ],
   );
 

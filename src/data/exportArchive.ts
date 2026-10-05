@@ -10,6 +10,7 @@
  * caller can show what is going to happen before a gigabyte starts moving.
  */
 import type { Contact, Cost, DiaryEntry, Photo, Task, Trade } from './types';
+import { DEFAULT_OPTIONS, labelOf, type OptionSets } from './options';
 import { formatDate } from '@/lib/date';
 
 export interface ExportSource {
@@ -19,6 +20,8 @@ export interface ExportSource {
   tasks: Task[];
   contacts: Contact[];
   trades: Trade[];
+  /** the option sets, so ids are written as names; the start values when missing */
+  sets?: OptionSets;
 }
 
 export interface ExportFile {
@@ -91,6 +94,7 @@ const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 /** the diary as one readable document, in the order the work happened */
 export function diaryToMarkdown(source: ExportSource, photoNames: Map<string, string>): string {
   const byDate = [...source.entries].sort((a, b) => a.date.localeCompare(b.date));
+  const sets = source.sets ?? DEFAULT_OPTIONS;
   const tradeName = new Map(source.trades.map((trade) => [trade.id, trade.name]));
   const lines: string[] = [
     '# Bautagebuch Schlesierstraße 31',
@@ -105,8 +109,10 @@ export function diaryToMarkdown(source: ExportSource, photoNames: Map<string, st
     lines.push(`## ${weekday}, ${formatDate(entry.date)} – ${entry.title}`, '');
 
     const facts: string[] = [];
-    if (entry.weather) facts.push(`Wetter: ${entry.weather}`);
-    if (entry.present.length) facts.push(`Anwesend: ${entry.present.join(', ')}`);
+    if (entry.weather) facts.push(`Wetter: ${labelOf(sets.weather, entry.weather)}`);
+    if (entry.present.length) {
+      facts.push(`Anwesend: ${entry.present.map((person) => labelOf(sets.people, person)).join(', ')}`);
+    }
     const trades = entry.tradeIds.map((id) => tradeName.get(id) ?? id).filter(Boolean);
     if (trades.length) facts.push(`Gewerke: ${trades.join(', ')}`);
     if (entry.defects) facts.push('**Mängel festgehalten**');
@@ -131,7 +137,8 @@ Bautagebuch.md   das ganze Tagebuch als Text, in zeitlicher Reihenfolge
 fotos/<Tag>/     die Fotos des jeweiligen Tages, nummeriert wie im Eintrag
 belege/<Tag>/    Rechnungen und Kassenzettel
 daten/           dieselben Inhalte als JSON, falls sie einmal in ein anderes
-                 Programm sollen
+                 Programm sollen; optionen.json übersetzt die Kennungen
+                 (Status, Kategorien, Personen ...) in ihre Namen
 
 Fotos, die mit "Original sichern" aufgenommen wurden, liegen hier in voller
 Auflösung. Bei allen anderen ist es die Fassung mit 1600 Pixel Kantenlänge;
@@ -189,6 +196,8 @@ export function planExport(source: ExportSource, createdAt = new Date()): Export
     { name: 'daten/aufgaben.json', text: JSON.stringify(source.tasks, null, 2) },
     { name: 'daten/kontakte.json', text: JSON.stringify(source.contacts, null, 2) },
     { name: 'daten/gewerke.json', text: JSON.stringify(source.trades, null, 2) },
+    // the records carry ids; this is the key to them, should the app be gone
+    { name: 'daten/optionen.json', text: JSON.stringify(source.sets ?? DEFAULT_OPTIONS, null, 2) },
     {
       name: 'daten/export.json',
       text: JSON.stringify(

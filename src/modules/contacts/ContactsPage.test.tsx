@@ -12,11 +12,22 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/components/TopBar', () => ({
   TopBar: ({ action }: { action?: React.ReactNode }) => <header>{action}</header>,
 }));
-vi.mock('@/components/Pickers', () => ({ TradePicker: () => null, RolePicker: () => null }));
+vi.mock('@/components/Pickers', () => ({ TradePicker: () => null, MultiPicker: () => null }));
 vi.mock('@/data/hooks', () => ({
   useCollection: (name: string) => ({ data: name === 'contacts' ? mocks.contacts : [], loading: false }),
 }));
-vi.mock('@/data/useLists', () => ({ useLists: () => ({ lists: { contactRoles: [] }, addTo: vi.fn() }) }));
+vi.mock('@/data/useOptions', async () => {
+  const options = await import('@/data/options');
+  const { DEFAULT_OPTIONS: sets } = options;
+  const value = {
+    sets,
+    label: (key: keyof typeof sets, stored: string) => options.labelOf(sets[key], stored),
+    resolve: (key: keyof typeof sets, stored: string) => options.resolveOption(sets[key], stored),
+    active: (key: keyof typeof sets) => options.activeEntries(sets[key]),
+    add: () => '',
+  };
+  return { useOptions: () => value };
+});
 vi.mock('@/data/repos', () => ({
   emptyContact: () => ({ id: 'new-contact', name: '', tradeIds: [], roles: [] }),
   saveContact: mocks.saveContact,

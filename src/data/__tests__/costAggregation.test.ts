@@ -10,6 +10,7 @@ import {
   NO_CATEGORY,
 } from '@/data/costAggregation';
 import { formatAmount } from '@/lib/money';
+import { DEFAULT_OPTIONS } from '@/data/options';
 import type { Cost, Trade } from '@/data/types';
 
 function cost(partial: Partial<Cost>): Cost {
@@ -47,8 +48,22 @@ describe('byCategory', () => {
       cost({ category: 'Werkzeug', amountGross: 200 }),
       cost({ category: 'Dach', amountGross: 25 }),
     ]);
-    expect(rows[0]).toEqual({ key: 'Werkzeug', total: 200, count: 1 });
-    expect(rows[1]).toEqual({ key: 'Dach', total: 75, count: 2 });
+    expect(rows[0]).toEqual({ key: 'werkzeug', label: 'Werkzeug', total: 200, count: 1 });
+    expect(rows[1]).toEqual({ key: 'dach', label: 'Dach', total: 75, count: 2 });
+  });
+
+  it('puts an old text and its id into one group, named from the sets', () => {
+    const sets = {
+      ...DEFAULT_OPTIONS,
+      costCategories: [{ id: 'dach', label: 'Dachdeckung' }],
+    };
+    const rows = byCategory([cost({ category: 'dach', amountGross: 10 }), cost({ category: 'Dachdeckung', amountGross: 5 })], sets);
+    expect(rows).toEqual([{ key: 'dach', label: 'Dachdeckung', total: 15, count: 2 }]);
+  });
+
+  it('keeps an unknown text as its own group', () => {
+    const rows = byCategory([cost({ category: 'Weltraum', amountGross: 1 })]);
+    expect(rows[0]).toMatchObject({ key: 'Weltraum', label: 'Weltraum' });
   });
 
   it('collects entries without a category', () => {

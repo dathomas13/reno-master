@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/Fields';
 import { useCollection } from '@/data/hooks';
 import { COL, type Contact, type ContactLog } from '@/data/types';
 import { saveContactLog, deleteContactLog } from '@/data/repos';
+import { useOptions } from '@/data/useOptions';
 import { formatDateTime } from '@/lib/date';
 import { ContactLogEditor, logPreview } from './ContactLogSection';
 
@@ -18,6 +19,7 @@ import { ContactLogEditor, logPreview } from './ContactLogSection';
 export default function ContactLogsPage() {
   const { data: logs } = useCollection<ContactLog>(COL.contactLogs);
   const { data: contacts } = useCollection<Contact>(COL.contacts);
+  const { label } = useOptions();
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<ContactLog | null>(null);
   const [params, setParams] = useSearchParams();
@@ -44,14 +46,14 @@ export default function ContactLogsPage() {
     const needle = search.trim().toLowerCase();
     const rows = needle
       ? logs.filter((log) =>
-          [contactName.get(log.contactId) ?? '', log.channel ?? '', log.text]
+          [contactName.get(log.contactId) ?? '', log.channel ? label('contactChannels', log.channel) : '', log.text]
             .join(' ')
             .toLowerCase()
             .includes(needle),
         )
       : logs;
     return [...rows].sort((a, b) => b.at.localeCompare(a.at));
-  }, [logs, search, contactName]);
+  }, [logs, search, contactName, label]);
 
   return (
     <>
@@ -85,7 +87,8 @@ export default function ContactLogsPage() {
                     {contactName.get(log.contactId) ?? 'Kontakt gelöscht'}
                   </span>
                   <span className="block text-xs text-muted truncate">
-                    {[formatDateTime(log.at), log.channel].filter(Boolean).join(' · ')}
+                    {[formatDateTime(log.at), log.channel ? label('contactChannels', log.channel) : '']
+                      .filter(Boolean).join(' · ')}
                   </span>
                   <span className="block text-xs text-muted line-clamp-3">{logPreview(log.text)}</span>
                 </span>

@@ -18,7 +18,7 @@ export interface ReceiptFields {
 export interface ExtractInput {
   file: Blob;
   contentType: string;
-  /** categories the app knows, so an engine can pick one */
+  /** labels of the visible cost categories, so an engine can pick one; the caller maps the answer back to an id */
   categories?: string[];
 }
 
