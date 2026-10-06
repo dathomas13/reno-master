@@ -57,7 +57,7 @@ export function FolderExportSection() {
     let active = true;
     void (async () => {
       const open = photos.data.filter(
-        (photo) => photo.kind === 'photo' && !(photo.sourceUri && photo.deviceId === device) && photo.takenAt,
+        (photo) => photo.contentType !== 'application/pdf' && !(photo.sourceUri && photo.deviceId === device) && photo.takenAt,
       );
       const days = [...new Set(open.map((photo) => photo.takenAt!.slice(0, 10)))];
       const matches: Record<string, string> = {};
@@ -100,7 +100,8 @@ export function FolderExportSection() {
 
   const fromGallery = plan.files.filter((file) => sourceFor(file, device) === 'gallery').length;
   const cloudFull = plan.files.filter((file) => sourceFor(file, device) === 'cloud' && file.original).length;
-  const fromCloud = plan.files.filter((file) => sourceFor(file, device) === 'cloud' && !file.original).length;
+  const shrunk = plan.files.filter((file) => sourceFor(file, device) === 'cloud' && !file.original);
+  const fromCloud = shrunk.length;
 
   if (!folderExportAvailable()) {
     return (
@@ -187,6 +188,17 @@ export function FolderExportSection() {
           <dt className="text-muted">aus der Cloud</dt>
           <dd>{fromCloud} verkleinert</dd>
         </dl>
+      )}
+
+      {!loading && shrunk.length > 0 && (
+        <details className="text-xs text-muted mb-3">
+          <summary>Welche sind verkleinert?</summary>
+          <ul className="mt-1 space-y-0.5">
+            {shrunk.slice(0, 40).map((file) => (
+              <li key={file.name}>{file.name}</li>
+            ))}
+          </ul>
+        </details>
       )}
 
       <button
