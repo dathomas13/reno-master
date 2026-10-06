@@ -46,7 +46,7 @@ function useReminderState(): ReminderState {
   const { profile } = useAuth();
   // today and the days after it are the only ones a reminder can still be planned for,
   // and a query that does not react to older entries keeps the rescheduling rare
-  const { data: entries, loading } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(40)]);
+  const { data: entries, loading, error } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(40)]);
 
   const dates = useMemo(
     () => entries.map((entry) => entry.date).filter((date) => date >= today()).sort(),
@@ -57,7 +57,9 @@ function useReminderState(): ReminderState {
     enabled: profile?.reminderEnabled ?? false,
     time: profile?.reminderTime ?? '20:00',
     dates,
-    known: profile !== null && !loading,
+    // a failed read looks exactly like an empty diary, and planning from it would bring
+    // back the alarm for every day that has its entry
+    known: profile !== null && !loading && !error,
   };
 }
 

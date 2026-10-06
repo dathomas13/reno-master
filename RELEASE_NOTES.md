@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.75.1 – Keine Abend-Erinnerung mehr trotz Eintrag
+
+- Nach einem Neustart der App kam die Abend-Erinnerung auch für Tage, die schon einen
+  Eintrag hatten. Behoben.
+- Aufgaben-Erinnerungen gehen nach einem Neustart nicht mehr verloren.
+
 ## 0.75.0 – Protokoll für die Fehlersuche
 
 - Die App schreibt mit, was die Abend-Erinnerung entscheidet, und schickt das Protokoll

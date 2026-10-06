@@ -253,7 +253,19 @@ export async function enableReminders(): Promise<ReminderResult> {
  * moved, and an entry written for today has to take today's reminder with it. Returns the
  * plan it applied, so the caller can say what will happen next.
  */
-export async function applyReminderPlan(input: ReminderInput): Promise<PlannedReminder[]> {
+// Plans are applied one after the other. Two runs started close together (the app coming
+// back to the front while the diary query delivers) would otherwise interleave on the
+// device: both read, both cancel, and the older plan's alarms land after the newer
+// cancel - with the day that just got its entry back in.
+let applying: Promise<unknown> = Promise.resolve();
+
+export function applyReminderPlan(input: ReminderInput): Promise<PlannedReminder[]> {
+  const run = applying.then(() => applyReminderPlanNow(input));
+  applying = run.catch(() => undefined);
+  return run;
+}
+
+async function applyReminderPlanNow(input: ReminderInput): Promise<PlannedReminder[]> {
   const plan = planReminders(input);
   const known = `an=${input.enabled ? 'ja' : 'nein'} ${input.time}, Einträge ab heute: ${describeDays([...input.datesWithEntry])}`;
   let step = 'Plugin suchen';
