@@ -17,13 +17,18 @@
  * notes in the log that the previous one never finished. A crash therefore leaves a trace even
  * though nothing could run at the moment it happened.
  *
+ * The log also leaves the device: `diagUpload.ts` sends it to the file worker now and then,
+ * where a development session can read it (`tools/diag/read_log.py`). So whatever is
+ * written here should make sense to someone who cannot ask the phone a follow-up question.
+ *
  * What it is not: a place for chatter. Every line costs a write and pushes an older line out
  * of the buffer, so log decisions and failures, not progress.
  */
 
 const LOG_KEY = 'reno.debugLog';
 const OPEN_PREFIX = 'reno.debugOpen.';
-const MAX_LINES = 600;
+/** about a week of ordinary use; at ~120 characters a line that is a quarter megabyte */
+const MAX_LINES = 2000;
 
 function read(): string[] {
   try {
@@ -42,8 +47,14 @@ function write(lines: string[]): void {
   }
 }
 
+const two = (value: number) => String(value).padStart(2, '0');
+
+/** local date and time - the log spans days, and "20:00" means the phone's evening */
 function stamp(now: Date): string {
-  return now.toISOString().slice(11, 23);
+  return (
+    `${two(now.getMonth() + 1)}-${two(now.getDate())} ` +
+    `${two(now.getHours())}:${two(now.getMinutes())}:${two(now.getSeconds())}.${String(now.getMilliseconds()).padStart(3, '0')}`
+  );
 }
 
 export function debugLog(scope: string, line: string, now: Date = new Date()): void {

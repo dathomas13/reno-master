@@ -221,7 +221,13 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   Konstanten-Array. Details in `PLAN.md` 5.7.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
 - **Zum Debuggen `src/platform/debugLog.ts` benutzen, nicht `console.log`.** Auf dem Telefon
-  gibt es keine Konsole. `debugLog('<bereich>', '…')` schreibt sofort in den localStorage und
+  gibt es keine Konsole. **Das Protokoll kommt von selbst an:** `src/platform/diagUpload.ts`
+  legt es als `diag/<gerät>.json` auf R2 ab (beim Wegschalten der App, nach dem Start, alle
+  15 min, nur wenn neu), `python3 tools/diag/read_log.py [--scope erinnerung]` liest es über
+  den Worker (`GET /diag`, Secret `DIAG_TOKEN`; Umgebung braucht `RENO_DIAG_URL`,
+  `RENO_DIAG_TOKEN` und den Worker-Host im Netzwerkzugriff, siehe `worker/README.md`).
+  Bei einem Fehlerbericht vom Telefon zuerst dort nachsehen. Die Gerätekennung steht in
+  den Einstellungen ganz unten („Protokoll · app-…“). `debugLog('<bereich>', '…')` schreibt sofort in den localStorage und
   übersteht Absturz, Reload und Neustart, `readDebugLog('<bereich>')` liest zurück. Für
   Vorgänge, die die App mitreißen können, `beginSession`/`endSession` – der nächste Start
   vermerkt dann im Protokoll, dass der vorige nie zu Ende kam.

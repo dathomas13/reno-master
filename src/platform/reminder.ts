@@ -31,6 +31,7 @@
  */
 import { isNative } from '@/platform/index';
 import {
+  describeDiagnosis,
   REMINDER_BODY,
   REMINDER_ROUTE,
   REMINDER_TITLE,
@@ -44,6 +45,15 @@ import {
   type ReminderInput,
 } from './reminderPlan';
 import { isTaskReminderId } from './taskReminderPlan';
+import { debugLog } from './debugLog';
+import { hasDiaryReminderDate } from './diaryReminderMarker';
+
+/**
+ * Everything the reminder decides goes into the log under this scope. A reminder that came
+ * although the diary had an entry is only explainable afterwards from what the app believed
+ * at the time - which days it knew, which alarms stood, which it took back.
+ */
+const LOG = 'erinnerung';
 
 const LAST_SHOWN_KEY = 'reno.reminder.lastShown';
 
@@ -132,6 +142,25 @@ function plugin(): LocalNotificationsApi | null {
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Unbekannter Fehler.';
 }
+
+/** '10-06, 10-07 … 10-19 (14)' - short enough for one log line */
+function describeDays(days: readonly string[]): string {
+  if (days.length === 0) return 'keine';
+  const short = days.map((day) => day.slice(5, 10));
+  if (short.length <= 3) return short.join(', ');
+  return `${short[0]}, ${short[1]} … ${short.at(-1)} (${short.length})`;
+}
+
+function pendingDays(pending: { id: number }[]): string[] {
+  return pending
+    .filter(({ id }) => isReminderId(id) && id !== TEST_REMINDER_ID)
+    .map(({ id }) => dateOfReminderId(id))
+    .filter((day): day is string => day !== null)
+    .sort();
+}
+
+/** the last plan written to the log; the same plan again is not worth a line */
+let lastLoggedPlan = '';
 
 /** the day the browser last showed the reminder by itself */
 export function lastShownDate(): string | undefined {
@@ -226,17 +255,26 @@ export async function enableReminders(): Promise<ReminderResult> {
  */
 export async function applyReminderPlan(input: ReminderInput): Promise<PlannedReminder[]> {
   const plan = planReminders(input);
+  const known = `an=${input.enabled ? 'ja' : 'nein'} ${input.time}, Einträge ab heute: ${describeDays([...input.datesWithEntry])}`;
+  let step = 'Plugin suchen';
   try {
     const local = plugin();
-    if (!local) return plan;
+    if (!local) {
+      logPlan(`Plan (ohne Gerät): ${known}; wäre ${describeDays(plan.map((reminder) => reminder.date))}`);
+      return plan;
+    }
 
+    step = 'gestellte Wecker lesen';
     const pending = await withDeadline(local.getPending());
+    const before = pendingDays(pending.notifications);
     const ours = pending.notifications
       .filter((notification) => isReminderId(notification.id) && notification.id !== TEST_REMINDER_ID)
       .map(({ id }) => ({ id }));
+    step = 'alte Wecker zurücknehmen';
     if (ours.length > 0) await withDeadline(local.cancel({ notifications: ours }));
 
     if (plan.length > 0) {
+      step = 'neue Wecker stellen';
       await withDeadline(
         local.schedule({
           notifications: plan.map((reminder) => ({
@@ -251,11 +289,22 @@ export async function applyReminderPlan(input: ReminderInput): Promise<PlannedRe
         }),
       );
     }
-  } catch {
+    logPlan(
+      `Plan: ${known}; vorher ${describeDays(before)}, jetzt ${describeDays(plan.map((reminder) => reminder.date))}`,
+    );
+  } catch (error) {
     // no permission yet, or a device that refuses alarms: the app keeps working and the
     // settings screen reports what really stands, instead of this guessing
+    debugLog(LOG, `✖ Plan nicht angewandt beim Schritt „${step}“: ${messageOf(error)} (${known})`);
+    lastLoggedPlan = '';
   }
   return plan;
+}
+
+function logPlan(line: string): void {
+  if (line === lastLoggedPlan) return;
+  lastLoggedPlan = line;
+  debugLog(LOG, line);
 }
 
 export async function cancelDiaryReminderForDate(date: string): Promise<void> {
@@ -263,8 +312,10 @@ export async function cancelDiaryReminderForDate(date: string): Promise<void> {
     const local = plugin();
     if (!local) return;
     await withDeadline(local.cancel({ notifications: [{ id: reminderId(date) }] }));
-  } catch {
+    debugLog(LOG, `Wecker für ${date} nach dem Speichern zurückgenommen`);
+  } catch (error) {
     // Saving the diary entry must not fail because Android refused to touch alarms.
+    debugLog(LOG, `✖ Wecker für ${date} nicht zurückgenommen: ${messageOf(error)}`);
   }
 }
 
@@ -292,6 +343,7 @@ export async function showReminderNow(date?: string): Promise<ReminderResult> {
           ],
         }),
       );
+      debugLog(LOG, date ? `Erinnerung für ${date} sofort gezeigt` : 'Testbenachrichtigung (App)');
       if (date) rememberShown(date);
       return { ok: true, message: 'Die Benachrichtigung ist rausgegangen.' };
     } catch (error) {
@@ -313,6 +365,7 @@ export async function showReminderNow(date?: string): Promise<ReminderResult> {
     };
     if (registration) await registration.showNotification(REMINDER_TITLE, options);
     else new Notification(REMINDER_TITLE, options);
+    debugLog(LOG, date ? `Browser zeigt die Erinnerung für ${date}` : 'Testbenachrichtigung (Browser)');
     if (date) rememberShown(date);
     return { ok: true, message: 'Benachrichtigung gesendet.' };
   } catch (error) {
@@ -380,7 +433,23 @@ export async function reminderDiagnosis(): Promise<ReminderDiagnosis> {
     // stays 'unbekannt', which is what the settings screen then says
   }
 
+  debugLog(LOG, `Diagnose: ${describeDiagnosis(diagnosis).join(' ')}`);
   return diagnosis;
+}
+
+/**
+ * A tap is the one moment the app learns that a reminder really went out. Whether the day it
+ * asked about already had an entry - as far as this device knew - is the question every
+ * "reminded although written" report comes down to.
+ */
+async function logTap(date: string): Promise<void> {
+  let known = 'unbekannt';
+  try {
+    known = (await hasDiaryReminderDate(date)) ? 'JA – Eintrag war bekannt' : 'nein';
+  } catch (error) {
+    known = `nicht lesbar (${messageOf(error)})`;
+  }
+  debugLog(LOG, `Erinnerung für ${date} angetippt; Eintrag auf diesem Gerät bekannt: ${known}`);
 }
 
 /**
@@ -395,7 +464,9 @@ export async function watchReminderTaps(): Promise<() => void> {
     if (!local) return () => undefined;
     const handle = await withDeadline(
       local.addListener('localNotificationActionPerformed', (event: TapEvent) => {
-        const route = (event.notification.extra as { route?: string } | undefined)?.route;
+        const extra = event.notification.extra as { route?: string; date?: string } | undefined;
+        const route = extra?.route;
+        if (extra?.date) void logTap(extra.date);
         window.location.hash = `#${route ?? REMINDER_ROUTE}`;
       }),
     );

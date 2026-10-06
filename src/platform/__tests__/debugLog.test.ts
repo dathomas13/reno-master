@@ -17,18 +17,18 @@ describe('debug log', () => {
     debugLog('kamera', 'erste', at(1));
     debugLog('kamera', 'zweite', at(2));
     expect(readDebugLog()).toEqual([
-      expect.stringMatching(/^\d\d:00:01\.000 \[kamera\] erste$/),
+      expect.stringMatching(/^09-19 20:00:01\.000 \[kamera\] erste$/),
       expect.stringMatching(/zweite$/),
     ]);
     expect(JSON.parse(localStorage.getItem('reno.debugLog') ?? '[]')).toHaveLength(2);
   });
 
   it('caps the log so it never fills the storage', () => {
-    for (let i = 0; i < 700; i += 1) debugLog('kamera', `zeile ${i}`);
+    for (let i = 0; i < 2100; i += 1) debugLog('kamera', `zeile ${i}`);
     const lines = readDebugLog();
-    expect(lines).toHaveLength(600);
+    expect(lines).toHaveLength(2000);
     expect(lines[0]).toMatch(/zeile 100$/);
-    expect(lines.at(-1)).toMatch(/zeile 699$/);
+    expect(lines.at(-1)).toMatch(/zeile 2099$/);
   });
 
   it('hands back one scope on its own, and everything in order without one', () => {

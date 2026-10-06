@@ -5,7 +5,7 @@
  *
  *   node worker/selftest.mjs
  */
-import { sign, validSignature, validPath, verifyFirebaseToken } from './reno-files.js';
+import worker, { sign, validSignature, validPath, verifyFirebaseToken } from './reno-files.js';
 
 let failed = 0;
 function check(name, ok) {
@@ -44,6 +44,35 @@ const none = [
   '',
 ].join('.');
 check('"alg: none" wird abgelehnt', (await verifyFirebaseToken(none, 'projekt')) === null);
+
+// Geräteprotokolle: nur mit DIAG_TOKEN, nur unter diag/
+const stored = { 'diag/app-abc123.json': '{"lines":["x"]}', 'photos/geheim.jpg': 'bild' };
+const bucket = {
+  async list({ prefix }) {
+    return {
+      objects: Object.keys(stored)
+        .filter((key) => key.startsWith(prefix))
+        .map((key) => ({ key, size: stored[key].length, uploaded: new Date(0) })),
+    };
+  },
+  async get(key) {
+    return key in stored ? { body: stored[key] } : null;
+  },
+};
+const diagEnv = { BUCKET: bucket, DIAG_TOKEN: 'diag-token-lang-genug-1234' };
+const diag = (path, token, env = diagEnv) =>
+  worker.fetch(
+    new Request(`https://w.example${path}`, { headers: token ? { authorization: `Bearer ${token}` } : {} }),
+    env,
+  );
+
+check('Protokolle ohne Token: 401', (await diag('/diag', '')).status === 401);
+check('Protokolle mit falschem Token: 401', (await diag('/diag', 'diag-token-lang-genug-1235')).status === 401);
+check('ohne DIAG_TOKEN ist die Route zu', (await diag('/diag', 'x', { BUCKET: bucket })).status === 404);
+const listing = await (await diag('/diag', diagEnv.DIAG_TOKEN)).json();
+check('Liste nennt nur Geräte aus diag/', listing.devices.length === 1 && listing.devices[0].device === 'app-abc123');
+check('ein Protokoll lässt sich lesen', (await (await diag('/diag/app-abc123', diagEnv.DIAG_TOKEN)).text()) === stored['diag/app-abc123.json']);
+check('kein Ausbruch aus diag/', (await diag('/diag/..%2Fphotos%2Fgeheim', diagEnv.DIAG_TOKEN)).status === 400);
 
 console.log(failed === 0 ? '\nalles in Ordnung' : `\n${failed} Fehler`);
 process.exit(failed ? 1 : 0);

@@ -52,6 +52,26 @@ lässt sich das nachsehen.
 | `DELETE /files/<pfad>` | Datei löschen, dito |
 | `POST /link` | `{ path }` → `{ url, expires }`, die Adresse zum Anzeigen |
 | `GET /files/<pfad>?exp=…&sig=…` | liefert die Datei, prüft Signatur und Ablauf |
+| `GET /diag` | Liste der Geräteprotokolle, mit `Authorization: Bearer <DIAG_TOKEN>` |
+| `GET /diag/<gerät>` | ein Geräteprotokoll, dito |
+
+## Geräteprotokolle (Diagnose)
+
+Die App legt ihr Protokoll (`src/platform/debugLog.ts`) selbst als `diag/<gerät>.json`
+ab, über dieselbe `PUT`-Route wie Fotos. Lesen lässt es sich nur mit einem eigenen Token,
+damit eine Entwicklungssitzung ohne Firebase-Anmeldung herankommt – und nur unter `diag/`.
+
+Einmalig einrichten:
+
+1. Im Dashboard den Code aus `reno-files.js` neu einfügen und bereitstellen.
+2. Einstellungen → Variablen → **Secret** `DIAG_TOKEN` anlegen, eine lange Zufallszeichenkette
+   (z. B. `openssl rand -hex 32`). Ohne das Secret antwortet `/diag` mit 404.
+3. In der Claude-Code-Umgebung (Umgebung bearbeiten) zwei Umgebungsvariablen setzen:
+   `RENO_DIAG_URL` = die Worker-Adresse (wie `VITE_FILES_URL`), `RENO_DIAG_TOKEN` = das Token.
+   Unter Netzwerkzugriff den Host des Workers (`…workers.dev`) erlauben.
+
+Lesen: `python3 tools/diag/read_log.py` (Geräte und letzte Zeilen),
+`python3 tools/diag/read_log.py app-abc123 --scope erinnerung`.
 
 ## Was geprüft ist, und was nicht
 

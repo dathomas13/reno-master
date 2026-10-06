@@ -34,6 +34,7 @@ vi.mock('./ExportSection', () => ({ ExportSection: () => <h2>Archiv exportieren<
 vi.mock('./FolderExportSection', () => ({ FolderExportSection: () => <h2>Export in einen Ordner</h2> }));
 vi.mock('./ModelSection', () => ({ ModelSection: () => null }));
 vi.mock('./AppUpdateSection', () => ({ AppUpdateSection: () => null }));
+vi.mock('./DiagSection', () => ({ DiagSection: () => null }));
 
 beforeEach(() => {
   localStorage.clear();

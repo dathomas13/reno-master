@@ -21,12 +21,14 @@ import {
 import {
   applyReminderPlan,
   lastShownDate,
+  reminderDiagnosis,
   reminderMode,
   showReminderNow,
   watchReminderTaps,
   type ReminderMode,
 } from '@/platform/reminder';
 import { rememberDiaryReminderDates } from '@/platform/diaryReminderMarker';
+import { debugLog } from '@/platform/debugLog';
 
 /** how often the browser looks at the clock while the app is open */
 const TICK_MS = 60_000;
@@ -87,7 +89,9 @@ export function useDiaryReminder(): void {
 
   useEffect(() => {
     if (!known) return;
-    void rememberDiaryReminderDates(signature ? signature.split(',') : []);
+    void rememberDiaryReminderDates(signature ? signature.split(',') : []).catch((error: unknown) =>
+      debugLog('erinnerung', `✖ Tage mit Eintrag nicht gemerkt: ${error instanceof Error ? error.message : String(error)}`),
+    );
   }, [known, signature]);
 
   useEffect(() => {
@@ -105,6 +109,11 @@ export function useDiaryReminder(): void {
     const timer = window.setInterval(tick, TICK_MS);
     return () => window.clearInterval(timer);
   }, [known, enabled, time, signature]);
+
+  // once per start: what the phone really holds, so the log shows it next to the plan
+  useEffect(() => {
+    if (reminderMode() === 'native') void reminderDiagnosis();
+  }, []);
 
   useEffect(() => {
     let stop: (() => void) | undefined;
