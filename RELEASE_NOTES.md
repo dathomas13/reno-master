@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.75.3 – Möbel kommen ins oberste sichtbare Geschoss
+
+- Neue Möbel landen im höchsten Geschoss, das gerade angezeigt wird, nicht mehr im
+  Erdgeschoss.
+
 ## 0.75.2 – Neue Geräte starten im Plan
 
 - Auf einem frisch eingerichteten Gerät steht der Schalter jetzt auf „Plan“. Räume und

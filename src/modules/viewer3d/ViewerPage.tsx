@@ -487,11 +487,11 @@ export default function ViewerPage() {
     setPieceId(step.before?.id ?? null);
   }
 
-  /** the storey a new piece goes on: the open room's, or the one floor plan on screen */
+  /** the storey a new piece goes on: the highest of the storeys on screen, else the open room's */
   function targetFloor(): FurnitureFloor {
+    for (const layer of ['OG', 'EG', 'KG'] as const) if (layerState[layer]) return layer;
     if (room && (FURNITURE_FLOORS as readonly string[]).includes(room.floor)) return room.floor as FurnitureFloor;
-    const visible = (['KG', 'EG', 'OG'] as const).filter((layer) => layerState[layer]);
-    return visible.length === 1 ? visible[0]! : 'EG';
+    return 'EG';
   }
 
   function addPiece(type: string, model?: FurnitureModel) {
