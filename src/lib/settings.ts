@@ -51,7 +51,7 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   geminiApiKey: '',
   geminiModel: 'gemini-2.5-flash',
   ocrEngine: 'auto',
-  defaultModelVariant: 'ist',
+  defaultModelVariant: 'soll',
   keepOriginals: false,
   useCustomCamera: false,
   cameraDeviceId: '',

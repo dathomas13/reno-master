@@ -652,7 +652,7 @@ die Wände feststehen. So kann die Soll-Namensliste und die Zuordnung stehen, be
 Soll-Aufmaß da ist.
 
 **Bestand/Planung** (seit 0.55.0 derselbe Schalter wie das 3D-Modell: Einstellungen →
-3D-Modelle → „Bestand oder Zielzustand“, gerätelokal `defaultModelVariant`, übersetzt von
+3D-Modelle → „Bestand oder Zielzustand“, gerätelokal `defaultModelVariant`, Standard `soll` (Plan) seit 0.75.2, übersetzt von
 `roomNamingOf` in `src/lib/settings.ts`; Logik in `src/data/roomNaming.ts`): wirkt auf
 Tagebuch, Kosten, Aufgaben, Notizen, Fotos und die Raum-Auswahl in Formularen. 3D und
 Pläne zeigen immer die Namen ihrer eigenen Modellvariante. Die Suche findet Räume und
