@@ -6,6 +6,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/firebase/auth';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
 import { AppUpdateSection } from './AppUpdateSection';
+import { DiagSection } from './DiagSection';
 import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
 import { ModelSection } from './ModelSection';
@@ -335,6 +336,8 @@ export default function SettingsPage() {
         </section>
 
         <AppUpdateSection />
+
+        <DiagSection />
       </div>
     </>
   );

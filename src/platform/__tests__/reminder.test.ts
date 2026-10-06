@@ -39,3 +39,35 @@ describe('diary reminder notifications', () => {
     expect(api.cancel).not.toHaveBeenCalled();
   });
 });
+describe('applying the diary reminder plan', () => {
+  it('runs one plan after the other, so an older plan cannot bring a written day back', async () => {
+    const { applyReminderPlan } = await import('@/platform/reminder');
+    const now = new Date(2026, 9, 6, 9, 0);
+    const standing = new Set<number>();
+    const calls: string[] = [];
+    // the device answers in the order it was asked, a little later each time
+    const later = <T,>(value: () => T) => new Promise<T>((resolve) => setTimeout(() => resolve(value()), 1));
+    setLocalNotifications({
+      getPending: vi.fn(() => {
+        calls.push('getPending');
+        return later(() => ({ notifications: [...standing].map((id) => ({ id })) }));
+      }),
+      cancel: vi.fn(({ notifications }: { notifications: { id: number }[] }) => {
+        calls.push('cancel');
+        return later(() => notifications.forEach(({ id }) => standing.delete(id)));
+      }),
+      schedule: vi.fn(({ notifications }: { notifications: { id: number }[] }) => {
+        calls.push('schedule');
+        return later(() => notifications.forEach(({ id }) => standing.add(id)));
+      }),
+    });
+
+    const older = applyReminderPlan({ enabled: true, time: '20:00', datesWithEntry: [], now, days: 2 });
+    const newer = applyReminderPlan({ enabled: true, time: '20:00', datesWithEntry: ['2026-10-06'], now, days: 2 });
+    await Promise.all([older, newer]);
+
+    expect(standing.has(reminderId('2026-10-06'))).toBe(false);
+    expect(standing.has(reminderId('2026-10-07'))).toBe(true);
+    expect(calls).toEqual(['getPending', 'schedule', 'getPending', 'cancel', 'schedule']);
+  });
+});

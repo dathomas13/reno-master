@@ -22,6 +22,11 @@ export function isAuthenticated(): boolean {
   return auth.currentUser !== null;
 }
 
+/** uid of whoever is signed in; null also while a restart has not restored the session yet */
+export function currentUid(): string | null {
+  return auth.currentUser?.uid ?? null;
+}
+
 export function watchUser(callback: (user: User | null) => void): () => void {
   try {
     // the error callback fires when the project is not configured yet - the preview

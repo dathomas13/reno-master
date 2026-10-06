@@ -21,12 +21,14 @@ import {
 import {
   applyReminderPlan,
   lastShownDate,
+  reminderDiagnosis,
   reminderMode,
   showReminderNow,
   watchReminderTaps,
   type ReminderMode,
 } from '@/platform/reminder';
 import { rememberDiaryReminderDates } from '@/platform/diaryReminderMarker';
+import { debugLog } from '@/platform/debugLog';
 
 /** how often the browser looks at the clock while the app is open */
 const TICK_MS = 60_000;
@@ -44,7 +46,7 @@ function useReminderState(): ReminderState {
   const { profile } = useAuth();
   // today and the days after it are the only ones a reminder can still be planned for,
   // and a query that does not react to older entries keeps the rescheduling rare
-  const { data: entries, loading } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(40)]);
+  const { data: entries, loading, error } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(40)]);
 
   const dates = useMemo(
     () => entries.map((entry) => entry.date).filter((date) => date >= today()).sort(),
@@ -55,7 +57,9 @@ function useReminderState(): ReminderState {
     enabled: profile?.reminderEnabled ?? false,
     time: profile?.reminderTime ?? '20:00',
     dates,
-    known: profile !== null && !loading,
+    // a failed read looks exactly like an empty diary, and planning from it would bring
+    // back the alarm for every day that has its entry
+    known: profile !== null && !loading && !error,
   };
 }
 
@@ -87,7 +91,9 @@ export function useDiaryReminder(): void {
 
   useEffect(() => {
     if (!known) return;
-    void rememberDiaryReminderDates(signature ? signature.split(',') : []);
+    void rememberDiaryReminderDates(signature ? signature.split(',') : []).catch((error: unknown) =>
+      debugLog('erinnerung', `✖ Tage mit Eintrag nicht gemerkt: ${error instanceof Error ? error.message : String(error)}`),
+    );
   }, [known, signature]);
 
   useEffect(() => {
@@ -105,6 +111,11 @@ export function useDiaryReminder(): void {
     const timer = window.setInterval(tick, TICK_MS);
     return () => window.clearInterval(timer);
   }, [known, enabled, time, signature]);
+
+  // once per start: what the phone really holds, so the log shows it next to the plan
+  useEffect(() => {
+    if (reminderMode() === 'native') void reminderDiagnosis();
+  }, []);
 
   useEffect(() => {
     let stop: (() => void) | undefined;

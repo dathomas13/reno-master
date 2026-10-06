@@ -22,6 +22,7 @@ import { today, toIsoDateTime, formatDate } from '@/lib/date';
 import { pendingWrite } from './pendingWrite';
 import { rememberDiaryReminderDate } from '@/platform/diaryReminderMarker';
 import { cancelDiaryReminderForDate } from '@/platform/reminder';
+import { debugLog } from '@/platform/debugLog';
 import { applyTaskReminderForTask, cancelTaskReminderForTask } from '@/platform/taskReminder';
 
 /** removes undefined values, which Firestore refuses to store */
@@ -49,6 +50,7 @@ export async function saveDiaryEntry(entry: DiaryEntry): Promise<string> {
     COL.diary,
     clean(entry as unknown as Record<string, unknown>) as unknown as DiaryEntry,
   );
+  debugLog('erinnerung', `Tagebucheintrag für ${entry.date} gespeichert`);
   void rememberDiaryReminderDate(entry.date);
   void cancelDiaryReminderForDate(entry.date);
   return saved;

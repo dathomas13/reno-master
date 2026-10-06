@@ -14,6 +14,13 @@
  *   DELETE /files/<pfad>   Datei löschen        (dito)
  *   POST   /link           { path } → { url }   (dito) – kurzlebige Adresse zum Anzeigen
  *   GET    /files/<pfad>?exp=…&sig=…            – die Adresse aus /link, ohne Anmeldung
+ *   GET    /diag            Liste der Geräteprotokolle   (Kopfzeile: Authorization: Bearer <DIAG_TOKEN>)
+ *   GET    /diag/<gerät>    ein Geräteprotokoll          (dito)
+ *
+ * Die Protokolle legt die App selbst über PUT /files/diag/<gerät>.json ab
+ * (src/platform/diagUpload.ts). Gelesen werden sie nicht von der App, sondern aus einer
+ * Entwicklungssitzung heraus (tools/diag/read_log.py) – deshalb ein eigenes Token statt
+ * der Firebase-Anmeldung, die es dort nicht gibt. Ohne DIAG_TOKEN ist die Route zu.
  *
  * Die Anzeige-Adresse trägt eine Signatur und ein Ablaufdatum. Ein <img>-Element kann
  * keine Kopfzeilen mitschicken, deshalb dieser Umweg: die Adresse selbst ist der Nachweis,
@@ -24,6 +31,8 @@
  *     ALLOWED_EMAILS   die beiden Adressen, mit Komma getrennt, klein geschrieben
  *     FIREBASE_PROJECT reno-master-307f7
  *     SIGNING_KEY      (als Secret!) eine lange Zufallszeichenkette
+ *     DIAG_TOKEN       (als Secret!, freiwillig) eine zweite lange Zufallszeichenkette,
+ *                      nur zum Lesen der Geräteprotokolle
  *   Einstellungen → Bindings → R2-Bucket
  *     Variablenname BUCKET, der angelegte Bucket
  */
@@ -44,6 +53,9 @@ export default {
     try {
       if (url.pathname === '/link' && request.method === 'POST') {
         return cors(await handleLink(request, env));
+      }
+      if (request.method === 'GET' && (url.pathname === '/diag' || url.pathname.startsWith('/diag/'))) {
+        return cors(await handleDiag(request, url, env));
       }
       if (url.pathname.startsWith('/files/')) {
         const path = decodeURIComponent(url.pathname.slice('/files/'.length));
@@ -114,6 +126,36 @@ async function handleGet(path, url, env) {
   // so lange wie die Adresse gilt, darf der Browser sie behalten
   headers.set('cache-control', 'private, max-age=3600');
   return new Response(object.body, { headers });
+}
+
+/**
+ * Geräteprotokolle lesen. Nur mit DIAG_TOKEN, und nur unter diag/ – an die übrigen Dateien
+ * kommt dieses Token nicht heran.
+ */
+async function handleDiag(request, url, env) {
+  const secret = String(env.DIAG_TOKEN ?? '');
+  if (secret.length < 16) return text(404, 'Diagnose ist nicht eingerichtet');
+  const header = request.headers.get('authorization') ?? '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  if (!timingSafeEqual(token, secret)) return text(401, 'Token ungültig');
+
+  const name = decodeURIComponent(url.pathname.slice('/diag'.length).replace(/^\//, ''));
+  if (!name) {
+    const listed = await env.BUCKET.list({ prefix: 'diag/', limit: 100 });
+    return json(200, {
+      devices: listed.objects.map((object) => ({
+        device: object.key.slice('diag/'.length).replace(/\.json$/, ''),
+        size: object.size,
+        uploaded: object.uploaded,
+      })),
+    });
+  }
+  if (!/^[A-Za-z0-9_-]{1,60}$/.test(name)) return text(400, 'Ungültiger Gerätename');
+  const object = await env.BUCKET.get(`diag/${name}.json`);
+  if (!object) return text(404, 'Kein Protokoll für dieses Gerät');
+  return new Response(object.body, {
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+  });
 }
 
 // ---------------------------------------------------------------- Signatur

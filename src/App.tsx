@@ -7,6 +7,7 @@ import { Spinner } from '@/components/Fields';
 import { UpdateBanner } from '@/components/UpdateBanner';
 import { startOutboxWorker } from '@/offline/outbox';
 import { startModelSync } from '@/data/modelSync';
+import { startDiagUpload } from '@/platform/diagUpload';
 import { useDiaryReminder } from '@/data/useReminder';
 import { useTaskReminders } from '@/data/useTaskReminders';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -39,6 +40,8 @@ function Protected() {
   // The model lives in the database, so the sync needs an account: it listens to the
   // published documents and keeps the newest model on the device for offline use.
   useEffect(() => (user ? startModelSync() : undefined), [user]);
+  // the log leaves the phone now and then, so a development session can read it
+  useEffect(() => (user ? startDiagUpload() : undefined), [user]);
   // the evening reminder: planned on the device, so it also fires with no connection
   useDiaryReminder();
   useTaskReminders(!!user);
