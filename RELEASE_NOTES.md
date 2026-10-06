@@ -8,6 +8,16 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.74.4 – Ordnerexport: auch Belege
+
+- Belege werden im Ordnerexport ebenfalls im Original aus der Galerie geholt; PDFs gelten nicht mehr als verkleinert.
+- Unter dem Zähler steht, welche Dateien noch verkleinert sind.
+
+## 0.74.3 – Ordnerexport mit mehr Originalen
+
+- Der Ordnerexport sucht die Originale auch für Fotos, die per Kamera oder Auswahl hinzugekommen sind, in der Galerie dieses Handys.
+- Die Anzeige trennt jetzt Galerie, Cloud-Original und verkleinerte Cloud-Fassung.
+
 ## 0.74.2 – Schneller Start auch im Browser
 
 - Die aufgeräumte Fassung steht jetzt auch in der Webansicht bereit.

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   alreadyThere,
   describeResult,
+  matchGalleryOriginal,
   planOrder,
   runFolderExport,
   sourceFor,
@@ -61,6 +62,16 @@ describe('alreadyThere', () => {
 
   it('accepts any size for a gallery original, whose size the plan cannot know', () => {
     const photo = file({ name: 'fotos/a.jpg', bytes: 300 });
+    expect(alreadyThere(photo, { 'fotos/a.jpg': 4_000_000 }, 'gallery')).toBe(true);
+  });
+
+  it('replaces the cloud copy of an earlier run when the original is now available', () => {
+    const photo = file({ name: 'fotos/a.jpg', bytes: 300 });
+    expect(alreadyThere(photo, { 'fotos/a.jpg': 300 }, 'gallery')).toBe(false);
+  });
+
+  it('keeps a gallery file of the original size when the plan already counts originals', () => {
+    const photo = file({ name: 'fotos/a.jpg', bytes: 4_000_000, original: true });
     expect(alreadyThere(photo, { 'fotos/a.jpg': 4_000_000 }, 'gallery')).toBe(true);
   });
 
@@ -175,5 +186,31 @@ describe('describeResult', () => {
     expect(describeResult({ fromGallery: 5, fromCloud: 0, skipped: 0, failed: [], bytes: 0 })).toBe(
       '5 Foto(s) im Original',
     );
+  });
+});
+
+describe('matchGalleryOriginal', () => {
+  const candidates = [
+    { uri: 'content://1', name: 'IMG_1.jpg', takenAt: '2026-09-01T10:00:00', bytes: 5_000_000 },
+    { uri: 'content://2', name: 'IMG_2.jpg', takenAt: '2026-09-01T10:05:00', bytes: 4_000_000 },
+  ];
+
+  it('matches on the exact size of the picked file', () => {
+    const hit = matchGalleryOriginal({ originalName: 'x.jpg', originalBytes: 4_000_000 }, candidates);
+    expect(hit?.uri).toBe('content://2');
+  });
+
+  it('falls back to name and time when the size differs', () => {
+    const hit = matchGalleryOriginal(
+      { originalName: 'IMG_1.jpg', originalBytes: 900_000, takenAt: '2026-09-01T10:00:20' },
+      candidates,
+    );
+    expect(hit?.uri).toBe('content://1');
+  });
+
+  it('does not guess when nothing fits', () => {
+    expect(
+      matchGalleryOriginal({ originalName: 'IMG_1.jpg', originalBytes: 1, takenAt: '2026-09-01T12:00:00' }, candidates),
+    ).toBeUndefined();
   });
 });

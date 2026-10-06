@@ -167,7 +167,8 @@ export function planExport(source: ExportSource, createdAt = new Date()): Export
       name,
       storagePath: photo.originalPath ?? photo.storagePath,
       bytes: photo.originalPath ? (photo.originalBytes ?? photo.bytes) : photo.bytes,
-      original: Boolean(photo.originalPath),
+      // a PDF is never resized, so the cloud copy already is the original
+      original: Boolean(photo.originalPath) || photo.contentType === 'application/pdf',
       mime: photo.contentType,
       sourceUri: photo.sourceUri,
       deviceId: photo.deviceId,
