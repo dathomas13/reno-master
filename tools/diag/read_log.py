@@ -27,7 +27,10 @@ def fetch(path: str):
     token = os.environ.get("RENO_DIAG_TOKEN", "")
     if not base or not token:
         sys.exit("RENO_DIAG_URL und RENO_DIAG_TOKEN fehlen (siehe worker/README.md, „Geräteprotokolle“).")
-    request = urllib.request.Request(base + path, headers={"authorization": f"Bearer {token}"})
+    # Cloudflare weist den Standard-User-Agent von urllib ab (error code 1010)
+    request = urllib.request.Request(
+        base + path, headers={"authorization": f"Bearer {token}", "user-agent": "reno-diag-reader/1.0"}
+    )
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.loads(response.read().decode("utf-8"))
