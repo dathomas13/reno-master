@@ -4,6 +4,7 @@ import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
 import { Sheet } from '@/components/Sheet';
 import { Icon, type IconName } from '@/components/Icon';
+import { useToast } from '@/components/Toast';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
 import { patchPhase } from '@/data/repos';
@@ -31,6 +32,7 @@ export default function HomePage() {
   const { label } = useOptions();
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [phaseBusy, setPhaseBusy] = useState(false);
+  const toast = useToast();
   // read on mount: the layout only changes on the settings screen, and coming back remounts this page
   const [homeLayout] = useState(() => normalizeHomeLayout(loadSettings().homeLayout));
 
@@ -68,6 +70,8 @@ export default function HomePage() {
         patchPhase(next.id, { status: PHASE_ACTIVE, start: next.start ?? date, end: undefined }),
       ]);
       setPhaseOpen(false);
+    } catch {
+      toast('Die Phase konnte nicht gesetzt werden.');
     } finally {
       setPhaseBusy(false);
     }
@@ -96,12 +100,12 @@ export default function HomePage() {
           {orderedPhases.length > 0 ? (
             <button
               type="button"
-              className="chip mt-1 bg-bg/70 text-ink"
+              className="flex items-center gap-1 py-2 -my-2 pr-2 text-xs text-muted text-left"
               title="Aktuelle Phase ändern"
               onClick={() => setPhaseOpen(true)}
             >
-              <span className="truncate max-w-[16rem]">{phase?.name ?? 'Phase setzen'}</span>
-              <Icon name="chevronDown" className="w-4 h-4 shrink-0" />
+              <span className="underline decoration-line underline-offset-2">{phase?.name ?? 'Phase setzen'}</span>
+              <Icon name="chevronDown" className="w-3 h-3 shrink-0" />
             </button>
           ) : (
             <div className="text-xs text-muted">Kernsanierung</div>

@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildRoomNaming } from '@/data/roomNaming';
-import { RoomPicker } from './Pickers';
+import { MultiPicker, RoomPicker } from './Pickers';
 
 // Heizung and Öllager merged into Technikraum - the same fixture as roomNaming.test.ts
 const ist = [
@@ -47,5 +47,34 @@ describe('RoomPicker - a room merged in Planung', () => {
     fireEvent.click(within(dialog).getByText('Technikraum'));
 
     expect(onChange).toHaveBeenCalledWith(['kg-technik']);
+  });
+});
+
+describe('MultiPicker - adding a new entry', () => {
+  it('creates an entry from the field in the sheet instead of a browser prompt', () => {
+    const onAddName = vi.fn();
+    render(
+      <MultiPicker
+        label="Anwesend"
+        value={[]}
+        onChange={vi.fn()}
+        options={[{ id: 'tom', name: 'Tom' }]}
+        emptyLabel="niemand"
+        onAddName={onAddName}
+        addLabel="Person hinzufügen"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /niemand/ }));
+    const dialog = screen.getByRole('dialog');
+    const add = within(dialog).getByRole('button', { name: 'Person hinzufügen' });
+    expect(add).toBeDisabled();
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'Person hinzufügen' }), {
+      target: { value: '  Elektro Maier ' },
+    });
+    fireEvent.click(add);
+
+    expect(onAddName).toHaveBeenCalledWith('Elektro Maier');
+    expect(within(dialog).getByRole('textbox', { name: 'Person hinzufügen' })).toHaveValue('');
   });
 });

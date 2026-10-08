@@ -113,16 +113,14 @@ interface OptionMultiPickerProps {
   value: readonly string[];
   onChange(value: string[]): void;
   emptyLabel?: string;
-  /** offers „＋“ that adds a new entry to the set (by prompt) and selects it */
+  /** offers a field in the sheet that adds a new entry to the set and selects it */
   addLabel?: string;
 }
 
 /** several values out of a (long) option set behind a sheet, e.g. people or roles; writes ids */
 export function OptionMultiPicker({ setKey, label, value, onChange, emptyLabel, addLabel }: OptionMultiPickerProps) {
   const { choices, selected, add } = useChoices(setKey, value);
-  function addNew() {
-    const name = window.prompt(addLabel ?? `${label} hinzufügen`)?.trim();
-    if (!name) return;
+  function addNew(name: string) {
     const id = add(name);
     if (id && !selected.includes(id)) onChange([...selected, id]);
   }
@@ -133,7 +131,7 @@ export function OptionMultiPicker({ setKey, label, value, onChange, emptyLabel, 
       onChange={onChange}
       options={choices.map((entry) => ({ id: entry.id, name: entry.label }))}
       emptyLabel={emptyLabel}
-      onAdd={addLabel ? addNew : undefined}
+      onAddName={addLabel ? addNew : undefined}
       addLabel={addLabel}
     />
   );

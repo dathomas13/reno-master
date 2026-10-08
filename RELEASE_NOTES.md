@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.77.0 – Aufgeräumte Einstellungen
+
+- Einstellungen geordnet nach Alltag, Daten und Fortgeschrittenem; das Konto steht am Ende.
+- Personen und Rollen lassen sich direkt im Auswahlfenster neu anlegen.
+- Die Phase auf der Startseite ist wieder dezent, mit kleinem Pfeil zum Ändern.
+
 ## 0.76.2 – Löschen mit Rückgängig, größere Tippflächen
 
 - Aufgaben, Notizen, Kontakte, Einträge, Rechnungen und Pläne lassen sich nach dem Löschen

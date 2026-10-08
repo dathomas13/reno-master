@@ -12,13 +12,30 @@ interface MultiPickerProps {
   onChange(value: string[]): void;
   options: { id: string; name: string; group?: string }[];
   emptyLabel?: string;
-  onAdd?(): void;
+  /** offers a field at the bottom of the sheet that creates a new entry by name */
+  onAddName?(name: string): void;
   addLabel?: string;
 }
 
 /** compact multi select: shows the picked names, opens a sheet with the full list */
-export function MultiPicker({ label, value, onChange, options, emptyLabel = 'keine', onAdd, addLabel }: MultiPickerProps) {
+export function MultiPicker({
+  label,
+  value,
+  onChange,
+  options,
+  emptyLabel = 'keine',
+  onAddName,
+  addLabel,
+}: MultiPickerProps) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  function addDraft() {
+    const name = draft.trim();
+    if (!name || !onAddName) return;
+    onAddName(name);
+    setDraft('');
+  }
   const byId = useMemo(() => new Map(options.map((option) => [option.id, option])), [options]);
   const groups = useMemo(() => {
     const map = new Map<string, typeof options>();
@@ -70,10 +87,32 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
               Auswahl leeren
             </button>
           )}
-          {onAdd && (
-            <button type="button" className="btn w-full mt-2" onClick={onAdd}>
-              {addLabel ?? 'Hinzufügen'}
-            </button>
+          {onAddName && (
+            // the same add field as in the presets: type, tap +, it is created and ticked
+            <form
+              className="flex gap-2 px-4 mt-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                addDraft();
+              }}
+            >
+              <input
+                className="field flex-1"
+                aria-label={addLabel ?? 'Neuer Eintrag'}
+                placeholder={`${addLabel ?? 'Hinzufügen'} …`}
+                value={draft}
+                maxLength={60}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+              <button
+                type="submit"
+                className="btn btn-primary w-11 px-0"
+                aria-label={addLabel ?? 'Hinzufügen'}
+                disabled={!draft.trim()}
+              >
+                <Icon name="plus" />
+              </button>
+            </form>
           )}
         </div>
       </Sheet>

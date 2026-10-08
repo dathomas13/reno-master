@@ -66,7 +66,7 @@ export function AppUpdateSection() {
         Alle Release Notes
       </button>
       <Sheet open={notesOpen} onClose={() => setNotesOpen(false)} doneLabel="Schließen" title="Release Notes">
-        <ul className="space-y-4">
+        <ul className="space-y-4 p-4">
           {RELEASE_NOTES.map((note) => (
             <li key={note.version}>
               <p className="font-medium">
