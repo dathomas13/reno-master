@@ -98,3 +98,16 @@
 .canvas-3d {
   touch-action: none;
 }
+
+/* the long-press menu: the screen dims, the menu grows out of the entry */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  [class*='animate-['] { animation: none !important; }
+}

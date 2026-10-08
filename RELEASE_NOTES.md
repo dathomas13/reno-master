@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.85.1 – Menü direkt am Eintrag
+
+- Lange drücken öffnet das Menü jetzt direkt am Eintrag statt unten am Bildschirm; der Rest wird kurz abgedunkelt.
+
 ## 0.85.0 – Lange drücken für mehr
 
 - Einen Eintrag lange drücken öffnet ein kleines Menü: Löschen, bei Aufgaben auch Erledigt, bei Notizen Anheften – mit „Rückgängig“ wie gewohnt.

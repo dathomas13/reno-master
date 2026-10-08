@@ -37,8 +37,9 @@ describe('long press on a row', () => {
     fireEvent.click(row);
     expect(onOpen).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Löschen' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Löschen' }));
     expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 
   it('a short tap or a scroll stays a normal tap', () => {
@@ -52,7 +53,7 @@ describe('long press on a row', () => {
     act(() => {
       vi.advanceTimersByTime(600);
     });
-    expect(screen.queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Löschen' })).not.toBeInTheDocument();
     fireEvent.click(row);
     expect(onOpen).toHaveBeenCalledTimes(1);
   });
