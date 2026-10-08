@@ -157,14 +157,14 @@ export default function HomePage() {
             <p className="text-sm text-muted line-clamp-2">{todayEntry.text || 'Noch kein Text'}</p>
           </Link>
         ) : null}
-        {/* more than one for today is almost always an accident - say so instead of picking silently */}
+        {/* several entries a day are allowed - the card shows the newest and leads to the rest */}
         {todays.length > 1 && (
           <Link
             to="/tagebuch"
-            className="flex items-center gap-3 px-4 min-h-11 border-t border-line/60 text-sm text-warn active:bg-panel2"
+            className="flex items-center gap-3 px-4 min-h-11 border-t border-line/60 text-sm text-muted active:bg-panel2"
           >
-            <Icon name="warning" className="w-4 h-4 shrink-0" />
-            <span className="flex-1">Heute gibt es {todays.length} Einträge – ansehen</span>
+            <Icon name="diary" className="w-4 h-4 shrink-0" />
+            <span className="flex-1">Heute {todays.length} Einträge – alle ansehen</span>
             <Icon name="chevronRight" className="w-4 h-4" />
           </Link>
         )}

@@ -88,6 +88,20 @@ export function CaptureSheet({ open, onClose }: { open: boolean; onClose(): void
             </button>
           ))}
         </div>
+        {todayEntry && (
+          // several entries a day are fine: "ergänzen" continues the newest, this starts another
+          <button
+            type="button"
+            className="btn btn-ghost w-full mt-2 text-accent"
+            onClick={() => {
+              onClose();
+              navigate(withRoom('/tagebuch/neu', room));
+            }}
+          >
+            <Icon name="plus" className="w-5 h-5" />
+            Weiteren Tagebucheintrag für heute
+          </button>
+        )}
       </div>
     </Sheet>
   );

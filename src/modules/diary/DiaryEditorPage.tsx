@@ -210,8 +210,8 @@ export default function DiaryEditorPage() {
         </div>
 
         {sameDay && (
-          <p className="card p-3 mb-4 text-sm">
-            Für diesen Tag gibt es schon einen Eintrag.{' '}
+          <p className="card p-3 mb-4 text-sm text-muted">
+            Für diesen Tag gibt es schon einen Eintrag – ein weiterer ist in Ordnung.{' '}
             <button
               type="button"
               className="text-accent underline"
