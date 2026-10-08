@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.83.1 – Kurzschrift verbessert
+
+- „!“ wirkt jetzt auch direkt am Wort („heute!“, „bestellen!“).
+- Das Aufgabenfeld ist wieder kurz beschriftet; die Kurzschrift-Hilfe erscheint beim Antippen darunter.
+
 ## 0.83.0 – Schneller erfassen
 
 - Aufgaben verstehen Kurzschrift: „Silikon kaufen morgen ! Bad“ setzt Fälligkeit, Priorität und Raum; ein Tipp auf einen Chip nimmt die Erkennung zurück.

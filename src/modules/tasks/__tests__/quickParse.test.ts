@@ -26,6 +26,22 @@ describe('quick task short-hand', () => {
     });
   });
 
+  it('reads an exclamation mark stuck to a word', () => {
+    expect(parseQuickTask('heute! Kamin bestellen', context)).toEqual({
+      title: 'Kamin bestellen',
+      hits: [
+        { kind: 'priority', value: 'hoch', text: '!' },
+        { kind: 'due', value: '2026-10-08', text: 'heute' },
+      ],
+    });
+    expect(parseQuickTask('Kamin bestellen!!', context)).toEqual({
+      title: 'Kamin bestellen',
+      hits: [{ kind: 'priority', value: 'hoch', text: '!' }],
+    });
+    // dropped priority: the text stays as typed
+    expect(parseQuickTask('Kamin bestellen!', context, ['priority']).title).toBe('Kamin bestellen!');
+  });
+
   it('keeps a name inside the sentence in the title', () => {
     const task = parseQuickTask('Maler anrufen wegen Küche', context);
     expect(task.title).toBe('Maler anrufen wegen');

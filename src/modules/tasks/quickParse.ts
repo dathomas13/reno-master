@@ -95,20 +95,27 @@ export function parseQuickTask(text: string, context: QuickContext, ignored: rea
   const keep: boolean[] = words.map(() => true);
   const taken = new Set<QuickKind>(ignored);
 
-  words.forEach((word, index) => {
+  words.forEach((typed, index) => {
+    // "!" may stand alone or stick to a word: "heute!", "!Kamin"
+    let word = typed;
+    const bangs = /^(!*)(.*?)(!*)$/.exec(typed)!;
+    if (!taken.has('priority') && (bangs[1] || bangs[3])) {
+      hits.push({ kind: 'priority', value: 'hoch', text: '!' });
+      taken.add('priority');
+      word = bangs[2]!;
+      words[index] = word;
+      if (!word) {
+        keep[index] = false;
+        return;
+      }
+    }
     if (!taken.has('due')) {
       const due = dateOf(word, context.today);
       if (due) {
         hits.push({ kind: 'due', value: due, text: word });
         keep[index] = false;
         taken.add('due');
-        return;
       }
-    }
-    if (!taken.has('priority') && /^!+$/.test(word)) {
-      hits.push({ kind: 'priority', value: 'hoch', text: word });
-      keep[index] = false;
-      taken.add('priority');
     }
   });
 

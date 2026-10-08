@@ -61,6 +61,7 @@ export default function TasksPage() {
   const [assignee, setAssignee] = useState<string | null>(null);
   const [quick, setQuick] = useState('');
   const [ignored, setIgnored] = useState<QuickKind[]>([]);
+  const [quickFocus, setQuickFocus] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [pendingTasks, setPendingTasks] = useState<Record<string, Partial<Task>>>({});
 
@@ -244,7 +245,9 @@ export default function TasksPage() {
         <div className="flex gap-2">
           <input
             className="field"
-            placeholder="Neue Aufgabe… z. B. „Silikon morgen ! Bad“"
+            placeholder="Neue Aufgabe…"
+            onFocus={() => setQuickFocus(true)}
+            onBlur={() => setQuickFocus(false)}
             value={quick}
             onChange={(event) => {
               setQuick(event.target.value);
@@ -264,6 +267,11 @@ export default function TasksPage() {
           </button>
         </div>
 
+        {quickFocus && parsed.hits.length === 0 && (
+          <p className="text-xs text-muted -mt-1 px-1">
+            Kurzschrift: heute, morgen, Fr, 12.10. · ! für dringend · Raum, Person oder Gewerk
+          </p>
+        )}
         {parsed.hits.length > 0 && (
           <div className="flex flex-wrap gap-2 -mt-1" aria-label="Erkannt">
             {parsed.hits.map((hit) => (
