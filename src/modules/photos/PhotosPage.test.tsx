@@ -53,7 +53,7 @@ describe('photos page phase grouping', () => {
   it('groups photos by diary phase by default and leaves receipts out', () => {
     renderPhotos();
 
-    expect(screen.getByRole('button', { name: 'Nach Phase' })).toHaveClass('chip-on');
+    expect(screen.getByRole('button', { name: 'Nach Phase' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Phase 2: Entkernung & Rückbau')).toBeInTheDocument();
     expect(screen.getByText('Phase 3: Rohbau & Keller')).toBeInTheDocument();
     expect(screen.getByAltText('photo-1')).toBeInTheDocument();
@@ -67,6 +67,6 @@ describe('photos page phase grouping', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Nach Monat' }));
 
     expect(screen.getByText('September 2026')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Nach Monat' })).toHaveClass('chip-on');
+    expect(screen.getByRole('button', { name: 'Nach Monat' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
