@@ -16,6 +16,7 @@ vi.mock('@/components/Pickers', () => ({
   RoomPicker: () => null,
   TradeSelect: () => null,
   PhaseSelect: () => null,
+  MultiPicker: ({ chipLabel }: { chipLabel?: string }) => <button type="button">{chipLabel}</button>,
 }));
 vi.mock('@/data/hooks', () => ({
   useCollection: (name: string) => ({ data: name === 'trades' ? mocks.trades : mocks.tasks, loading: false }),
@@ -179,5 +180,23 @@ describe('tasks page', () => {
       expect.objectContaining({ title: 'Silikon kaufen Maler', priority: 'hoch', roomIds: ['eg-bad'] }),
     );
     expect(mocks.saveTask.mock.calls[0]![0]).not.toHaveProperty('tradeId');
+  });
+
+  it('offers only the people who already have tasks as assignee chips', async () => {
+    mocks.tasks = [{ ...mocks.tasks[0]!, assignees: ['thomas'] }];
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Neu' }));
+    });
+
+    const dialog = screen.getByRole('dialog', { name: 'Aufgabe' });
+    expect(within(dialog).getByRole('button', { name: 'Thomas' })).toHaveAttribute('aria-pressed', 'false');
+    expect(within(dialog).queryByRole('button', { name: 'Sarah' })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Person' })).toBeInTheDocument();
   });
 });

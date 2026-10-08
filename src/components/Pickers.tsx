@@ -15,6 +15,8 @@ interface MultiPickerProps {
   /** offers a field at the bottom of the sheet that creates a new entry by name */
   onAddName?(name: string): void;
   addLabel?: string;
+  /** shows a small "+ <text>" chip instead of the field with the picked names */
+  chipLabel?: string;
 }
 
 /** compact multi select: shows the picked names, opens a sheet with the full list */
@@ -26,6 +28,7 @@ export function MultiPicker({
   emptyLabel = 'keine',
   onAddName,
   addLabel,
+  chipLabel,
 }: MultiPickerProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState('');
@@ -50,12 +53,19 @@ export function MultiPicker({
 
   return (
     <>
-      <button type="button" className="field text-left flex items-center gap-2" onClick={() => setOpen(true)}>
-        <span className={`flex-1 truncate ${picked.length ? '' : 'text-muted'}`}>
-          {picked.length ? picked.join(', ') : emptyLabel}
-        </span>
-        <span className="text-muted"><Icon name="chevronRight" className="w-5 h-5" /></span>
-      </button>
+      {chipLabel ? (
+        <button type="button" className="chip text-muted" onClick={() => setOpen(true)}>
+          <Icon name="plus" className="w-4 h-4" />
+          {chipLabel}
+        </button>
+      ) : (
+        <button type="button" className="field text-left flex items-center gap-2" onClick={() => setOpen(true)}>
+          <span className={`flex-1 truncate ${picked.length ? '' : 'text-muted'}`}>
+            {picked.length ? picked.join(', ') : emptyLabel}
+          </span>
+          <span className="text-muted"><Icon name="chevronRight" className="w-5 h-5" /></span>
+        </button>
+      )}
       <Sheet open={open} onClose={() => setOpen(false)} title={label}>
         <div className="pb-4">
           {groups.map(([group, entries]) => (

@@ -11,7 +11,7 @@ import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
 import { hasAssignee, isTaskDone, PRIORITY_MEDIUM, TASK_DONE, TASK_OPEN } from '@/data/options';
-import { OptionChips, OptionMultiChips } from '@/components/OptionFields';
+import { OptionChips, OptionMultiPicker } from '@/components/OptionFields';
 import { COL, type Task, type Trade } from '@/data/types';
 import { emptyTask, saveTask, toggleTaskDone, deleteTask } from '@/data/repos';
 import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, today, type DueBucket } from '@/lib/date';
@@ -394,6 +394,7 @@ export default function TasksPage() {
 
       <TaskSheet
         task={editing}
+        regularAssignees={assigneeChips.map((person) => person.id)}
         onClose={() => {
           setEditing(null);
           dropWanted();
@@ -431,14 +432,18 @@ function TaskSheet({
   onSave,
   onDelete,
   isNew,
+  regularAssignees,
 }: {
   task: Task | null;
+  /** the people who already have tasks - offered as chips, the rest behind "+ Person" */
+  regularAssignees: string[];
   onClose(): void;
   onSave(task: Task): Promise<void>;
   onDelete(task: Task): void;
   isNew(task: Task): boolean;
 }) {
   const [draft, setDraft] = useState<Task | null>(task);
+  const { label } = useOptions();
 
   useEffect(() => {
     if (!task) {
@@ -489,11 +494,34 @@ function TaskSheet({
           />
         </Field>
         <Field label="Zuständig">
-          <OptionMultiChips
-            setKey="people"
-            value={draft.assignees}
-            onChange={(value) => update({ assignees: value })}
-          />
+          {/* only who already has tasks, plus who is set here - everyone else behind "+ Person" */}
+          <div className="flex flex-wrap gap-2">
+            {[...new Set([...regularAssignees, ...draft.assignees])].map((person) => {
+              const on = draft.assignees.includes(person);
+              return (
+                <button
+                  key={person}
+                  type="button"
+                  aria-pressed={on}
+                  className={`chip ${on ? 'chip-on' : ''}`}
+                  onClick={() =>
+                    update({
+                      assignees: on ? draft.assignees.filter((item) => item !== person) : [...draft.assignees, person],
+                    })
+                  }
+                >
+                  {label('people', person)}
+                </button>
+              );
+            })}
+            <OptionMultiPicker
+              setKey="people"
+              label="Zuständig"
+              chipLabel="Person"
+              value={draft.assignees}
+              onChange={(value) => update({ assignees: value })}
+            />
+          </div>
         </Field>
         <Field label="Fällig am">
           <input

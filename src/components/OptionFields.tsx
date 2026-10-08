@@ -48,35 +48,6 @@ export function OptionChips({ setKey, value, onChange, allowEmpty = true }: Opti
   );
 }
 
-interface OptionMultiChipsProps {
-  setKey: OptionSetKey;
-  value: readonly string[];
-  onChange(value: string[]): void;
-}
-
-/** several values out of an option set, as chips; writes ids */
-export function OptionMultiChips({ setKey, value, onChange }: OptionMultiChipsProps) {
-  const { choices, selected } = useChoices(setKey, value);
-  function toggle(id: string) {
-    onChange(selected.includes(id) ? selected.filter((item) => item !== id) : [...selected, id]);
-  }
-  return (
-    <div className="flex flex-wrap gap-2">
-      {choices.map((entry) => (
-        <button
-          key={entry.id}
-          type="button"
-          aria-pressed={selected.includes(entry.id)}
-          className={`chip ${selected.includes(entry.id) ? 'chip-on' : ''} ${entry.archived ? 'opacity-70' : ''}`}
-          onClick={() => toggle(entry.id)}
-        >
-          {entry.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 interface OptionSelectProps {
   setKey: OptionSetKey;
   value: string | undefined;
@@ -115,10 +86,12 @@ interface OptionMultiPickerProps {
   emptyLabel?: string;
   /** offers a field in the sheet that adds a new entry to the set and selects it */
   addLabel?: string;
+  /** a small "+ <text>" chip opens the sheet, for a row of chips in front of it */
+  chipLabel?: string;
 }
 
 /** several values out of a (long) option set behind a sheet, e.g. people or roles; writes ids */
-export function OptionMultiPicker({ setKey, label, value, onChange, emptyLabel, addLabel }: OptionMultiPickerProps) {
+export function OptionMultiPicker({ setKey, label, value, onChange, emptyLabel, addLabel, chipLabel }: OptionMultiPickerProps) {
   const { choices, selected, add } = useChoices(setKey, value);
   function addNew(name: string) {
     const id = add(name);
@@ -133,6 +106,7 @@ export function OptionMultiPicker({ setKey, label, value, onChange, emptyLabel, 
       emptyLabel={emptyLabel}
       onAddName={addLabel ? addNew : undefined}
       addLabel={addLabel}
+      chipLabel={chipLabel}
     />
   );
 }

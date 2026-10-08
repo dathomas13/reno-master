@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.83.2 – Übersichtliches „Zuständig“
+
+- Bei „Zuständig“ stehen nur noch die Leute, die schon Aufgaben haben; alle anderen über „+ Person“.
+
 ## 0.83.1 – Kurzschrift verbessert
 
 - „!“ wirkt jetzt auch direkt am Wort („heute!“, „bestellen!“).
