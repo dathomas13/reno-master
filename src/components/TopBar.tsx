@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { SyncBadge } from './SyncBadge';
 import { Icon } from './Icon';
+import { debugLog } from '@/platform/debugLog';
 
 interface TopBarProps {
   title: string;
@@ -16,6 +17,8 @@ export function TopBar({ title, subtitle, back, action }: TopBarProps) {
   // Back means back: to wherever the user came from (search, 3D, start page). The fixed
   // target only applies when there is nothing to go back to - a cold start on a deep link.
   function goBack() {
+    // a stuck back button was reported once and could not be reproduced - leave a trace
+    debugLog('navigation', `Zurück-Pfeil auf ${location.pathname}${location.search} (${location.key === 'default' ? 'Einstieg' : 'Verlauf'})`);
     if (location.key !== 'default') navigate(-1);
     else navigate(typeof back === 'string' ? back : '/', { replace: true });
   }

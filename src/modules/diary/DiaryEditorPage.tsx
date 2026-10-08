@@ -19,7 +19,7 @@ import { useToast } from '@/components/Toast';
 
 export default function DiaryEditorPage() {
   const { id } = useParams();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
   const toast = useToast();
@@ -241,6 +241,12 @@ export default function DiaryEditorPage() {
             disabled={saving}
             onBusyChange={setAttaching}
             openDay={pickDay && ready}
+            onDayOpened={() => {
+              // once is enough: back/forward or a re-render must not open the gallery again
+              const next = new URLSearchParams(params);
+              next.delete('fotos');
+              setParams(next, { replace: true });
+            }}
             onAdded={(photo) => setAddedPhotos((current) => [...current.filter((item) => item.id !== photo.id), photo])}
             onRemoved={(photo) => setRemovedPhotoIds((current) => [...current, photo.id])}
           />

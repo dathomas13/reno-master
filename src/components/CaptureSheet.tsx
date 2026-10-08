@@ -7,6 +7,7 @@ import { COL, type DiaryEntry } from '@/data/types';
 import { where } from '@/firebase/db';
 import { today } from '@/lib/date';
 import { openRoom } from '@/lib/openRoom';
+import { entriesOfDay } from '@/modules/diary/entriesOfDay';
 
 interface Tile {
   icon: IconName;
@@ -31,8 +32,10 @@ export function CaptureSheet({ open, onClose }: { open: boolean; onClose(): void
   const location = useLocation();
   const { shortLabel } = useRooms();
   const date = today();
-  const { data: todays } = useCollection<DiaryEntry>(COL.diary, [where('date', '==', date)], [date]);
-  const todayEntry = todays[0];
+  // mounted with the shell, so today's entry is known before the button is ever tapped -
+  // opened fresh, the first frame had no data and "Tagebuch heute" started a second entry
+  const { data: todays, loading } = useCollection<DiaryEntry>(COL.diary, [where('date', '==', date)], [date]);
+  const todayEntry = entriesOfDay(todays, date)[0];
   const room = new URLSearchParams(location.search).get('raum') ?? openRoom();
 
   const diary = todayEntry ? `/tagebuch/${todayEntry.id}/bearbeiten` : '/tagebuch/neu';
@@ -68,7 +71,8 @@ export function CaptureSheet({ open, onClose }: { open: boolean; onClose(): void
             <button
               key={tile.label}
               type="button"
-              className="card p-3 min-h-20 flex items-start gap-3 text-left active:bg-panel2"
+              className="card p-3 min-h-20 flex items-start gap-3 text-left active:bg-panel2 disabled:opacity-50"
+              disabled={loading && (tile.icon === 'diary' || tile.icon === 'photo')}
               onClick={() => {
                 onClose();
                 navigate(tile.to);

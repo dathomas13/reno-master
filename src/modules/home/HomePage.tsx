@@ -16,6 +16,7 @@ import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib
 import { formatEuro } from '@/lib/money';
 import { loadSettings } from '@/lib/settings';
 import { normalizeHomeLayout, visibleHomeBlocks } from '@/lib/homeLayout';
+import { entriesOfDay } from '@/modules/diary/entriesOfDay';
 
 const SHORTCUTS: { to: string; icon: IconName; label: string }[] = [
   { to: '/kosten/neu?capture=1', icon: 'receipt', label: 'Beleg' },
@@ -51,7 +52,8 @@ export default function HomePage() {
   // read on mount: the layout only changes on the settings screen, and coming back remounts this page
   const [homeLayout] = useState(() => normalizeHomeLayout(loadSettings().homeLayout));
 
-  const todayEntry = entries.find((entry) => entry.date === today());
+  const todays = entriesOfDay(entries, today());
+  const todayEntry = todays[0];
   const recent = entries.slice(0, 3);
   const orderedPhases = useMemo(() => [...phases].sort((a, b) => a.order - b.order), [phases]);
   const phase = orderedPhases.find((item) => isPhaseActive(item));
@@ -154,7 +156,19 @@ export default function HomePage() {
             <div className="font-medium">{todayEntry.title}</div>
             <p className="text-sm text-muted line-clamp-2">{todayEntry.text || 'Noch kein Text'}</p>
           </Link>
-        ) : (
+        ) : null}
+        {/* more than one for today is almost always an accident - say so instead of picking silently */}
+        {todays.length > 1 && (
+          <Link
+            to="/tagebuch"
+            className="flex items-center gap-3 px-4 min-h-11 border-t border-line/60 text-sm text-warn active:bg-panel2"
+          >
+            <Icon name="warning" className="w-4 h-4 shrink-0" />
+            <span className="flex-1">Heute gibt es {todays.length} Einträge – ansehen</span>
+            <Icon name="chevronRight" className="w-4 h-4" />
+          </Link>
+        )}
+        {!todayEntry && (
           <Link to="/tagebuch/neu" className="p-4 flex items-center gap-3">
             <span className="w-10 h-10 rounded-full bg-accent/15 text-accent grid place-items-center shrink-0">
               <Icon name="diary" className="w-5 h-5" />

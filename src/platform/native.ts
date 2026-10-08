@@ -5,6 +5,7 @@
  * missing plugin can never break the browser build.
  */
 import { isNative } from './index';
+import { debugLog } from './debugLog';
 
 /** status bar, splash screen and back button, called once at start up */
 export async function initNative(): Promise<void> {
@@ -29,6 +30,7 @@ export async function initNative(): Promise<void> {
     const { App } = await import('@capacitor/app');
     // the hardware back button should walk the history, and only leave the app at the top
     await App.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+      debugLog('navigation', `Android-Zurück auf ${window.location.hash || '#/'} (${canGoBack ? 'Verlauf' : 'App verlassen'})`);
       if (canGoBack) window.history.back();
       else void App.exitApp();
     });

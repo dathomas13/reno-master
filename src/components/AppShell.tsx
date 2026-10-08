@@ -150,7 +150,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </button>
       </nav>
 
-      {captureOpen && <CaptureSheet open onClose={() => setCaptureOpen(false)} />}
+      <CaptureSheet open={captureOpen} onClose={() => setCaptureOpen(false)} />
 
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Mehr" doneLabel="Schließen">
         <div className="flex flex-col">

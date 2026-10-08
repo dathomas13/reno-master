@@ -13,6 +13,7 @@ import { useConfirm } from '@/components/Confirm';
 import type { Cost, Photo } from '@/data/types';
 import { makeThumbnail } from '@/lib/image';
 import { newId } from '@/lib/ids';
+import { debugLog } from '@/platform/debugLog';
 
 interface PhotoBlob {
   blob: Blob;
@@ -69,6 +70,8 @@ interface PhotoAttachProps {
   autoCapture?: boolean;
   /** open the gallery of the day right away (capture button "Fotos von heute"); app only */
   openDay?: boolean;
+  /** told once the gallery of the day was opened that way */
+  onDayOpened?(): void;
 }
 
 /**
@@ -95,6 +98,7 @@ export function PhotoAttach({
   onFileChosen,
   autoCapture = false,
   openDay = false,
+  onDayOpened,
 }: PhotoAttachProps) {
   const [busy, setBusy] = useState(false);
   const confirmRemove = useConfirm();
@@ -291,7 +295,9 @@ export function PhotoAttach({
     let active = true;
     void (async () => {
       try {
+        const started = Date.now();
         const items = await importDeadline(listGalleryPhotosForDay(forDate));
+        debugLog('tagebuch', `Tagesgalerie ${forDate}: ${items.length} Fotos in ${Date.now() - started} ms`);
         if (!active) return;
         setDayPhotos(items);
         setDayLoading(false);
@@ -352,7 +358,9 @@ export function PhotoAttach({
   useEffect(() => {
     if (!openDay || dayOpened.current || disabled || !forDate || !galleryPickerAvailable()) return;
     dayOpened.current = true;
+    debugLog('tagebuch', `Tagesgalerie ${forDate} automatisch geöffnet`);
     openDayGallery();
+    onDayOpened?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openDay, disabled, forDate]);
 
