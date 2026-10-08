@@ -5,6 +5,7 @@ import { Sheet } from '@/components/Sheet';
 import { Field, EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { TradePicker } from '@/components/Pickers';
 import { OptionChips, OptionMultiPicker } from '@/components/OptionFields';
 import { useCollection } from '@/data/hooks';
@@ -32,6 +33,13 @@ export default function ContactsPage() {
   const { data: contacts, loading } = useCollection<Contact>(COL.contacts);
   const toast = useToast();
   const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
+
+  function removeContact(contact: Contact) {
+    const stored = contacts.find((item) => item.id === contact.id);
+    if (!stored) return;
+    undoableDelete(`„${stored.name || 'Kontakt'}“ gelöscht`, () => deleteContact(stored.id), () => saveContact(stored));
+  }
   const { label } = useOptions();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Contact | null>(null);
@@ -114,7 +122,13 @@ export default function ContactsPage() {
 
       <ul>
         {filtered.map((contact) => (
-          <li key={contact.id} className="list-row">
+          <li
+            key={contact.id}
+            className="list-row"
+            {...rowActions.bind(contact.name || 'Kontakt', [
+              { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeContact(contact) },
+            ])}
+          >
             <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(contact)}>
               <span className={`block truncate ${contact.name ? '' : 'italic text-muted'}`}>
                 {contact.name || '(ohne Namen)'}
@@ -160,6 +174,7 @@ export default function ContactsPage() {
           </li>
         ))}
       </ul>
+      {rowActions.sheet}
 
       {editing && (
         <ContactSheet
@@ -176,14 +191,8 @@ export default function ContactsPage() {
             close();
           }}
           onDelete={(contact) => {
-            const stored = contacts.find((item) => item.id === contact.id);
             close();
-            if (!stored) return;
-            undoableDelete(
-              `„${stored.name || 'Kontakt'}“ gelöscht`,
-              () => deleteContact(stored.id),
-              () => saveContact(stored),
-            );
+            removeContact(contact);
           }}
         />
       )}

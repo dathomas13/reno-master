@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { useCollection } from '@/data/hooks';
 import { COL, type Contact, type ContactLog } from '@/data/types';
 import { saveContactLog, deleteContactLog, emptyContactLog } from '@/data/repos';
@@ -22,6 +23,13 @@ export default function ContactLogsPage() {
   const { data: logs, loading } = useCollection<ContactLog>(COL.contactLogs);
   const toast = useToast();
   const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
+
+  function removeLog(log: ContactLog) {
+    const stored = logs.find((item) => item.id === log.id);
+    if (!stored) return;
+    undoableDelete('Gesprächseintrag gelöscht', () => deleteContactLog(stored.id), () => saveContactLog(stored));
+  }
   const { data: contacts } = useCollection<Contact>(COL.contacts);
   const { label } = useOptions();
   const [search, setSearch] = useState('');
@@ -102,7 +110,12 @@ export default function ContactLogsPage() {
         {filtered.map((log) => {
           const orphaned = !contactName.has(log.contactId);
           return (
-            <li key={log.id}>
+            <li
+              key={log.id}
+              {...rowActions.bind(contactName.get(log.contactId) ?? 'Gespräch', [
+                { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeLog(log) },
+              ])}
+            >
               <button type="button" className="list-row w-full text-left" onClick={() => setOpen(log)}>
                 <span className="flex-1 min-w-0">
                   <span className={`block truncate font-medium ${orphaned ? 'text-bad' : ''}`}>
@@ -119,6 +132,7 @@ export default function ContactLogsPage() {
           );
         })}
       </ul>
+      {rowActions.sheet}
 
       {open && (
         <ContactLogEditor
@@ -136,10 +150,8 @@ export default function ContactLogsPage() {
             close();
           }}
           onDelete={(log) => {
-            const stored = logs.find((item) => item.id === log.id);
             close();
-            if (!stored) return;
-            undoableDelete('Gesprächseintrag gelöscht', () => deleteContactLog(stored.id), () => saveContactLog(stored));
+            removeLog(log);
           }}
         />
       )}

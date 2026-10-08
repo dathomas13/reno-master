@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.85.0 – Lange drücken für mehr
+
+- Einen Eintrag lange drücken öffnet ein kleines Menü: Löschen, bei Aufgaben auch Erledigt, bei Notizen Anheften – mit „Rückgängig“ wie gewohnt.
+- Beim Wischen zwischen den Reitern folgt der goldene Strich dem Finger, und der neue Reiter gleitet sanft herein.
+
 ## 0.84.0 – Wischen zwischen den Reitern
 
 - Seitlich über die Liste wischen wechselt den Reiter, z. B. zwischen Aufgaben und Notizen oder Einträgen und Fotos.

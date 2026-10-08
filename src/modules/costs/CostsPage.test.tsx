@@ -28,6 +28,7 @@ vi.mock('@/data/useOptions', async () => {
   return { useOptions: () => value };
 });
 vi.mock('@/firebase/db', () => ({ orderBy: vi.fn() }));
+vi.mock('@/data/repos', () => ({ deleteCost: vi.fn(), saveCost: vi.fn() }));
 vi.mock('@/data/RoomsContext', () => ({
   useRooms: () => ({
     name: (id: string) => id,

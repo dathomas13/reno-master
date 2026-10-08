@@ -4,6 +4,9 @@ import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { SectionTabs } from '@/components/SectionTabs';
+import { useRowActions } from '@/components/RowActions';
+import { useUndoableDelete } from '@/components/Toast';
+import { deleteCost, saveCost } from '@/data/repos';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type Trade } from '@/data/types';
 import { useOptions } from '@/data/useOptions';
@@ -30,6 +33,8 @@ type BarRow = [string, number, string];
 
 export default function CostsPage() {
   const [params, setParams] = useSearchParams();
+  const rowActions = useRowActions();
+  const undoableDelete = useUndoableDelete();
   const { data: rawCosts, loading } = useCollection<Cost>(COL.costs, [orderBy('date', 'desc')]);
   const costs = useMemo(() => sortNewestFirst(rawCosts), [rawCosts]);
   const { data: trades } = useCollection<Trade>(COL.trades);
@@ -168,7 +173,18 @@ export default function CostsPage() {
 
           <ul>
             {filtered.map((cost) => (
-              <li key={cost.id}>
+              <li
+                key={cost.id}
+                {...rowActions.bind(cost.vendor || 'Rechnung', [
+                  {
+                    label: 'Löschen',
+                    icon: 'trash',
+                    danger: true,
+                    // the receipts keep their costId, so writing the cost again links them again
+                    onSelect: () => undoableDelete('Rechnung gelöscht', () => deleteCost(cost.id), () => saveCost(cost)),
+                  },
+                ])}
+              >
                 <Link to={`/kosten/${cost.id}`} className="list-row">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
@@ -195,6 +211,7 @@ export default function CostsPage() {
               </li>
             ))}
           </ul>
+          {rowActions.sheet}
         </>
       )}
 

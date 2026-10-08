@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
@@ -12,10 +12,21 @@ import { useRooms } from '@/data/RoomsContext';
 import { useOptions } from '@/data/useOptions';
 import { weatherIcon } from './weatherIcons';
 import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
+import { useRowActions } from '@/components/RowActions';
+import { useUndoableDelete } from '@/components/Toast';
+import { deleteDiaryEntry, saveDiaryEntry } from '@/data/repos';
 
 export default function DiaryListPage() {
   const [params, setParams] = useSearchParams();
   const { data: entries, loading } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc')]);
+  const navigate = useNavigate();
+  const rowActions = useRowActions();
+  const undoableDelete = useUndoableDelete();
+
+  function removeEntry(entry: DiaryEntry) {
+    // the photos keep their entryId, so writing the entry again brings everything back
+    undoableDelete('Eintrag gelöscht', () => deleteDiaryEntry(entry.id), () => saveDiaryEntry(entry));
+  }
   const { data: photos } = useCollection<Photo>(COL.photos);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { shortLabel: roomLabel, matches } = useRooms();
@@ -137,7 +148,13 @@ export default function DiaryListPage() {
           const showMonth = !previous || monthKey(previous.date) !== monthKey(entry.date);
           const entryPhotos = (photosByEntry.get(entry.id) ?? []).slice(0, 3);
           return (
-            <li key={entry.id}>
+            <li
+              key={entry.id}
+              {...rowActions.bind(entry.title || formatDateWithWeekday(entry.date), [
+                { label: 'Bearbeiten', icon: 'diary', onSelect: () => navigate(`/tagebuch/${entry.id}/bearbeiten`) },
+                { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeEntry(entry) },
+              ])}
+            >
               {showMonth && <div className="section-title">{formatMonth(entry.date)}</div>}
               <Link to={`/tagebuch/${entry.id}`} className="list-row">
                 <div className="min-w-0 flex-1">
@@ -169,6 +186,7 @@ export default function DiaryListPage() {
           );
         })}
       </ul>
+      {rowActions.sheet}
     </>
   );
 }

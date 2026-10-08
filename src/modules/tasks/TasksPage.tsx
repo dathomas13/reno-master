@@ -6,6 +6,7 @@ import { Field, EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { MoreFields } from '@/components/MoreFields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
@@ -47,6 +48,7 @@ export default function TasksPage() {
   const { data: tasks, loading } = useCollection<Task>(COL.tasks);
   const toast = useToast();
   const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
   const { sets, label } = useOptions();
   const { shortLabel: roomLabel, matches, writeId, rooms } = useRooms();
   const { data: trades } = useCollection<Trade>(COL.trades);
@@ -183,6 +185,12 @@ export default function TasksPage() {
       setQuick(typed);
       toast('Die Aufgabe konnte nicht gespeichert werden.');
     }
+  }
+
+  function removeTask(task: Task) {
+    const stored = tasks.find((item) => item.id === task.id);
+    if (!stored) return;
+    undoableDelete(`„${stored.title}“ gelöscht`, () => deleteTask(stored.id), () => saveTask(stored));
   }
 
   async function toggleDone(task: Task) {
@@ -342,7 +350,18 @@ export default function TasksPage() {
             </div>
             <ul>
               {rows.map((task) => (
-                <li key={task.id} className="list-row">
+                <li
+                  key={task.id}
+                  className="list-row"
+                  {...rowActions.bind(task.title, [
+                    {
+                      label: isTaskDone(task) ? 'Wieder öffnen' : 'Erledigt',
+                      icon: 'check',
+                      onSelect: () => void toggleDone(task),
+                    },
+                    { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeTask(task) },
+                  ])}
+                >
                   {/* the box stays small, the tap area is the full 44 px a thumb needs */}
                   <button
                     type="button"
@@ -384,6 +403,7 @@ export default function TasksPage() {
         );
       })}
 
+      {rowActions.sheet}
       <TaskSheet
         task={editing}
         regularAssignees={assigneeChips.map((person) => person.id)}
@@ -402,15 +422,9 @@ export default function TasksPage() {
           dropWanted();
         }}
         onDelete={(task) => {
-          const stored = tasks.find((item) => item.id === task.id);
           setEditing(null);
           dropWanted();
-          if (!stored) return;
-          undoableDelete(
-            `„${stored.title}“ gelöscht`,
-            () => deleteTask(stored.id),
-            () => saveTask(stored),
-          );
+          removeTask(task);
         }}
         isNew={(task) => !tasks.some((item) => item.id === task.id)}
       />

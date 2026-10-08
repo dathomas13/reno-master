@@ -5,6 +5,7 @@ import { Sheet } from '@/components/Sheet';
 import { Field, EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { RoomPicker } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { COL, type Note } from '@/data/types';
@@ -28,6 +29,17 @@ export default function NotesPage() {
   const { data: notes, loading } = useCollection<Note>(COL.notes);
   const toast = useToast();
   const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
+
+  function removeNote(note: Note) {
+    const stored = notes.find((item) => item.id === note.id);
+    if (!stored) return;
+    undoableDelete('Notiz gelöscht', () => deleteNote(stored.id), () => saveNote(stored));
+  }
+
+  function togglePinned(note: Note) {
+    saveNote({ ...note, pinned: !note.pinned }).catch(() => toast('Die Notiz konnte nicht gespeichert werden.'));
+  }
   const { shortLabel: roomLabel, shortLabels, matches, writeId } = useRooms();
   const [editing, setEditing] = useState<Note | null>(null);
 
@@ -116,7 +128,14 @@ export default function NotesPage() {
 
       <ul>
         {visible.map((note) => (
-          <li key={note.id} className="list-row">
+          <li
+            key={note.id}
+            className="list-row"
+            {...rowActions.bind(titleOf(note.text), [
+              { label: note.pinned ? 'Lösen' : 'Anheften', icon: 'pin', onSelect: () => togglePinned(note) },
+              { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeNote(note) },
+            ])}
+          >
             <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(note)}>
               <span className="flex items-center gap-1">
                 {note.pinned && (
@@ -135,6 +154,7 @@ export default function NotesPage() {
         ))}
       </ul>
 
+      {rowActions.sheet}
       <NoteSheet
         note={editing}
         onClose={() => {
@@ -152,11 +172,9 @@ export default function NotesPage() {
           dropWanted();
         }}
         onDelete={(note) => {
-          const stored = notes.find((item) => item.id === note.id);
           setEditing(null);
           dropWanted();
-          if (!stored) return;
-          undoableDelete('Notiz gelöscht', () => deleteNote(stored.id), () => saveNote(stored));
+          removeNote(note);
         }}
       />
     </>
