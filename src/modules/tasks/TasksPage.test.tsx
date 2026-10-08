@@ -6,6 +6,7 @@ import TasksPage from './TasksPage';
 
 const mocks = vi.hoisted(() => ({
   tasks: [] as Task[],
+  trades: [{ id: 'maler', name: 'Maler', status: 'offen', priority: 'mittel' }],
   saveTask: vi.fn().mockResolvedValue('task-1'),
   toggleTaskDone: vi.fn().mockResolvedValue(undefined),
 }));
@@ -17,7 +18,7 @@ vi.mock('@/components/Pickers', () => ({
   PhaseSelect: () => null,
 }));
 vi.mock('@/data/hooks', () => ({
-  useCollection: () => ({ data: mocks.tasks, loading: false }),
+  useCollection: (name: string) => ({ data: name === 'trades' ? mocks.trades : mocks.tasks, loading: false }),
 }));
 vi.mock('@/data/useOptions', async () => {
   const options = await vi.importActual<typeof import('@/data/options')>('@/data/options');
@@ -38,6 +39,7 @@ vi.mock('@/data/RoomsContext', () => ({
     matches: (roomIds: string[], filterId: string) => roomIds.includes(filterId),
     idsFor: (id: string) => [id],
     writeId: (id: string) => id,
+    rooms: [{ id: 'eg-bad', name: 'Bad', floor: 'EG', rects: [] }],
   }),
 }));
 vi.mock('@/data/repos', () => ({
@@ -153,5 +155,29 @@ describe('tasks page', () => {
 
     expect(mocks.saveTask).not.toHaveBeenCalled();
     expect(screen.queryByRole('dialog', { name: 'Aufgabe' })).not.toBeInTheDocument();
+  });
+
+  it('reads short-hand in the quick field and lets a hit be dropped', async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    const field = screen.getByPlaceholderText(/Neue Aufgabe/);
+    fireEvent.change(field, { target: { value: 'Silikon kaufen ! Maler Bad' } });
+
+    expect(screen.getByRole('button', { name: 'Raum eg-bad nicht übernehmen' })).toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Gewerk Maler nicht übernehmen' }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Aufgabe hinzufügen' }));
+    });
+
+    expect(mocks.saveTask).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Silikon kaufen Maler', priority: 'hoch', roomIds: ['eg-bad'] }),
+    );
+    expect(mocks.saveTask.mock.calls[0]![0]).not.toHaveProperty('tradeId');
   });
 });

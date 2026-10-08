@@ -11,7 +11,8 @@ import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
 import { ModelSection } from './ModelSection';
 import { NavSection } from './NavSection';
-import { HomeSection } from './HomeSection';
+import { homeSettingsSummary } from './HomeSettingsPage';
+import { Icon } from '@/components/Icon';
 import { listJobs, retryAll, type OutboxJob } from '@/offline/outbox';
 import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
@@ -189,7 +190,13 @@ export default function SettingsPage() {
           </label>
         </section>
 
-        <HomeSection />
+        <Link to="/einstellungen/startseite" className="card p-4 min-h-16 flex items-center gap-3 text-ink">
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Startseite</span>
+            <span className="block text-sm text-muted truncate">{homeSettingsSummary()}</span>
+          </span>
+          <Icon name="chevronRight" className="w-5 h-5 text-muted shrink-0" />
+        </Link>
         <NavSection />
 
         <GroupTitle>Daten</GroupTitle>

@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.83.0 – Schneller erfassen
+
+- Aufgaben verstehen Kurzschrift: „Silikon kaufen morgen ! Bad“ setzt Fälligkeit, Priorität und Raum; ein Tipp auf einen Chip nimmt die Erkennung zurück.
+- Nach dem Auslesen eines Belegs stehen Betrag, Datum, Händler und Kategorie oben zum Prüfen, mit „Passt – speichern“.
+- Die Startseiten-Einstellungen haben eine eigene Seite.
+
 ## 0.82.0 – Schnellzugriff nach Wunsch
 
 - Auf der Startseite steht jetzt „Notizen“ im Schnellzugriff statt „3D-Modell“ – ein Tipp, und die Notizen sind offen.

@@ -33,6 +33,7 @@ import PhotosPage from '@/modules/photos/PhotosPage';
 import ReceiptsPage from '@/modules/receipts/ReceiptsPage';
 import SettingsPage from '@/modules/settings/SettingsPage';
 import PresetsPage from '@/modules/settings/presets/PresetsPage';
+import HomeSettingsPage from '@/modules/settings/HomeSettingsPage';
 import PresetDetailPage from '@/modules/settings/presets/PresetDetailPage';
 
 /** the first moment before the session is known; says why if it ever takes long */
@@ -101,6 +102,7 @@ function Protected() {
           <Route path="/fotos" element={<PhotosPage />} />
           <Route path="/belege" element={<ReceiptsPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
+          <Route path="/einstellungen/startseite" element={<HomeSettingsPage />} />
           <Route path="/einstellungen/voreinstellungen" element={<PresetsPage />} />
           <Route path="/einstellungen/voreinstellungen/:key" element={<PresetDetailPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

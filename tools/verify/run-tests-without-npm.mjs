@@ -71,7 +71,8 @@ const relevant = (result.stdout ?? '')
     const file = /^(\S.*?)\(\d+,\d+\): error/.exec(line)?.[1];
     return file ? picked.has(file) : false;
   })
-  .filter((line) => !/error TS2307|error TS2882|error TS2591/.test(line));
+  // TS6142: a type-only import from a .tsx file, erased in the output
+  .filter((line) => !/error TS2307|error TS2882|error TS2591|error TS6142/.test(line));
 if (relevant.length) {
   console.log('TypeScript meldet:');
   for (const line of relevant) console.log('  ' + line);

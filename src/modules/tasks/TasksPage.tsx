@@ -12,9 +12,10 @@ import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
 import { hasAssignee, isTaskDone, PRIORITY_MEDIUM, TASK_DONE, TASK_OPEN } from '@/data/options';
 import { OptionChips, OptionMultiChips } from '@/components/OptionFields';
-import { COL, type Task } from '@/data/types';
+import { COL, type Task, type Trade } from '@/data/types';
 import { emptyTask, saveTask, toggleTaskDone, deleteTask } from '@/data/repos';
-import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, type DueBucket } from '@/lib/date';
+import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, today, type DueBucket } from '@/lib/date';
+import { parseQuickTask, type QuickHit, type QuickKind } from './quickParse';
 import { useRooms } from '@/data/RoomsContext';
 import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
@@ -54,10 +55,12 @@ export default function TasksPage() {
   const toast = useToast();
   const undoableDelete = useUndoableDelete();
   const { sets, label } = useOptions();
-  const { shortLabel: roomLabel, matches, writeId } = useRooms();
+  const { shortLabel: roomLabel, matches, writeId, rooms } = useRooms();
+  const { data: trades } = useCollection<Trade>(COL.trades);
   const [filter, setFilter] = useState<Filter>('offen');
   const [assignee, setAssignee] = useState<string | null>(null);
   const [quick, setQuick] = useState('');
+  const [ignored, setIgnored] = useState<QuickKind[]>([]);
   const [editing, setEditing] = useState<Task | null>(null);
   const [pendingTasks, setPendingTasks] = useState<Record<string, Partial<Task>>>({});
 
@@ -135,6 +138,30 @@ export default function TasksPage() {
     return map;
   }, [visible]);
 
+  // short-hand in the quick field: "Fliesenkleber bestellen morgen ! Bad"
+  const parsed = useMemo(
+    () =>
+      parseQuickTask(
+        quick,
+        {
+          today: today(),
+          rooms,
+          people: sets.people.map((person) => ({ id: person.id, name: person.label })),
+          trades: trades.filter((trade) => !trade.archived),
+        },
+        ignored,
+      ),
+    [quick, rooms, sets.people, trades, ignored],
+  );
+
+  function hitLabel(hit: QuickHit): string {
+    if (hit.kind === 'due') return `Fällig ${formatRelativeDay(hit.value)}`;
+    if (hit.kind === 'priority') return 'Priorität hoch';
+    if (hit.kind === 'room') return `Raum ${roomLabel(hit.value)}`;
+    if (hit.kind === 'person') return `Zuständig ${label('people', hit.value)}`;
+    return `Gewerk ${trades.find((trade) => trade.id === hit.value)?.name ?? hit.text}`;
+  }
+
   function newTask() {
     setEditing({ ...emptyTask(), roomIds: roomFilter ? [writeId(roomFilter)] : [] });
   }
@@ -146,12 +173,25 @@ export default function TasksPage() {
       newTask();
       return;
     }
+    const typed = quick;
+    const hit = (kind: QuickKind) => parsed.hits.find((item) => item.kind === kind)?.value;
+    const roomIds = [roomFilter, hit('room')].filter((id): id is string => !!id).map(writeId);
+    const person = hit('person');
     setQuick('');
+    setIgnored([]);
     // a task added while a room filter is active must land in that room, or it vanishes from view
     try {
-      await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [writeId(roomFilter)] : [] });
+      await saveTask({
+        ...emptyTask(),
+        title: parsed.title || title,
+        roomIds: [...new Set(roomIds)],
+        ...(hit('due') ? { due: hit('due') } : {}),
+        ...(hit('priority') ? { priority: hit('priority')! } : {}),
+        ...(person ? { assignees: [person] } : {}),
+        ...(hit('trade') ? { tradeId: hit('trade') } : {}),
+      });
     } catch {
-      setQuick(title);
+      setQuick(typed);
       toast('Die Aufgabe konnte nicht gespeichert werden.');
     }
   }
@@ -204,9 +244,12 @@ export default function TasksPage() {
         <div className="flex gap-2">
           <input
             className="field"
-            placeholder="Neue Aufgabe…"
+            placeholder="Neue Aufgabe… z. B. „Silikon morgen ! Bad“"
             value={quick}
-            onChange={(event) => setQuick(event.target.value)}
+            onChange={(event) => {
+              setQuick(event.target.value);
+              if (!event.target.value.trim()) setIgnored([]);
+            }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') void addQuick();
             }}
@@ -220,6 +263,23 @@ export default function TasksPage() {
             <Icon name="plus" />
           </button>
         </div>
+
+        {parsed.hits.length > 0 && (
+          <div className="flex flex-wrap gap-2 -mt-1" aria-label="Erkannt">
+            {parsed.hits.map((hit) => (
+              <button
+                key={hit.kind}
+                type="button"
+                className="chip chip-on"
+                aria-label={`${hitLabel(hit)} nicht übernehmen`}
+                onClick={() => setIgnored((current) => [...current, hit.kind])}
+              >
+                {hitLabel(hit)}
+                <Icon name="close" className="w-3.5 h-3.5" />
+              </button>
+            ))}
+          </div>
+        )}
 
         <Segmented<Filter> label="Anzeigen" options={FILTERS} value={filter} onChange={setFilter} />
 

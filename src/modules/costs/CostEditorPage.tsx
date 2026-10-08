@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Field, Spinner } from '@/components/Fields';
 import { MoreFields } from '@/components/MoreFields';
+import { Icon } from '@/components/Icon';
 import { useToast, useUndoableDelete } from '@/components/Toast';
 import { useRooms } from '@/data/RoomsContext';
 import { RoomPicker, TradeSelect } from '@/components/Pickers';
@@ -220,8 +221,16 @@ function CostEditor() {
     !!cost.notes,
   ].filter(Boolean).length;
 
+  // after reading a receipt the main fields come first as a card to check, with one tap to save
+  const reviewing = ocrState === 'done';
+  const big = reviewing ? 'text-lg font-semibold' : '';
   const autoMark = (key: keyof Cost) =>
-    auto[key] ? <span className="text-xs normal-case tracking-normal text-accent ml-2">automatisch erkannt</span> : null;
+    auto[key] ? (
+      <span className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-accent/15 text-accent text-xs font-semibold px-2 py-0.5">
+        <Icon name="check" className="w-3.5 h-3.5" strokeWidth={2.2} />
+        erkannt
+      </span>
+    ) : null;
 
   if (!isNew && loading && !ready) return <Spinner label="Rechnung wird geladen…" />;
   if (!isNew && !loading && !existing && !ready) {
@@ -290,46 +299,73 @@ function CostEditor() {
           )}
         </Field>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Field label="Datum">
-              <input
-                className="field"
-                type="date"
-                value={cost.date}
-                onChange={(event) => {
-                  update({ date: event.target.value });
-                  setAuto((current) => ({ ...current, date: false }));
-                }}
-              />
-              {autoMark('date')}
-            </Field>
+        <div className={reviewing ? 'rounded-2xl border border-accent/50 bg-accent/5 p-3 mb-4' : ''}>
+          {reviewing && (
+            <p className="font-semibold mb-3 flex items-center gap-2">
+              <Icon name="eye" className="w-5 h-5 text-accent" />
+              Bitte prüfen
+            </p>
+          )}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Field label="Datum">
+                <input
+                  className={`field ${big}`}
+                  type="date"
+                  value={cost.date}
+                  onChange={(event) => {
+                    update({ date: event.target.value });
+                    setAuto((current) => ({ ...current, date: false }));
+                  }}
+                />
+                {autoMark('date')}
+              </Field>
+            </div>
+            <div className="flex-1">
+              <Field label="Betrag brutto">
+                <input
+                  className={`field text-right ${big}`}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={amountText}
+                  onChange={(event) => setGross(event.target.value)}
+                />
+                {autoMark('amountGross')}
+              </Field>
+            </div>
           </div>
-          <div className="flex-1">
-            <Field label="Betrag brutto">
-              <input
-                className="field text-right"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={amountText}
-                onChange={(event) => setGross(event.target.value)}
-              />
-              {autoMark('amountGross')}
-            </Field>
-          </div>
-        </div>
 
-        <Field label="Händler / Firma">
-          <input
-            className="field"
-            value={cost.vendor}
-            onChange={(event) => {
-              update({ vendor: event.target.value });
-              setAuto((current) => ({ ...current, vendor: false }));
-            }}
-          />
-          {autoMark('vendor')}
-        </Field>
+          <Field label="Händler / Firma">
+            <input
+              className={`field ${big}`}
+              value={cost.vendor}
+              onChange={(event) => {
+                update({ vendor: event.target.value });
+                setAuto((current) => ({ ...current, vendor: false }));
+              }}
+            />
+            {autoMark('vendor')}
+          </Field>
+
+          <Field label="Kategorie">
+            <OptionSelect
+              setKey="costCategories"
+              value={cost.category || undefined}
+              emptyLabel="ohne Kategorie"
+              onChange={(value) => {
+                update({ category: value ?? '' });
+                setAuto((current) => ({ ...current, category: false }));
+              }}
+            />
+            {autoMark('category')}
+          </Field>
+          {reviewing && (
+            <button type="button" className="btn btn-primary w-full" onClick={() => void save()} disabled={saveBlocked}>
+              <Icon name="check" className="w-5 h-5" />
+              {saving ? 'Speichert…' : 'Passt – speichern'}
+            </button>
+          )}
+        </div>
 
         <Field label="Beschreibung">
           <input
@@ -338,16 +374,6 @@ function CostEditor() {
             placeholder="Perimeterdämmung, Kleber, Dichtschlämme"
             onChange={(event) => update({ description: event.target.value })}
           />
-        </Field>
-
-        <Field label="Kategorie">
-          <OptionSelect
-            setKey="costCategories"
-            value={cost.category || undefined}
-            emptyLabel="ohne Kategorie"
-            onChange={(value) => update({ category: value ?? '' })}
-          />
-          {autoMark('category')}
         </Field>
 
         <MoreFields filled={moreFilled}>
