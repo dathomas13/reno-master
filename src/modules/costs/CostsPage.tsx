@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
-import { Segmented } from '@/components/Segmented';
+import { SectionTabs } from '@/components/SectionTabs';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type Trade } from '@/data/types';
 import { useOptions } from '@/data/useOptions';
@@ -25,10 +25,6 @@ import {
 import { isNative } from '@/platform';
 
 type Tab = 'liste' | 'uebersicht';
-const TABS = [
-  { value: 'liste', label: 'Liste' },
-  { value: 'uebersicht', label: 'Übersicht' },
-] as const;
 /** key, sum, text to show */
 type BarRow = [string, number, string];
 
@@ -39,7 +35,19 @@ export default function CostsPage() {
   const { data: trades } = useCollection<Trade>(COL.trades);
   const { shortLabel: roomLabel, matches } = useRooms();
   const { sets, label } = useOptions();
-  const [tab, setTab] = useState<Tab>('liste');
+  // the view is part of the address, so Liste · Übersicht · Belege are tabs like elsewhere
+  const tab: Tab = params.get('ansicht') === 'uebersicht' ? 'uebersicht' : 'liste';
+  function tabTo(next: Tab): string {
+    const query = new URLSearchParams(params);
+    if (next === 'uebersicht') query.set('ansicht', 'uebersicht');
+    else query.delete('ansicht');
+    const text = query.toString();
+    return text ? `/kosten?${text}` : '/kosten';
+  }
+  /** the filters go, the view stays */
+  function clearFilters() {
+    setParams(tab === 'uebersicht' ? { ansicht: 'uebersicht' } : {}, { replace: true });
+  }
   const [search, setSearch] = useState('');
 
   const roomFilter = params.get('raum');
@@ -91,15 +99,23 @@ export default function CostsPage() {
         }
       />
 
-      <div className="flex items-center gap-2 p-3">
-        <Segmented<Tab> label="Ansicht" options={TABS} value={tab} onChange={setTab} className="flex-1 max-w-xs" />
-        <div className="flex-1" />
-        {canDownloadCsv && (
+      <SectionTabs
+        label="Kosten"
+        tabs={[
+          { to: tabTo('liste'), label: 'Liste', active: tab === 'liste' },
+          { to: tabTo('uebersicht'), label: 'Übersicht', active: tab === 'uebersicht' },
+          { to: '/belege', label: 'Belege', active: false },
+        ]}
+      />
+
+      {canDownloadCsv && (
+        <div className="flex justify-end px-3 pt-2">
           <button type="button" className="btn btn-ghost px-3 min-h-10 text-sm" onClick={exportCsv}>
             CSV-Export
           </button>
-        )}
-      </div>
+        </div>
+      )}
+      <div className="h-3" />
 
       {(roomFilter || categoryFilter || tradeFilter) && (
         <div className="px-3 pb-2">
@@ -107,7 +123,7 @@ export default function CostsPage() {
             type="button"
             className="chip chip-on"
             aria-label="Filter aufheben"
-            onClick={() => setParams(new URLSearchParams(), { replace: true })}
+            onClick={clearFilters}
           >
             Filter:{' '}
             {[
@@ -193,7 +209,7 @@ export default function CostsPage() {
           <Bars
             title="Nach Kategorie"
             rows={categories.map((bucket) => [bucket.key, bucket.total, bucket.label ?? bucket.key] as BarRow)}
-            onPick={(key) => setParams({ kategorie: key })}
+            onPick={(key) => setParams({ ansicht: 'uebersicht', kategorie: key })}
           />
           <Bars title="Nach Monat" rows={months.map((bucket) => [bucket.key, bucket.total, bucket.key] as BarRow)} />
 

@@ -15,6 +15,7 @@ import { newId } from '@/lib/ids';
 import { safeExtension } from '@/lib/storagePath';
 import { formatBytes } from '@/lib/image';
 import { isAuthenticated } from '@/firebase/auth';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 const GROUP_LABEL: Record<string, string> = {
   original: 'Originalpläne 1967',
@@ -90,7 +91,6 @@ export default function PlansPage() {
     <>
       <TopBar
         title="Pläne"
-        back="/dateien"
         subtitle={`${all.length} Pläne`}
         action={
           isAuthenticated() ? (
@@ -101,6 +101,7 @@ export default function PlansPage() {
           ) : undefined
         }
       />
+      <SectionTabs label="Haus" tabs={AREA_TABS.house('plans')} />
 
       {loading && all.length === 0 && <Spinner label="Pläne werden geladen…" />}
       {!loading && all.length === 0 && (

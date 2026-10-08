@@ -10,6 +10,7 @@ import { useCollection } from '@/data/hooks';
 import { COL, type Note } from '@/data/types';
 import { emptyNote, saveNote, deleteNote } from '@/data/repos';
 import { useRooms } from '@/data/RoomsContext';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 function formatWhen(at: string): string {
   const [date, time] = at.split('T');
@@ -80,6 +81,7 @@ export default function NotesPage() {
           </button>
         }
       />
+      <SectionTabs label="Aufgaben" tabs={AREA_TABS.tasks('notes')} />
 
       {roomFilter && (
         <div className="p-3 flex flex-wrap gap-2">

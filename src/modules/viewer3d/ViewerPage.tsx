@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import {
   buildHouse,
@@ -764,6 +764,20 @@ export default function ViewerPage() {
           )}
         </div>
       </div>
+
+      {/* the tabs of the area "Haus", small on the left so the model keeps the room */}
+      <nav
+        aria-label="Haus"
+        className="absolute left-2 top-[calc(3.5rem+env(safe-area-inset-top))] z-10 flex rounded-xl overflow-hidden
+                   border border-line bg-panel/80 backdrop-blur text-sm"
+      >
+        <span aria-current="page" className="px-3 min-h-9 grid place-items-center bg-accent/15 text-accent font-semibold">
+          3D
+        </span>
+        <Link to="/plaene" replace className="px-3 min-h-9 grid place-items-center text-muted">
+          Pläne
+        </Link>
+      </nav>
 
       {/* the floors, stacked like the house itself: roof on top, cellar at the bottom */}
       <div

@@ -16,6 +16,7 @@ import { ContactImportSheet } from './ContactImportSheet';
 import { ContactLogSection } from './ContactLogSection';
 import { rememberCall } from './callFollowUp';
 import { CHANNEL_CALL, CHANNEL_MESSAGE } from '@/data/options';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, '')}`;
@@ -90,6 +91,7 @@ export default function ContactsPage() {
           </div>
         }
       />
+      <SectionTabs label="Kontakte" tabs={AREA_TABS.contacts('contacts')} />
 
       <div className="p-3">
         <input

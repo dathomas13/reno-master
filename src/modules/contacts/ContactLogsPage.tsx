@@ -9,6 +9,7 @@ import { saveContactLog, deleteContactLog, emptyContactLog } from '@/data/repos'
 import { useOptions } from '@/data/useOptions';
 import { formatDateTime } from '@/lib/date';
 import { ContactLogEditor, logPreview } from './ContactLogSection';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 /**
  * All Gesprächsprotokoll entries in one place, across every contact - the per-contact list
@@ -73,6 +74,7 @@ export default function ContactLogsPage() {
   return (
     <>
       <TopBar title="Gespräche" subtitle={`${logs.length} Einträge`} />
+      <SectionTabs label="Kontakte" tabs={AREA_TABS.contacts('logs')} />
 
       <div className="p-3">
         <input

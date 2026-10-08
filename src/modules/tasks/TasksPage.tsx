@@ -16,6 +16,7 @@ import { COL, type Task } from '@/data/types';
 import { emptyTask, saveTask, toggleTaskDone, deleteTask } from '@/data/repos';
 import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, type DueBucket } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 const BUCKETS: DueBucket[] = ['overdue', 'today', 'week', 'later', 'none'];
 type Filter = 'offen' | 'alle' | 'erledigt';
@@ -197,6 +198,7 @@ export default function TasksPage() {
           </button>
         }
       />
+      <SectionTabs label="Aufgaben" tabs={AREA_TABS.tasks('tasks')} />
 
       <div className="p-3 flex flex-col gap-3">
         <div className="flex gap-2">

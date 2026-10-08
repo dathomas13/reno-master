@@ -10,6 +10,7 @@ import { formatDate, formatMonth, monthKey } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
 import { Icon } from '@/components/Icon';
 import { Segmented } from '@/components/Segmented';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 type Grouping = 'phase' | 'month';
 const GROUPINGS = [
@@ -73,9 +74,10 @@ export default function PhotosPage() {
     <>
       <TopBar
         title={title}
-        back={roomFilter ? `/3d?raum=${roomFilter}` : '/dateien'}
+        back={roomFilter ? `/3d?raum=${roomFilter}` : undefined}
         subtitle={`${visible.length} ${visible.length === 1 ? 'Bild' : 'Bilder'}`}
       />
+      {!roomFilter && <SectionTabs label="Tagebuch" tabs={AREA_TABS.diary('photos')} />}
 
       {(roomFilter || visible.length > 0) && (
         <div className="flex flex-wrap items-center gap-2 p-3">

@@ -9,19 +9,32 @@ export interface NavEntry {
   label: string;
 }
 
+/**
+ * Six areas instead of a dozen screens: what belongs together sits behind tabs inside its
+ * area (Tagebuch: Einträge · Fotos, Haus: 3D · Pläne, Kosten: Liste · Übersicht · Belege,
+ * Aufgaben: Aufgaben · Notizen, Kontakte: Kontakte · Gespräche).
+ */
 export const NAV_ENTRIES: readonly NavEntry[] = [
   { to: '/', label: 'Start' },
   { to: '/tagebuch', label: 'Tagebuch' },
-  { to: '/3d', label: '3D' },
+  { to: '/3d', label: 'Haus' },
   { to: '/kosten', label: 'Kosten' },
   { to: '/suche', label: 'Suche' },
-  { to: '/dateien', label: 'Dateien' },
   { to: '/aufgaben', label: 'Aufgaben' },
-  { to: '/notizen', label: 'Notizen' },
   { to: '/kontakte', label: 'Kontakte' },
-  { to: '/gespraeche', label: 'Gespräche' },
   { to: '/einstellungen', label: 'Einstellungen' },
 ];
+
+/**
+ * Menu entries that became tabs of an area. A stored layout that had them keeps its spot
+ * for the area instead (Notizen in the bar becomes Aufgaben there); Dateien had no area
+ * of its own and simply drops out.
+ */
+const MERGED: Record<string, string | null> = {
+  '/notizen': '/aufgaben',
+  '/gespraeche': '/kontakte',
+  '/dateien': null,
+};
 
 /** four plus "Mehr" is what fits the S24 without the labels getting cut off */
 export const MAX_BAR_ITEMS = 4;
@@ -42,7 +55,11 @@ const KNOWN = new Set(NAV_ENTRIES.map((entry) => entry.to));
 
 function known(routes: unknown): string[] {
   if (!Array.isArray(routes)) return [];
-  return [...new Set(routes.filter((route): route is string => typeof route === 'string' && KNOWN.has(route)))];
+  const mapped = routes
+    .filter((route): route is string => typeof route === 'string')
+    .map((route) => (route in MERGED ? MERGED[route] : route))
+    .filter((route): route is string => route !== null && KNOWN.has(route));
+  return [...new Set(mapped)];
 }
 
 /** the bar is simply the top of the list: everything above the line in the settings */
@@ -95,14 +112,14 @@ export function moveNavEntry(layout: NavLayout, route: string, delta: -1 | 1): N
   return withBarCount(order, count);
 }
 
-/**
- * Screens without their own menu entry light up the entry they belong to: Fotos, Belege
- * and Pläne sit under Dateien, the plan view as well.
- */
+/** screens that are a tab of an area light up that area's entry */
 const PARENT_ROUTES: Record<string, string> = {
-  '/fotos': '/dateien',
-  '/belege': '/dateien',
-  '/plaene': '/dateien',
+  '/fotos': '/tagebuch',
+  '/belege': '/kosten',
+  '/plaene': '/3d',
+  '/notizen': '/aufgaben',
+  '/gespraeche': '/kontakte',
+  '/dateien': '/tagebuch',
 };
 
 export function navRouteFor(pathname: string): string {

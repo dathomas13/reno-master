@@ -11,6 +11,7 @@ import { formatDateWithWeekday, formatMonth, monthKey, today } from '@/lib/date'
 import { useRooms } from '@/data/RoomsContext';
 import { useOptions } from '@/data/useOptions';
 import { weatherIcon } from './weatherIcons';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 export default function DiaryListPage() {
   const [params, setParams] = useSearchParams();
@@ -65,6 +66,7 @@ export default function DiaryListPage() {
           </Link>
         }
       />
+      <SectionTabs label="Tagebuch" tabs={AREA_TABS.diary('entries')} />
 
       <div className="p-3">
         <input

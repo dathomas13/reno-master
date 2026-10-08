@@ -10,6 +10,7 @@ import { formatEuro } from '@/lib/money';
 import { formatDate, formatMonth, monthKey } from '@/lib/date';
 import { useOptions } from '@/data/useOptions';
 import { Icon } from '@/components/Icon';
+import { SectionTabs } from '@/components/SectionTabs';
 
 interface Row {
   photo: Photo;
@@ -91,7 +92,6 @@ export default function ReceiptsPage() {
     <>
       <TopBar
         title="Belege"
-        back="/dateien"
         subtitle={`${visible.length} ${visible.length === 1 ? 'Beleg' : 'Belege'} · ${formatEuro(sum)}`}
         action={
           <Link to="/kosten/neu?capture=1" className="btn btn-primary px-3 min-h-11">
@@ -99,6 +99,14 @@ export default function ReceiptsPage() {
             Beleg
           </Link>
         }
+      />
+      <SectionTabs
+        label="Kosten"
+        tabs={[
+          { to: '/kosten', label: 'Liste', active: false },
+          { to: '/kosten?ansicht=uebersicht', label: 'Übersicht', active: false },
+          { to: '/belege', label: 'Belege', active: true },
+        ]}
       />
 
       <div className="p-3">
