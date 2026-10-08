@@ -17,6 +17,7 @@ import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, type DueBucket } from '
 import { useRooms } from '@/data/RoomsContext';
 
 const BUCKETS: DueBucket[] = ['overdue', 'today', 'week', 'later', 'none'];
+type Filter = 'offen' | 'alle' | 'erledigt';
 const FILTERS = [
   { value: 'offen', label: 'Offen' },
   { value: 'alle', label: 'Alle' },
@@ -52,7 +53,7 @@ export default function TasksPage() {
   const undoableDelete = useUndoableDelete();
   const { sets, label } = useOptions();
   const { shortLabel: roomLabel, matches, writeId } = useRooms();
-  const [filter, setFilter] = useState<'offen' | 'alle' | 'erledigt'>('offen');
+  const [filter, setFilter] = useState<Filter>('offen');
   const [assignee, setAssignee] = useState<string | null>(null);
   const [quick, setQuick] = useState('');
   const [editing, setEditing] = useState<Task | null>(null);
@@ -207,7 +208,7 @@ export default function TasksPage() {
           </button>
         </div>
 
-        <Segmented label="Anzeigen" options={FILTERS} value={filter} onChange={setFilter} />
+        <Segmented<Filter> label="Anzeigen" options={FILTERS} value={filter} onChange={setFilter} />
 
         {(assigneeChips.length > 0 || roomFilter) && (
           <div className="flex flex-wrap gap-2">

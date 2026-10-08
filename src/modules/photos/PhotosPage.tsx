@@ -80,7 +80,7 @@ export default function PhotosPage() {
       {(roomFilter || visible.length > 0) && (
         <div className="flex flex-wrap items-center gap-2 p-3">
           {visible.length > 0 && (
-            <Segmented
+            <Segmented<Grouping>
               label="Gruppieren"
               options={GROUPINGS}
               value={grouping}

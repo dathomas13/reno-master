@@ -92,7 +92,7 @@ export default function CostsPage() {
       />
 
       <div className="flex items-center gap-2 p-3">
-        <Segmented label="Ansicht" options={TABS} value={tab} onChange={setTab} className="flex-1 max-w-xs" />
+        <Segmented<Tab> label="Ansicht" options={TABS} value={tab} onChange={setTab} className="flex-1 max-w-xs" />
         <div className="flex-1" />
         {canDownloadCsv && (
           <button type="button" className="btn btn-ghost px-3 min-h-10 text-sm" onClick={exportCsv}>
