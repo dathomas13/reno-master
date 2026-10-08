@@ -45,6 +45,7 @@ import {
 import { useFurniture } from '@/modules/furniture/useFurniture';
 import { FurnitureCatalog } from '@/modules/furniture/FurnitureCatalog';
 import { FurnitureItemPanel } from '@/modules/furniture/FurnitureItemPanel';
+import { setOpenRoom } from '@/lib/openRoom';
 
 /** one step the editor can take back: the piece before and after, null where there was none */
 interface UndoStep {
@@ -91,6 +92,11 @@ export default function ViewerPage() {
   const [showRooms, setShowRooms] = useState(saved?.showRooms ?? false);
   const [selected, setSelected] = useState<Picked | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+  // the capture button files new entries under the room shown here
+  useEffect(() => {
+    setOpenRoom(room?.id ?? null);
+    return () => setOpenRoom(null);
+  }, [room]);
 
   // ---------------------------------------------------------------- furniture (Plan only)
   const isPlan = variant === 'soll';

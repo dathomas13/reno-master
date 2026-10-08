@@ -14,6 +14,8 @@ import { contactRoleLabels, contactRoleNames } from '@/data/contactRoles';
 import { emptyContact, saveContact, deleteContact } from '@/data/repos';
 import { ContactImportSheet } from './ContactImportSheet';
 import { ContactLogSection } from './ContactLogSection';
+import { rememberCall } from './callFollowUp';
+import { CHANNEL_CALL, CHANNEL_MESSAGE } from '@/data/options';
 
 function telHref(phone: string): string {
   return `tel:${phone.replace(/[^\d+]/g, '')}`;
@@ -130,6 +132,9 @@ export default function ContactsPage() {
                 <a
                   className="btn btn-ghost w-11 px-0 text-accent shrink-0"
                   href={telHref(contact.phone)}
+                  onClick={() =>
+                    rememberCall({ contactId: contact.id, name: contact.name, channel: CHANNEL_CALL, at: Date.now() })
+                  }
                   aria-label={`${contact.name || 'Kontakt'} anrufen`}
                   title="Anrufen"
                 >
@@ -138,6 +143,9 @@ export default function ContactsPage() {
                 <a
                   className="btn btn-ghost w-11 px-0 text-good shrink-0"
                   href={whatsappHref(contact.phone)}
+                  onClick={() =>
+                    rememberCall({ contactId: contact.id, name: contact.name, channel: CHANNEL_MESSAGE, at: Date.now() })
+                  }
                   target="_blank"
                   rel="noreferrer"
                   aria-label={`WhatsApp an ${contact.name || 'Kontakt'}`}

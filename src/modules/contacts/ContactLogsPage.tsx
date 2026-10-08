@@ -5,7 +5,7 @@ import { EmptyState, Spinner } from '@/components/Fields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
 import { useCollection } from '@/data/hooks';
 import { COL, type Contact, type ContactLog } from '@/data/types';
-import { saveContactLog, deleteContactLog } from '@/data/repos';
+import { saveContactLog, deleteContactLog, emptyContactLog } from '@/data/repos';
 import { useOptions } from '@/data/useOptions';
 import { formatDateTime } from '@/lib/date';
 import { ContactLogEditor, logPreview } from './ContactLogSection';
@@ -34,6 +34,18 @@ export default function ContactLogsPage() {
     const log = logs.find((item) => item.id === wanted);
     if (log) setOpen(log);
   }, [wanted, logs]);
+
+  // a new entry from the capture button or after a call (?neu=1&kontakt=…&kanal=…)
+  useEffect(() => {
+    if (params.get('neu') !== '1') return;
+    const log = emptyContactLog(params.get('kontakt') ?? '');
+    const channel = params.get('kanal');
+    setOpen(channel ? { ...log, channel } : log);
+    const next = new URLSearchParams(params);
+    for (const key of ['neu', 'kontakt', 'kanal']) next.delete(key);
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   function close() {
     setOpen(null);
@@ -110,6 +122,7 @@ export default function ContactLogsPage() {
         <ContactLogEditor
           log={open}
           contacts={contacts}
+          isNew={!logs.some((item) => item.id === open.id)}
           onClose={close}
           onSave={async (log) => {
             try {

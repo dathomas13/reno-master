@@ -4,6 +4,7 @@ import { TopBar } from '@/components/TopBar';
 import { EmptyState, Field, Spinner } from '@/components/Fields';
 import { MoreFields } from '@/components/MoreFields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRooms } from '@/data/RoomsContext';
 import { RoomPicker, TradeSelect } from '@/components/Pickers';
 import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
@@ -36,7 +37,12 @@ function CostEditor() {
 
   const { data: existing, loading } = useDocument<Cost>(COL.costs, id);
   const options = useOptions();
-  const [cost, setCost] = useState<Cost>(() => emptyCost(today()));
+  const { writeId } = useRooms();
+  // from the capture button: a room the new cost belongs to
+  const [cost, setCost] = useState<Cost>(() => {
+    const room = params.get('raum');
+    return { ...emptyCost(today()), roomIds: room ? [writeId(room)] : [] };
+  });
   const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
   const [duplicateCostId, setDuplicateCostId] = useState<string | null>(null);

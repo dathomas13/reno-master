@@ -67,6 +67,8 @@ interface PhotoAttachProps {
   onFileChosen?(file: Blob, contentType: string): void | Promise<void>;
   /** open the camera as soon as the screen is shown (app shortcut "Beleg erfassen") */
   autoCapture?: boolean;
+  /** open the gallery of the day right away (capture button "Fotos von heute"); app only */
+  openDay?: boolean;
 }
 
 /**
@@ -92,6 +94,7 @@ export function PhotoAttach({
   disabled = false,
   onFileChosen,
   autoCapture = false,
+  openDay = false,
 }: PhotoAttachProps) {
   const [busy, setBusy] = useState(false);
   const confirmRemove = useConfirm();
@@ -343,6 +346,15 @@ export function PhotoAttach({
     await deletePhoto(photo);
     onRemoved(photo);
   }
+
+  // only where the gallery can be listed - a browser file dialog needs a real tap
+  const dayOpened = useRef(false);
+  useEffect(() => {
+    if (!openDay || dayOpened.current || disabled || !forDate || !galleryPickerAvailable()) return;
+    dayOpened.current = true;
+    openDayGallery();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openDay, disabled, forDate]);
 
   useEffect(() => {
     if (!autoCapture || captured.current || disabled) return;

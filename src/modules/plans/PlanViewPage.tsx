@@ -10,6 +10,7 @@ import { loadPlanSvg, loadRooms, modelPlans, MODEL_EVENT, type Variant } from '@
 import { resolveFileUrl } from '@/offline/fileUrls';
 import { RoomPanel } from '@/modules/viewer3d/RoomPanel';
 import type { Room } from '@/modules/viewer3d/houseScene';
+import { setOpenRoom } from '@/lib/openRoom';
 
 export default function PlanViewPage() {
   const { id } = useParams();
@@ -20,6 +21,11 @@ export default function PlanViewPage() {
   const [svg, setSvg] = useState<string | null>(null);
   const [roomById, setRoomById] = useState<Map<string, Room>>(new Map());
   const [room, setRoom] = useState<Room | null>(null);
+  // the capture button files new entries under the room shown here
+  useEffect(() => {
+    setOpenRoom(room?.id ?? null);
+    return () => setOpenRoom(null);
+  }, [room]);
   const [modelKey, setModelKey] = useState(0);
   // why a generated plan cannot be drawn - no model on this device yet
   const [missing, setMissing] = useState<string | null>(null);

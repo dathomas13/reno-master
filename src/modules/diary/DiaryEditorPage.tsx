@@ -12,6 +12,7 @@ import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
 import { diaryTextPlaceholder } from './diaryPlaceholder';
+import { useRooms } from '@/data/RoomsContext';
 import { clearDiaryDraft, loadDiaryDraft, saveDiaryDraft } from './diaryDraft';
 import { useToast } from '@/components/Toast';
 
@@ -23,6 +24,9 @@ export default function DiaryEditorPage() {
   const toast = useToast();
   const isNew = !id;
   const dateParam = params.get('date');
+  // from the capture button: a room to file the entry under, and "open today's photos"
+  const roomParam = params.get('raum');
+  const pickDay = params.get('fotos') === 'heute';
   const initialDate = dateParam ?? today();
 
   const { data: existing, loading } = useDocument<DiaryEntry>(COL.diary, id);
@@ -30,7 +34,9 @@ export default function DiaryEditorPage() {
   const { data: phases } = useCollection<Phase>(COL.phases);
   const activePhase = phases.find((phase) => isPhaseActive(phase));
 
-  const [entry, setEntry] = useState<DiaryEntry>(() => loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
+  const { writeId } = useRooms();
+  const fresh = () => ({ ...emptyDiaryEntry(initialDate), roomIds: roomParam ? [writeId(roomParam)] : [] });
+  const [entry, setEntry] = useState<DiaryEntry>(() => loadDiaryDraft(dateParam ?? undefined) ?? fresh());
   const entryPhase = phases.find((phase) => phase.id === entry.phaseId);
   const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
@@ -45,7 +51,7 @@ export default function DiaryEditorPage() {
       setReady(false);
       return;
     }
-    setEntry(loadDiaryDraft(dateParam ?? undefined) ?? emptyDiaryEntry(initialDate));
+    setEntry(loadDiaryDraft(dateParam ?? undefined) ?? fresh());
     setReady(true);
   }, [id, isNew, dateParam, initialDate]);
 
@@ -208,6 +214,7 @@ export default function DiaryEditorPage() {
             forDate={entry.date}
             disabled={saving}
             onBusyChange={setAttaching}
+            openDay={pickDay && ready}
             onAdded={(photo) => setAddedPhotos((current) => [...current.filter((item) => item.id !== photo.id), photo])}
             onRemoved={(photo) => setRemovedPhotoIds((current) => [...current, photo.id])}
           />

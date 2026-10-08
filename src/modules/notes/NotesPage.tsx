@@ -47,6 +47,16 @@ export default function NotesPage() {
     if (note) setEditing(note);
   }, [wanted, notes]);
 
+  // the capture button opens a new note straight away (?neu=1, with ?raum= when a room is open)
+  useEffect(() => {
+    if (params.get('neu') !== '1') return;
+    setEditing(emptyNote(roomFilter ? [writeId(roomFilter)] : []));
+    const next = new URLSearchParams(params);
+    next.delete('neu');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
   function dropWanted() {
     if (!wanted) return;
     const next = new URLSearchParams(params);

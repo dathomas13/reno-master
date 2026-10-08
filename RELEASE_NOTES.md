@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.79.0 – Alles mit einem Tipp erfassen
+
+- Neuer runder Plus-Knopf in der Mitte der unteren Leiste: Tagebuch, Fotos von heute, Beleg, Aufgabe, Notiz oder Gespräch, von überall aus. Ist gerade ein Raum offen, gehört der neue Eintrag gleich dazu.
+- Nach einem Anruf oder WhatsApp aus den Kontakten fragt die App, ob du das Gespräch notieren willst – Kontakt, Art und Uhrzeit sind schon eingetragen.
+
 ## 0.78.2 – Start ohne Netz
 
 - Die App öffnet sich auch bei schlechtem oder fehlendem Empfang sofort, statt beim Start zu hängen.
