@@ -1,5 +1,6 @@
 import { useEffect, useId, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useBackClose } from '@/platform/backHandlers';
 
 interface SheetProps {
   open: boolean;
@@ -27,6 +28,7 @@ export function Sheet({ open, onClose, onDone, doneLabel = 'Fertig', title, chil
   // A sheet whose "Fertig" saves must not throw the input away when a thumb taps beside
   // it: leaving it any way counts as "Fertig". Only "Abbrechen"-sheets simply close.
   const leave = onDone ?? onClose;
+  useBackClose(open, leave);
 
   useEffect(() => {
     if (!open) return;

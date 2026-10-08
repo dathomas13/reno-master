@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.85.2 – Zurück schließt Menüs
+
+- Die Zurück-Taste schließt ein offenes Menü oder Fenster, statt die Seite zu verlassen.
+- Der lange gedrückte Eintrag bleibt scharf, nur der Rest wird abgedunkelt.
+
 ## 0.85.1 – Menü direkt am Eintrag
 
 - Lange drücken öffnet das Menü jetzt direkt am Eintrag statt unten am Bildschirm; der Rest wird kurz abgedunkelt.

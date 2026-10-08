@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useBackClose } from '@/platform/backHandlers';
 import { Icon, type IconName } from './Icon';
 
 export interface RowAction {
@@ -15,6 +16,8 @@ interface Open {
   actions: RowAction[];
   /** where the row is on screen: it stays visible, the menu opens right at it */
   rect: { top: number; bottom: number; left: number; right: number };
+  /** the entry itself - a copy of it is shown sharp above the blurred screen */
+  row: HTMLElement;
 }
 
 const HOLD_MS = 500;
@@ -50,7 +53,7 @@ export function useRowActions() {
           fired.current = true;
           navigator.vibrate?.(12);
           const { top, bottom, left, right } = row.getBoundingClientRect();
-          setOpen({ title, actions, rect: { top, bottom, left, right } });
+          setOpen({ title, actions, rect: { top, bottom, left, right }, row });
         }, HOLD_MS);
         press.current = { x: event.clientX, y: event.clientY, timer };
       },
@@ -87,7 +90,8 @@ const BOTTOM_RESERVE = 88;
 const ITEM_HEIGHT = 48;
 
 function RowMenu({ open, onClose }: { open: Open; onClose(): void }) {
-  const { rect, actions, title } = open;
+  const { rect, actions, title, row } = open;
+  useBackClose(true, onClose);
   // lifting the finger that held the entry must not land as a tap on the backdrop
   const openedAt = useRef(Date.now());
 
@@ -114,11 +118,19 @@ function RowMenu({ open, onClose }: { open: Open; onClose(): void }) {
           if (Date.now() - openedAt.current > 400) onClose();
         }}
       />
-      {/* the entry stays lit above the dimmed screen, so it is clear what the menu acts on */}
+      {/* the entry itself stays sharp above the blurred screen: a copy of it, lifted and
+          framed, so it is clear what the menu acts on */}
       <div
         aria-hidden="true"
-        className="absolute rounded-xl ring-1 ring-accent/60 bg-accent/10 pointer-events-none"
-        style={{ top: rect.top, left: rect.left + 4, width: rect.right - rect.left - 8, height: rect.bottom - rect.top }}
+        className="absolute overflow-hidden rounded-xl bg-bg ring-1 ring-accent/60 shadow-2xl pointer-events-none"
+        style={{ top: rect.top, left: rect.left, width: rect.right - rect.left, height: rect.bottom - rect.top }}
+        ref={(frame) => {
+          if (!frame || frame.firstChild) return;
+          const copy = row.cloneNode(true) as HTMLElement;
+          copy.style.margin = '0';
+          copy.style.width = '100%';
+          frame.appendChild(copy);
+        }}
       />
       <div
         role="menu"
