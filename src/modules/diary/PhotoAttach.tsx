@@ -396,6 +396,11 @@ export function PhotoAttach({
         </span>}
       </div>
 
+      {/* the title above is invisible on a phone - say what the switch costs while it is on */}
+      {kind === 'photo' && keepOriginals && (
+        <p className="text-xs text-muted -mt-1 mb-2">Originale in voller Auflösung werden mitgesichert – braucht mehr Speicher.</p>
+      )}
+
       {warning && <p className="text-warn text-sm mb-2">{warning}</p>}
 
       {(photos.length > 0 || imports.length > 0) && (

@@ -5,6 +5,7 @@ import { Sheet } from '@/components/Sheet';
 import { Field, EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { Segmented } from '@/components/Segmented';
+import { MoreFields } from '@/components/MoreFields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
@@ -371,6 +372,14 @@ function TaskSheet({
 
   const update = (patch: Partial<Task>) => setDraft({ ...draft, ...patch });
   const canSave = draft.title.trim().length > 0;
+  const moreFilled = [
+    !!draft.notes,
+    !!draft.reminderAt,
+    !!draft.area,
+    !!draft.tradeId,
+    !!draft.phaseId,
+    draft.roomIds.length > 0,
+  ].filter(Boolean).length;
   const saveDraft = () => void onSave({ ...draft, title: draft.title.trim() });
 
   return (
@@ -381,13 +390,6 @@ function TaskSheet({
             className="field"
             value={draft.title}
             onChange={(event) => update({ title: event.target.value })}
-          />
-        </Field>
-        <Field label="Notizen">
-          <textarea
-            className="field min-h-[5rem]"
-            value={draft.notes ?? ''}
-            onChange={(event) => update({ notes: event.target.value })}
           />
         </Field>
         <Field label="Status">
@@ -421,30 +423,39 @@ function TaskSheet({
             onChange={(event) => update({ due: event.target.value || undefined })}
           />
         </Field>
-        <Field label="Erinnerung">
-          <input
-            className="field"
-            type="datetime-local"
-            value={toDateTimeInput(draft.reminderAt)}
-            onChange={(event) => update({ reminderAt: fromDateTimeInput(event.target.value) })}
-          />
-          <p className="text-xs text-muted mt-1">
-            Kommt zuverlässig in der Android-App. In der Benachrichtigung kannst du die Aufgabe direkt als
-            erledigt markieren.
-          </p>
-        </Field>
-        <Field label="Bereich">
-          <OptionChips setKey="taskAreas" value={draft.area} onChange={(value) => update({ area: value })} />
-        </Field>
-        <Field label="Gewerk">
-          <TradeSelect value={draft.tradeId} onChange={(value) => update({ tradeId: value })} />
-        </Field>
-        <Field label="Phase">
-          <PhaseSelect value={draft.phaseId} onChange={(value) => update({ phaseId: value })} />
-        </Field>
-        <Field label="Räume">
-          <RoomPicker value={draft.roomIds} onChange={(value) => update({ roomIds: value })} />
-        </Field>
+        <MoreFields filled={moreFilled}>
+          <Field label="Notizen">
+            <textarea
+              className="field min-h-[5rem]"
+              value={draft.notes ?? ''}
+              onChange={(event) => update({ notes: event.target.value })}
+            />
+          </Field>
+          <Field label="Erinnerung">
+            <input
+              className="field"
+              type="datetime-local"
+              value={toDateTimeInput(draft.reminderAt)}
+              onChange={(event) => update({ reminderAt: fromDateTimeInput(event.target.value) })}
+            />
+            <p className="text-xs text-muted mt-1">
+              Kommt zuverlässig in der Android-App. In der Benachrichtigung kannst du die Aufgabe direkt als
+              erledigt markieren.
+            </p>
+          </Field>
+          <Field label="Bereich">
+            <OptionChips setKey="taskAreas" value={draft.area} onChange={(value) => update({ area: value })} />
+          </Field>
+          <Field label="Gewerk">
+            <TradeSelect value={draft.tradeId} onChange={(value) => update({ tradeId: value })} />
+          </Field>
+          <Field label="Phase">
+            <PhaseSelect value={draft.phaseId} onChange={(value) => update({ phaseId: value })} />
+          </Field>
+          <Field label="Räume">
+            <RoomPicker value={draft.roomIds} onChange={(value) => update({ roomIds: value })} />
+          </Field>
+        </MoreFields>
         <div className="flex gap-3">
           <button type="button" className="btn btn-primary flex-1" onClick={saveDraft} disabled={!canSave}>
             Speichern

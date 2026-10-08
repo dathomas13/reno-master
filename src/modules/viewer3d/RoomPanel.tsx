@@ -42,7 +42,7 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
   );
 
   return (
-    <div className="card p-3 pointer-events-auto max-h-[45dvh] overflow-y-auto">
+    <div className="card p-3 pointer-events-auto max-h-[40dvh] overflow-y-auto">
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <h2 className="font-semibold truncate">{room.name}</h2>

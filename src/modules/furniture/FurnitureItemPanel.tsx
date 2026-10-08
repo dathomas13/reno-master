@@ -46,7 +46,7 @@ export function FurnitureItemPanel({ item, models, rooms, editing, onChange, onD
   };
 
   return (
-    <div className="card p-3 pointer-events-auto max-h-[45dvh] overflow-y-auto border-l-4 border-l-accent">
+    <div className="card p-3 pointer-events-auto max-h-[40dvh] overflow-y-auto border-l-4 border-l-accent">
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate">{itemLabel(item, models)}</div>

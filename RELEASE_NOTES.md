@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.78.0 – Kürzere Formulare, ruhigere 3D-Ansicht
+
+- 3D: Die Geschosse stehen rechts übereinander wie im Haus, unten bleibt nur eine Zeile für Räume, Tragwände und Ansicht.
+- Rechnung und Aufgabe zeigen zuerst das Wichtige; der Rest steckt unter „Weitere Angaben“.
+- Kurze Hinweise zu Raum antippen und Wischen in der Fotoansicht; Rechnungen kehren nach dem Speichern dorthin zurück, wo sie geöffnet wurden.
+
 ## 0.77.0 – Aufgeräumte Einstellungen
 
 - Einstellungen geordnet nach Alltag, Daten und Fortgeschrittenem; das Konto steht am Ende.

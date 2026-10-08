@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { Field, Spinner } from '@/components/Fields';
+import { EmptyState, Field, Spinner } from '@/components/Fields';
+import { MoreFields } from '@/components/MoreFields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
 import { RoomPicker, TradeSelect } from '@/components/Pickers';
 import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
-import { findOptionByName, PAYMENT_OPEN } from '@/data/options';
+import { findOptionByName, PAYMENT_OPEN, PAYMENT_PAID } from '@/data/options';
 import { OptionChips, OptionSelect } from '@/components/OptionFields';
 import { COL, type Cost, type Photo } from '@/data/types';
 import { emptyCost, saveCost, deleteCost } from '@/data/repos';
@@ -28,6 +29,7 @@ function CostEditor() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const undoableDelete = useUndoableDelete();
   const isNew = !id;
@@ -183,7 +185,9 @@ function CostEditor() {
     try {
       await saveCost({ ...cost, receiptPhotoIds: photos.map((photo) => photo.id) });
       toast('Rechnung gespeichert');
-      navigate('/kosten', { replace: true });
+      // back to where it was opened from (list, receipts, search); the list on a cold start
+      if (location.key !== 'default') navigate(-1);
+      else navigate('/kosten', { replace: true });
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Rechnung konnte nicht gespeichert werden.');
     } finally {
@@ -198,10 +202,30 @@ function CostEditor() {
     navigate('/kosten', { replace: true });
   }
 
+  // what sits behind "Weitere Angaben" - "bezahlt" is the default and does not count
+  const moreFilled = [
+    cost.vatRate != null,
+    cost.paymentStatus !== PAYMENT_PAID,
+    !!cost.paidBy,
+    !!cost.paymentMethod,
+    !!cost.tradeId,
+    cost.roomIds.length > 0,
+    !!cost.invoiceNumber,
+    !!cost.notes,
+  ].filter(Boolean).length;
+
   const autoMark = (key: keyof Cost) =>
     auto[key] ? <span className="text-xs normal-case tracking-normal text-accent ml-2">automatisch erkannt</span> : null;
 
-  if (!isNew && loading && !ready) return <Spinner />;
+  if (!isNew && loading && !ready) return <Spinner label="Rechnung wird geladen…" />;
+  if (!isNew && !loading && !existing && !ready) {
+    return (
+      <>
+        <TopBar title="Rechnung" back="/kosten" />
+        <EmptyState title="Diese Rechnung gibt es nicht mehr." hint="Sie wurde gelöscht." />
+      </>
+    );
+  }
 
   return (
     <>
@@ -320,71 +344,73 @@ function CostEditor() {
           {autoMark('category')}
         </Field>
 
-        <Field label="MwSt">
-          <div className="flex gap-2 items-center">
-            {[19, 7, 0].map((rate) => (
-              <button
-                key={rate}
-                type="button"
-                className={`chip ${cost.vatRate === rate ? 'chip-on' : ''}`}
-                onClick={() => setVatRate(cost.vatRate === rate ? null : rate)}
-              >
-                {rate} %
-              </button>
-            ))}
-            {cost.amountNet !== undefined && (
-              <span className="text-xs text-muted ml-2">
-                netto {formatAmount(cost.amountNet)} · MwSt {formatAmount(cost.vatAmount ?? 0)}
-              </span>
-            )}
-          </div>
-        </Field>
+        <MoreFields filled={moreFilled}>
+          <Field label="MwSt">
+            <div className="flex gap-2 items-center">
+              {[19, 7, 0].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  className={`chip ${cost.vatRate === rate ? 'chip-on' : ''}`}
+                  onClick={() => setVatRate(cost.vatRate === rate ? null : rate)}
+                >
+                  {rate} %
+                </button>
+              ))}
+              {cost.amountNet !== undefined && (
+                <span className="text-xs text-muted ml-2">
+                  netto {formatAmount(cost.amountNet)} · MwSt {formatAmount(cost.vatAmount ?? 0)}
+                </span>
+              )}
+            </div>
+          </Field>
 
-        <Field label="Status">
-          <OptionChips
-            setKey="paymentStatus"
-            value={cost.paymentStatus}
-            allowEmpty={false}
-            onChange={(value) => update({ paymentStatus: value ?? PAYMENT_OPEN })}
-          />
-        </Field>
+          <Field label="Status">
+            <OptionChips
+              setKey="paymentStatus"
+              value={cost.paymentStatus}
+              allowEmpty={false}
+              onChange={(value) => update({ paymentStatus: value ?? PAYMENT_OPEN })}
+            />
+          </Field>
 
-        <Field label="Bezahlt von">
-          <OptionChips setKey="payers" value={cost.paidBy} onChange={(value) => update({ paidBy: value })} />
-        </Field>
+          <Field label="Bezahlt von">
+            <OptionChips setKey="payers" value={cost.paidBy} onChange={(value) => update({ paidBy: value })} />
+          </Field>
 
-        <Field label="Zahlungsart">
-          <OptionChips
-            setKey="paymentMethods"
-            value={cost.paymentMethod}
-            onChange={(value) => update({ paymentMethod: value })}
-          />
-        </Field>
+          <Field label="Zahlungsart">
+            <OptionChips
+              setKey="paymentMethods"
+              value={cost.paymentMethod}
+              onChange={(value) => update({ paymentMethod: value })}
+            />
+          </Field>
 
-        <Field label="Gewerk">
-          <TradeSelect value={cost.tradeId} onChange={(value) => update({ tradeId: value })} />
-        </Field>
+          <Field label="Gewerk">
+            <TradeSelect value={cost.tradeId} onChange={(value) => update({ tradeId: value })} />
+          </Field>
 
-        <Field label="Räume">
-          <RoomPicker value={cost.roomIds} onChange={(value) => update({ roomIds: value })} />
-        </Field>
+          <Field label="Räume">
+            <RoomPicker value={cost.roomIds} onChange={(value) => update({ roomIds: value })} />
+          </Field>
 
-        <Field label="Rechnungsnummer">
-          <input
-            className="field"
-            value={cost.invoiceNumber ?? ''}
-            onChange={(event) => update({ invoiceNumber: event.target.value })}
-          />
-          {autoMark('invoiceNumber')}
-        </Field>
+          <Field label="Rechnungsnummer">
+            <input
+              className="field"
+              value={cost.invoiceNumber ?? ''}
+              onChange={(event) => update({ invoiceNumber: event.target.value })}
+            />
+            {autoMark('invoiceNumber')}
+          </Field>
 
-        <Field label="Notizen">
-          <textarea
-            className="field min-h-[5rem]"
-            value={cost.notes ?? ''}
-            onChange={(event) => update({ notes: event.target.value })}
-          />
-        </Field>
+          <Field label="Notizen">
+            <textarea
+              className="field min-h-[5rem]"
+              value={cost.notes ?? ''}
+              onChange={(event) => update({ notes: event.target.value })}
+            />
+          </Field>
+        </MoreFields>
 
         <div className="flex gap-3 mt-4">
           <button type="button" className="btn btn-primary flex-1" onClick={() => void save()} disabled={saveBlocked}>

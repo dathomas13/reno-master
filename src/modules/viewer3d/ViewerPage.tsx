@@ -5,7 +5,6 @@ import {
   buildHouse,
   isVisible,
   LAYERS,
-  LAYER_SHORT,
   LAYER_LABEL,
   CONFIDENCE_LABEL,
   formatDimensions,
@@ -23,6 +22,9 @@ import { VARIANT_LABEL, VARIANTS, type ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings } from '@/lib/settings';
 import { Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { Hint } from '@/components/Hint';
+import { Sheet } from '@/components/Sheet';
 import { newId } from '@/lib/ids';
 import { debugLog } from '@/platform/debugLog';
 import { deleteFurnitureItem, readModelFile, saveFurnitureItem } from '@/data/furniture';
@@ -51,6 +53,18 @@ interface UndoStep {
 }
 const UNDO_LIMIT = 50;
 
+/** top to bottom as the house is built; the garage stands apart at the end */
+const RAIL_ORDER: Layer[] = ['DACH', 'STUHL', 'DG', 'OG', 'EG', 'KG', 'GAR'];
+const RAIL_LABEL: Record<Layer, string> = {
+  DACH: 'Dach',
+  STUHL: 'Stuhl',
+  DG: 'DG',
+  OG: 'OG',
+  EG: 'EG',
+  KG: 'KG',
+  GAR: 'Gar.',
+};
+
 export default function ViewerPage() {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -72,6 +86,7 @@ export default function ViewerPage() {
     saved?.layers ?? { KG: true, EG: true, OG: true, DG: true, STUHL: true, DACH: true, GAR: true },
   );
   const [viewLabel, setViewLabel] = useState(saved?.viewLabel || VIEW_PRESETS[0]!.label);
+  const [viewOpen, setViewOpen] = useState(false);
   const [structural, setStructural] = useState(saved?.structural ?? false);
   const [showRooms, setShowRooms] = useState(saved?.showRooms ?? false);
   const [selected, setSelected] = useState<Picked | null>(null);
@@ -690,22 +705,30 @@ export default function ViewerPage() {
           </div>
         )}
 
-        {/* controls */}
-        <div className="flex flex-wrap gap-1.5 pointer-events-auto">
-          {LAYERS.map((layer) => (
-            <button
-              key={layer}
-              type="button"
-              className={`chip ${layerState[layer] ? 'chip-on' : ''}`}
-              aria-pressed={!!layerState[layer]}
-              onClick={() => toggleLayer(layer)}
-            >
-              {LAYER_SHORT[layer]}
-            </button>
-          ))}
+        {!loading && !error && (
+          <Hint id="raum-antippen" done={!!room} className="pointer-events-auto">
+            Einen Raum antippen zeigt, was dort passiert ist.
+          </Hint>
+        )}
+
+        {/* overlays: one quiet row - the floors have their own rail at the right edge */}
+        <div className="flex items-center gap-1.5 pointer-events-auto">
           <button
             type="button"
-            className={`chip ${structural ? 'border-bad text-bad' : ''}`}
+            className={`chip ${showRooms ? 'chip-on' : ''}`}
+            aria-pressed={showRooms}
+            onClick={() => {
+              const next = !showRooms;
+              setShowRooms(next);
+              houseRef.current?.setRoomsVisible(next);
+              renderRef.current?.();
+            }}
+          >
+            Räume
+          </button>
+          <button
+            type="button"
+            className={`chip ${structural ? 'border-bad text-bad bg-bad/10' : ''}`}
             aria-pressed={structural}
             onClick={() => {
               const next = !structural;
@@ -721,10 +744,11 @@ export default function ViewerPage() {
               Möbel
             </button>
           )}
+          <span className="flex-1" />
           {isPlan && !editing && (
             <button
               type="button"
-              className="chip"
+              className="chip border-accent text-accent"
               onClick={() => {
                 setEditing(true);
                 if (!showFurniture) toggleFurniture();
@@ -735,30 +759,62 @@ export default function ViewerPage() {
           )}
           <button
             type="button"
-            className={`chip ${showRooms ? 'chip-on' : ''}`}
-            aria-pressed={showRooms}
-            onClick={() => {
-              const next = !showRooms;
-              setShowRooms(next);
-              houseRef.current?.setRoomsVisible(next);
-              renderRef.current?.();
-            }}
+            className="chip bg-panel text-ink max-w-[45%]"
+            aria-label={`Ansicht: ${viewLabel} – ändern`}
+            onClick={() => setViewOpen(true)}
           >
-            Räume
+            <span className="truncate">{viewLabel}</span>
+            <Icon name="chevronDown" className="w-4 h-4 shrink-0" />
           </button>
-          <select
-            className="chip bg-panel"
-            value={viewLabel}
-            onChange={(event) => applyPreset(event.target.value)}
-          >
-            {VIEW_PRESETS.map((preset) => (
-              <option key={preset.label} value={preset.label}>
-                Ansicht: {preset.label}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
+
+      {/* the floors, stacked like the house itself: roof on top, cellar at the bottom */}
+      <div
+        role="group"
+        aria-label="Geschosse"
+        className="absolute right-2 top-[calc(3.5rem+env(safe-area-inset-top))] z-10 flex flex-col gap-1 p-1
+                   rounded-xl bg-panel/80 backdrop-blur border border-line"
+      >
+        {RAIL_ORDER.map((layer) => (
+          <button
+            key={layer}
+            type="button"
+            aria-pressed={!!layerState[layer]}
+            aria-label={LAYER_LABEL[layer]}
+            title={LAYER_LABEL[layer]}
+            className={`w-12 h-9 rounded-lg text-xs border ${layer === 'GAR' ? 'mt-2' : ''} ${
+              layerState[layer]
+                ? 'bg-accent/15 text-accent border-accent/60 font-semibold'
+                : 'text-muted border-line/60'
+            }`}
+            onClick={() => toggleLayer(layer)}
+          >
+            {RAIL_LABEL[layer]}
+          </button>
+        ))}
+      </div>
+
+      <Sheet open={viewOpen} onClose={() => setViewOpen(false)} title="Ansicht" doneLabel="Abbrechen">
+        <ul className="pb-2">
+          {VIEW_PRESETS.map((preset) => (
+            <li key={preset.label}>
+              <button
+                type="button"
+                className={`list-row w-full text-left ${preset.label === viewLabel ? 'text-accent' : ''}`}
+                aria-pressed={preset.label === viewLabel}
+                onClick={() => {
+                  applyPreset(preset.label);
+                  setViewOpen(false);
+                }}
+              >
+                <span className="flex-1">{preset.label}</span>
+                {preset.label === viewLabel && <Icon name="check" className="w-5 h-5" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
 
       <FurnitureCatalog
         open={catalogOpen}
