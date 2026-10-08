@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/auth/AuthContext';
 import { RoomsProvider } from '@/data/RoomsContext';
@@ -35,6 +35,25 @@ import SettingsPage from '@/modules/settings/SettingsPage';
 import PresetsPage from '@/modules/settings/presets/PresetsPage';
 import PresetDetailPage from '@/modules/settings/presets/PresetDetailPage';
 
+/** the first moment before the session is known; says why if it ever takes long */
+function StartupWait() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSlow(true), 4000);
+    return () => window.clearTimeout(timer);
+  }, []);
+  return (
+    <div>
+      <Spinner label="Wird geladen…" />
+      {slow && (
+        <p className="text-center text-sm text-muted px-8 -mt-4">
+          Das dauert länger als sonst. Ohne Netz kann die App kurz brauchen.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function Protected() {
   const { user, ready } = useAuth();
 
@@ -48,7 +67,7 @@ function Protected() {
   useDiaryReminder();
   useTaskReminders(!!user);
 
-  if (!ready) return <Spinner label="Wird geladen…" />;
+  if (!ready) return <StartupWait />;
 
   if (!user) {
     return (

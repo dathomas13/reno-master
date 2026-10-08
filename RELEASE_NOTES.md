@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.78.2 – Start ohne Netz
+
+- Die App öffnet sich auch bei schlechtem oder fehlendem Empfang sofort, statt beim Start zu hängen.
+
 ## 0.78.1 – 3D: Ansicht nicht mehr abgeschnitten
 
 - „Ansicht“ sitzt jetzt unten an der Geschossleiste und ist immer ganz zu sehen.

@@ -6,16 +6,11 @@ import {
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence,
   type User,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './app';
 import { COL, type UserProfile } from '@/data/types';
-
-/** the session survives restarts and works offline once established */
-void setPersistence(auth, browserLocalPersistence).catch(() => undefined);
 
 /** true when somebody is signed in; the preview mode runs without an account */
 export function isAuthenticated(): boolean {
