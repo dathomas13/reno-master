@@ -10,28 +10,25 @@ export interface SectionTab {
  * The tabs of an area (Tagebuch: Einträge · Fotos, …): the screens that belong together
  * sit side by side here instead of being scattered over the menu. Real links, so back
  * and the address keep working the way they did when each screen had its own entry.
+ * Underlined like tabs, not boxed: they belong to the header, and must not look like
+ * the filters and switches inside the screen.
  */
 export function SectionTabs({ tabs, label, className = '' }: { tabs: SectionTab[]; label: string; className?: string }) {
   return (
-    <nav aria-label={label} className={`px-3 pt-3 ${className}`}>
-      <div
-        className="grid rounded-xl border border-line overflow-hidden bg-panel/60"
-        style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
-      >
-        {tabs.map((tab) => (
-          <Link
-            key={tab.label}
-            to={tab.to}
-            replace
-            aria-current={tab.active ? 'page' : undefined}
-            className={`min-h-10 px-2 text-sm truncate grid place-items-center ${
-              tab.active ? 'bg-accent/15 text-accent font-semibold' : 'text-muted'
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </div>
+    <nav aria-label={label} className={`flex border-b border-line px-3 ${className}`}>
+      {tabs.map((tab) => (
+        <Link
+          key={tab.label}
+          to={tab.to}
+          replace
+          aria-current={tab.active ? 'page' : undefined}
+          className={`flex-1 min-w-0 min-h-11 px-2 -mb-px border-b-2 text-sm truncate grid place-items-center ${
+            tab.active ? 'border-accent text-accent font-semibold' : 'border-transparent text-muted'
+          }`}
+        >
+          {tab.label}
+        </Link>
+      ))}
     </nav>
   );
 }

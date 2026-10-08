@@ -4,7 +4,6 @@ import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
 import { Field, EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
-import { Segmented } from '@/components/Segmented';
 import { MoreFields } from '@/components/MoreFields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
@@ -20,12 +19,6 @@ import { useRooms } from '@/data/RoomsContext';
 import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 const BUCKETS: DueBucket[] = ['overdue', 'today', 'week', 'later', 'none'];
-type Filter = 'offen' | 'alle' | 'erledigt';
-const FILTERS = [
-  { value: 'offen', label: 'Offen' },
-  { value: 'alle', label: 'Alle' },
-  { value: 'erledigt', label: 'Erledigt' },
-] as const;
 const PRIORITY_COLOR: Record<string, string> = {
   hoch: 'text-bad',
   mittel: 'text-warn',
@@ -57,7 +50,8 @@ export default function TasksPage() {
   const { sets, label } = useOptions();
   const { shortLabel: roomLabel, matches, writeId, rooms } = useRooms();
   const { data: trades } = useCollection<Trade>(COL.trades);
-  const [filter, setFilter] = useState<Filter>('offen');
+  // open tasks unless "Erledigte" is on - one chip instead of a second switch row
+  const [showDone, setShowDone] = useState(false);
   const [assignee, setAssignee] = useState<string | null>(null);
   const [quick, setQuick] = useState('');
   const [ignored, setIgnored] = useState<QuickKind[]>([]);
@@ -119,11 +113,9 @@ export default function TasksPage() {
     return viewTasks.filter((task) => {
       if (roomFilter && !matches(task.roomIds, roomFilter)) return false;
       if (assignee && !hasAssignee(task, assignee)) return false;
-      if (filter === 'offen') return !isTaskDone(task);
-      if (filter === 'erledigt') return isTaskDone(task);
-      return true;
+      return showDone ? isTaskDone(task) : !isTaskDone(task);
     });
-  }, [viewTasks, filter, assignee, roomFilter, matches]);
+  }, [viewTasks, showDone, assignee, roomFilter, matches]);
 
   const grouped = useMemo(() => {
     const map = new Map<DueBucket, Task[]>();
@@ -169,11 +161,7 @@ export default function TasksPage() {
 
   async function addQuick() {
     const title = quick.trim();
-    if (!title) {
-      // no text typed: open the editor for a new task instead of doing nothing
-      newTask();
-      return;
-    }
+    if (!title) return;
     const typed = quick;
     const hit = (kind: QuickKind) => parsed.hits.find((item) => item.kind === kind)?.value;
     const roomIds = [roomFilter, hit('room')].filter((id): id is string => !!id).map(writeId);
@@ -214,24 +202,17 @@ export default function TasksPage() {
   }
 
   const filtered = !!roomFilter || !!assignee;
-  const emptyTitle = filtered
-    ? 'Nichts gefunden'
-    : filter === 'erledigt'
-      ? 'Noch nichts erledigt'
-      : filter === 'offen'
-        ? 'Nichts offen'
-        : 'Noch keine Aufgaben';
+  const emptyTitle = filtered ? 'Nichts gefunden' : showDone ? 'Noch nichts erledigt' : 'Nichts offen';
   const emptyHint = filtered
     ? 'Mit diesem Filter gibt es keine Aufgaben.'
-    : filter === 'offen'
-      ? 'Alles erledigt oder noch nichts angelegt.'
-      : 'Oben eine Aufgabe eintragen.';
+    : showDone
+      ? 'Erledigte Aufgaben erscheinen hier.'
+      : 'Alles erledigt oder noch nichts angelegt.';
 
   return (
     <>
       <TopBar
         title="Aufgaben"
-        subtitle={`${visible.length} angezeigt`}
         action={
           <button type="button" className="btn btn-primary px-3 min-h-11" onClick={newTask}>
             <Icon name="plus" className="w-5 h-5" />
@@ -242,10 +223,13 @@ export default function TasksPage() {
       <SectionTabs label="Aufgaben" tabs={AREA_TABS.tasks('tasks')} />
 
       <div className="p-3 flex flex-col gap-3">
-        <div className="flex gap-2">
+        {/* "Neu" in the top bar opens the full form; here only the quick line, sent from the keyboard */}
+        <div className="relative">
           <input
-            className="field"
+            className={`field ${quick.trim() ? 'pr-12' : ''}`}
             placeholder="Neue Aufgabe…"
+            aria-label="Neue Aufgabe"
+            enterKeyHint="send"
             onFocus={() => setQuickFocus(true)}
             onBlur={() => setQuickFocus(false)}
             value={quick}
@@ -254,22 +238,24 @@ export default function TasksPage() {
               if (!event.target.value.trim()) setIgnored([]);
             }}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') void addQuick();
+              if (event.key === 'Enter' && quick.trim()) void addQuick();
             }}
           />
-          <button
-            type="button"
-            className="btn btn-primary px-3"
-            aria-label={quick.trim() ? 'Aufgabe hinzufügen' : 'Neue Aufgabe mit allen Feldern'}
-            onClick={() => void addQuick()}
-          >
-            <Icon name="plus" />
-          </button>
+          {quick.trim() && (
+            <button
+              type="button"
+              className="absolute right-0 top-0 h-full w-12 grid place-items-center text-accent"
+              aria-label="Aufgabe hinzufügen"
+              onClick={() => void addQuick()}
+            >
+              <Icon name="check" className="w-6 h-6" strokeWidth={2.2} />
+            </button>
+          )}
         </div>
 
         {quickFocus && parsed.hits.length === 0 && (
-          <p className="text-xs text-muted -mt-1 px-1">
-            Kurzschrift: heute, morgen, Fr, 12.10. · ! für dringend · Raum, Person oder Gewerk
+          <p className="text-xs text-muted -mt-1 px-1 truncate">
+            Kurzschrift: heute · Fr · 12.10. · ! dringend · Raum/Person
           </p>
         )}
         {parsed.hits.length > 0 && (
@@ -289,10 +275,15 @@ export default function TasksPage() {
           </div>
         )}
 
-        <Segmented<Filter> label="Anzeigen" options={FILTERS} value={filter} onChange={setFilter} />
-
-        {(assigneeChips.length > 0 || roomFilter) && (
-          <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2" aria-label="Filter">
+          <button
+            type="button"
+            aria-pressed={showDone}
+            className={`chip ${showDone ? 'chip-on' : ''}`}
+            onClick={() => setShowDone(!showDone)}
+          >
+            Erledigte
+          </button>
             {assigneeChips.map((person) => (
               <button
                 key={person.id}
@@ -315,8 +306,7 @@ export default function TasksPage() {
                 <Icon name="close" className="w-4 h-4" />
               </button>
             )}
-          </div>
-        )}
+        </div>
       </div>
 
       {loading && tasks.length === 0 && <Spinner label="Aufgaben werden geladen…" />}
@@ -347,7 +337,9 @@ export default function TasksPage() {
         if (!rows?.length) return null;
         return (
           <section key={bucket}>
-            <div className="section-title">{DUE_BUCKET_LABEL[bucket]}</div>
+            <div className="section-title">
+              {showDone ? 'Erledigt' : DUE_BUCKET_LABEL[bucket]} · {rows.length}
+            </div>
             <ul>
               {rows.map((task) => (
                 <li key={task.id} className="list-row">

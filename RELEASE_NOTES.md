@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.83.3 – Ruhigere Köpfe, kleiner Raum-Steckbrief
+
+- Bereichs-Reiter sind jetzt unterstrichen statt als Kasten; Aufgaben haben nur noch eine Filterzeile („Erledigte“, Personen).
+- Die Schnelleingabe schickt über die Tastatur oder den Haken im Feld ab – kein zweites „+“ mehr.
+- Der Raum-Steckbrief ist eine kompakte Karte und verschwindet beim Einrichten; die Schalter unten sind auf hellem Modell lesbar.
+
 ## 0.83.2 – Übersichtliches „Zuständig“
 
 - Bei „Zuständig“ stehen nur noch die Leute, die schon Aufgaben haben; alle anderen über „+ Person“.

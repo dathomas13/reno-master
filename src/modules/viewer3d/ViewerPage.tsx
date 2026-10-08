@@ -672,7 +672,8 @@ export default function ViewerPage() {
           />
         )}
 
-        {room && !piece && (
+        {/* while furnishing only the room's name matters - it says where new pieces go */}
+        {room && !piece && !editing && (
           <RoomPanel
             room={room}
             onClose={() => {
@@ -705,8 +706,10 @@ export default function ViewerPage() {
             </div>
             <p className="text-xs text-muted mt-1.5">
               {piece
-                ? 'Das gewählte Möbel mit einem Finger ziehen – an Wänden rastet es ein.'
-                : 'Ein Möbel antippen, um es zu wählen. Neue kommen in den offenen Raum oder die Mitte der Ansicht.'}
+                ? 'Möbel mit einem Finger ziehen – an Wänden rastet es ein.'
+                : room
+                  ? `Neue Möbel kommen in: ${room.name}`
+                  : 'Neue Möbel kommen in die Bildmitte.'}
             </p>
           </div>
         )}
@@ -718,7 +721,8 @@ export default function ViewerPage() {
         )}
 
         {/* overlays: one quiet row - floors and views have their own rail at the right edge */}
-        <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto">
+        {/* on its own panel like the floor rail: gold text alone is unreadable on a light model */}
+        <div className="self-start flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-panel/80 backdrop-blur border border-line pointer-events-auto">
           <button
             type="button"
             className={`chip ${showRooms ? 'chip-on' : ''}`}

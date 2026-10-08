@@ -7,7 +7,6 @@ import { COL, type Cost, type DiaryEntry, type Note, type Photo, type Task } fro
 import { photosForRoom } from '@/data/photoRooms';
 import { where } from '@/firebase/db';
 import { formatEuroShort } from '@/lib/money';
-import { formatDate } from '@/lib/date';
 import { isAuthenticated } from '@/firebase/auth';
 import { LAYER_LABEL, type Layer, type Room } from './houseScene';
 import { Icon } from '@/components/Icon';
@@ -41,64 +40,46 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
     [roomIds, photos, entries, costs],
   );
 
+  // only what exists, as small links into the filtered lists - five zero tiles told nothing
+  // and took a third of the screen above the model
+  const links = [
+    { to: `/tagebuch?raum=${room.id}`, count: entries.length, label: `${entries.length} ${entries.length === 1 ? 'Eintrag' : 'Einträge'}` },
+    { to: `/fotos?raum=${room.id}`, count: roomPhotos.length, label: `${roomPhotos.length} ${roomPhotos.length === 1 ? 'Foto' : 'Fotos'}` },
+    { to: `/kosten?raum=${room.id}`, count: costs.length, label: formatEuroShort(total) },
+    { to: `/aufgaben?raum=${room.id}`, count: openTasks.length, label: `${openTasks.length} offen` },
+    { to: `/notizen?raum=${room.id}`, count: notes.length, label: `${notes.length} ${notes.length === 1 ? 'Notiz' : 'Notizen'}` },
+  ].filter((link) => link.count > 0);
+
   return (
-    <div className="card p-3 pointer-events-auto max-h-[40dvh] overflow-y-auto">
-      <div className="flex items-start gap-2">
-        <div className="flex-1 min-w-0">
-          <h2 className="font-semibold truncate">{room.name}</h2>
-          <p className="text-xs text-muted">
+    <div className="card p-3 pointer-events-auto">
+      <div className="flex items-center gap-2">
+        <p className="flex-1 min-w-0 truncate">
+          <span className="font-semibold">{room.name}</span>
+          <span className="text-sm text-muted">
+            {' · '}
             {LAYER_LABEL[room.floor as Layer] ?? room.floor}
             {room.areaM2 !== undefined && ` · ${room.areaM2.toFixed(1).replace('.', ',')} m²`}
-          </p>
-        </div>
-        <button type="button" className="btn btn-ghost w-11 px-0 -mr-2 -mt-2" aria-label="Raum schließen" onClick={onClose}>
+          </span>
+        </p>
+        <button type="button" className="btn btn-ghost w-11 h-11 px-0 -my-2 -mr-2" aria-label="Raum schließen" onClick={onClose}>
           <Icon name="close" className="w-5 h-5" />
         </button>
       </div>
 
-      {!isAuthenticated() && (
+      {!isAuthenticated() ? (
         <p className="text-xs text-muted mt-2">
           Einträge, Fotos und Kosten zu diesem Raum erscheinen nach der Anmeldung.
         </p>
-      )}
-
-      {isAuthenticated() && (
-        // five tiles on 360 pixels: the number must be allowed to shrink, or '1.234 €'
-        // pushes the row wider than the screen and the last tile leaves it
-        <div className="grid grid-cols-5 gap-1.5 mt-3 text-center">
-          <Link to={`/tagebuch?raum=${room.id}`} className="card py-2 px-1 min-w-0">
-            <div className="text-base font-medium truncate">{entries.length}</div>
-            <div className="text-[10px] text-muted truncate">Einträge</div>
-          </Link>
-          <Link to={`/fotos?raum=${room.id}`} className="card py-2 px-1 min-w-0">
-            <div className="text-base font-medium truncate">{roomPhotos.length}</div>
-            <div className="text-[10px] text-muted truncate">Fotos</div>
-          </Link>
-          <Link to={`/kosten?raum=${room.id}`} className="card py-2 px-1 min-w-0">
-            <div className="text-base font-medium truncate">{costs.length ? formatEuroShort(total) : '0'}</div>
-            <div className="text-[10px] text-muted truncate">Kosten</div>
-          </Link>
-          <Link to={`/aufgaben?raum=${room.id}`} className="card py-2 px-1 min-w-0">
-            <div className="text-base font-medium truncate">{openTasks.length}</div>
-            <div className="text-[10px] text-muted truncate">offen</div>
-          </Link>
-          <Link to={`/notizen?raum=${room.id}`} className="card py-2 px-1 min-w-0">
-            <div className="text-base font-medium truncate">{notes.length}</div>
-            <div className="text-[10px] text-muted truncate">Notizen</div>
-          </Link>
-        </div>
-      )}
-
-      {entries.length > 0 && (
-        <ul className="mt-3 text-sm">
-          {entries.slice(0, 3).map((entry) => (
-            <li key={entry.id} className="truncate">
-              <Link to={`/tagebuch/${entry.id}`} className="text-muted hover:text-ink">
-                {formatDate(entry.date)} · {entry.title}
-              </Link>
-            </li>
+      ) : links.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5 mt-2">
+          {links.map((link) => (
+            <Link key={link.to} to={link.to} className="chip">
+              {link.label}
+            </Link>
           ))}
-        </ul>
+        </div>
+      ) : (
+        <p className="text-sm text-muted mt-1">Noch nichts zu diesem Raum.</p>
       )}
     </div>
   );

@@ -84,9 +84,6 @@ describe('tasks page', () => {
     await act(async () => {});
 
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
-    });
-    await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /^Fenster pruefen/ }));
     });
     expect(
@@ -99,6 +96,11 @@ describe('tasks page', () => {
 
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: 'Erledigt: Fenster pruefen' }));
+    });
+    // done tasks leave the open list; the chip shows them
+    expect(screen.queryByRole('button', { name: /^Fenster pruefen/ })).not.toBeInTheDocument();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Erledigte' }));
     });
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /^Fenster pruefen/ }));
