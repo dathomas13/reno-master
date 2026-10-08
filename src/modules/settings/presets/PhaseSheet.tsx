@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@/components/Sheet';
+import { useConfirm } from '@/components/Confirm';
 import { Field } from '@/components/Fields';
 import { OptionChips } from '@/components/OptionFields';
 import type { Phase } from '@/data/types';
@@ -17,6 +18,7 @@ interface PhaseSheetProps {
 /** edit one phase; "Fertig" saves, hiding and deleting act at once */
 export default function PhaseSheet({ phase, phases, usage, onClose }: PhaseSheetProps) {
   const [name, setName] = useState('');
+  const confirm = useConfirm();
   const [status, setStatus] = useState<string | undefined>('geplant');
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
@@ -66,9 +68,15 @@ export default function PhaseSheet({ phase, phases, usage, onClose }: PhaseSheet
     onClose();
   }
 
-  function remove() {
+  async function remove() {
     if (!phase || usage > 0) return;
-    if (!window.confirm(`„${phase.name}“ endgültig löschen?`)) return;
+    const go = await confirm({
+      title: `„${phase.name}“ löschen?`,
+      message: 'Wird endgültig entfernt. Wer es nur nicht mehr sehen will, blendet es aus.',
+      confirmLabel: 'Endgültig löschen',
+      danger: true,
+    });
+    if (!go) return;
     deletePhase(phase.id);
     onClose();
   }
@@ -131,7 +139,7 @@ export default function PhaseSheet({ phase, phases, usage, onClose }: PhaseSheet
             {phase.archived ? 'Wieder anzeigen' : 'Ausblenden'}
           </button>
           {usage === 0 ? (
-            <button type="button" className="btn btn-danger w-full min-h-11" onClick={remove}>
+            <button type="button" className="btn btn-danger w-full min-h-11" onClick={() => void remove()}>
               Löschen
             </button>
           ) : (

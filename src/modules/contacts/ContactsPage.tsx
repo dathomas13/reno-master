@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
-import { Field, EmptyState } from '@/components/Fields';
+import { Field, EmptyState, Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { useToast, useUndoableDelete } from '@/components/Toast';
 import { TradePicker } from '@/components/Pickers';
 import { OptionChips, OptionMultiPicker } from '@/components/OptionFields';
 import { useCollection } from '@/data/hooks';
@@ -24,7 +26,9 @@ function whatsappHref(phone: string): string {
 
 export default function ContactsPage() {
   const [params, setParams] = useSearchParams();
-  const { data: contacts } = useCollection<Contact>(COL.contacts);
+  const { data: contacts, loading } = useCollection<Contact>(COL.contacts);
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
   const { label } = useOptions();
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<Contact | null>(null);
@@ -70,14 +74,15 @@ export default function ContactsPage() {
         subtitle={`${contacts.length} Handwerker und Firmen`}
         action={
           <div className="flex gap-2">
-            <button type="button" className="btn px-3 min-h-0 py-2" onClick={() => setImporting(true)}>
+            <button type="button" className="btn px-3 min-h-11" onClick={() => setImporting(true)}>
               Importieren
             </button>
             <button
               type="button"
-              className="btn btn-primary px-3 min-h-0 py-2"
+              className="btn btn-primary px-3 min-h-11"
               onClick={() => setEditing(emptyContact())}
             >
+              <Icon name="plus" className="w-5 h-5" />
               Neu
             </button>
           </div>
@@ -94,7 +99,14 @@ export default function ContactsPage() {
         />
       </div>
 
-      {filtered.length === 0 && <EmptyState title="Keine Kontakte" />}
+      {loading && contacts.length === 0 && <Spinner label="Kontakte werden geladen…" />}
+
+      {!(loading && contacts.length === 0) && filtered.length === 0 &&
+        (search.trim() ? (
+          <EmptyState title="Nichts gefunden" hint={`Kein Kontakt passt zu „${search.trim()}“.`} />
+        ) : (
+          <EmptyState title="Noch keine Kontakte" hint="Oben über „Neu“ anlegen oder aus dem Adressbuch importieren." />
+        ))}
 
       <ul>
         {filtered.map((contact) => (
@@ -116,20 +128,22 @@ export default function ContactsPage() {
             {contact.phone && (
               <>
                 <a
-                  className="btn btn-ghost px-2 min-h-0 py-1 text-accent"
+                  className="btn btn-ghost w-11 px-0 text-accent shrink-0"
                   href={telHref(contact.phone)}
-                  aria-label="Anrufen"
+                  aria-label={`${contact.name || 'Kontakt'} anrufen`}
+                  title="Anrufen"
                 >
-                  Anruf
+                  <Icon name="phone" className="w-5 h-5" />
                 </a>
                 <a
-                  className="btn btn-ghost px-2 min-h-0 py-1 text-good"
+                  className="btn btn-ghost w-11 px-0 text-good shrink-0"
                   href={whatsappHref(contact.phone)}
                   target="_blank"
                   rel="noreferrer"
-                  aria-label="WhatsApp"
+                  aria-label={`WhatsApp an ${contact.name || 'Kontakt'}`}
+                  title="WhatsApp"
                 >
-                  WA
+                  <Icon name="chat" className="w-5 h-5" />
                 </a>
               </>
             )}
@@ -143,12 +157,23 @@ export default function ContactsPage() {
           isNew={!contacts.some((item) => item.id === editing.id)}
           onClose={close}
           onSave={async (contact) => {
-            await saveContact(contact);
+            try {
+              await saveContact(contact);
+            } catch {
+              toast('Der Kontakt konnte nicht gespeichert werden.');
+              return;
+            }
             close();
           }}
-          onDelete={async (contact) => {
-            await deleteContact(contact.id);
+          onDelete={(contact) => {
+            const stored = contacts.find((item) => item.id === contact.id);
             close();
+            if (!stored) return;
+            undoableDelete(
+              `„${stored.name || 'Kontakt'}“ gelöscht`,
+              () => deleteContact(stored.id),
+              () => saveContact(stored),
+            );
           }}
         />
       )}
@@ -174,7 +199,7 @@ function ContactSheet({
   isNew: boolean;
   onClose(): void;
   onSave(contact: Contact): Promise<void>;
-  onDelete(contact: Contact): Promise<void>;
+  onDelete(contact: Contact): void;
 }) {
   const [draft, setDraft] = useState<Contact>(contact);
 
@@ -233,16 +258,20 @@ function ContactSheet({
           <OptionChips setKey="contactStatus" value={draft.status} onChange={(value) => update({ status: value })} />
         </Field>
         <Field label="Bewertung">
-          <div className="flex gap-1">
+          <div className="flex -ml-2.5">
             {[1, 2, 3, 4, 5].map((stars) => (
               <button
                 key={stars}
                 type="button"
-                className={`text-2xl ${(draft.rating ?? 0) >= stars ? 'text-accent' : 'text-line'}`}
-                onClick={() => update({ rating: stars as 1 | 2 | 3 | 4 | 5 })}
-                aria-label={`${stars} Sterne`}
+                className={`w-11 h-11 grid place-items-center ${(draft.rating ?? 0) >= stars ? 'text-accent' : 'text-line'}`}
+                // the star that is already set takes the rating away again
+                onClick={() =>
+                  update({ rating: draft.rating === stars ? undefined : (stars as 1 | 2 | 3 | 4 | 5) })
+                }
+                aria-label={`${stars} ${stars === 1 ? 'Stern' : 'Sterne'}`}
+                aria-pressed={draft.rating === stars}
               >
-                ★
+                <Icon name="star" filled={(draft.rating ?? 0) >= stars} className="w-7 h-7" />
               </button>
             ))}
           </div>
@@ -273,9 +302,11 @@ function ContactSheet({
           >
             Speichern
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
-            Löschen
-          </button>
+          {!isNew && (
+            <button type="button" className="btn btn-danger" onClick={() => onDelete(draft)}>
+              Löschen
+            </button>
+          )}
         </div>
       </div>
     </Sheet>

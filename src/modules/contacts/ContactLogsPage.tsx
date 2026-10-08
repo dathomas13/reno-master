@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { EmptyState } from '@/components/Fields';
+import { EmptyState, Spinner } from '@/components/Fields';
+import { useToast, useUndoableDelete } from '@/components/Toast';
 import { useCollection } from '@/data/hooks';
 import { COL, type Contact, type ContactLog } from '@/data/types';
 import { saveContactLog, deleteContactLog } from '@/data/repos';
@@ -17,7 +18,9 @@ import { ContactLogEditor, logPreview } from './ContactLogSection';
  * does not delete its log entries) gets a new home rather than staying stuck.
  */
 export default function ContactLogsPage() {
-  const { data: logs } = useCollection<ContactLog>(COL.contactLogs);
+  const { data: logs, loading } = useCollection<ContactLog>(COL.contactLogs);
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
   const { data: contacts } = useCollection<Contact>(COL.contacts);
   const { label } = useOptions();
   const [search, setSearch] = useState('');
@@ -69,12 +72,17 @@ export default function ContactLogsPage() {
         />
       </div>
 
-      {filtered.length === 0 && (
-        <EmptyState
-          title="Keine Gesprächseinträge"
-          hint="Steht bei einem Kontakt unter „Gesprächsprotokoll“."
-        />
-      )}
+      {loading && logs.length === 0 && <Spinner label="Gespräche werden geladen…" />}
+
+      {!(loading && logs.length === 0) && filtered.length === 0 &&
+        (search.trim() ? (
+          <EmptyState title="Nichts gefunden" hint={`Kein Gespräch passt zu „${search.trim()}“.`} />
+        ) : (
+          <EmptyState
+            title="Noch keine Gesprächseinträge"
+            hint="Ein Gespräch wird beim Kontakt unter „Gesprächsprotokoll“ eingetragen."
+          />
+        ))}
 
       <ul>
         {filtered.map((log) => {
@@ -104,12 +112,19 @@ export default function ContactLogsPage() {
           contacts={contacts}
           onClose={close}
           onSave={async (log) => {
-            await saveContactLog(log);
+            try {
+              await saveContactLog(log);
+            } catch {
+              toast('Der Eintrag konnte nicht gespeichert werden.');
+              return;
+            }
             close();
           }}
-          onDelete={async (log) => {
-            await deleteContactLog(log.id);
+          onDelete={(log) => {
+            const stored = logs.find((item) => item.id === log.id);
             close();
+            if (!stored) return;
+            undoableDelete('Gesprächseintrag gelöscht', () => deleteContactLog(stored.id), () => saveContactLog(stored));
           }}
         />
       )}

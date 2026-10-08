@@ -111,7 +111,7 @@ export function AppUpdateSection() {
 
       {busy && (
         <>
-          <div className="mt-2 h-1.5 rounded bg-black/30 overflow-hidden" aria-hidden="true">
+          <div className="mt-2 h-1.5 rounded bg-bg overflow-hidden" aria-hidden="true">
             <div
               className="h-full bg-accent transition-[width] duration-200"
               style={{ width: percent === null ? '100%' : `${percent}%` }}

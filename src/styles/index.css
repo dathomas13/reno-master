@@ -20,6 +20,12 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* every checkbox and radio in the app's colour, not the browser's blue */
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: theme('colors.accent');
+  }
+
   /* inputs must not zoom the page on iOS/Android: 16px minimum */
   input,
   textarea,
@@ -53,7 +59,7 @@
   }
 
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full border border-line px-3 py-1.5
+    @apply inline-flex items-center gap-1 rounded-full border border-line px-3 py-1.5 min-h-[36px]
            text-sm text-muted bg-panel/60;
   }
 

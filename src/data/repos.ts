@@ -166,6 +166,8 @@ export function emptyContact(): Contact {
 
 export async function saveContact(contact: Contact): Promise<string> {
   const value = clean(contact as unknown as Record<string, unknown>);
+  // the document is merged, so a rating taken away has to be removed explicitly
+  if (contact.rating === undefined) value.rating = deleteField();
   return saveDoc<Contact>(COL.contacts, value as unknown as Contact);
 }
 

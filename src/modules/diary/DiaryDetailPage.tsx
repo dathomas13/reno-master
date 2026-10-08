@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Spinner } from '@/components/Fields';
 import { PhotoImage, Lightbox } from '@/components/PhotoView';
 import { useCollection, useDocument } from '@/data/hooks';
 import { COL, type DiaryEntry, type Phase, type Photo, type Trade } from '@/data/types';
 import { where } from '@/firebase/db';
-import { deleteDiaryEntry } from '@/data/repos';
+import { deleteDiaryEntry, saveDiaryEntry } from '@/data/repos';
+import { useUndoableDelete } from '@/components/Toast';
+import { EmptyState } from '@/components/Fields';
 import { formatDateWithWeekday, formatDate } from '@/lib/date';
 import { formatBytes } from '@/lib/image';
 import { useRooms } from '@/data/RoomsContext';
@@ -17,6 +19,8 @@ import { openOriginalInGallery } from '@/platform/photos';
 export default function DiaryDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const undoableDelete = useUndoableDelete();
   const { data: entry, loading } = useDocument<DiaryEntry>(COL.diary, id);
   const { data: photos } = useCollection<Photo>(COL.photos, id ? [where('entryId', '==', id)] : [], [id]);
   const { data: trades } = useCollection<Trade>(COL.trades);
@@ -31,12 +35,12 @@ export default function DiaryDetailPage() {
     return [...photos].sort((a, b) => (index.get(a.id) ?? 999) - (index.get(b.id) ?? 999));
   }, [photos, entry]);
 
-  if (loading) return <Spinner />;
+  if (loading) return <Spinner label="Eintrag wird geladen…" />;
   if (!entry) {
     return (
       <>
-        <TopBar title="Eintrag" back />
-        <p className="p-6 text-muted">Dieser Eintrag existiert nicht mehr.</p>
+        <TopBar title="Eintrag" back="/tagebuch" />
+        <EmptyState title="Diesen Eintrag gibt es nicht mehr." hint="Er wurde gelöscht." />
       </>
     );
   }
@@ -46,11 +50,13 @@ export default function DiaryDetailPage() {
     .filter(Boolean);
   const phaseName = phases.find((phase) => phase.id === entry.phaseId)?.name;
 
-  async function remove() {
+  function remove() {
     if (!entry) return;
-    if (!confirm('Diesen Eintrag löschen?')) return;
-    await deleteDiaryEntry(entry.id);
-    navigate('/tagebuch', { replace: true });
+    const stored = entry;
+    // the photos keep their entryId, so writing the entry again brings everything back
+    undoableDelete('Eintrag gelöscht', () => deleteDiaryEntry(stored.id), () => saveDiaryEntry(stored));
+    if (location.key !== 'default') navigate(-1);
+    else navigate('/tagebuch', { replace: true });
   }
 
   return (
@@ -60,7 +66,7 @@ export default function DiaryDetailPage() {
         subtitle={formatDateWithWeekday(entry.date)}
         back="/tagebuch"
         action={
-          <Link className="btn btn-ghost px-3 min-h-0 py-2" to={`/tagebuch/${entry.id}/bearbeiten`}>
+          <Link className="btn btn-ghost px-3 min-h-11 text-accent" to={`/tagebuch/${entry.id}/bearbeiten`}>
             Bearbeiten
           </Link>
         }
@@ -121,7 +127,7 @@ export default function DiaryDetailPage() {
           )}
         </dl>
 
-        <button type="button" className="btn btn-danger self-start" onClick={() => void remove()}>
+        <button type="button" className="btn btn-danger self-start" onClick={remove}>
           Eintrag löschen
         </button>
       </div>
@@ -141,7 +147,7 @@ export default function DiaryDetailPage() {
               {photo.sourceUri && (
                 <button
                   type="button"
-                  className="btn btn-ghost px-2 py-1 min-h-0"
+                  className="btn btn-ghost px-3"
                   onClick={() => void openOriginalInGallery(photo.sourceUri!)}
                 >
                   Original in Galerie

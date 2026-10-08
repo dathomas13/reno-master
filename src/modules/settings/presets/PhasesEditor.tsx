@@ -8,6 +8,7 @@ import { usePhaseUsage } from '@/data/phaseUsage';
 import { useOptions } from '@/data/useOptions';
 import { formatDate } from '@/lib/date';
 import PhaseSheet from './PhaseSheet';
+import { Icon } from '@/components/Icon';
 
 function byOrder(a: Phase, b: Phase): number {
   return (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name, 'de');
@@ -76,7 +77,7 @@ export default function PhasesEditor() {
               disabled={index === 0}
               onClick={() => move(index, -1)}
             >
-              ↑
+              <Icon name="chevronLeft" className="w-5 h-5 rotate-90" />
             </button>
             <button
               type="button"
@@ -85,7 +86,7 @@ export default function PhasesEditor() {
               disabled={index === active.length - 1}
               onClick={() => move(index, 1)}
             >
-              ↓
+              <Icon name="chevronDown" className="w-5 h-5" />
             </button>
           </>
         )}
@@ -119,7 +120,7 @@ export default function PhasesEditor() {
           }}
         />
         <button type="submit" className="btn btn-primary min-h-11 min-w-11" aria-label="Phase hinzufügen">
-          ＋
+          <Icon name="plus" />
         </button>
       </form>
       {error && (

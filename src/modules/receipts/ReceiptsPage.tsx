@@ -8,6 +8,8 @@ import { COL, createdAtMillis, type Cost, type Photo } from '@/data/types';
 import { orderBy } from '@/firebase/db';
 import { formatEuro } from '@/lib/money';
 import { formatDate, formatMonth, monthKey } from '@/lib/date';
+import { useOptions } from '@/data/useOptions';
+import { Icon } from '@/components/Icon';
 
 interface Row {
   photo: Photo;
@@ -39,6 +41,9 @@ export default function ReceiptsPage() {
   const { data: costs } = useCollection<Cost>(COL.costs, [orderBy('date', 'desc')]);
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<number | null>(null);
+  const { label } = useOptions();
+  // the cost stores the category's key; people read and search for its name
+  const categoryOf = (cost?: Cost) => (cost?.category ? label('costCategories', cost.category) : '');
 
   const rows = useMemo<Row[]>(() => {
     const byId = new Map(costs.map((cost) => [cost.id, cost]));
@@ -52,12 +57,12 @@ export default function ReceiptsPage() {
     const needle = search.trim().toLowerCase();
     if (!needle) return rows;
     return rows.filter((row) =>
-      [row.cost?.vendor, row.cost?.category, row.cost?.description, row.cost?.invoiceNumber, row.photo.originalName]
+      [row.cost?.vendor, row.cost?.category ? label('costCategories', row.cost.category) : '', row.cost?.description, row.cost?.invoiceNumber, row.photo.originalName]
         .join(' ')
         .toLowerCase()
         .includes(needle),
     );
-  }, [rows, search]);
+  }, [rows, search, label]);
 
   const sum = useMemo(() => {
     const seen = new Set<string>();
@@ -88,9 +93,15 @@ export default function ReceiptsPage() {
         title="Belege"
         back="/dateien"
         subtitle={`${visible.length} ${visible.length === 1 ? 'Beleg' : 'Belege'} · ${formatEuro(sum)}`}
+        action={
+          <Link to="/kosten/neu?capture=1" className="btn btn-primary px-3 min-h-11">
+            <Icon name="plus" className="w-5 h-5" />
+            Beleg
+          </Link>
+        }
       />
 
-      <div className="px-3 pb-3">
+      <div className="p-3">
         <input
           className="field"
           type="search"
@@ -129,7 +140,7 @@ export default function ReceiptsPage() {
                     <div className="font-medium truncate">{row.cost?.vendor || row.photo.originalName || 'ohne Händler'}</div>
                     <div className="text-xs text-muted truncate">
                       {rowDate(row) ? formatDate(rowDate(row)) : 'ohne Datum'}
-                      {row.cost?.category ? ` · ${row.cost.category}` : ''}
+                      {row.cost?.category ? ` · ${categoryOf(row.cost)}` : ''}
                       {!row.cost ? ' · ohne Kosten-Eintrag' : ''}
                     </div>
                   </div>
@@ -158,8 +169,13 @@ export default function ReceiptsPage() {
                   {row.cost ? ` · ${formatEuro(row.cost.amountGross)}` : ''}
                 </span>
                 {row.cost && (
-                  <Link to={`/kosten/${row.cost.id}`} className="text-accent" onClick={() => setOpen(null)}>
-                    Kosten-Eintrag öffnen ›
+                  <Link
+                    to={`/kosten/${row.cost.id}`}
+                    className="text-accent inline-flex items-center gap-1 min-h-11"
+                    onClick={() => setOpen(null)}
+                  >
+                    Kosten-Eintrag öffnen
+                    <Icon name="chevronRight" className="w-4 h-4" />
                   </Link>
                 )}
               </div>

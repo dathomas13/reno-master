@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Field, Spinner } from '@/components/Fields';
 import { RoomPicker, TradePicker } from '@/components/Pickers';
@@ -13,11 +13,14 @@ import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
 import { formatDate, today } from '@/lib/date';
 import { diaryTextPlaceholder } from './diaryPlaceholder';
 import { clearDiaryDraft, loadDiaryDraft, saveDiaryDraft } from './diaryDraft';
+import { useToast } from '@/components/Toast';
 
 export default function DiaryEditorPage() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToast();
   const isNew = !id;
   const dateParam = params.get('date');
   const initialDate = dateParam ?? today();
@@ -33,6 +36,7 @@ export default function DiaryEditorPage() {
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
   const [attaching, setAttaching] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [ready, setReady] = useState(isNew);
   const closingWithoutDraft = useRef(false);
 
@@ -90,20 +94,42 @@ export default function DiaryEditorPage() {
 
   function discardAndClose() {
     if (attaching || saving) return;
+    const discarded = { ...entry, photoIds: photos.map((photo) => photo.id) };
+    const hadContent = !!(entry.text.trim() || entry.title.trim() || photos.length);
     closingWithoutDraft.current = true;
     clearDiaryDraft();
     navigate('/tagebuch', { replace: true });
+    // the draft only lived on this device - the way back puts it there again
+    if (hadContent) {
+      toast('Entwurf verworfen', {
+        actionLabel: 'Rückgängig',
+        onAction: () => {
+          saveDiaryDraft(discarded, initialDate);
+          navigate(`/tagebuch/neu${dateParam ? `?date=${dateParam}` : ''}`);
+        },
+      });
+    }
   }
 
   async function save() {
     if (attaching || saving) return;
     setSaving(true);
+    setSaveError(null);
     try {
       const title = entry.title.trim() || `Tagebuch ${formatDate(entry.date).slice(0, 6)}`;
       await saveDiaryEntry({ ...entry, title, photoIds: photos.map((photo) => photo.id) });
       closingWithoutDraft.current = true;
       clearDiaryDraft();
-      navigate(`/tagebuch/${entry.id}`, { replace: true });
+      toast('Eintrag gespeichert');
+      // an edit goes back to the page it came from; a new entry turns into its own page
+      if (!isNew && location.key !== 'default') navigate(-1);
+      else navigate(`/tagebuch/${entry.id}`, { replace: true });
+    } catch (problem) {
+      setSaveError(
+        problem instanceof Error && problem.message
+          ? `Speichern hat nicht geklappt: ${problem.message}`
+          : 'Speichern hat nicht geklappt.',
+      );
     } finally {
       setSaving(false);
     }
@@ -117,21 +143,14 @@ export default function DiaryEditorPage() {
         title={isNew ? 'Neuer Eintrag' : 'Eintrag bearbeiten'}
         back
         action={
-          <div className="flex gap-2">
-            {isNew && (
-              <button type="button" className="btn btn-danger px-3 min-h-0 py-2" onClick={discardAndClose} disabled={saving || attaching}>
-                Verwerfen
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn btn-primary px-3 min-h-0 py-2"
-              onClick={() => void save()}
-              disabled={saving || attaching}
-            >
-              {saving ? 'Speichert…' : 'Speichern'}
-            </button>
-          </div>
+          <button
+            type="button"
+            className="btn btn-primary px-3 min-h-11"
+            onClick={() => void save()}
+            disabled={saving || attaching}
+          >
+            {saving ? 'Speichert…' : 'Speichern'}
+          </button>
         }
       />
 
@@ -231,16 +250,21 @@ export default function DiaryEditorPage() {
           </p>
         </div>
 
-        <label className="flex items-center gap-3 py-2">
+        <label className="flex items-center gap-3 min-h-11">
           <input
             type="checkbox"
-            className="w-5 h-5 accent-[#c9a86a]"
+            className="w-5 h-5 accent-accent"
             checked={entry.defects}
             onChange={(event) => update({ defects: event.target.checked })}
           />
           <span>Mängel festgestellt</span>
         </label>
 
+        {saveError && (
+          <p role="alert" className="text-sm text-bad mt-4">
+            {saveError}
+          </p>
+        )}
         <button
           type="button"
           className="btn btn-primary w-full mt-4"
@@ -249,8 +273,14 @@ export default function DiaryEditorPage() {
         >
           {saving ? 'Speichert…' : 'Speichern'}
         </button>
+        {/* far from "Speichern" and quiet: throwing a draft away is the rare case */}
         {isNew && (
-          <button type="button" className="btn btn-danger w-full mt-2" onClick={discardAndClose} disabled={saving || attaching}>
+          <button
+            type="button"
+            className="btn btn-ghost text-bad w-full mt-6"
+            onClick={discardAndClose}
+            disabled={saving || attaching}
+          >
             Verwerfen und schließen
           </button>
         )}

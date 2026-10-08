@@ -8,6 +8,8 @@ import {
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/date';
 import { Sheet } from '@/components/Sheet';
+import { Icon } from '@/components/Icon';
+import { useConfirm } from '@/components/Confirm';
 import type { Cost, Photo } from '@/data/types';
 import { makeThumbnail } from '@/lib/image';
 import { newId } from '@/lib/ids';
@@ -92,6 +94,7 @@ export function PhotoAttach({
   autoCapture = false,
 }: PhotoAttachProps) {
   const [busy, setBusy] = useState(false);
+  const confirmRemove = useConfirm();
   const [previewId, setPreviewId] = useState<string | null>(null);
   const previewIndex = photos.findIndex((photo) => photo.id === previewId);
   const processing = useRef(false);
@@ -329,6 +332,14 @@ export function PhotoAttach({
   }
 
   async function remove(photo: Photo) {
+    // the file goes for good, from the device and the storage - so ask first
+    const go = await confirmRemove({
+      title: kind === 'receipt' ? 'Beleg entfernen?' : 'Foto entfernen?',
+      message: 'Die Datei wird aus der App gelöscht und lässt sich hier nicht wiederherstellen.',
+      confirmLabel: 'Entfernen',
+      danger: true,
+    });
+    if (!go) return;
     await deletePhoto(photo);
     onRemoved(photo);
   }
@@ -415,14 +426,17 @@ export function PhotoAttach({
                   Original
                 </span>
               )}
+              {/* a 28 px dot to see, a 44 px corner to hit */}
               <button
                 type="button"
-                aria-label="Foto entfernen"
+                aria-label={kind === 'receipt' ? 'Beleg entfernen' : 'Foto entfernen'}
                 disabled={busy || disabled}
-                className="absolute top-1 right-1 w-6 h-6 rounded-full bg-bg/80 text-ink text-sm leading-6"
+                className="absolute top-0 right-0 w-11 h-11 grid place-items-center"
                 onClick={() => void remove(photo)}
               >
-                ×
+                <span className="w-7 h-7 rounded-full bg-bg/80 text-ink grid place-items-center">
+                  <Icon name="close" className="w-4 h-4" strokeWidth={2} />
+                </span>
               </button>
             </div>
           ))}
@@ -435,9 +449,13 @@ export function PhotoAttach({
                     <span role="alert" className="text-xs text-center text-warn line-clamp-3" title={tile.error}>{tile.error}</span>
                     <button type="button" className="btn px-2 text-xs" disabled={busy || disabled}
                       onClick={() => void importPhotos([tile.source])}>Erneut</button>
-                    <button type="button" className="absolute top-1 right-1 w-6 h-6 rounded-full bg-bg/80"
+                    <button type="button" className="absolute top-0 right-0 w-11 h-11 grid place-items-center"
                       aria-label={`Import entfernen: ${tile.source.name}`}
-                      onClick={() => setImports((current) => current.filter((item) => item.source.key !== tile.source.key))}>×</button>
+                      onClick={() => setImports((current) => current.filter((item) => item.source.key !== tile.source.key))}>
+                      <span className="w-7 h-7 rounded-full bg-bg/80 grid place-items-center">
+                        <Icon name="close" className="w-4 h-4" strokeWidth={2} />
+                      </span>
+                    </button>
                   </>
                 ) : (
                   <span role="status" aria-label={`Foto wird vorbereitet: ${tile.source.name}`}
@@ -454,7 +472,7 @@ export function PhotoAttach({
           onIndexChange={(index) => setPreviewId(photos[index]?.id ?? null)} />
       )}
 
-      <Sheet open={dayOpen} onClose={() => setDayOpen(false)} title={`Galerie ${forDate ? formatDate(forDate) : ''}`}>
+      <Sheet open={dayOpen} onClose={() => setDayOpen(false)} title={`Galerie ${forDate ? formatDate(forDate) : ''}`} doneLabel="Abbrechen">
         {dayLoading ? (
           <p role="status" className="p-6 text-muted text-sm">Galerie wird geladen…</p>
         ) : dayPhotos.length === 0 ? (
@@ -480,8 +498,9 @@ export function PhotoAttach({
                 <span className="absolute bottom-0 inset-x-0 text-[10px] bg-bg/70 truncate px-1">
                   {item.takenAt.slice(11, 16)}
                 </span>
-                <span className="absolute top-1 right-1 w-6 h-6 rounded-full bg-bg/90 border border-accent text-accent">
-                  {selectedUris.includes(item.uri) ? '✓' : ''}
+                <span className={`absolute top-1 right-1 w-6 h-6 rounded-full border border-accent grid place-items-center ${
+                  selectedUris.includes(item.uri) ? 'bg-accent text-bg' : 'bg-bg/90'}`}>
+                  {selectedUris.includes(item.uri) && <Icon name="check" className="w-4 h-4" strokeWidth={2.5} />}
                 </span>
               </button>
             ))}

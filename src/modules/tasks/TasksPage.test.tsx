@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   toggleTaskDone: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('@/components/TopBar', () => ({ TopBar: () => null }));
+vi.mock('@/components/TopBar', () => ({ TopBar: ({ action }: { action?: React.ReactNode }) => <>{action}</> }));
 vi.mock('@/components/Pickers', () => ({
   RoomPicker: () => null,
   TradeSelect: () => null,
@@ -84,7 +84,7 @@ describe('tasks page', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Alle' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Fenster pruefen/ }));
+      fireEvent.click(screen.getByRole('button', { name: /^Fenster pruefen/ }));
     });
     expect(
       within(screen.getByRole('dialog', { name: 'Aufgabe' })).getByRole('button', { name: 'Offen' }),
@@ -95,10 +95,10 @@ describe('tasks page', () => {
     expect(screen.queryByRole('dialog', { name: 'Aufgabe' })).not.toBeInTheDocument();
 
     await act(async () => {
-      fireEvent.click(screen.getAllByRole('button', { name: 'Erledigt' })[1]);
+      fireEvent.click(screen.getByRole('button', { name: 'Erledigt: Fenster pruefen' }));
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Fenster pruefen/ }));
+      fireEvent.click(screen.getByRole('button', { name: /^Fenster pruefen/ }));
     });
 
     const dialog = screen.getByRole('dialog', { name: 'Aufgabe' });
@@ -119,7 +119,7 @@ describe('tasks page', () => {
     );
     await act(async () => {});
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /Fenster pruefen/ }));
+      fireEvent.click(screen.getByRole('button', { name: /^Fenster pruefen/ }));
     });
 
     const dialog = screen.getByRole('dialog', { name: 'Aufgabe' });
@@ -142,7 +142,7 @@ describe('tasks page', () => {
     );
     await act(async () => {});
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: '+' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Neu' }));
     });
 
     const dialog = screen.getByRole('dialog', { name: 'Aufgabe' });

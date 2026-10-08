@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Field, Spinner } from '@/components/Fields';
+import { useToast, useUndoableDelete } from '@/components/Toast';
 import { RoomPicker, TradeSelect } from '@/components/Pickers';
 import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
@@ -27,6 +28,8 @@ function CostEditor() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
   const isNew = !id;
 
   const { data: existing, loading } = useDocument<Cost>(COL.costs, id);
@@ -179,6 +182,7 @@ function CostEditor() {
     setSaveError(null);
     try {
       await saveCost({ ...cost, receiptPhotoIds: photos.map((photo) => photo.id) });
+      toast('Rechnung gespeichert');
       navigate('/kosten', { replace: true });
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Rechnung konnte nicht gespeichert werden.');
@@ -187,14 +191,15 @@ function CostEditor() {
     }
   }
 
-  async function remove() {
-    if (!confirm('Diese Position löschen?')) return;
-    await deleteCost(cost.id);
+  function remove() {
+    const stored = existing ?? cost;
+    // the receipts keep their costId, so writing the cost again links them again
+    undoableDelete('Rechnung gelöscht', () => deleteCost(stored.id), () => saveCost(stored));
     navigate('/kosten', { replace: true });
   }
 
   const autoMark = (key: keyof Cost) =>
-    auto[key] ? <span className="text-[10px] text-accent ml-2">automatisch erkannt</span> : null;
+    auto[key] ? <span className="text-xs normal-case tracking-normal text-accent ml-2">automatisch erkannt</span> : null;
 
   if (!isNew && loading && !ready) return <Spinner />;
 
@@ -204,7 +209,7 @@ function CostEditor() {
         title={isNew ? 'Neue Rechnung' : 'Rechnung'}
         back="/kosten"
         action={
-          <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => void save()} disabled={saveBlocked}>
+          <button type="button" className="btn btn-primary px-3 min-h-11" onClick={() => void save()} disabled={saveBlocked}>
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
         }
@@ -386,7 +391,7 @@ function CostEditor() {
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
           {!isNew && (
-            <button type="button" className="btn btn-danger" onClick={() => void remove()}>
+            <button type="button" className="btn btn-danger" onClick={remove}>
               Löschen
             </button>
           )}

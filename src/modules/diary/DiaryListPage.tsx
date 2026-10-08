@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
 import { PhotoImage } from '@/components/PhotoView';
 import { useCollection } from '@/data/hooks';
 import { COL, type DiaryEntry, type Phase, type Photo } from '@/data/types';
@@ -58,7 +59,8 @@ export default function DiaryListPage() {
             : `${entries.length} Einträge`
         }
         action={
-          <Link className="btn btn-primary px-3 min-h-0 py-2" to="/tagebuch/neu">
+          <Link className="btn btn-primary px-3 min-h-11" to="/tagebuch/neu">
+            <Icon name="plus" className="w-5 h-5" />
             Neu
           </Link>
         }
@@ -79,32 +81,53 @@ export default function DiaryListPage() {
           <button
             type="button"
             className="chip chip-on"
+            aria-label={`Filter ${filterLabel} aufheben`}
             onClick={() => setParams(new URLSearchParams(), { replace: true })}
           >
-            Filter: {filterLabel} ×
+            Filter: {filterLabel}
+            <Icon name="close" className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {!hasToday && !search && !roomFilter && !phaseFilter && (
-        <Link to="/tagebuch/neu" className="mx-3 mb-3 card p-4 flex items-center gap-3 active:bg-panel2">
-          <span className="text-2xl">📝</span>
+        <Link
+          to="/tagebuch/neu"
+          className="mx-3 mb-3 card p-4 flex items-center gap-3 border-accent/40 active:bg-panel2"
+        >
+          <span className="w-10 h-10 rounded-full bg-accent/15 text-accent grid place-items-center shrink-0">
+            <Icon name="diary" className="w-5 h-5" />
+          </span>
           <span className="flex-1">
             <span className="block">Für heute gibt es noch keinen Eintrag</span>
             <span className="block text-xs text-muted">{formatDateWithWeekday(today())}</span>
           </span>
-          <span className="text-accent">›</span>
+          <span className="text-accent"><Icon name="chevronRight" className="w-5 h-5" /></span>
         </Link>
       )}
 
       {loading && entries.length === 0 && <Spinner label="Einträge werden geladen…" />}
 
-      {!loading && filtered.length === 0 && (
-        <EmptyState
-          title={search ? 'Nichts gefunden' : 'Noch keine Einträge'}
-          hint={search ? undefined : 'Jeden Abend kurz festhalten, was passiert ist.'}
-        />
-      )}
+      {!loading && filtered.length === 0 &&
+        (entries.length > 0 ? (
+          <EmptyState
+            title="Nichts gefunden"
+            hint={search ? `Kein Eintrag passt zu „${search.trim()}“.` : `Zu ${filterLabel} gibt es keine Einträge.`}
+            action={
+              (roomFilter || phaseFilter) && (
+                <button
+                  type="button"
+                  className="btn mt-2"
+                  onClick={() => setParams(new URLSearchParams(), { replace: true })}
+                >
+                  Filter aufheben
+                </button>
+              )
+            }
+          />
+        ) : (
+          <EmptyState title="Noch keine Einträge" hint="Jeden Abend kurz festhalten, was passiert ist." />
+        ))}
 
       <ul>
         {filtered.map((entry, index) => {

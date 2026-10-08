@@ -14,6 +14,7 @@ import {
 import { KIND_BADGE, KIND_LABEL, KINDS } from '@/search/records';
 import { useSearchIndex } from '@/search/useSearch';
 import { clearRecent, loadRecent, rememberSearch } from '@/search/recent';
+import { Icon } from '@/components/Icon';
 
 /** how many results one kind shows before it hands over to its own filtered list */
 const PER_GROUP = 5;
@@ -169,14 +170,14 @@ export default function SearchPage() {
             {query && (
               <button
                 type="button"
-                aria-label="Leeren"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted px-2"
+                aria-label="Suchtext leeren"
+                className="absolute right-0 top-1/2 -translate-y-1/2 text-muted w-11 h-11 grid place-items-center"
                 onClick={() => {
                   setQuery('');
                   input.current?.focus();
                 }}
               >
-                ×
+                <Icon name="close" className="w-5 h-5" />
               </button>
             )}
           </div>
@@ -213,7 +214,7 @@ export default function SearchPage() {
                 <span>Zuletzt gesucht</span>
                 <button
                   type="button"
-                  className="text-muted normal-case"
+                  className="text-muted normal-case tracking-normal min-h-11 px-3 -mr-3 -my-3"
                   onClick={() => {
                     clearRecent();
                     setRecent([]);
@@ -291,7 +292,10 @@ export default function SearchPage() {
                 className="w-full text-left px-4 py-3 text-sm text-accent border-b border-line/60"
                 onClick={() => setKind(item)}
               >
-                Alle {rows.length} unter {KIND_LABEL[item]} anzeigen ›
+                <span className="inline-flex items-center gap-1">
+                  Alle {rows.length} unter {KIND_LABEL[item]} anzeigen
+                  <Icon name="chevronRight" className="w-4 h-4" />
+                </span>
               </button>
             )}
           </section>

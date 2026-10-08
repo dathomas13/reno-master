@@ -4,6 +4,7 @@ import { useRooms } from '@/data/RoomsContext';
 import { useCollection } from '@/data/hooks';
 import { COL, type Phase, type Trade } from '@/data/types';
 import { LAYER_LABEL, type Layer } from '@/modules/viewer3d/houseScene';
+import { Icon } from './Icon';
 
 interface MultiPickerProps {
   label: string;
@@ -36,7 +37,7 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
         <span className={`flex-1 truncate ${picked.length ? '' : 'text-muted'}`}>
           {picked.length ? picked.join(', ') : emptyLabel}
         </span>
-        <span className="text-muted">›</span>
+        <span className="text-muted"><Icon name="chevronRight" className="w-5 h-5" /></span>
       </button>
       <Sheet open={open} onClose={() => setOpen(false)} title={label}>
         <div className="pb-4">
@@ -50,11 +51,14 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
                     key={option.id}
                     type="button"
                     className="list-row w-full text-left"
+                    aria-pressed={on}
                     onClick={() =>
                       onChange(on ? value.filter((id) => id !== option.id) : [...value, option.id])
                     }
                   >
-                    <span className={`w-5 ${on ? 'text-accent' : 'text-transparent'}`}>✓</span>
+                    <span className={`w-5 shrink-0 ${on ? 'text-accent' : 'text-transparent'}`}>
+                      <Icon name="check" className="w-5 h-5" strokeWidth={2.2} />
+                    </span>
                     <span className="flex-1">{option.name}</span>
                   </button>
                 );

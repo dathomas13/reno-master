@@ -3,7 +3,8 @@ import { useEffect, useRef } from 'react';
 interface UndoBarProps {
   message: string;
   actionLabel?: string;
-  onAction(): void;
+  /** without it the bar only informs ("Gespeichert") */
+  onAction?(): void;
   onClose(): void;
   timeoutMs?: number;
 }
@@ -24,21 +25,23 @@ export function UndoBar({ message, actionLabel = 'Rückgängig', onAction, onClo
   return (
     <div
       role="status"
-      className="fixed inset-x-3 z-40 bottom-[calc(64px+env(safe-area-inset-bottom)+8px)] md:bottom-4 md:left-auto
+      className="fixed inset-x-3 z-[60] bottom-[calc(64px+env(safe-area-inset-bottom)+8px)] md:bottom-4 md:left-auto
                  md:right-4 md:w-[420px] flex items-center gap-2 rounded-xl border border-line bg-panel2 pl-4 pr-1
-                 shadow-lg"
+                 shadow-lg min-h-12"
     >
       <span className="flex-1 min-w-0 py-3 text-sm">{message}</span>
-      <button
-        type="button"
-        className="btn btn-ghost text-accent font-semibold px-3"
-        onClick={() => {
-          onAction();
-          onClose();
-        }}
-      >
-        {actionLabel}
-      </button>
+      {onAction && (
+        <button
+          type="button"
+          className="btn btn-ghost text-accent font-semibold px-3"
+          onClick={() => {
+            onAction();
+            onClose();
+          }}
+        >
+          {actionLabel}
+        </button>
+      )}
     </div>
   );
 }

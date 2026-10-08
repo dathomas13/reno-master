@@ -10,6 +10,7 @@ import { formatEuroShort } from '@/lib/money';
 import { formatDate } from '@/lib/date';
 import { isAuthenticated } from '@/firebase/auth';
 import { LAYER_LABEL, type Layer, type Room } from './houseScene';
+import { Icon } from '@/components/Icon';
 
 /**
  * What happened in this room: the link between the model and everything the app records.
@@ -50,8 +51,8 @@ export function RoomPanel({ room, onClose }: { room: Room; onClose(): void }) {
             {room.areaM2 !== undefined && ` · ${room.areaM2.toFixed(1).replace('.', ',')} m²`}
           </p>
         </div>
-        <button type="button" className="btn btn-ghost px-2 py-1 min-h-0" onClick={onClose}>
-          ×
+        <button type="button" className="btn btn-ghost w-11 px-0 -mr-2 -mt-2" aria-label="Raum schließen" onClick={onClose}>
+          <Icon name="close" className="w-5 h-5" />
         </button>
       </div>
 

@@ -80,14 +80,14 @@ export function SyncBadge() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 text-xs text-muted"
+        className="flex items-center gap-2 text-xs text-muted min-h-11 px-1"
         title="Ausstehende Uploads ansehen"
       >
         <span className={`inline-block w-2 h-2 rounded-full ${color} ${state.uploading ? 'animate-pulse' : ''}`} />
         {text}
       </button>
 
-      <Sheet open={open} onClose={() => setOpen(false)} title="Uploads">
+      <Sheet open={open} onClose={() => setOpen(false)} title="Uploads" doneLabel="Schließen">
         <div className="p-4 flex flex-col gap-3">
           <p className="text-sm text-muted">
             {!online
@@ -114,7 +114,7 @@ export function SyncBadge() {
                   </span>
                   <button
                     type="button"
-                    className="btn btn-ghost px-2 py-1 min-h-0 text-bad shrink-0"
+                    className="btn btn-ghost px-3 text-bad shrink-0"
                     onClick={() => void removeJob(job.id).then(refresh)}
                   >
                     Verwerfen

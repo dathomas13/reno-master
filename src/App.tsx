@@ -11,6 +11,8 @@ import { startDiagUpload } from '@/platform/diagUpload';
 import { useDiaryReminder } from '@/data/useReminder';
 import { useTaskReminders } from '@/data/useTaskReminders';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ToastProvider } from '@/components/Toast';
+import { ConfirmProvider } from '@/components/Confirm';
 import LoginPage from '@/modules/auth/LoginPage';
 import HomePage from '@/modules/home/HomePage';
 import DiaryListPage from '@/modules/diary/DiaryListPage';
@@ -94,8 +96,12 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <HashRouter>
-          <UpdateBanner />
-          <Protected />
+          <ToastProvider>
+            <ConfirmProvider>
+              <UpdateBanner />
+              <Protected />
+            </ConfirmProvider>
+          </ToastProvider>
         </HashRouter>
       </AuthProvider>
     </ErrorBoundary>

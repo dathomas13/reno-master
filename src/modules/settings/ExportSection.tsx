@@ -119,7 +119,7 @@ export function ExportSection() {
 
       {progress && (
         <div className="mt-3">
-          <div className="h-1.5 rounded bg-black/30 overflow-hidden">
+          <div className="h-1.5 rounded bg-bg overflow-hidden">
             <div className="h-full bg-accent transition-[width]" style={{ width: `${percent}%` }} />
           </div>
           <p className="text-xs text-muted mt-1 truncate">

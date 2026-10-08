@@ -109,7 +109,7 @@ export default function SettingsPage() {
           <label className="flex items-center gap-3 mb-3">
             <input
               type="checkbox"
-              className="w-5 h-5 accent-[#c9a86a]"
+              className="w-5 h-5 accent-accent"
               checked={profile?.reminderEnabled ?? false}
               onChange={(event) => void updateProfile({ reminderEnabled: event.target.checked })}
             />
@@ -199,7 +199,7 @@ export default function SettingsPage() {
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
-              className="w-5 h-5 accent-[#c9a86a] mt-0.5"
+              className="w-5 h-5 accent-accent mt-0.5"
               checked={settings.keepOriginals}
               onChange={(event) => update({ keepOriginals: event.target.checked })}
             />

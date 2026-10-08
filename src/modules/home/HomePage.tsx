@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
 import { Sheet } from '@/components/Sheet';
+import { Icon, type IconName } from '@/components/Icon';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
 import { patchPhase } from '@/data/repos';
@@ -13,6 +14,12 @@ import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib
 import { formatEuro } from '@/lib/money';
 import { loadSettings } from '@/lib/settings';
 import { normalizeHomeLayout, visibleHomeBlocks } from '@/lib/homeLayout';
+
+const SHORTCUTS: { to: string; icon: IconName; label: string }[] = [
+  { to: '/kosten/neu?capture=1', icon: 'receipt', label: 'Beleg' },
+  { to: '/3d', icon: 'cube', label: '3D-Modell' },
+  { to: '/aufgaben', icon: 'task', label: 'Aufgaben' },
+];
 
 export default function HomePage() {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(20)]);
@@ -69,10 +76,7 @@ export default function HomePage() {
   const blocks: Record<string, ReactNode> = {
     search: (
       <Link to="/suche" className="field flex items-center gap-2 text-muted" aria-label="Suchen">
-        <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none" stroke="currentColor"
-             strokeWidth="1.7" strokeLinecap="round" aria-hidden="true">
-          <path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21" />
-        </svg>
+        <Icon name="search" className="w-5 h-5 shrink-0" />
         <span>Alles durchsuchen…</span>
       </Link>
     ),
@@ -92,10 +96,12 @@ export default function HomePage() {
           {orderedPhases.length > 0 ? (
             <button
               type="button"
-              className="text-xs text-muted underline decoration-line underline-offset-2 text-left"
+              className="chip mt-1 bg-bg/70 text-ink"
+              title="Aktuelle Phase ändern"
               onClick={() => setPhaseOpen(true)}
             >
-              {phase?.name ?? 'Phase setzen'}
+              <span className="truncate max-w-[16rem]">{phase?.name ?? 'Phase setzen'}</span>
+              <Icon name="chevronDown" className="w-4 h-4 shrink-0" />
             </button>
           ) : (
             <div className="text-xs text-muted">Kernsanierung</div>
@@ -113,12 +119,14 @@ export default function HomePage() {
           </Link>
         ) : (
           <Link to="/tagebuch/neu" className="card p-4 border-accent/40 flex items-center gap-3">
-            <span className="text-2xl">📝</span>
+            <span className="w-10 h-10 rounded-full bg-accent/15 text-accent grid place-items-center shrink-0">
+              <Icon name="diary" className="w-5 h-5" />
+            </span>
             <span className="flex-1">
               <span className="block font-medium">Tagebuch-Eintrag für heute</span>
               <span className="block text-xs text-muted">Kurz festhalten, was passiert ist</span>
             </span>
-            <span className="text-accent">›</span>
+            <span className="text-accent"><Icon name="chevronRight" className="w-5 h-5" /></span>
           </Link>
         )}
       </>
@@ -127,7 +135,10 @@ export default function HomePage() {
       <>
         {pinnedNotes.length > 0 && (
           <section className="card">
-            <div className="section-title">📌 Angepinnte Notizen</div>
+            <div className="section-title flex items-center gap-1.5">
+              <Icon name="pin" className="w-4 h-4" />
+              Angepinnte Notizen
+            </div>
             <ul>
               {pinnedNotes.map((note) => (
                 <li key={note.id}>
@@ -150,18 +161,16 @@ export default function HomePage() {
     ),
     shortcuts: (
       <div className="grid grid-cols-3 gap-2">
-        <Link to="/kosten/neu?capture=1" className="card p-3 text-center">
-          <div className="text-xl">🧾</div>
-          <div className="text-xs mt-1">Beleg</div>
-        </Link>
-        <Link to="/3d" className="card p-3 text-center">
-          <div className="text-xl">🏠</div>
-          <div className="text-xs mt-1">3D-Modell</div>
-        </Link>
-        <Link to="/aufgaben" className="card p-3 text-center">
-          <div className="text-xl">✅</div>
-          <div className="text-xs mt-1">Aufgaben</div>
-        </Link>
+        {SHORTCUTS.map((shortcut) => (
+          <Link
+            key={shortcut.to}
+            to={shortcut.to}
+            className="card p-3 min-h-16 flex flex-col items-center justify-center gap-1.5 active:bg-panel2"
+          >
+            <Icon name={shortcut.icon} className="w-6 h-6 text-accent" />
+            <span className="text-sm">{shortcut.label}</span>
+          </Link>
+        ))}
       </div>
     ),
     costs: (
@@ -235,7 +244,7 @@ export default function HomePage() {
           <Fragment key={id}>{blocks[id]}</Fragment>
         ))}
 
-        <Sheet open={phaseOpen} onClose={() => setPhaseOpen(false)} title="Aktuelle Phase">
+        <Sheet open={phaseOpen} onClose={() => setPhaseOpen(false)} title="Aktuelle Phase" doneLabel="Abbrechen">
           <div className="p-3">
             <ul className="flex flex-col">
               {orderedPhases.map((item) => (

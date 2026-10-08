@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { Icon } from './Icon';
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
@@ -43,14 +44,15 @@ export function ChipSelect<T extends string>({
           key={option}
           type="button"
           className={`chip ${value.includes(option) ? 'chip-on' : ''}`}
+          aria-pressed={value.includes(option)}
           onClick={() => toggle(option)}
         >
           {option}
         </button>
       ))}
       {onAdd && (
-        <button type="button" className="chip" onClick={onAdd}>
-          ＋
+        <button type="button" className="chip" aria-label="Hinzufügen" onClick={onAdd}>
+          <Icon name="plus" className="w-4 h-4" />
         </button>
       )}
     </div>

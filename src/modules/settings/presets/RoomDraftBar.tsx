@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import type { RoomDraft } from '@/data/useRoomDraft';
 import { RoomPublishSheet } from './RoomPublishSheet';
+import { useConfirm } from '@/components/Confirm';
 
 /** The bar at the bottom of the room screens while a draft exists: discard or publish it. */
 export function RoomDraftBar({ draft }: { draft: RoomDraft }) {
   const [open, setOpen] = useState(false);
+  const confirm = useConfirm();
   const count = draft.edits.length;
   if (count === 0 && !open) return null;
   return (
@@ -21,9 +23,14 @@ export function RoomDraftBar({ draft }: { draft: RoomDraft }) {
           <button
             type="button"
             className="btn btn-ghost"
-            onClick={() => {
-              if (window.confirm('Den Entwurf verwerfen? Die Änderungen gehen verloren.')) draft.discard();
-            }}
+            onClick={() =>
+              void confirm({
+                title: 'Entwurf verwerfen?',
+                message: 'Die Änderungen gehen verloren.',
+                confirmLabel: 'Verwerfen',
+                danger: true,
+              }).then((go) => go && draft.discard())
+            }
           >
             Verwerfen
           </button>

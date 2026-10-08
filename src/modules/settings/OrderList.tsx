@@ -1,4 +1,5 @@
 import { Fragment } from 'react';
+import { Icon } from '@/components/Icon';
 
 export interface OrderListItem {
   id: string;
@@ -45,7 +46,7 @@ export function OrderList({
               <label className="flex items-center gap-3 flex-1 min-w-0 py-2">
                 <input
                   type="checkbox"
-                  className="w-5 h-5 accent-[#c9a86a]"
+                  className="w-5 h-5 accent-accent"
                   checked={item.checked ?? false}
                   aria-label={`${item.label} ${check.label}`}
                   onChange={() => check.onToggle(item.id)}
@@ -62,7 +63,7 @@ export function OrderList({
               disabled={!canMove(item.id, -1)}
               onClick={() => onMove(item.id, -1)}
             >
-              ↑
+              <Icon name="chevronLeft" className="w-5 h-5 rotate-90" />
             </button>
             <button
               type="button"
@@ -71,7 +72,7 @@ export function OrderList({
               disabled={!canMove(item.id, 1)}
               onClick={() => onMove(item.id, 1)}
             >
-              ↓
+              <Icon name="chevronDown" className="w-5 h-5" />
             </button>
           </li>
           {divider && divider.after > 0 && index === divider.after - 1 && line}

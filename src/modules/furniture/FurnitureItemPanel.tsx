@@ -10,6 +10,7 @@ import {
   type FurnitureModel,
   type RoomLike,
 } from './placement';
+import { Icon } from '@/components/Icon';
 
 interface Props {
   item: FurnitureItem;
@@ -56,8 +57,8 @@ export function FurnitureItemPanel({ item, models, rooms, editing, onChange, onD
           </div>
           {out && <div className="text-xs text-warn mt-0.5">Steht nicht ganz im Raum – ragt in eine Wand oder nebenan.</div>}
         </div>
-        <button type="button" className="btn btn-ghost px-2 py-1 min-h-0" onClick={onClose}>
-          ×
+        <button type="button" className="btn btn-ghost w-11 px-0 -mr-2 -mt-2" aria-label="Möbel schließen" onClick={onClose}>
+          <Icon name="close" className="w-5 h-5" />
         </button>
       </div>
 

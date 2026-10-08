@@ -571,7 +571,8 @@ export default function ViewerPage() {
               <button
                 key={item}
                 type="button"
-                className={`px-3 py-2 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
+                aria-pressed={variant === item}
+                className={`px-3 min-h-10 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
                 onClick={() => switchVariant(item)}
               >
                 {VARIANT_LABEL[item]}
@@ -681,7 +682,7 @@ export default function ViewerPage() {
                 Fertig
               </button>
             </div>
-            <p className="text-[11px] text-muted mt-1.5">
+            <p className="text-xs text-muted mt-1.5">
               {piece
                 ? 'Das gewählte Möbel mit einem Finger ziehen – an Wänden rastet es ein.'
                 : 'Ein Möbel antippen, um es zu wählen. Neue kommen in den offenen Raum oder die Mitte der Ansicht.'}
@@ -696,6 +697,7 @@ export default function ViewerPage() {
               key={layer}
               type="button"
               className={`chip ${layerState[layer] ? 'chip-on' : ''}`}
+              aria-pressed={!!layerState[layer]}
               onClick={() => toggleLayer(layer)}
             >
               {LAYER_SHORT[layer]}
@@ -704,6 +706,7 @@ export default function ViewerPage() {
           <button
             type="button"
             className={`chip ${structural ? 'border-bad text-bad' : ''}`}
+            aria-pressed={structural}
             onClick={() => {
               const next = !structural;
               setStructural(next);
@@ -714,7 +717,7 @@ export default function ViewerPage() {
             Tragwände
           </button>
           {isPlan && (
-            <button type="button" className={`chip ${showFurniture ? 'chip-on' : ''}`} onClick={toggleFurniture}>
+            <button type="button" className={`chip ${showFurniture ? 'chip-on' : ''}`} aria-pressed={showFurniture} onClick={toggleFurniture}>
               Möbel
             </button>
           )}
@@ -733,6 +736,7 @@ export default function ViewerPage() {
           <button
             type="button"
             className={`chip ${showRooms ? 'chip-on' : ''}`}
+            aria-pressed={showRooms}
             onClick={() => {
               const next = !showRooms;
               setShowRooms(next);

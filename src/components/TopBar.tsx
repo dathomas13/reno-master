@@ -1,6 +1,7 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { SyncBadge } from './SyncBadge';
+import { Icon } from './Icon';
 
 interface TopBarProps {
   title: string;
@@ -11,6 +12,13 @@ interface TopBarProps {
 
 export function TopBar({ title, subtitle, back, action }: TopBarProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  // Back means back: to wherever the user came from (search, 3D, start page). The fixed
+  // target only applies when there is nothing to go back to - a cold start on a deep link.
+  function goBack() {
+    if (location.key !== 'default') navigate(-1);
+    else navigate(typeof back === 'string' ? back : '/', { replace: true });
+  }
   return (
     <header className="sticky top-0 z-20 bg-bg/95 backdrop-blur border-b border-line pt-[env(safe-area-inset-top)]">
       <div className="flex items-center gap-2 px-3 h-14">
@@ -18,12 +26,10 @@ export function TopBar({ title, subtitle, back, action }: TopBarProps) {
           <button
             type="button"
             aria-label="Zurück"
-            className="btn btn-ghost px-2 min-h-0 py-1 -ml-1"
-            onClick={() => (typeof back === 'string' ? navigate(back) : navigate(-1))}
+            className="btn btn-ghost px-2 min-h-11 -ml-1"
+            onClick={goBack}
           >
-            <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M15 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Icon name="chevronLeft" strokeWidth={1.8} />
           </button>
         )}
         <div className="min-w-0 flex-1">

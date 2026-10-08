@@ -8,6 +8,13 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.76.0 – Löschen mit Rückgängig, größere Tippflächen
+
+- Aufgaben, Notizen, Kontakte, Einträge, Rechnungen und Pläne lassen sich nach dem Löschen
+  zurückholen; Tippen neben ein Formular speichert statt zu verwerfen.
+- Größere Knöpfe und Haken, einheitliche Symbole statt Emojis, „Neu“ immer oben rechts.
+- Planansicht nicht mehr von der unteren Leiste verdeckt, Belege zeigen den Kategorienamen.
+
 ## 0.75.4 – Wartung
 
 - Keine sichtbaren Änderungen.

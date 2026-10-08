@@ -94,3 +94,18 @@ export function moveNavEntry(layout: NavLayout, route: string, delta: -1 | 1): N
   [order[index], order[target]] = [order[target], order[index]];
   return withBarCount(order, count);
 }
+
+/**
+ * Screens without their own menu entry light up the entry they belong to: Fotos, Belege
+ * and Pläne sit under Dateien, the plan view as well.
+ */
+const PARENT_ROUTES: Record<string, string> = {
+  '/fotos': '/dateien',
+  '/belege': '/dateien',
+  '/plaene': '/dateien',
+};
+
+export function navRouteFor(pathname: string): string {
+  const first = `/${pathname.split('/')[1] ?? ''}`;
+  return PARENT_ROUTES[first] ?? first;
+}

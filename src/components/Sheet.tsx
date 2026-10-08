@@ -24,15 +24,18 @@ interface SheetProps {
  */
 export function Sheet({ open, onClose, onDone, doneLabel = 'Fertig', title, children }: SheetProps) {
   const titleId = useId();
+  // A sheet whose "Fertig" saves must not throw the input away when a thumb taps beside
+  // it: leaving it any way counts as "Fertig". Only "Abbrechen"-sheets simply close.
+  const leave = onDone ?? onClose;
 
   useEffect(() => {
     if (!open) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
+      if (event.key === 'Escape') leave();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, leave]);
 
   // the page behind must not scroll away under the sheet while it is open
   useEffect(() => {
@@ -50,9 +53,9 @@ export function Sheet({ open, onClose, onDone, doneLabel = 'Fertig', title, chil
     <div className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center">
       <button
         type="button"
-        aria-label="Schließen"
-        className="absolute inset-0 bg-black/60"
-        onClick={onClose}
+        aria-label={onDone ? doneLabel : 'Schließen'}
+        className="absolute inset-0 bg-bg/80"
+        onClick={leave}
       />
       <div
         role="dialog"
@@ -66,7 +69,7 @@ export function Sheet({ open, onClose, onDone, doneLabel = 'Fertig', title, chil
             <h2 id={titleId} className="font-semibold">
               {title}
             </h2>
-            <button type="button" className="btn btn-ghost px-2 min-h-0 py-1" onClick={onDone ?? onClose}>
+            <button type="button" className="btn btn-ghost px-3 min-h-11 -mr-2" onClick={leave}>
               {doneLabel}
             </button>
           </div>

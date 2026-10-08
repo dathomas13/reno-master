@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { Segmented } from '@/components/Segmented';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type Trade } from '@/data/types';
 import { useOptions } from '@/data/useOptions';
@@ -23,6 +25,10 @@ import {
 import { isNative } from '@/platform';
 
 type Tab = 'liste' | 'uebersicht';
+const TABS = [
+  { value: 'liste', label: 'Liste' },
+  { value: 'uebersicht', label: 'Übersicht' },
+] as const;
 /** key, sum, text to show */
 type BarRow = [string, number, string];
 
@@ -78,27 +84,19 @@ export default function CostsPage() {
         title="Kosten"
         subtitle={`${formatEuro(total)} gesamt · ${formatEuro(thisMonth)} diesen Monat`}
         action={
-          <Link className="btn btn-primary px-3 min-h-0 py-2" to="/kosten/neu">
+          <Link className="btn btn-primary px-3 min-h-11" to="/kosten/neu">
+            <Icon name="plus" className="w-5 h-5" />
             Neu
           </Link>
         }
       />
 
-      <div className="flex gap-2 p-3">
-        {(['liste', 'uebersicht'] as Tab[]).map((item) => (
-          <button
-            key={item}
-            type="button"
-            className={`chip ${tab === item ? 'chip-on' : ''}`}
-            onClick={() => setTab(item)}
-          >
-            {item === 'liste' ? 'Liste' : 'Übersicht'}
-          </button>
-        ))}
+      <div className="flex items-center gap-2 p-3">
+        <Segmented label="Ansicht" options={TABS} value={tab} onChange={setTab} className="flex-1 max-w-xs" />
         <div className="flex-1" />
         {canDownloadCsv && (
-          <button type="button" className="chip" onClick={exportCsv}>
-            CSV
+          <button type="button" className="btn btn-ghost px-3 min-h-10 text-sm" onClick={exportCsv}>
+            CSV-Export
           </button>
         )}
       </div>
@@ -108,15 +106,18 @@ export default function CostsPage() {
           <button
             type="button"
             className="chip chip-on"
+            aria-label="Filter aufheben"
             onClick={() => setParams(new URLSearchParams(), { replace: true })}
           >
             Filter:{' '}
-            {roomFilter
-              ? roomLabel(roomFilter)
-              : tradeFilter
-                ? (trades.find((trade) => trade.id === tradeFilter)?.name ?? 'Gewerk')
-                : label('costCategories', categoryFilter ?? '')}{' '}
-            ×
+            {[
+              roomFilter ? roomLabel(roomFilter) : '',
+              tradeFilter ? (trades.find((trade) => trade.id === tradeFilter)?.name ?? 'Gewerk') : '',
+              categoryFilter ? label('costCategories', categoryFilter) : '',
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+            <Icon name="close" className="w-4 h-4" />
           </button>
         </div>
       )}
@@ -133,10 +134,21 @@ export default function CostsPage() {
             />
           </div>
 
-          {loading && costs.length === 0 && <Spinner />}
-          {!loading && filtered.length === 0 && (
-            <EmptyState title="Keine Rechnungen" hint="Beleg fotografieren und die Felder prüfen." />
-          )}
+          {loading && costs.length === 0 && <Spinner label="Kosten werden geladen…" />}
+          {!loading && filtered.length === 0 &&
+            (costs.length > 0 ? (
+              <EmptyState title="Nichts gefunden" hint="Keine Rechnung passt zu Suche oder Filter." />
+            ) : (
+              <EmptyState
+                title="Noch keine Rechnungen"
+                hint="Beleg fotografieren und die Felder prüfen."
+                action={
+                  <Link className="btn btn-primary mt-2" to="/kosten/neu?capture=1">
+                    Beleg erfassen
+                  </Link>
+                }
+              />
+            ))}
 
           <ul>
             {filtered.map((cost) => (
@@ -145,7 +157,12 @@ export default function CostsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{cost.vendor || 'ohne Händler'}</span>
-                      {cost.receiptPhotoIds.length > 0 && <span className="text-muted text-xs">📎</span>}
+                      {cost.receiptPhotoIds.length > 0 && (
+                        <span className="text-muted shrink-0" title="Mit Beleg">
+                          <Icon name="paperclip" className="w-4 h-4" />
+                          <span className="sr-only">mit Beleg</span>
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-muted truncate">
                       {formatDate(cost.date)} · {cost.category ? label('costCategories', cost.category) : 'ohne Kategorie'}
@@ -155,7 +172,7 @@ export default function CostsPage() {
                   <div className="text-right shrink-0">
                     <div>{formatEuro(cost.amountGross)}</div>
                     {!isPaid(cost) && (
-                      <div className="text-[11px] text-warn">{label('paymentStatus', cost.paymentStatus)}</div>
+                      <div className="text-xs text-warn">{label('paymentStatus', cost.paymentStatus)}</div>
                     )}
                   </div>
                 </Link>
@@ -227,7 +244,8 @@ function Bars({
   const max = Math.max(...rows.map(([, value]) => value));
   return (
     <div className="card p-4">
-      <h3 className="text-sm text-muted uppercase tracking-wide mb-3">{title}</h3>
+      <h3 className={`text-sm text-muted uppercase tracking-wide ${onPick ? '' : 'mb-3'}`}>{title}</h3>
+      {onPick && <p className="text-xs text-muted mb-3">Antippen zeigt nur diese Rechnungen.</p>}
       <ul className="flex flex-col gap-2">
         {rows.map(([key, value, text]) => (
           <li key={key}>

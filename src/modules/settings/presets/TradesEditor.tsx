@@ -8,6 +8,7 @@ import { useTradeUsage } from '@/data/tradeUsage';
 import { useOptions } from '@/data/useOptions';
 import { formatEuroShort } from '@/lib/money';
 import TradeSheet from './TradeSheet';
+import { Icon } from '@/components/Icon';
 
 function byName(a: Trade, b: Trade): number {
   return a.name.localeCompare(b.name, 'de');
@@ -56,7 +57,7 @@ export default function TradesEditor() {
           <span className="block truncate">{trade.name}</span>
           <span className="block text-xs text-muted truncate">{parts.join(' · ')}</span>
         </span>
-        <span className="text-muted">›</span>
+        <span className="text-muted"><Icon name="chevronRight" className="w-5 h-5" /></span>
       </button>
     );
   }
@@ -87,7 +88,7 @@ export default function TradesEditor() {
           }}
         />
         <button type="submit" className="btn btn-primary min-h-11 min-w-11" aria-label="Gewerk hinzufügen">
-          ＋
+          <Icon name="plus" />
         </button>
       </form>
       {error && (

@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
-import { Field, EmptyState } from '@/components/Fields';
+import { Field, EmptyState, Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { Segmented } from '@/components/Segmented';
+import { useToast, useUndoableDelete } from '@/components/Toast';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
@@ -14,6 +17,11 @@ import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, type DueBucket } from '
 import { useRooms } from '@/data/RoomsContext';
 
 const BUCKETS: DueBucket[] = ['overdue', 'today', 'week', 'later', 'none'];
+const FILTERS = [
+  { value: 'offen', label: 'Offen' },
+  { value: 'alle', label: 'Alle' },
+  { value: 'erledigt', label: 'Erledigt' },
+] as const;
 const PRIORITY_COLOR: Record<string, string> = {
   hoch: 'text-bad',
   mittel: 'text-warn',
@@ -39,7 +47,9 @@ function formatReminder(value: string | undefined): string {
 
 export default function TasksPage() {
   const [params, setParams] = useSearchParams();
-  const { data: tasks } = useCollection<Task>(COL.tasks);
+  const { data: tasks, loading } = useCollection<Task>(COL.tasks);
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
   const { sets, label } = useOptions();
   const { shortLabel: roomLabel, matches, writeId } = useRooms();
   const [filter, setFilter] = useState<'offen' | 'alle' | 'erledigt'>('offen');
@@ -112,16 +122,25 @@ export default function TasksPage() {
     return map;
   }, [visible]);
 
+  function newTask() {
+    setEditing({ ...emptyTask(), roomIds: roomFilter ? [writeId(roomFilter)] : [] });
+  }
+
   async function addQuick() {
     const title = quick.trim();
     if (!title) {
       // no text typed: open the editor for a new task instead of doing nothing
-      setEditing({ ...emptyTask(), roomIds: roomFilter ? [writeId(roomFilter)] : [] });
+      newTask();
       return;
     }
     setQuick('');
     // a task added while a room filter is active must land in that room, or it vanishes from view
-    await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [writeId(roomFilter)] : [] });
+    try {
+      await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [writeId(roomFilter)] : [] });
+    } catch {
+      setQuick(title);
+      toast('Die Aufgabe konnte nicht gespeichert werden.');
+    }
   }
 
   async function toggleDone(task: Task) {
@@ -136,12 +155,36 @@ export default function TasksPage() {
         delete next[task.id];
         return next;
       });
+      toast('Konnte nicht gespeichert werden.');
     }
   }
 
+  const filtered = !!roomFilter || !!assignee;
+  const emptyTitle = filtered
+    ? 'Nichts gefunden'
+    : filter === 'erledigt'
+      ? 'Noch nichts erledigt'
+      : filter === 'offen'
+        ? 'Nichts offen'
+        : 'Noch keine Aufgaben';
+  const emptyHint = filtered
+    ? 'Mit diesem Filter gibt es keine Aufgaben.'
+    : filter === 'offen'
+      ? 'Alles erledigt oder noch nichts angelegt.'
+      : 'Oben eine Aufgabe eintragen.';
+
   return (
     <>
-      <TopBar title="Aufgaben" subtitle={`${visible.length} angezeigt`} />
+      <TopBar
+        title="Aufgaben"
+        subtitle={`${visible.length} angezeigt`}
+        action={
+          <button type="button" className="btn btn-primary px-3 min-h-11" onClick={newTask}>
+            <Icon name="plus" className="w-5 h-5" />
+            Neu
+          </button>
+        }
+      />
 
       <div className="p-3 flex flex-col gap-3">
         <div className="flex gap-2">
@@ -154,43 +197,67 @@ export default function TasksPage() {
               if (event.key === 'Enter') void addQuick();
             }}
           />
-          <button type="button" className="btn btn-primary px-4" onClick={() => void addQuick()}>
-            +
+          <button
+            type="button"
+            className="btn btn-primary px-3"
+            aria-label={quick.trim() ? 'Aufgabe hinzufügen' : 'Neue Aufgabe mit allen Feldern'}
+            onClick={() => void addQuick()}
+          >
+            <Icon name="plus" />
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {(['offen', 'alle', 'erledigt'] as const).map((item) => (
-            <button
-              key={item}
-              type="button"
-              className={`chip ${filter === item ? 'chip-on' : ''}`}
-              onClick={() => setFilter(item)}
-            >
-              {item === 'offen' ? 'Offen' : item === 'alle' ? 'Alle' : 'Erledigt'}
-            </button>
-          ))}
-          <span className="w-px bg-line mx-1" />
-          {assigneeChips.map((person) => (
-            <button
-              key={person.id}
-              type="button"
-              className={`chip ${assignee === person.id ? 'chip-on' : ''}`}
-              onClick={() => setAssignee(assignee === person.id ? null : person.id)}
-            >
-              {person.label}
-            </button>
-          ))}
-          {roomFilter && (
-            <button type="button" className="chip chip-on" onClick={() => setParams(new URLSearchParams())}>
-              {roomLabel(roomFilter)} ×
-            </button>
-          )}
-        </div>
+        <Segmented label="Anzeigen" options={FILTERS} value={filter} onChange={setFilter} />
+
+        {(assigneeChips.length > 0 || roomFilter) && (
+          <div className="flex flex-wrap gap-2">
+            {assigneeChips.map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                aria-pressed={assignee === person.id}
+                className={`chip ${assignee === person.id ? 'chip-on' : ''}`}
+                onClick={() => setAssignee(assignee === person.id ? null : person.id)}
+              >
+                {person.label}
+              </button>
+            ))}
+            {roomFilter && (
+              <button
+                type="button"
+                className="chip chip-on"
+                aria-label={`Raumfilter ${roomLabel(roomFilter)} aufheben`}
+                onClick={() => setParams(new URLSearchParams())}
+              >
+                {roomLabel(roomFilter)}
+                <Icon name="close" className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {visible.length === 0 && (
-        <EmptyState title="Nichts offen" hint="Alles erledigt oder noch nichts angelegt." />
+      {loading && tasks.length === 0 && <Spinner label="Aufgaben werden geladen…" />}
+
+      {!(loading && tasks.length === 0) && visible.length === 0 && (
+        <EmptyState
+          title={emptyTitle}
+          hint={emptyHint}
+          action={
+            filtered && (
+              <button
+                type="button"
+                className="btn mt-2"
+                onClick={() => {
+                  setAssignee(null);
+                  if (roomFilter) setParams(new URLSearchParams());
+                }}
+              >
+                Filter aufheben
+              </button>
+            )
+          }
+        />
       )}
 
       {BUCKETS.map((bucket) => {
@@ -202,15 +269,21 @@ export default function TasksPage() {
             <ul>
               {rows.map((task) => (
                 <li key={task.id} className="list-row">
+                  {/* the box stays small, the tap area is the full 44 px a thumb needs */}
                   <button
                     type="button"
-                    aria-label={isTaskDone(task) ? 'Wieder öffnen' : 'Erledigt'}
-                    className={`w-6 h-6 rounded-md border shrink-0 ${
-                      isTaskDone(task) ? 'bg-accent border-accent text-bg' : 'border-line'
-                    }`}
+                    aria-label={isTaskDone(task) ? `Wieder öffnen: ${task.title}` : `Erledigt: ${task.title}`}
+                    aria-pressed={isTaskDone(task)}
+                    className="w-11 h-11 -m-2.5 shrink-0 grid place-items-center"
                     onClick={() => void toggleDone(task)}
                   >
-                    {isTaskDone(task) ? '✓' : ''}
+                    <span
+                      className={`w-6 h-6 rounded-md border grid place-items-center ${
+                        isTaskDone(task) ? 'bg-accent border-accent text-bg' : 'border-muted'
+                      }`}
+                    >
+                      {isTaskDone(task) && <Icon name="check" className="w-4 h-4" strokeWidth={2.5} />}
+                    </span>
                   </button>
                   <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(task)}>
                     <span
@@ -244,15 +317,27 @@ export default function TasksPage() {
           dropWanted();
         }}
         onSave={async (task) => {
-          await saveTask(task);
+          try {
+            await saveTask(task);
+          } catch {
+            toast('Die Aufgabe konnte nicht gespeichert werden.');
+            return;
+          }
           setEditing(null);
           dropWanted();
         }}
-        onDelete={async (task) => {
-          await deleteTask(task.id);
+        onDelete={(task) => {
+          const stored = tasks.find((item) => item.id === task.id);
           setEditing(null);
           dropWanted();
+          if (!stored) return;
+          undoableDelete(
+            `„${stored.title}“ gelöscht`,
+            () => deleteTask(stored.id),
+            () => saveTask(stored),
+          );
         }}
+        isNew={(task) => !tasks.some((item) => item.id === task.id)}
       />
     </>
   );
@@ -263,11 +348,13 @@ function TaskSheet({
   onClose,
   onSave,
   onDelete,
+  isNew,
 }: {
   task: Task | null;
   onClose(): void;
   onSave(task: Task): Promise<void>;
-  onDelete(task: Task): Promise<void>;
+  onDelete(task: Task): void;
+  isNew(task: Task): boolean;
 }) {
   const [draft, setDraft] = useState<Task | null>(task);
 
@@ -361,9 +448,11 @@ function TaskSheet({
           <button type="button" className="btn btn-primary flex-1" onClick={saveDraft} disabled={!canSave}>
             Speichern
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
-            Löschen
-          </button>
+          {!isNew(draft) && (
+            <button type="button" className="btn btn-danger" onClick={() => onDelete(draft)}>
+              Löschen
+            </button>
+          )}
         </div>
       </div>
     </Sheet>
