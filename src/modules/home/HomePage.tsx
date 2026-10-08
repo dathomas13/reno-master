@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
@@ -7,9 +7,10 @@ import { Icon, type IconName } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
-import { patchPhase } from '@/data/repos';
+import { patchPhase, toggleTaskDone } from '@/data/repos';
+import { galleryPickerAvailable, listGalleryPhotosForDay } from '@/platform/photos';
 import { useOptions } from '@/data/useOptions';
-import { isHighPriority, isPhaseActive, isTaskDone, PHASE_ACTIVE, PHASE_DONE } from '@/data/options';
+import { isHighPriority, isPhaseActive, isTaskDone, PHASE_ACTIVE, PHASE_DONE, TASK_DONE } from '@/data/options';
 import { orderBy, limit } from '@/firebase/db';
 import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib/date';
 import { formatEuro } from '@/lib/money';
@@ -33,6 +34,20 @@ export default function HomePage() {
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [phaseBusy, setPhaseBusy] = useState(false);
   const toast = useToast();
+  // ticked off here: hidden at once, before the snapshot catches up
+  const [ticked, setTicked] = useState<string[]>([]);
+  // how many photos the phone took today - the app can list its gallery, the browser cannot
+  const [dayPhotos, setDayPhotos] = useState(0);
+  useEffect(() => {
+    if (!galleryPickerAvailable()) return;
+    let active = true;
+    void listGalleryPhotosForDay(today()).then((list) => {
+      if (active) setDayPhotos(list.length);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   // read on mount: the layout only changes on the settings screen, and coming back remounts this page
   const [homeLayout] = useState(() => normalizeHomeLayout(loadSettings().homeLayout));
 
@@ -45,13 +60,31 @@ export default function HomePage() {
     .filter((cost) => monthKey(cost.date) === monthKey(today()))
     .reduce((sum, cost) => sum + (cost.amountGross || 0), 0);
   const openTasks = tasks
-    .filter((task) => !isTaskDone(task))
+    .filter((task) => !isTaskDone(task) && !ticked.includes(task.id))
     .filter((task) => isHighPriority(task.priority) || (task.due && task.due <= today()))
     .slice(0, 5);
 
   const pinnedNotes = notes
     .filter((note) => note.pinned)
     .sort((a, b) => b.at.localeCompare(a.at));
+
+  async function tickTask(task: Task) {
+    setTicked((current) => [...current, task.id]);
+    try {
+      await toggleTaskDone(task);
+    } catch {
+      setTicked((current) => current.filter((id) => id !== task.id));
+      toast('Konnte nicht gespeichert werden.');
+      return;
+    }
+    toast(`„${task.title}“ erledigt`, {
+      actionLabel: 'Rückgängig',
+      onAction: () => {
+        setTicked((current) => current.filter((id) => id !== task.id));
+        void toggleTaskDone({ ...task, status: TASK_DONE }).catch(() => toast('Konnte nicht gespeichert werden.'));
+      },
+    });
+  }
 
   const photoFor = (entry: DiaryEntry) => photos.find((photo) => photo.entryId === entry.id);
 
@@ -114,15 +147,15 @@ export default function HomePage() {
       </div>
     ),
     today: (
-      <>
+      <div className="card overflow-hidden">
         {todayEntry ? (
-          <Link to={`/tagebuch/${todayEntry.id}`} className="card p-4">
+          <Link to={`/tagebuch/${todayEntry.id}`} className="block p-4">
             <div className="text-xs text-muted uppercase tracking-wide mb-1">Heute</div>
             <div className="font-medium">{todayEntry.title}</div>
             <p className="text-sm text-muted line-clamp-2">{todayEntry.text || 'Noch kein Text'}</p>
           </Link>
         ) : (
-          <Link to="/tagebuch/neu" className="card p-4 border-accent/40 flex items-center gap-3">
+          <Link to="/tagebuch/neu" className="p-4 flex items-center gap-3">
             <span className="w-10 h-10 rounded-full bg-accent/15 text-accent grid place-items-center shrink-0">
               <Icon name="diary" className="w-5 h-5" />
             </span>
@@ -133,7 +166,20 @@ export default function HomePage() {
             <span className="text-accent"><Icon name="chevronRight" className="w-5 h-5" /></span>
           </Link>
         )}
-      </>
+        {dayPhotos > 0 && (
+          // straight into the entry with today's gallery open
+          <Link
+            to={todayEntry ? `/tagebuch/${todayEntry.id}/bearbeiten?fotos=heute` : '/tagebuch/neu?fotos=heute'}
+            className="flex items-center gap-3 px-4 min-h-12 border-t border-line/60 text-sm text-accent active:bg-panel2"
+          >
+            <Icon name="photo" className="w-5 h-5 shrink-0" />
+            <span className="flex-1">
+              {dayPhotos === 1 ? '1 Foto von heute' : `${dayPhotos} Fotos von heute`} übernehmen
+            </span>
+            <Icon name="chevronRight" className="w-4 h-4" />
+          </Link>
+        )}
+      </div>
     ),
     pinned: (
       <>
@@ -196,8 +242,17 @@ export default function HomePage() {
             <div className="section-title">Dringend</div>
             <ul>
               {openTasks.map((task) => (
-                <li key={task.id}>
-                  <Link to={`/aufgaben?aufgabe=${task.id}`} className="list-row last:border-0">
+                <li key={task.id} className="flex items-center pl-4 border-b border-line/60 last:border-0">
+                  <button
+                    type="button"
+                    aria-label={`Erledigt: ${task.title}`}
+                    aria-pressed={false}
+                    className="w-11 h-11 -ml-2.5 shrink-0 grid place-items-center"
+                    onClick={() => void tickTask(task)}
+                  >
+                    <span className="w-6 h-6 rounded-md border border-muted" />
+                  </button>
+                  <Link to={`/aufgaben?aufgabe=${task.id}`} className="list-row flex-1 min-w-0 border-b-0 pl-1.5">
                     <span className="flex-1 min-w-0 truncate">{task.title}</span>
                     {task.due && <span className="text-xs text-muted shrink-0">{formatRelativeDay(task.due)}</span>}
                   </Link>

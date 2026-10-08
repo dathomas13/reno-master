@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.80.0 – Heute auf der Startseite, Tagebuch schneller
+
+- Startseite: dringende Aufgaben direkt abhaken (mit Rückgängig); in der App steht unter dem Tagebuch „Fotos von heute übernehmen“.
+- Tagebuch: zuerst Text und Fotos, der Rest unter „Details“; „Wie beim letzten Mal“ übernimmt Anwesende, Räume, Gewerke und Wetter.
+
 ## 0.79.0 – Alles mit einem Tipp erfassen
 
 - Neuer runder Plus-Knopf in der Mitte der unteren Leiste: Tagebuch, Fotos von heute, Beleg, Aufgabe, Notiz oder Gespräch, von überall aus. Ist gerade ein Raum offen, gehört der neue Eintrag gleich dazu.

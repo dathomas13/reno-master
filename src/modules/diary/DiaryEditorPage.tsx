@@ -10,7 +10,8 @@ import { isPhaseActive } from '@/data/options';
 import { COL, type DiaryEntry, type Phase, type Photo } from '@/data/types';
 import { where } from '@/firebase/db';
 import { emptyDiaryEntry, saveDiaryEntry } from '@/data/repos';
-import { formatDate, today } from '@/lib/date';
+import { formatDate, formatDateWithWeekday, today } from '@/lib/date';
+import { MoreFields } from '@/components/MoreFields';
 import { diaryTextPlaceholder } from './diaryPlaceholder';
 import { useRooms } from '@/data/RoomsContext';
 import { clearDiaryDraft, loadDiaryDraft, saveDiaryDraft } from './diaryDraft';
@@ -89,6 +90,38 @@ export default function DiaryEditorPage() {
     [allEntries, entry.date, entry.id],
   );
 
+  // the latest entry before this day: its people, rooms, trades and weather are the best guess
+  const previous = useMemo(
+    () =>
+      allEntries
+        .filter((other) => other.id !== entry.id && other.date < entry.date)
+        .sort((a, b) => b.date.localeCompare(a.date))[0],
+    [allEntries, entry.id, entry.date],
+  );
+  const [tookOver, setTookOver] = useState(false);
+
+  /** fills only what is still empty - nothing typed in is overwritten */
+  function takeOverPrevious() {
+    if (!previous) return;
+    setEntry((current) => ({
+      ...current,
+      present: current.present.length ? current.present : [...previous.present],
+      roomIds: current.roomIds.length ? current.roomIds : [...previous.roomIds],
+      tradeIds: current.tradeIds.length ? current.tradeIds : [...previous.tradeIds],
+      weather: current.weather ?? previous.weather,
+    }));
+    setTookOver(true);
+  }
+
+  const detailsFilled = [
+    !!entry.title.trim(),
+    !!entry.weather,
+    entry.present.length > 0,
+    entry.roomIds.length > 0,
+    entry.tradeIds.length > 0,
+    entry.defects,
+  ].filter(Boolean).length;
+
   function update(patch: Partial<DiaryEntry>) {
     setEntry((current) => ({ ...current, ...patch }));
   }
@@ -161,27 +194,19 @@ export default function DiaryEditorPage() {
       />
 
       <div className="p-4 max-w-3xl">
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Field label="Datum">
-              <input
-                className="field"
-                type="date"
-                value={entry.date}
-                onChange={(event) => update({ date: event.target.value })}
-              />
-            </Field>
-          </div>
-          <div className="flex-[2]">
-            <Field label="Titel">
-              <input
-                className="field"
-                value={entry.title}
-                placeholder={`Tagebuch ${formatDate(entry.date).slice(0, 6)}`}
-                onChange={(event) => update({ title: event.target.value })}
-              />
-            </Field>
-          </div>
+        {/* the day in one line - the text below is what the screen is for */}
+        <div className="flex items-center gap-3 mb-3">
+          <input
+            className="field w-auto py-2"
+            type="date"
+            aria-label="Datum"
+            value={entry.date}
+            onChange={(event) => update({ date: event.target.value })}
+          />
+          <span className="text-sm text-muted truncate">
+            {entry.date === today() ? 'Heute, ' : ''}
+            {formatDateWithWeekday(entry.date)}
+          </span>
         </div>
 
         {sameDay && (
@@ -200,6 +225,7 @@ export default function DiaryEditorPage() {
         <Field label="Was war heute?">
           <textarea
             className="field min-h-[9rem]"
+            autoFocus={isNew && !pickDay}
             value={entry.text}
             placeholder={diaryTextPlaceholder(entry.date)}
             onChange={(event) => update({ text: event.target.value })}
@@ -220,52 +246,74 @@ export default function DiaryEditorPage() {
           />
         </Field>
 
-        <Field label="Wetter">
-          <OptionSelect
-            setKey="weather"
-            ariaLabel="Wetter"
-            emptyLabel="kein Wetter"
-            value={entry.weather}
-            onChange={(value) => update({ weather: value })}
-          />
-        </Field>
+        {isNew && previous && (
+          <div className="mb-4 flex items-center gap-3">
+            <button type="button" className="btn" onClick={takeOverPrevious}>
+              Wie beim letzten Mal
+            </button>
+            <span className="text-xs text-muted">
+              {tookOver ? `Übernommen vom ${formatDate(previous.date)}` : 'Anwesende, Räume, Gewerke, Wetter'}
+            </span>
+          </div>
+        )}
 
-        <Field label="Anwesend">
-          <OptionMultiPicker
-            setKey="people"
-            label="Anwesend"
-            emptyLabel="niemand ausgewählt"
-            addLabel="Person hinzufügen"
-            value={entry.present}
-            onChange={(value) => update({ present: value })}
-          />
-        </Field>
+        <MoreFields title="Details" filled={detailsFilled}>
+          <Field label="Titel">
+            <input
+              className="field"
+              value={entry.title}
+              placeholder={`Tagebuch ${formatDate(entry.date).slice(0, 6)}`}
+              onChange={(event) => update({ title: event.target.value })}
+            />
+          </Field>
 
-        <Field label="Räume">
-          <RoomPicker value={entry.roomIds} onChange={(value) => update({ roomIds: value })} />
-        </Field>
+          <Field label="Wetter">
+            <OptionSelect
+              setKey="weather"
+              ariaLabel="Wetter"
+              emptyLabel="kein Wetter"
+              value={entry.weather}
+              onChange={(value) => update({ weather: value })}
+            />
+          </Field>
 
-        <Field label="Gewerke">
-          <TradePicker value={entry.tradeIds} onChange={(value) => update({ tradeIds: value })} />
-        </Field>
+          <Field label="Anwesend">
+            <OptionMultiPicker
+              setKey="people"
+              label="Anwesend"
+              emptyLabel="niemand ausgewählt"
+              addLabel="Person hinzufügen"
+              value={entry.present}
+              onChange={(value) => update({ present: value })}
+            />
+          </Field>
 
-        <div className="mb-4">
-          <span className="label">Phase</span>
-          <p className="mt-1 flex items-center gap-2 text-xs text-muted">
-            <span className="w-2 h-2 rounded-full bg-accent" aria-hidden="true" />
-            <span className="truncate">{entryPhase?.name ?? activePhase?.name ?? 'keine aktive Phase'}</span>
-          </p>
-        </div>
+          <Field label="Räume">
+            <RoomPicker value={entry.roomIds} onChange={(value) => update({ roomIds: value })} />
+          </Field>
 
-        <label className="flex items-center gap-3 min-h-11">
-          <input
-            type="checkbox"
-            className="w-5 h-5 accent-accent"
-            checked={entry.defects}
-            onChange={(event) => update({ defects: event.target.checked })}
-          />
-          <span>Mängel festgestellt</span>
-        </label>
+          <Field label="Gewerke">
+            <TradePicker value={entry.tradeIds} onChange={(value) => update({ tradeIds: value })} />
+          </Field>
+
+          <div className="mb-4">
+            <span className="label">Phase</span>
+            <p className="mt-1 flex items-center gap-2 text-xs text-muted">
+              <span className="w-2 h-2 rounded-full bg-accent" aria-hidden="true" />
+              <span className="truncate">{entryPhase?.name ?? activePhase?.name ?? 'keine aktive Phase'}</span>
+            </p>
+          </div>
+
+          <label className="flex items-center gap-3 min-h-11">
+            <input
+              type="checkbox"
+              className="w-5 h-5 accent-accent"
+              checked={entry.defects}
+              onChange={(event) => update({ defects: event.target.checked })}
+            />
+            <span>Mängel festgestellt</span>
+          </label>
+        </MoreFields>
 
         {saveError && (
           <p role="alert" className="text-sm text-bad mt-4">
