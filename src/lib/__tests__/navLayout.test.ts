@@ -34,10 +34,11 @@ describe('normalizeNavLayout', () => {
 describe('areas instead of screens', () => {
   it('turns a stored Notizen or Gespräche entry into its area and drops Dateien', () => {
     const layout = normalizeNavLayout({
-      order: ['/', '/notizen', '/dateien', '/gespraeche', '/tagebuch'],
+      order: ['/', '/tagebuch', '/notizen', '/dateien', '/gespraeche'],
       bar: ['/', '/tagebuch', '/3d', '/notizen'],
     });
-    expect(layout.bar).toEqual(['/', '/tagebuch', '/3d', '/aufgaben']);
+    // Aufgaben takes the place Notizen had, in the stored order
+    expect(layout.bar).toEqual(['/', '/tagebuch', '/aufgaben', '/3d']);
     expect(layout.order).not.toContain('/notizen');
     expect(layout.order).not.toContain('/dateien');
     expect(layout.order.indexOf('/kontakte')).toBeLessThan(layout.order.indexOf('/einstellungen'));
