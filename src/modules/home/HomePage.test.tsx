@@ -92,4 +92,15 @@ describe('home phase', () => {
     const search = screen.getByRole('link', { name: 'Suchen' });
     expect(urgent.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it('shows the quick access tiles chosen in the settings', () => {
+    renderHome();
+    expect(screen.getByRole('link', { name: 'Notizen' })).toHaveAttribute('href', '/notizen');
+    cleanup();
+
+    localStorage.setItem('reno.settings', JSON.stringify({ shortcuts: { order: ['haus', 'notizen'], shown: 1 } }));
+    renderHome();
+    expect(screen.getByRole('link', { name: '3D-Modell' })).toHaveAttribute('href', '/3d');
+    expect(screen.queryByRole('link', { name: 'Notizen' })).not.toBeInTheDocument();
+  });
 });

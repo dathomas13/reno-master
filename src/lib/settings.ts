@@ -1,5 +1,6 @@
 import { DEFAULT_NAV_LAYOUT, type NavLayout } from './navLayout';
 import { DEFAULT_HOME_LAYOUT, type HomeLayout } from './homeLayout';
+import { DEFAULT_SHORTCUTS, type ShortcutLayout } from './shortcuts';
 
 /**
  * Device local settings. These never leave the phone: the API keys in particular are
@@ -41,6 +42,8 @@ export interface LocalSettings {
   navLayout: NavLayout;
   /** start page blocks and their order; read through normalizeHomeLayout */
   homeLayout: HomeLayout;
+  /** quick access tiles on the start page; read through normalizeShortcuts */
+  shortcuts: ShortcutLayout;
 }
 
 const KEY = 'reno.settings';
@@ -61,6 +64,7 @@ export const DEFAULT_SETTINGS: LocalSettings = {
   cameraResolution: 'auto',
   navLayout: DEFAULT_NAV_LAYOUT,
   homeLayout: DEFAULT_HOME_LAYOUT,
+  shortcuts: DEFAULT_SHORTCUTS,
 };
 
 export const CLAUDE_MODELS = [

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
 import { Sheet } from '@/components/Sheet';
-import { Icon, type IconName } from '@/components/Icon';
+import { Icon } from '@/components/Icon';
 import { useToast } from '@/components/Toast';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
@@ -16,13 +16,9 @@ import { formatDateWithWeekday, formatRelativeDay, monthKey, today } from '@/lib
 import { formatEuro } from '@/lib/money';
 import { loadSettings } from '@/lib/settings';
 import { normalizeHomeLayout, visibleHomeBlocks } from '@/lib/homeLayout';
+import { normalizeShortcuts, visibleShortcuts } from '@/lib/shortcuts';
 import { entriesOfDay } from '@/modules/diary/entriesOfDay';
 
-const SHORTCUTS: { to: string; icon: IconName; label: string }[] = [
-  { to: '/kosten/neu?capture=1', icon: 'receipt', label: 'Beleg' },
-  { to: '/3d', icon: 'cube', label: '3D-Modell' },
-  { to: '/aufgaben', icon: 'task', label: 'Aufgaben' },
-];
 
 export default function HomePage() {
   const { data: entries } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc'), limit(20)]);
@@ -51,6 +47,7 @@ export default function HomePage() {
   }, []);
   // read on mount: the layout only changes on the settings screen, and coming back remounts this page
   const [homeLayout] = useState(() => normalizeHomeLayout(loadSettings().homeLayout));
+  const [shortcuts] = useState(() => visibleShortcuts(normalizeShortcuts(loadSettings().shortcuts)));
 
   const todays = entriesOfDay(entries, today());
   const todayEntry = todays[0];
@@ -223,20 +220,22 @@ export default function HomePage() {
         )}
       </>
     ),
-    shortcuts: (
-      <div className="grid grid-cols-3 gap-2">
-        {SHORTCUTS.map((shortcut) => (
-          <Link
-            key={shortcut.to}
-            to={shortcut.to}
-            className="card p-3 min-h-16 flex flex-col items-center justify-center gap-1.5 active:bg-panel2"
-          >
-            <Icon name={shortcut.icon} className="w-6 h-6 text-accent" />
-            <span className="text-sm">{shortcut.label}</span>
-          </Link>
-        ))}
-      </div>
-    ),
+    shortcuts:
+      shortcuts.length > 0 ? (
+        // chosen in the settings (Startseite → Schnellzugriff)
+        <div className="grid grid-cols-3 gap-2">
+          {shortcuts.map((shortcut) => (
+            <Link
+              key={shortcut.id}
+              to={shortcut.to}
+              className="card p-3 min-h-16 flex flex-col items-center justify-center gap-1.5 active:bg-panel2"
+            >
+              <Icon name={shortcut.icon} className="w-6 h-6 text-accent" />
+              <span className="text-sm">{shortcut.label}</span>
+            </Link>
+          ))}
+        </div>
+      ) : null,
     costs: (
       <Link to="/kosten" className="card p-4 flex items-center gap-4">
         <div className="flex-1">
