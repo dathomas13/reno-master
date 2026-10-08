@@ -103,7 +103,7 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
 
   let startX = 0;
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black flex flex-col" data-no-swipe>
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 min-h-14 shrink-0 pt-[env(safe-area-inset-top)] text-muted">
         <div className="flex items-center gap-1">
           {photos.length > 1 && <button type="button" className="btn btn-ghost w-11 h-11 p-0" aria-label="Vorherige Datei" title="Vorherige Datei"

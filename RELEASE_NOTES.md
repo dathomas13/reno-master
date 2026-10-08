@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.84.0 – Wischen zwischen den Reitern
+
+- Seitlich über die Liste wischen wechselt den Reiter, z. B. zwischen Aufgaben und Notizen oder Einträgen und Fotos.
+
 ## 0.83.3 – Ruhigere Köpfe, kleiner Raum-Steckbrief
 
 - Bereichs-Reiter sind jetzt unterstrichen statt als Kasten; Aufgaben haben nur noch eine Filterzeile („Erledigte“, Personen).
