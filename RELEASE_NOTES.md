@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.78.1 – 3D: Ansicht nicht mehr abgeschnitten
+
+- „Ansicht“ sitzt jetzt unten an der Geschossleiste und ist immer ganz zu sehen.
+
 ## 0.78.0 – Kürzere Formulare, ruhigere 3D-Ansicht
 
 - 3D: Die Geschosse stehen rechts übereinander wie im Haus, unten bleibt nur eine Zeile für Räume, Tragwände und Ansicht.

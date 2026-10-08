@@ -711,8 +711,8 @@ export default function ViewerPage() {
           </Hint>
         )}
 
-        {/* overlays: one quiet row - the floors have their own rail at the right edge */}
-        <div className="flex items-center gap-1.5 pointer-events-auto">
+        {/* overlays: one quiet row - floors and views have their own rail at the right edge */}
+        <div className="flex flex-wrap items-center gap-1.5 pointer-events-auto">
           <button
             type="button"
             className={`chip ${showRooms ? 'chip-on' : ''}`}
@@ -744,7 +744,6 @@ export default function ViewerPage() {
               Möbel
             </button>
           )}
-          <span className="flex-1" />
           {isPlan && !editing && (
             <button
               type="button"
@@ -757,15 +756,6 @@ export default function ViewerPage() {
               Einrichten
             </button>
           )}
-          <button
-            type="button"
-            className="chip bg-panel text-ink max-w-[45%]"
-            aria-label={`Ansicht: ${viewLabel} – ändern`}
-            onClick={() => setViewOpen(true)}
-          >
-            <span className="truncate">{viewLabel}</span>
-            <Icon name="chevronDown" className="w-4 h-4 shrink-0" />
-          </button>
         </div>
       </div>
 
@@ -793,6 +783,17 @@ export default function ViewerPage() {
             {RAIL_LABEL[layer]}
           </button>
         ))}
+        {/* a view sets floors and camera together, so it belongs with the floors */}
+        <button
+          type="button"
+          className="w-12 mt-2 py-1.5 rounded-lg border border-line/60 text-muted flex flex-col items-center gap-0.5"
+          aria-label={`Ansicht: ${viewLabel} – ändern`}
+          title={`Ansicht: ${viewLabel}`}
+          onClick={() => setViewOpen(true)}
+        >
+          <Icon name="eye" className="w-5 h-5" />
+          <span className="text-[10px] leading-none">Ansicht</span>
+        </button>
       </div>
 
       <Sheet open={viewOpen} onClose={() => setViewOpen(false)} title="Ansicht" doneLabel="Abbrechen">
