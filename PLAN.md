@@ -455,6 +455,16 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Outbox nach R2 und kommt über denselben Cache zurück, gesehen ist sie also auch offline da. Farben und Texturen
   aus glTF werden auf die Farbbehandlung des Viewers (ohne Farbmanagement, lineare Ausgabe) umgerechnet, sonst
   wären sie viel zu dunkel. In den 2D-Plänen und im Modell-Export stehen die Möbel (noch) nicht.
+- **Maßband** (seit 0.86.0): Chip „Messen“. Zwei Punkte auf beliebigen sichtbaren Flächen (Bauteile und
+  Möbel, nicht das Raum-Overlay, das über dem Boden schwebt) ergeben eine Strecke im Raum; die Länge steht als
+  Etikett an der Linie, das Fenster unten zeigt dazu Millimeter, waagrecht, Höhe sowie Ost–West und Nord–Süd
+  (zwei Punkte auf parallelen Wänden geben so den lichten Abstand, ohne genau zielen zu müssen). Ein Punkt rastet
+  auf die nächste Ecke der getroffenen Dreiecksfläche ein, wenn sie auf dem Bildschirm nah genug liegt (Maus
+  10 px, Finger 22 px; Alt hält ihn frei). Gesetzte Punkte lassen sich ziehen, am Telefon mit einer Lupe
+  (dreifach, über dem Finger), weil der Finger den Punkt verdeckt. Ein dritter Tipp beginnt neu, Esc nimmt den
+  letzten Punkt zurück, Zurück beendet das Messen. Punkte und Linie bleiben durch Wände sichtbar, der verdeckte
+  Teil der Linie blass. Rechnen in `viewer3d/measure.ts` (getestet), Zeichnen in `viewer3d/measureLayer.ts`;
+  Etikett und Lupenrahmen setzt die Renderschleife direkt, nicht React. Gespeichert wird nichts.
 - **Alles Untere ist ein Stapel**: Bauteil-Info, Raumfenster und die Schalter-Chips stehen in *einem* Container über der Bottom-Navigation (`bottom-[calc(64px+env(safe-area-inset-bottom))]`), nicht als drei Einblendungen mit eigenen Abständen. Sonst liegt das Raumfenster am Telefon hinter der Navigation und unter den Chips – die Kachelleiste war dort zur Hälfte unsichtbar.
 
 ### 8.4 Pläne

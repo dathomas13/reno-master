@@ -185,6 +185,8 @@ Steht:
   ein Kontextmenü am Eintrag, Android-Zurück schließt erst Menüs und Sheets. Die Regeln dazu stehen in
   `PLAN.md` 8.0 („Bedienmuster“) – **neue Bildschirme folgen ihnen**, statt eigene Wege für Neu,
   Löschen, Zurück oder Umschalten zu erfinden. Offen und bewusst nicht begonnen: ein heller Modus.
+- **Maßband im 3D** (0.86.0): Chip „Messen“, freie Strecken zwischen zwei Punkten mit Einrasten an Ecken
+  und Lupe beim Ziehen am Telefon. Regeln in `PLAN.md` 8.3.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.
