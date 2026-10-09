@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { applyTaskReminderForTask, applyTaskReminderPlan, cancelTaskReminderForTask, watchTaskReminderActions } from '../taskReminder';
+import {
+  applyTaskReminderForTask,
+  applyTaskReminderPlan,
+  cancelTaskReminderForTask,
+  handleTaskNotificationAction,
+  watchTaskReminderActions,
+} from '../taskReminder';
 
 const mocks = vi.hoisted(() => ({ native: true }));
 
@@ -165,21 +171,38 @@ describe('task reminder notifications', () => {
 
   it('marks a task done from the notification action', async () => {
     const onDone = vi.fn().mockResolvedValue(undefined);
-    let handler: ((event: { actionId?: string; notification: { extra?: unknown } }) => void) | undefined;
-    const api = {
-      getPending: vi.fn(),
-      cancel: vi.fn(),
-      schedule: vi.fn(),
-      addListener: vi.fn().mockImplementation((_event: string, next: typeof handler) => {
-        handler = next;
-        return Promise.resolve({ remove: vi.fn() });
-      }),
-    };
-    setLocalNotifications(api);
+    const stop = watchTaskReminderActions(onDone);
 
-    await watchTaskReminderActions(onDone);
-    handler?.({ actionId: 'task-done', notification: { extra: { taskId: 'task-1' } } });
+    const handled = handleTaskNotificationAction({ actionId: 'task-done', notification: { extra: { taskId: 'task-1' } } });
 
+    expect(handled).toBe(true);
     expect(onDone).toHaveBeenCalledWith('task-1');
+    stop();
+  });
+
+  it('keeps an "Erledigt" from a cold start until someone is signed in to write it', () => {
+    handleTaskNotificationAction({ actionId: 'task-done', notification: { extra: { taskId: 'task-2' } } });
+    const onDone = vi.fn().mockResolvedValue(undefined);
+
+    const stop = watchTaskReminderActions(onDone);
+
+    expect(onDone).toHaveBeenCalledWith('task-2');
+    stop();
+  });
+
+  it('sends the app back once the task is ticked off, when the tap brought it up', async () => {
+    const minimizeApp = vi.fn().mockResolvedValue(undefined);
+    (globalThis as { Capacitor?: { Plugins?: Record<string, unknown> } }).Capacitor = { Plugins: { App: { minimizeApp } } };
+    const stop = watchTaskReminderActions(vi.fn().mockResolvedValue(undefined));
+
+    handleTaskNotificationAction({ actionId: 'task-done', notification: { extra: { taskId: 'task-3' } } });
+    await vi.waitFor(() => expect(minimizeApp).toHaveBeenCalled());
+    stop();
+  });
+
+  it('leaves the diary reminder alone and opens a task on a plain tap', () => {
+    expect(handleTaskNotificationAction({ notification: { extra: { date: '2026-10-09' } } })).toBe(false);
+    expect(handleTaskNotificationAction({ notification: { extra: { taskId: 'task-1', route: '/aufgaben?aufgabe=task-1' } } })).toBe(true);
+    expect(window.location.hash).toBe('#/aufgaben?aufgabe=task-1');
   });
 });

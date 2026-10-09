@@ -13,6 +13,7 @@ Commit-Nachricht, und die liest sich im Banner auch so.
 - Langes Drücken öffnet jetzt auch auf der Startseite das Menü am Eintrag.
 - „Wie beim letzten Mal“ nimmt vom Vortag den Eintrag mit den meisten Angaben, nicht den Mängeleintrag.
 - Tagebuch: neuer Filter „Mängel“, und die Phase im Eintrag lässt sich ändern.
+- „Erledigt“ in einer Aufgaben-Erinnerung hakt die Aufgabe jetzt wirklich ab; die App geht danach gleich wieder zu.
 
 ## 0.85.4 – Kleine Korrekturen
 

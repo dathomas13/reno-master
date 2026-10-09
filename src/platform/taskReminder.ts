@@ -1,12 +1,13 @@
 import { isNative } from '@/platform/index';
 import type { Task } from '@/data/types';
 import { isTaskReminderId, planTaskReminders, taskReminderId, type PlannedTaskReminder } from './taskReminderPlan';
+import { debugLog } from './debugLog';
 
 const TASK_ACTION_TYPE = 'task-reminder';
 const TASK_DONE_ACTION = 'task-done';
 const DEVICE_TIMEOUT_MS = 8000;
 
-interface TapEvent {
+export interface TapEvent {
   actionId?: string;
   notification: { extra?: unknown };
 }
@@ -26,10 +27,6 @@ interface LocalNotificationsApi {
   schedule(options: { notifications: ScheduledTaskNotification[] }): Promise<unknown>;
   cancel(options: { notifications: { id: number }[] }): Promise<unknown>;
   getPending(): Promise<{ notifications: { id: number }[] }>;
-  addListener(
-    event: 'localNotificationActionPerformed',
-    handler: (event: TapEvent) => void,
-  ): Promise<{ remove: () => Promise<void> }>;
   registerActionTypes?(options: {
     types: { id: string; actions: { id: string; title: string; foreground?: boolean }[] }[];
   }): Promise<unknown>;
@@ -161,28 +158,63 @@ export async function cancelTaskReminderForTask(taskId: string): Promise<void> {
   }
 }
 
-export async function watchTaskReminderActions(
-  onDone: (taskId: string) => Promise<void>,
-): Promise<() => void> {
-  try {
-    const local = plugin();
-    if (!local) return () => undefined;
-    const handle = await withDeadline(
-      local.addListener('localNotificationActionPerformed', (event) => {
-        const extra = event.notification.extra as { taskId?: string; route?: string } | undefined;
-        if (!extra?.taskId) return;
-        if (event.actionId === TASK_DONE_ACTION) {
-          void onDone(extra.taskId);
-          window.location.hash = '#/aufgaben';
-          return;
-        }
-        window.location.hash = `#${extra.route ?? `/aufgaben?aufgabe=${extra.taskId}`}`;
-      }),
-    );
-    return () => void handle.remove();
-  } catch {
-    return () => undefined;
+/** "Erledigt" taps that arrived before anyone signed in could write them */
+const pendingDone: string[] = [];
+let doneHandler: ((taskId: string) => Promise<void>) | null = null;
+
+// when the app last came to the front: a tap that brought it up only for "Erledigt" sends
+// it back once the task is ticked off
+const BROUGHT_UP_MS = 15_000;
+let shownAt = Date.now();
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') shownAt = Date.now();
+  });
+}
+
+function minimizeApp(): void {
+  const plugins = (globalThis as { Capacitor?: { Plugins?: Record<string, unknown> } }).Capacitor?.Plugins;
+  const app = plugins?.App as { minimizeApp?: () => Promise<void> } | undefined;
+  void app?.minimizeApp?.().catch(() => undefined);
+}
+
+async function tickOff(taskId: string, handler: (taskId: string) => Promise<void>): Promise<void> {
+  const broughtUp = Date.now() - shownAt < BROUGHT_UP_MS;
+  debugLog('aufgaben', `Erledigt aus der Benachrichtigung: ${taskId}${broughtUp ? ', App geht wieder weg' : ''}`);
+  // not awaited to the end: offline the write only settles once the server has it, but it
+  // is in the local queue right away and goes out on its own
+  const write = handler(taskId).catch(() => debugLog('aufgaben', `Erledigt nicht gespeichert: ${taskId}`));
+  if (!broughtUp) return;
+  await Promise.race([write, new Promise((resolve) => setTimeout(resolve, 800))]);
+  minimizeApp();
+}
+
+/**
+ * The tap on a task reminder or its "Erledigt" button. Both reminders share ONE listener
+ * (`watchReminderTaps` in reminder.ts): the plugin hands an action that comes in before any
+ * listener is attached - the usual cold start from the notification - to the first
+ * listener only, and that is the diary's, attached before sign-in. Returns false for any
+ * notification that is not a task's.
+ */
+export function handleTaskNotificationAction(event: TapEvent): boolean {
+  const extra = event.notification.extra as { taskId?: string; route?: string } | undefined;
+  if (!extra?.taskId) return false;
+  if (event.actionId === TASK_DONE_ACTION) {
+    if (doneHandler) void tickOff(extra.taskId, doneHandler);
+    else pendingDone.push(extra.taskId);
+    return true;
   }
+  window.location.hash = `#${extra.route ?? `/aufgaben?aufgabe=${extra.taskId}`}`;
+  return true;
+}
+
+/** ticks off what "Erledigt" asks for, once someone is signed in - also what came in before */
+export function watchTaskReminderActions(onDone: (taskId: string) => Promise<void>): () => void {
+  doneHandler = onDone;
+  for (const taskId of pendingDone.splice(0)) void tickOff(taskId, onDone);
+  return () => {
+    if (doneHandler === onDone) doneHandler = null;
+  };
 }
 
 export function plannedTaskRemindersLabel(tasks: readonly PlannedTaskReminder[]): string {
