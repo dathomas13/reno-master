@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import HomePage from './HomePage';
@@ -22,7 +22,16 @@ vi.mock('@/data/hooks', () => ({
     loading: false,
   }),
 }));
-vi.mock('@/data/repos', () => ({ patchPhase, toggleTaskDone }));
+vi.mock('@/data/repos', () => ({
+  patchPhase,
+  toggleTaskDone,
+  deleteTask: vi.fn(),
+  saveTask: vi.fn(),
+  deleteNote: vi.fn(),
+  saveNote: vi.fn(),
+  deleteDiaryEntry: vi.fn(),
+  saveDiaryEntry: vi.fn(),
+}));
 vi.mock('@/data/useOptions', async () => {
   const options = await vi.importActual<typeof import('@/data/options')>('@/data/options');
   const sets = options.normalizeSets();
@@ -68,6 +77,29 @@ describe('home phase', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Erledigt: Fenster pruefen' }));
     await waitFor(() => expect(toggleTaskDone).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' })));
     expect(screen.queryByRole('link', { name: 'Fenster pruefen' })).not.toBeInTheDocument();
+  });
+
+  it('long press on an urgent task opens its actions instead of the task', async () => {
+    toggleTaskDone.mockClear();
+    renderHome();
+    const row = screen.getByRole('link', { name: /Fenster pruefen/ });
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.pointerDown(row, { clientX: 10, clientY: 10, pointerType: 'touch' });
+      act(() => {
+        vi.advanceTimersByTime(600);
+      });
+      fireEvent.pointerUp(row);
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(screen.getByRole('menuitem', { name: 'Löschen' })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Erledigt' }));
+    });
+    expect(toggleTaskDone).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }));
   });
 
   it('links urgent tasks to their task sheet', () => {

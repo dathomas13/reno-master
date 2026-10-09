@@ -1,13 +1,23 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { PhotoImage } from '@/components/PhotoView';
 import { Sheet } from '@/components/Sheet';
 import { Icon } from '@/components/Icon';
-import { useToast } from '@/components/Toast';
+import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { useCollection } from '@/data/hooks';
 import { COL, type Cost, type DiaryEntry, type Note, type Phase, type Photo, type Task } from '@/data/types';
-import { patchPhase, toggleTaskDone } from '@/data/repos';
+import {
+  deleteDiaryEntry,
+  deleteNote,
+  deleteTask,
+  patchPhase,
+  saveDiaryEntry,
+  saveNote,
+  saveTask,
+  toggleTaskDone,
+} from '@/data/repos';
 import { galleryPickerAvailable, listGalleryPhotosForDay } from '@/platform/photos';
 import { useOptions } from '@/data/useOptions';
 import { isHighPriority, isPhaseActive, isTaskDone, PHASE_ACTIVE, PHASE_DONE, TASK_DONE } from '@/data/options';
@@ -31,6 +41,9 @@ export default function HomePage() {
   const [phaseOpen, setPhaseOpen] = useState(false);
   const [phaseBusy, setPhaseBusy] = useState(false);
   const toast = useToast();
+  const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
+  const navigate = useNavigate();
   // ticked off here: hidden at once, before the snapshot catches up
   const [ticked, setTicked] = useState<string[]>([]);
   // how many photos the phone took today - the app can list its gallery, the browser cannot
@@ -83,6 +96,11 @@ export default function HomePage() {
         void toggleTaskDone({ ...task, status: TASK_DONE }).catch(() => toast('Konnte nicht gespeichert werden.'));
       },
     });
+  }
+
+  // the same long-press actions as on the notes, tasks and diary pages
+  function unpinNote(note: Note) {
+    saveNote({ ...note, pinned: false }).catch(() => toast('Die Notiz konnte nicht gespeichert werden.'));
   }
 
   const photoFor = (entry: DiaryEntry) => photos.find((photo) => photo.entryId === entry.id);
@@ -202,7 +220,18 @@ export default function HomePage() {
             </div>
             <ul>
               {pinnedNotes.map((note) => (
-                <li key={note.id}>
+                <li
+                  key={note.id}
+                  {...rowActions.bind(note.text.split('\n')[0].trim() || 'Notiz', [
+                    { label: 'Lösen', icon: 'pin', onSelect: () => unpinNote(note) },
+                    {
+                      label: 'Löschen',
+                      icon: 'trash',
+                      danger: true,
+                      onSelect: () => undoableDelete('Notiz gelöscht', () => deleteNote(note.id), () => saveNote(note)),
+                    },
+                  ])}
+                >
                   <Link to={`/notizen?notiz=${note.id}`} className="list-row last:border-0">
                     <span className="flex-1 min-w-0">
                       <span className="block truncate">{note.text.split('\n')[0].trim() || 'Notiz'}</span>
@@ -255,7 +284,20 @@ export default function HomePage() {
             <div className="section-title">Dringend</div>
             <ul>
               {openTasks.map((task) => (
-                <li key={task.id} className="flex items-center pl-4 border-b border-line/60 last:border-0">
+                <li
+                  key={task.id}
+                  className="flex items-center pl-4 border-b border-line/60 last:border-0"
+                  {...rowActions.bind(task.title, [
+                    { label: 'Erledigt', icon: 'check', onSelect: () => void tickTask(task) },
+                    {
+                      label: 'Löschen',
+                      icon: 'trash',
+                      danger: true,
+                      onSelect: () =>
+                        undoableDelete(`„${task.title}“ gelöscht`, () => deleteTask(task.id), () => saveTask(task)),
+                    },
+                  ])}
+                >
                   <button
                     type="button"
                     aria-label={`Erledigt: ${task.title}`}
@@ -285,7 +327,20 @@ export default function HomePage() {
               {recent.map((entry) => {
                 const photo = photoFor(entry);
                 return (
-                  <li key={entry.id}>
+                  <li
+                    key={entry.id}
+                    {...rowActions.bind(entry.title || formatDateWithWeekday(entry.date), [
+                      { label: 'Bearbeiten', icon: 'diary', onSelect: () => navigate(`/tagebuch/${entry.id}/bearbeiten`) },
+                      {
+                        label: 'Löschen',
+                        icon: 'trash',
+                        danger: true,
+                        // the photos keep their entryId, so writing the entry again brings everything back
+                        onSelect: () =>
+                          undoableDelete('Eintrag gelöscht', () => deleteDiaryEntry(entry.id), () => saveDiaryEntry(entry)),
+                      },
+                    ])}
+                  >
                     <Link to={`/tagebuch/${entry.id}`} className="list-row last:border-0">
                       {photo ? (
                         <PhotoImage photo={photo} thumb className="w-10 h-10 rounded-lg object-cover bg-panel2" />
@@ -315,6 +370,8 @@ export default function HomePage() {
         {visibleHomeBlocks(homeLayout).map((id) => (
           <Fragment key={id}>{blocks[id]}</Fragment>
         ))}
+
+        {rowActions.sheet}
 
         <Sheet open={phaseOpen} onClose={() => setPhaseOpen(false)} title="Aktuelle Phase" doneLabel="Abbrechen">
           <div className="p-3">

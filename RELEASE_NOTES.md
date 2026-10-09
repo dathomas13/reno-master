@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.85.5 – Lange drücken auf der Startseite
+
+- Auch auf der Startseite öffnet langes Drücken das Menü: bei Notizen Lösen, bei Aufgaben Erledigt, bei Tagebucheinträgen Bearbeiten – und überall Löschen.
+
 ## 0.85.4 – Kleine Korrekturen
 
 - Gesprächseinträge: speichern auch ohne Kontakt, „+ Neuer Kontakt…“ legt ihn gleich mit an, und „Beteiligt“ hält fest, wer dabei war.
