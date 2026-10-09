@@ -525,7 +525,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
-- Die Standardgruppierung ist nach Bauphase: Fotos erben die Phase ausschließlich über ihren Tagebuch-Eintrag (`entry.phaseId`), nicht über ein eigenes Pflegefeld. Ein dezenter Umschalter bietet weiter die Monatsgruppierung. Belege werden hier nicht nach Phase gruppiert; die Fotos-Seite zeigt nur `kind:'photo'`.
+- Die Standardgruppierung ist nach Monat (neuester zuerst); der Umschalter bietet rechts daneben „Nach Phase“ (höchste Phase zuerst, „Ohne Phase“ ganz unten). Fotos erben die Phase ausschließlich über ihren Tagebuch-Eintrag (`entry.phaseId`), nicht über ein eigenes Pflegefeld. Belege werden hier nicht nach Phase gruppiert; die Fotos-Seite zeigt nur `kind:'photo'`.
 - Chips: Alle · Fotos · Belege. `?raum=<id>` filtert auf einen Raum – dorthin führt die Kachel „Fotos“ im Raumfenster des 3D-Modells, und zurück führt der Pfeil dorthin.
 - **Der Raum eines Fotos steht nicht am Foto.** `addPhoto` setzt `roomIds` nie: beim Fotografieren wählt niemand Räume aus. Ein Bild gehört zu einem Raum, wenn sein Tagebucheintrag oder sein Beleg ihn trägt (`src/data/photoRooms.ts`, testbar); das Feld am Foto zählt zusätzlich. Ohne diese Regel zeigt die Kachel „Fotos“ eines Raums null, so voll das Tagebuch auch ist.
 - Das Datum eines Fotos ist `takenAt`, sonst der Tag seines Eintrags, sonst der seines Belegs – Bilder ohne alles stehen unter „Ohne Datum“.
