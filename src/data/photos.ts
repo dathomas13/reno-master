@@ -33,6 +33,12 @@ export interface AddPhotoInput {
   thumbnail?: Blob;
   existingPhotos?: readonly Photo[];
   existingCosts?: readonly Cost[];
+  /**
+   * Called once the file is known to be stored on this record - new, or a known receipt
+   * moved over - before the slow part (shrinking, local copy, waiting for the database).
+   * A receipt can be read from here on instead of after all that.
+   */
+  onAccepted?(): void;
 }
 
 export class ReceiptAlreadyLinkedError extends Error {
@@ -73,12 +79,14 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
       throw new ReceiptAlreadyLinkedError({ ...duplicate, costId: ownerId });
     }
     if (input.costId && duplicate.costId !== input.costId) {
+      input.onAccepted?.();
       await pendingWrite(updatePhoto(duplicate.id, { costId: input.costId }));
       return { ...duplicate, costId: input.costId };
     }
     return duplicate;
   }
 
+  input.onAccepted?.();
   const id = newId();
   const maxEdge = input.kind === 'receipt' ? RECEIPT_MAX_EDGE : PHOTO_MAX_EDGE;
 

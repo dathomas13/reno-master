@@ -13,6 +13,12 @@ Commit-Nachricht, und die liest sich im Banner auch so.
 - Neuer Schalter „Messen“ im 3D: zwei Punkte antippen, die Länge steht an der Linie, unten dazu waagrecht, Höhe und die Himmelsrichtungen.
 - Punkte rasten an Ecken ein und lassen sich mit dem Finger nachziehen – eine Lupe zeigt dabei, wo der Punkt landet.
 
+## 0.85.4 – Kleine Korrekturen
+
+- Gesprächseinträge: speichern auch ohne Kontakt, „+ Neuer Kontakt…“ legt ihn gleich mit an, und „Beteiligt“ hält fest, wer dabei war.
+- Fotos sind wieder zuerst nach Monat sortiert; „Nach Phase“ zeigt die neueste Phase oben.
+- Ein Beleg wird jetzt sofort nach dem Foto ausgelesen, nicht erst nach dem Speichern.
+
 ## 0.85.3 – Letzter Schliff
 
 - Lange drücken jetzt auch bei Plänen (statt Mülleimer) und Belegen; Gespräche haben oben „Neu“.

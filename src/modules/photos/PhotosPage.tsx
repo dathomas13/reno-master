@@ -14,8 +14,8 @@ import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 type Grouping = 'phase' | 'month';
 const GROUPINGS = [
-  { value: 'phase', label: 'Nach Phase' },
   { value: 'month', label: 'Nach Monat' },
+  { value: 'phase', label: 'Nach Phase' },
 ] as const;
 
 /**
@@ -32,7 +32,7 @@ export default function PhotosPage() {
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { shortLabel: roomLabel, idsFor } = useRooms();
   const [open, setOpen] = useState<number | null>(null);
-  const [grouping, setGrouping] = useState<Grouping>('phase');
+  const [grouping, setGrouping] = useState<Grouping>('month');
 
   const roomFilter = params.get('raum');
 
@@ -60,10 +60,11 @@ export default function PhotosPage() {
       title: grouping === 'phase'
         ? (phaseById.get(key)?.name ?? 'Ohne Phase')
         : (key ? formatMonth(`${key}-01`) : 'Ohne Datum'),
-      order: grouping === 'phase' ? (phaseById.get(key)?.order ?? Number.MAX_SAFE_INTEGER) : 0,
+      // latest phase first, like the months; photos without a phase at the very end
+      order: grouping === 'phase' ? (phaseById.get(key)?.order ?? Number.MIN_SAFE_INTEGER) : 0,
       photos: sortByDate(items, source),
     }));
-    return rows.sort((a, b) => grouping === 'phase' ? a.order - b.order || a.title.localeCompare(b.title) : b.key.localeCompare(a.key));
+    return rows.sort((a, b) => grouping === 'phase' ? b.order - a.order || a.title.localeCompare(b.title) : b.key.localeCompare(a.key));
   }, [visible, source, grouping, entryById, phaseById]);
 
   const lightboxPhotos = useMemo(() => groups.flatMap((group) => group.photos), [groups]);

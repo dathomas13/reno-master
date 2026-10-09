@@ -50,23 +50,23 @@ function renderPhotos() {
 }
 
 describe('photos page phase grouping', () => {
-  it('groups photos by diary phase by default and leaves receipts out', () => {
+  it('groups photos by month by default', () => {
     renderPhotos();
 
+    expect(screen.getByRole('button', { name: 'Nach Monat' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('September 2026')).toBeInTheDocument();
+  });
+
+  it('groups by diary phase, latest phase first, and leaves receipts out', () => {
+    renderPhotos();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Nach Phase' }));
+
     expect(screen.getByRole('button', { name: 'Nach Phase' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText('Phase 2: Entkernung & Rückbau')).toBeInTheDocument();
-    expect(screen.getByText('Phase 3: Rohbau & Keller')).toBeInTheDocument();
+    const titles = screen.getAllByText(/^Phase \d/).map((node) => node.textContent);
+    expect(titles).toEqual(['Phase 3: Rohbau & Keller', 'Phase 2: Entkernung & Rückbau']);
     expect(screen.getByAltText('photo-1')).toBeInTheDocument();
     expect(screen.getByAltText('photo-2')).toBeInTheDocument();
     expect(screen.queryByAltText('receipt-1')).not.toBeInTheDocument();
-  });
-
-  it('can switch back to month grouping', () => {
-    renderPhotos();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Nach Monat' }));
-
-    expect(screen.getByText('September 2026')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Nach Monat' })).toHaveAttribute('aria-pressed', 'true');
   });
 });
