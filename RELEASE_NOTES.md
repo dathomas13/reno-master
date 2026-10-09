@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.86.0 – Maßband im 3D-Modell
+
+- Neuer Schalter „Messen“ im 3D: zwei Punkte antippen, die Länge steht an der Linie, unten dazu waagrecht, Höhe und die Himmelsrichtungen.
+- Punkte rasten an Ecken ein und lassen sich mit dem Finger nachziehen – eine Lupe zeigt dabei, wo der Punkt landet.
+
 ## 0.85.3 – Letzter Schliff
 
 - Lange drücken jetzt auch bei Plänen (statt Mülleimer) und Belegen; Gespräche haben oben „Neu“.

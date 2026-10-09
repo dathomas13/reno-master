@@ -16,6 +16,17 @@ import {
 import { createOrbitControls, VIEW_PRESETS, type OrbitControls } from './orbitControls';
 import { lastViewerState, rememberViewerState, type ViewerState } from './viewerState';
 import { RoomPanel } from './RoomPanel';
+import { createMeasureLayer, type MeasureLayer } from './measureLayer';
+import {
+  formatMetres,
+  formatMillimetres,
+  fromWorld,
+  loupePlacement,
+  measure,
+  nearestWithin,
+  type ModelPoint,
+} from './measure';
+import { useBackClose } from '@/platform/backHandlers';
 import { activeRelease, clearPreview, loadRoomMap, loadRooms, loadScene, NO_MODEL_MESSAGE, previewOf, type Variant } from '@/data/models';
 import { resolveInVariant } from '@/data/roomNaming';
 import { VARIANT_LABEL, VARIANTS, type ReleaseInfo } from '@/data/modelRelease';
@@ -53,6 +64,13 @@ interface UndoStep {
   after: FurnitureItem | null;
 }
 const UNDO_LIMIT = 50;
+
+/** how close (screen px) a point has to come to a corner to snap onto it */
+const SNAP_PX = { mouse: 10, touch: 22, drag: 14 };
+/** how close a finger or the mouse has to come to a set point to move it */
+const GRAB_PX = { mouse: 12, touch: 32 };
+const LOUPE_PX = 132;
+const LOUPE_ZOOM = 3;
 
 /** top to bottom as the house is built; the garage stands apart at the end */
 const RAIL_ORDER: Layer[] = ['DACH', 'STUHL', 'DG', 'OG', 'EG', 'KG', 'GAR'];
@@ -121,6 +139,21 @@ export default function ViewerPage() {
   const editRef = useRef({ editing, pieceId });
   editRef.current = { editing, pieceId };
   const piece = furniture.items.find((item) => item.id === pieceId) ?? null;
+
+  // ---------------------------------------------------------------- tape measure
+  const [measuring, setMeasuring] = useState(false);
+  const measuringRef = useRef(measuring);
+  measuringRef.current = measuring;
+  /** the placed points in world coordinates (at most two) and the hovered one, if any */
+  const measureRef = useRef<{ points: THREE.Vector3[]; hover: THREE.Vector3 | null }>({ points: [], hover: null });
+  const measureLayerRef = useRef<MeasureLayer | null>(null);
+  /** the same points in model mm, for the panel */
+  const [measurePoints, setMeasurePoints] = useState<ModelPoint[]>([]);
+  /** redraws the measure from measureRef; set by the scene effect */
+  const refreshMeasureRef = useRef<() => void>(() => undefined);
+  const labelRef = useRef<HTMLDivElement>(null);
+  const loupeRef = useRef<HTMLDivElement>(null);
+  const coarse = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches;
 
   /**
    * What the switches say right now. The scene effect only runs again on a variant
@@ -231,10 +264,81 @@ export default function ViewerPage() {
     };
     renderRef.current = invalidate;
 
+    const measureLayer = createMeasureLayer(THREE, scene);
+    measureLayerRef.current = measureLayer;
+    measureRef.current = { points: [], hover: null };
+    setMeasurePoints([]);
+    /** the finger moving a measure point, in canvas pixels - the magnifier follows it */
+    let loupeAt: { x: number; y: number } | null = null;
+    const loupeCamera = new THREE.PerspectiveCamera();
+
+    /** the two points the line runs between: both placed, or the first and the hovered one */
+    const shownPair = (): [THREE.Vector3, THREE.Vector3] | null => {
+      const { points, hover } = measureRef.current;
+      if (points.length === 2) return [points[0]!, points[1]!];
+      if (points.length === 1 && hover) return [points[0]!, hover];
+      return null;
+    };
+
+    const refreshMeasure = () => {
+      const pair = shownPair();
+      const { points } = measureRef.current;
+      measureLayer.setPoints(points[0] ?? null, pair ? pair[1] : null);
+      invalidate();
+    };
+    refreshMeasureRef.current = refreshMeasure;
+
+    /** the distance label sits on the middle of the line, the magnifier above the finger */
+    const placeOverlays = () => {
+      const label = labelRef.current;
+      if (label) {
+        const pair = shownPair();
+        const mid = pair ? pair[0].clone().lerp(pair[1], 0.5).project(camera) : null;
+        if (pair && mid && mid.z < 1) {
+          const x = ((mid.x + 1) / 2) * canvas.clientWidth;
+          const y = ((1 - mid.y) / 2) * canvas.clientHeight;
+          label.textContent = formatMetres(measure(fromWorld(pair[0]), fromWorld(pair[1])).total);
+          label.style.transform = `translate(${x}px, ${y}px) translate(-50%, -140%)`;
+          label.style.visibility = 'visible';
+        } else {
+          label.style.visibility = 'hidden';
+        }
+      }
+      const frameEl = loupeRef.current;
+      if (frameEl) {
+        if (loupeAt) {
+          const at = loupePlacement(loupeAt, LOUPE_PX, canvas.clientWidth, canvas.clientHeight);
+          frameEl.style.transform = `translate(${at.x}px, ${at.y}px)`;
+          frameEl.style.visibility = 'visible';
+        } else {
+          frameEl.style.visibility = 'hidden';
+        }
+      }
+    };
+
+    /** the spot under the moving finger, enlarged, in a square above it */
+    const renderLoupe = () => {
+      if (!loupeAt) return;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      const at = loupePlacement(loupeAt, LOUPE_PX, width, height);
+      const span = LOUPE_PX / LOUPE_ZOOM;
+      loupeCamera.copy(camera);
+      loupeCamera.setViewOffset(width, height, loupeAt.x - span / 2, loupeAt.y - span / 2, span, span);
+      renderer.setScissorTest(true);
+      renderer.setScissor(at.x, height - at.y - LOUPE_PX, LOUPE_PX, LOUPE_PX);
+      renderer.setViewport(at.x, height - at.y - LOUPE_PX, LOUPE_PX, LOUPE_PX);
+      renderer.render(scene, loupeCamera);
+      renderer.setScissorTest(false);
+      renderer.setViewport(0, 0, width, height);
+    };
+
     let frame = 0;
     const loop = () => {
       if (needsRender) {
         renderer.render(scene, camera);
+        renderLoupe();
+        placeOverlays();
         needsRender = false;
       }
       frame = requestAnimationFrame(loop);
@@ -250,9 +354,144 @@ export default function ViewerPage() {
     };
 
     const raycaster = new THREE.Raycaster();
+
+    /** the pointer of the last press: a finger needs bigger targets than the mouse */
+    let touch = false;
+    const notePointer = (event: PointerEvent) => {
+      touch = event.pointerType !== 'mouse';
+    };
+    canvas.addEventListener('pointerdown', notePointer, { capture: true });
+
+    /** a world point in client pixels */
+    const toScreen = (world: THREE.Vector3, rect: DOMRect) => {
+      const ndc = world.clone().project(camera);
+      return { x: rect.left + ((ndc.x + 1) / 2) * rect.width, y: rect.top + ((1 - ndc.y) / 2) * rect.height };
+    };
+
+    /**
+     * The point of the model under the screen point. Within `snapPx` of a corner of the
+     * face it hits, it jumps onto that corner - the corners are where measurements start.
+     */
+    const surfaceAt = (clientX: number, clientY: number, snapPx: number) => {
+      const house = houseRef.current;
+      if (!house) return null;
+      const rect = canvas.getBoundingClientRect();
+      raycaster.setFromCamera(
+        new THREE.Vector2(
+          ((clientX - rect.left) / rect.width) * 2 - 1,
+          -((clientY - rect.top) / rect.height) * 2 + 1,
+        ),
+        camera,
+      );
+      // not the room overlay: it floats a little above the floor and would cost that much
+      const layer = furnitureLayerRef.current;
+      const targets = [...(layer ? layer.pickables.filter(isVisible) : []), ...house.pickables.filter(isVisible)];
+      const hit = raycaster.intersectObjects(targets, false)[0];
+      if (!hit) return null;
+      const geometry = (hit.object as THREE.Mesh).geometry as THREE.BufferGeometry | undefined;
+      const position = geometry?.getAttribute('position');
+      if (snapPx > 0 && hit.face && position) {
+        const corners = [hit.face.a, hit.face.b, hit.face.c].map((index) =>
+          new THREE.Vector3().fromBufferAttribute(position, index).applyMatrix4(hit.object.matrixWorld),
+        );
+        const index = nearestWithin(
+          corners.map((corner) => toScreen(corner, rect)),
+          { x: clientX, y: clientY },
+          snapPx,
+        );
+        if (index >= 0) return { point: corners[index]!, snapped: true };
+      }
+      return { point: hit.point.clone(), snapped: false };
+    };
+
+    /** the measure point under the finger, while it is moved */
+    let measureDrag: number | null = null;
+    /** a press on a point that did not move it is not a tap that sets a new one */
+    let skipTap = false;
+    /** held Alt sets a point freely, without snapping to a corner */
+    let altKey = false;
+
+    /** the placed points changed: the panel shows them in model mm */
+    const publishMeasure = () => {
+      setMeasurePoints(measureRef.current.points.map(fromWorld));
+      refreshMeasure();
+    };
+
+    /** a third point starts a new measurement */
+    const measureTap = (clientX: number, clientY: number) => {
+      const hit = surfaceAt(clientX, clientY, touch ? SNAP_PX.touch : altKey ? 0 : SNAP_PX.mouse);
+      if (!hit) return;
+      const state = measureRef.current;
+      if (state.points.length >= 2) state.points = [];
+      state.points.push(hit.point);
+      state.hover = null;
+      measureLayer.setCursor(null, false);
+      publishMeasure();
+    };
+
+    const grabMeasure = (clientX: number, clientY: number): boolean => {
+      const { points } = measureRef.current;
+      if (!points.length) return false;
+      const rect = canvas.getBoundingClientRect();
+      const index = nearestWithin(
+        points.map((point) => toScreen(point, rect)),
+        { x: clientX, y: clientY },
+        touch ? GRAB_PX.touch : GRAB_PX.mouse,
+      );
+      if (index < 0) return false;
+      measureDrag = index;
+      return true;
+    };
+
+    const dragMeasure = (clientX: number, clientY: number) => {
+      if (measureDrag === null) return;
+      const rect = canvas.getBoundingClientRect();
+      const hit = surfaceAt(clientX, clientY, touch ? SNAP_PX.drag : altKey ? 0 : SNAP_PX.mouse);
+      if (touch) loupeAt = { x: clientX - rect.left, y: clientY - rect.top };
+      if (hit) {
+        measureRef.current.points[measureDrag] = hit.point;
+        measureLayer.setCursor(hit.point, hit.snapped);
+        publishMeasure();
+      } else {
+        measureLayer.setCursor(null, false);
+        invalidate();
+      }
+    };
+
+    const releaseMeasure = (moved: boolean) => {
+      measureDrag = null;
+      loupeAt = null;
+      skipTap = !moved;
+      measureLayer.setCursor(null, false);
+      invalidate();
+    };
+
+    // the mouse shows where a click would land, and with one point set the line follows it
+    const hover = (event: PointerEvent) => {
+      altKey = event.altKey;
+      if (!measuringRef.current || event.pointerType !== 'mouse' || event.buttons !== 0) return;
+      const hit = surfaceAt(event.clientX, event.clientY, event.altKey ? 0 : SNAP_PX.mouse);
+      measureLayer.setCursor(hit?.point ?? null, hit?.snapped ?? false);
+      measureRef.current.hover = measureRef.current.points.length === 1 ? (hit?.point ?? null) : null;
+      refreshMeasure();
+    };
+    const leave = () => {
+      if (!measuringRef.current) return;
+      measureLayer.setCursor(null, false);
+      measureRef.current.hover = null;
+      refreshMeasure();
+    };
+    canvas.addEventListener('pointermove', hover);
+    canvas.addEventListener('pointerleave', leave);
+
     const pick = (clientX: number, clientY: number) => {
       const house = houseRef.current;
       if (!house) return;
+      if (measuringRef.current) {
+        if (skipTap) skipTap = false;
+        else measureTap(clientX, clientY);
+        return;
+      }
       const rect = canvas.getBoundingClientRect();
       raycaster.setFromCamera(
         new THREE.Vector2(
@@ -301,6 +540,8 @@ export default function ViewerPage() {
     // only the chosen piece can be dragged, and only in the editor - anywhere else one
     // finger turns the house as always
     const grab = (clientX: number, clientY: number): boolean => {
+      skipTap = false;
+      if (measuringRef.current) return grabMeasure(clientX, clientY);
       const layer = furnitureLayerRef.current;
       const { editing: isEditing, pieceId: chosen } = editRef.current;
       if (!layer || !isEditing || !chosen) return false;
@@ -323,6 +564,10 @@ export default function ViewerPage() {
     };
 
     const drag = (clientX: number, clientY: number) => {
+      if (measureDrag !== null) {
+        dragMeasure(clientX, clientY);
+        return;
+      }
       const state = dragRef.current;
       const layer = furnitureLayerRef.current;
       if (!state || !layer) return;
@@ -337,6 +582,10 @@ export default function ViewerPage() {
     };
 
     const release = (moved: boolean) => {
+      if (measureDrag !== null) {
+        releaseMeasure(moved);
+        return;
+      }
       const state = dragRef.current;
       dragRef.current = null;
       if (!state || !moved) return;
@@ -439,6 +688,12 @@ export default function ViewerPage() {
       if (state) rememberViewerState(state);
       cancelAnimationFrame(frame);
       window.removeEventListener('resize', resize);
+      canvas.removeEventListener('pointerdown', notePointer, { capture: true });
+      canvas.removeEventListener('pointermove', hover);
+      canvas.removeEventListener('pointerleave', leave);
+      measureLayer.dispose();
+      measureLayerRef.current = null;
+      refreshMeasureRef.current = () => undefined;
       controlsRef.current?.dispose();
       controlsRef.current = null;
       furnitureLayerRef.current?.dispose();
@@ -462,6 +717,59 @@ export default function ViewerPage() {
       return { ...current, [layer]: visible };
     });
   }
+
+  // ---------------------------------------------------------------- tape measure
+
+  function startMeasuring() {
+    setMeasuring(true);
+    setEditing(false);
+    setPieceId(null);
+    setSelected(null);
+    setRoom(null);
+    houseRef.current?.setSelected(null);
+    houseRef.current?.highlightRoom(null);
+    renderRef.current?.();
+  }
+
+  function clearMeasure() {
+    measureRef.current = { points: [], hover: null };
+    setMeasurePoints([]);
+    refreshMeasureRef.current();
+  }
+
+  function stopMeasuring() {
+    setMeasuring(false);
+    clearMeasure();
+    measureLayerRef.current?.setCursor(null, false);
+    renderRef.current?.();
+  }
+
+  useBackClose(measuring, stopMeasuring);
+
+  // Escape takes back the last point, and with none left ends measuring
+  useEffect(() => {
+    if (!measuring) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (!measureRef.current.points.length) {
+        stopMeasuring();
+        return;
+      }
+      measureRef.current.points.pop();
+      measureRef.current.hover = null;
+      setMeasurePoints(measureRef.current.points.map(fromWorld));
+      refreshMeasureRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // stopMeasuring only touches refs and setters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [measuring]);
+
+  const measured = measurePoints.length === 2 ? measure(measurePoints[0]!, measurePoints[1]!) : null;
+  const measureHint = coarse
+    ? ['Ersten Punkt antippen – an Ecken rastet er ein.', 'Zweiten Punkt antippen.', 'Einen Punkt mit dem Finger ziehen setzt ihn genau, die Lupe zeigt wohin. Neu antippen beginnt von vorn.']
+    : ['Ersten Punkt anklicken – an Ecken rastet er ein, mit Alt nicht.', 'Zweiten Punkt anklicken.', 'Punkte lassen sich ziehen. Ein neuer Klick beginnt von vorn, Esc nimmt den letzten Punkt zurück.'];
 
   // ---------------------------------------------------------------- furniture
 
@@ -584,6 +892,24 @@ export default function ViewerPage() {
     <div className={`relative ${containerHeight} overflow-hidden`}>
       <canvas ref={canvasRef} className="canvas-3d absolute inset-0 w-full h-full block" />
 
+      {/* placed every frame by the render loop, never through React - see placeOverlays */}
+      <div
+        ref={labelRef}
+        aria-hidden
+        className={`absolute left-0 top-0 z-[5] pointer-events-none rounded-md bg-bg/85 border border-accent/70
+                    px-1.5 py-0.5 text-xs font-semibold text-accent tabular-nums whitespace-nowrap ${measuring ? '' : 'hidden'}`}
+        style={{ visibility: 'hidden' }}
+      />
+      <div
+        ref={loupeRef}
+        aria-hidden
+        className="absolute left-0 top-0 z-[5] pointer-events-none rounded-lg border-2 border-accent shadow-lg"
+        style={{ width: LOUPE_PX, height: LOUPE_PX, visibility: 'hidden' }}
+      >
+        <div className="absolute left-1/2 top-2 bottom-2 w-px -translate-x-1/2 bg-accent/70" />
+        <div className="absolute top-1/2 left-2 right-2 h-px -translate-y-1/2 bg-accent/70" />
+      </div>
+
       {/* header */}
       <div className="absolute top-0 inset-x-0 p-2 pt-[max(0.5rem,env(safe-area-inset-top))] pointer-events-none">
         <div className="flex items-center gap-2">
@@ -646,7 +972,41 @@ export default function ViewerPage() {
         className={`absolute left-2 right-2 ${bottomOffset} z-20 flex flex-col gap-2
                     pointer-events-none`}
       >
-        {selected?.type === 'part' && (
+        {measuring && (
+          <div className="card p-3 border-l-4 border-l-accent pointer-events-auto">
+            <div className="flex items-start gap-2">
+              <div className="flex-1 min-w-0">
+                {measured ? (
+                  <>
+                    <div className="text-2xl font-semibold text-accent tabular-nums leading-tight">
+                      {formatMetres(measured.total)}
+                      <span className="text-xs text-muted font-normal ml-2">{formatMillimetres(measured.total)}</span>
+                    </div>
+                    <div className="text-xs text-muted tabular-nums">
+                      waagrecht {formatMetres(measured.horizontal)} · Höhe {formatMetres(measured.dz)}
+                    </div>
+                    <div className="text-xs text-muted tabular-nums">
+                      Ost–West {formatMetres(measured.dx)} · Nord–Süd {formatMetres(measured.dy)}
+                    </div>
+                  </>
+                ) : (
+                  <div className="font-medium">Maßband</div>
+                )}
+                <p className="text-xs text-muted mt-1">{measureHint[Math.min(measurePoints.length, 2)]}</p>
+              </div>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <button type="button" className="chip" disabled={!measurePoints.length} onClick={clearMeasure}>
+                  Neu
+                </button>
+                <button type="button" className="chip" onClick={stopMeasuring}>
+                  Fertig
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!measuring && selected?.type === 'part' && (
           <div className="card p-3 border-l-4 border-l-accent pointer-events-auto">
             <div className="font-medium">
               {selected.prim.name} <span className="text-muted">· {LAYER_LABEL[selected.prim.layer]}</span>
@@ -673,7 +1033,7 @@ export default function ViewerPage() {
         )}
 
         {/* while furnishing only the room's name matters - it says where new pieces go */}
-        {room && !piece && !editing && (
+        {room && !piece && !editing && !measuring && (
           <RoomPanel
             room={room}
             onClose={() => {
@@ -714,7 +1074,7 @@ export default function ViewerPage() {
           </div>
         )}
 
-        {!loading && !error && (
+        {!loading && !error && !measuring && (
           <Hint id="raum-antippen" done={!!room} className="pointer-events-auto">
             Einen Raum antippen zeigt, was dort passiert ist.
           </Hint>
@@ -749,6 +1109,14 @@ export default function ViewerPage() {
           >
             Tragwände
           </button>
+          <button
+            type="button"
+            className={`chip ${measuring ? 'chip-on' : ''}`}
+            aria-pressed={measuring}
+            onClick={() => (measuring ? stopMeasuring() : startMeasuring())}
+          >
+            Messen
+          </button>
           {isPlan && (
             <button type="button" className={`chip ${showFurniture ? 'chip-on' : ''}`} aria-pressed={showFurniture} onClick={toggleFurniture}>
               Möbel
@@ -759,6 +1127,7 @@ export default function ViewerPage() {
               type="button"
               className="chip border-accent text-accent"
               onClick={() => {
+                if (measuring) stopMeasuring();
                 setEditing(true);
                 if (!showFurniture) toggleFurniture();
               }}
