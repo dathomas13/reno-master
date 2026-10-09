@@ -36,6 +36,14 @@ export default function DiaryListPage() {
   // the room panel in the 3D view and the search link here with a filter
   const roomFilter = params.get('raum');
   const phaseFilter = params.get('phase');
+  const defectsOnly = params.get('maengel') === '1';
+  const filtering = !!roomFilter || !!phaseFilter || defectsOnly;
+  function toggleDefects() {
+    const next = new URLSearchParams(params);
+    if (defectsOnly) next.delete('maengel');
+    else next.set('maengel', '1');
+    setParams(next, { replace: true });
+  }
   const filterLabel = roomFilter
     ? roomLabel(roomFilter)
     : (phases.find((phase) => phase.id === phaseFilter)?.name ?? phaseFilter);
@@ -54,10 +62,11 @@ export default function DiaryListPage() {
     return entries.filter((entry) => {
       if (roomFilter && !matches(entry.roomIds, roomFilter)) return false;
       if (phaseFilter && entry.phaseId !== phaseFilter) return false;
+      if (defectsOnly && !entry.defects) return false;
       if (!needle) return true;
       return [entry.title, entry.text, ...entry.present.map((person) => label('people', person))].join(' ').toLowerCase().includes(needle);
     });
-  }, [entries, search, roomFilter, phaseFilter, matches, label]);
+  }, [entries, search, roomFilter, phaseFilter, defectsOnly, matches, label]);
 
   const hasToday = entries.some((entry) => entry.date === today());
 
@@ -66,7 +75,7 @@ export default function DiaryListPage() {
       <TopBar
         title="Bautagebuch"
         subtitle={
-          roomFilter || phaseFilter
+          filtering
             ? `${filtered.length} von ${entries.length} Einträgen`
             : `${entries.length} Einträge`
         }
@@ -89,21 +98,34 @@ export default function DiaryListPage() {
         />
       </div>
 
-      {(roomFilter || phaseFilter) && (
-        <div className="px-3 pb-3">
+      <div className="px-3 pb-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          aria-pressed={defectsOnly}
+          className={`chip ${defectsOnly ? 'chip-on' : ''}`}
+          onClick={toggleDefects}
+        >
+          Mängel
+        </button>
+        {(roomFilter || phaseFilter) && (
           <button
             type="button"
             className="chip chip-on"
             aria-label={`Filter ${filterLabel} aufheben`}
-            onClick={() => setParams(new URLSearchParams(), { replace: true })}
+            onClick={() => {
+              const next = new URLSearchParams(params);
+              next.delete('raum');
+              next.delete('phase');
+              setParams(next, { replace: true });
+            }}
           >
             Filter: {filterLabel}
             <Icon name="close" className="w-4 h-4" />
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
-      {!hasToday && !search && !roomFilter && !phaseFilter && (
+      {!hasToday && !search && !filtering && (
         <Link
           to="/tagebuch/neu"
           className="mx-3 mb-3 card p-4 flex items-center gap-3 border-accent/40 active:bg-panel2"
@@ -125,9 +147,15 @@ export default function DiaryListPage() {
         (entries.length > 0 ? (
           <EmptyState
             title="Nichts gefunden"
-            hint={search ? `Kein Eintrag passt zu „${search.trim()}“.` : `Zu ${filterLabel} gibt es keine Einträge.`}
+            hint={
+              search
+                ? `Kein Eintrag passt zu „${search.trim()}“.`
+                : roomFilter || phaseFilter
+                  ? `Zu ${filterLabel} gibt es keine Einträge.`
+                  : 'Kein Eintrag ist mit Mängeln markiert.'
+            }
             action={
-              (roomFilter || phaseFilter) && (
+              filtering && (
                 <button
                   type="button"
                   className="btn mt-2"

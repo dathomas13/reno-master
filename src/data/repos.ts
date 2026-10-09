@@ -46,10 +46,13 @@ export function emptyDiaryEntry(date = today()): DiaryEntry {
 }
 
 export async function saveDiaryEntry(entry: DiaryEntry): Promise<string> {
-  const saved = saveDoc<DiaryEntry>(
-    COL.diary,
-    clean(entry as unknown as Record<string, unknown>) as unknown as DiaryEntry,
-  );
+  // the document is merged: a phase or weather taken away has to be removed explicitly
+  const optional: (keyof DiaryEntry)[] = ['weather', 'phaseId'];
+  const value = clean(entry as unknown as Record<string, unknown>);
+  for (const key of optional) {
+    if (entry[key] === undefined) value[key] = deleteField();
+  }
+  const saved = saveDoc<DiaryEntry>(COL.diary, value as unknown as DiaryEntry);
   debugLog('erinnerung', `Tagebucheintrag für ${entry.date} gespeichert`);
   void rememberDiaryReminderDate(entry.date);
   void cancelDiaryReminderForDate(entry.date);

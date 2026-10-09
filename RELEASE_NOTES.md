@@ -8,9 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
-## 0.85.5 – Lange drücken auf der Startseite
+## 0.85.5 – Startseite und Tagebuch
 
-- Auch auf der Startseite öffnet langes Drücken das Menü: bei Notizen Lösen, bei Aufgaben Erledigt, bei Tagebucheinträgen Bearbeiten – und überall Löschen.
+- Langes Drücken öffnet jetzt auch auf der Startseite das Menü am Eintrag.
+- „Wie beim letzten Mal“ nimmt vom Vortag den Eintrag mit den meisten Angaben, nicht den Mängeleintrag.
+- Tagebuch: neuer Filter „Mängel“, und die Phase im Eintrag lässt sich ändern.
 
 ## 0.85.4 – Kleine Korrekturen
 

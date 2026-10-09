@@ -14,6 +14,7 @@ import { formatDate, formatDateWithWeekday, today } from '@/lib/date';
 import { MoreFields } from '@/components/MoreFields';
 import { diaryTextPlaceholder } from './diaryPlaceholder';
 import { useRooms } from '@/data/RoomsContext';
+import { previousEntryFor } from './entriesOfDay';
 import { clearDiaryDraft, loadDiaryDraft, saveDiaryDraft } from './diaryDraft';
 import { useToast } from '@/components/Toast';
 
@@ -34,6 +35,7 @@ export default function DiaryEditorPage() {
   const { data: allEntries } = useCollection<DiaryEntry>(COL.diary);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const activePhase = phases.find((phase) => isPhaseActive(phase));
+  const orderedPhases = useMemo(() => [...phases].sort((a, b) => a.order - b.order), [phases]);
 
   const { writeId } = useRooms();
   const fresh = () => ({ ...emptyDiaryEntry(initialDate), roomIds: roomParam ? [writeId(roomParam)] : [] });
@@ -46,6 +48,8 @@ export default function DiaryEditorPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [ready, setReady] = useState(isNew);
   const closingWithoutDraft = useRef(false);
+  // the running phase is only a default: once picked by hand (even "Ohne Phase") it stays
+  const phasePicked = useRef(false);
 
   useEffect(() => {
     if (!isNew) {
@@ -66,7 +70,7 @@ export default function DiaryEditorPage() {
 
   // default phase: the one that is currently running
   useEffect(() => {
-    if (!isNew || entry.phaseId) return;
+    if (!isNew || entry.phaseId || phasePicked.current) return;
     if (activePhase) setEntry((current) => ({ ...current, phaseId: activePhase.id }));
   }, [isNew, activePhase, entry.phaseId]);
 
@@ -90,12 +94,9 @@ export default function DiaryEditorPage() {
     [allEntries, entry.date, entry.id],
   );
 
-  // the latest entry before this day: its people, rooms, trades and weather are the best guess
+  // the latest day before this one: its people, rooms, trades and weather are the best guess
   const previous = useMemo(
-    () =>
-      allEntries
-        .filter((other) => other.id !== entry.id && other.date < entry.date)
-        .sort((a, b) => b.date.localeCompare(a.date))[0],
+    () => previousEntryFor(allEntries, entry.date, entry.id),
     [allEntries, entry.id, entry.date],
   );
   const [tookOver, setTookOver] = useState(false);
@@ -302,13 +303,24 @@ export default function DiaryEditorPage() {
             <TradePicker value={entry.tradeIds} onChange={(value) => update({ tradeIds: value })} />
           </Field>
 
-          <div className="mb-4">
-            <span className="label">Phase</span>
-            <p className="mt-1 flex items-center gap-2 text-xs text-muted">
-              <span className="w-2 h-2 rounded-full bg-accent" aria-hidden="true" />
-              <span className="truncate">{entryPhase?.name ?? activePhase?.name ?? 'keine aktive Phase'}</span>
-            </p>
-          </div>
+          <Field label="Phase">
+            <select
+              className="field"
+              aria-label="Phase"
+              value={entryPhase ? entryPhase.id : ''}
+              onChange={(event) => {
+                phasePicked.current = true;
+                update({ phaseId: event.target.value || undefined });
+              }}
+            >
+              <option value="">Ohne Phase</option>
+              {orderedPhases.map((phase) => (
+                <option key={phase.id} value={phase.id}>
+                  {phase.name}
+                </option>
+              ))}
+            </select>
+          </Field>
 
           <label className="flex items-center gap-3 min-h-11">
             <input
