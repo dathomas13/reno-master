@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { OptionEntry } from '@/data/options';
+import { Icon } from '@/components/Icon';
 
 interface PresetRowProps {
   entry: OptionEntry;
@@ -114,7 +115,7 @@ export function PresetRow({
               onMouseDown={keepFocus}
               onClick={save}
             >
-              ✓
+              <Icon name="check" className="w-5 h-5" strokeWidth={2.2} />
             </button>
             <button
               type="button"

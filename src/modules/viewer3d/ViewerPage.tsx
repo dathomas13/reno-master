@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import {
   buildHouse,
   isVisible,
   LAYERS,
-  LAYER_SHORT,
   LAYER_LABEL,
   CONFIDENCE_LABEL,
   formatDimensions,
@@ -23,6 +22,9 @@ import { VARIANT_LABEL, VARIANTS, type ReleaseInfo } from '@/data/modelRelease';
 import { MODEL_EVENT, type SyncResult } from '@/data/modelSync';
 import { loadSettings } from '@/lib/settings';
 import { Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { Hint } from '@/components/Hint';
+import { Sheet } from '@/components/Sheet';
 import { newId } from '@/lib/ids';
 import { debugLog } from '@/platform/debugLog';
 import { deleteFurnitureItem, readModelFile, saveFurnitureItem } from '@/data/furniture';
@@ -43,6 +45,7 @@ import {
 import { useFurniture } from '@/modules/furniture/useFurniture';
 import { FurnitureCatalog } from '@/modules/furniture/FurnitureCatalog';
 import { FurnitureItemPanel } from '@/modules/furniture/FurnitureItemPanel';
+import { setOpenRoom } from '@/lib/openRoom';
 
 /** one step the editor can take back: the piece before and after, null where there was none */
 interface UndoStep {
@@ -50,6 +53,18 @@ interface UndoStep {
   after: FurnitureItem | null;
 }
 const UNDO_LIMIT = 50;
+
+/** top to bottom as the house is built; the garage stands apart at the end */
+const RAIL_ORDER: Layer[] = ['DACH', 'STUHL', 'DG', 'OG', 'EG', 'KG', 'GAR'];
+const RAIL_LABEL: Record<Layer, string> = {
+  DACH: 'Dach',
+  STUHL: 'Stuhl',
+  DG: 'DG',
+  OG: 'OG',
+  EG: 'EG',
+  KG: 'KG',
+  GAR: 'Gar.',
+};
 
 export default function ViewerPage() {
   const [params, setParams] = useSearchParams();
@@ -72,10 +87,16 @@ export default function ViewerPage() {
     saved?.layers ?? { KG: true, EG: true, OG: true, DG: true, STUHL: true, DACH: true, GAR: true },
   );
   const [viewLabel, setViewLabel] = useState(saved?.viewLabel || VIEW_PRESETS[0]!.label);
+  const [viewOpen, setViewOpen] = useState(false);
   const [structural, setStructural] = useState(saved?.structural ?? false);
   const [showRooms, setShowRooms] = useState(saved?.showRooms ?? false);
   const [selected, setSelected] = useState<Picked | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
+  // the capture button files new entries under the room shown here
+  useEffect(() => {
+    setOpenRoom(room?.id ?? null);
+    return () => setOpenRoom(null);
+  }, [room]);
 
   // ---------------------------------------------------------------- furniture (Plan only)
   const isPlan = variant === 'soll';
@@ -487,11 +508,11 @@ export default function ViewerPage() {
     setPieceId(step.before?.id ?? null);
   }
 
-  /** the storey a new piece goes on: the open room's, or the one floor plan on screen */
+  /** the storey a new piece goes on: the highest of the storeys on screen, else the open room's */
   function targetFloor(): FurnitureFloor {
+    for (const layer of ['OG', 'EG', 'KG'] as const) if (layerState[layer]) return layer;
     if (room && (FURNITURE_FLOORS as readonly string[]).includes(room.floor)) return room.floor as FurnitureFloor;
-    const visible = (['KG', 'EG', 'OG'] as const).filter((layer) => layerState[layer]);
-    return visible.length === 1 ? visible[0]! : 'EG';
+    return 'EG';
   }
 
   function addPiece(type: string, model?: FurnitureModel) {
@@ -571,7 +592,8 @@ export default function ViewerPage() {
               <button
                 key={item}
                 type="button"
-                className={`px-3 py-2 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
+                aria-pressed={variant === item}
+                className={`px-3 min-h-10 text-sm ${variant === item ? 'bg-accent text-bg font-semibold' : 'bg-panel text-muted'}`}
                 onClick={() => switchVariant(item)}
               >
                 {VARIANT_LABEL[item]}
@@ -650,7 +672,8 @@ export default function ViewerPage() {
           />
         )}
 
-        {room && !piece && (
+        {/* while furnishing only the room's name matters - it says where new pieces go */}
+        {room && !piece && !editing && (
           <RoomPanel
             room={room}
             onClose={() => {
@@ -681,29 +704,42 @@ export default function ViewerPage() {
                 Fertig
               </button>
             </div>
-            <p className="text-[11px] text-muted mt-1.5">
+            <p className="text-xs text-muted mt-1.5">
               {piece
-                ? 'Das gewählte Möbel mit einem Finger ziehen – an Wänden rastet es ein.'
-                : 'Ein Möbel antippen, um es zu wählen. Neue kommen in den offenen Raum oder die Mitte der Ansicht.'}
+                ? 'Möbel mit einem Finger ziehen – an Wänden rastet es ein.'
+                : room
+                  ? `Neue Möbel kommen in: ${room.name}`
+                  : 'Neue Möbel kommen in die Bildmitte.'}
             </p>
           </div>
         )}
 
-        {/* controls */}
-        <div className="flex flex-wrap gap-1.5 pointer-events-auto">
-          {LAYERS.map((layer) => (
-            <button
-              key={layer}
-              type="button"
-              className={`chip ${layerState[layer] ? 'chip-on' : ''}`}
-              onClick={() => toggleLayer(layer)}
-            >
-              {LAYER_SHORT[layer]}
-            </button>
-          ))}
+        {!loading && !error && (
+          <Hint id="raum-antippen" done={!!room} className="pointer-events-auto">
+            Einen Raum antippen zeigt, was dort passiert ist.
+          </Hint>
+        )}
+
+        {/* overlays: one quiet row - floors and views have their own rail at the right edge */}
+        {/* on its own panel like the floor rail: gold text alone is unreadable on a light model */}
+        <div className="self-start flex flex-wrap items-center gap-1.5 p-1 rounded-xl bg-panel/80 backdrop-blur border border-line pointer-events-auto">
           <button
             type="button"
-            className={`chip ${structural ? 'border-bad text-bad' : ''}`}
+            className={`chip ${showRooms ? 'chip-on' : ''}`}
+            aria-pressed={showRooms}
+            onClick={() => {
+              const next = !showRooms;
+              setShowRooms(next);
+              houseRef.current?.setRoomsVisible(next);
+              renderRef.current?.();
+            }}
+          >
+            Räume
+          </button>
+          <button
+            type="button"
+            className={`chip ${structural ? 'border-bad text-bad bg-bad/10' : ''}`}
+            aria-pressed={structural}
             onClick={() => {
               const next = !structural;
               setStructural(next);
@@ -714,14 +750,14 @@ export default function ViewerPage() {
             Tragwände
           </button>
           {isPlan && (
-            <button type="button" className={`chip ${showFurniture ? 'chip-on' : ''}`} onClick={toggleFurniture}>
+            <button type="button" className={`chip ${showFurniture ? 'chip-on' : ''}`} aria-pressed={showFurniture} onClick={toggleFurniture}>
               Möbel
             </button>
           )}
           {isPlan && !editing && (
             <button
               type="button"
-              className="chip"
+              className="chip border-accent text-accent"
               onClick={() => {
                 setEditing(true);
                 if (!showFurniture) toggleFurniture();
@@ -730,31 +766,80 @@ export default function ViewerPage() {
               Einrichten
             </button>
           )}
-          <button
-            type="button"
-            className={`chip ${showRooms ? 'chip-on' : ''}`}
-            onClick={() => {
-              const next = !showRooms;
-              setShowRooms(next);
-              houseRef.current?.setRoomsVisible(next);
-              renderRef.current?.();
-            }}
-          >
-            Räume
-          </button>
-          <select
-            className="chip bg-panel"
-            value={viewLabel}
-            onChange={(event) => applyPreset(event.target.value)}
-          >
-            {VIEW_PRESETS.map((preset) => (
-              <option key={preset.label} value={preset.label}>
-                Ansicht: {preset.label}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
+
+      {/* the tabs of the area "Haus", small on the left so the model keeps the room */}
+      <nav
+        aria-label="Haus"
+        className="absolute left-2 top-[calc(3.5rem+env(safe-area-inset-top))] z-10 flex rounded-xl overflow-hidden
+                   border border-line bg-panel/80 backdrop-blur text-sm"
+      >
+        <span aria-current="page" className="px-3 min-h-9 grid place-items-center bg-accent/15 text-accent font-semibold">
+          3D
+        </span>
+        <Link to="/plaene" replace className="px-3 min-h-9 grid place-items-center text-muted">
+          Pläne
+        </Link>
+      </nav>
+
+      {/* the floors, stacked like the house itself: roof on top, cellar at the bottom */}
+      <div
+        role="group"
+        aria-label="Geschosse"
+        className="absolute right-2 top-[calc(3.5rem+env(safe-area-inset-top))] z-10 flex flex-col gap-1 p-1
+                   rounded-xl bg-panel/80 backdrop-blur border border-line"
+      >
+        {RAIL_ORDER.map((layer) => (
+          <button
+            key={layer}
+            type="button"
+            aria-pressed={!!layerState[layer]}
+            aria-label={LAYER_LABEL[layer]}
+            title={LAYER_LABEL[layer]}
+            className={`w-12 h-9 rounded-lg text-xs border ${layer === 'GAR' ? 'mt-2' : ''} ${
+              layerState[layer]
+                ? 'bg-accent/15 text-accent border-accent/60 font-semibold'
+                : 'text-muted border-line/60'
+            }`}
+            onClick={() => toggleLayer(layer)}
+          >
+            {RAIL_LABEL[layer]}
+          </button>
+        ))}
+        {/* a view sets floors and camera together, so it belongs with the floors */}
+        <button
+          type="button"
+          className="w-12 mt-2 py-1.5 rounded-lg border border-line/60 text-muted flex flex-col items-center gap-0.5"
+          aria-label={`Ansicht: ${viewLabel} – ändern`}
+          title={`Ansicht: ${viewLabel}`}
+          onClick={() => setViewOpen(true)}
+        >
+          <Icon name="eye" className="w-5 h-5" />
+          <span className="text-[10px] leading-none">Ansicht</span>
+        </button>
+      </div>
+
+      <Sheet open={viewOpen} onClose={() => setViewOpen(false)} title="Ansicht" doneLabel="Abbrechen">
+        <ul className="pb-2">
+          {VIEW_PRESETS.map((preset) => (
+            <li key={preset.label}>
+              <button
+                type="button"
+                className={`list-row w-full text-left ${preset.label === viewLabel ? 'text-accent' : ''}`}
+                aria-pressed={preset.label === viewLabel}
+                onClick={() => {
+                  applyPreset(preset.label);
+                  setViewOpen(false);
+                }}
+              >
+                <span className="flex-1">{preset.label}</span>
+                {preset.label === viewLabel && <Icon name="check" className="w-5 h-5" />}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
 
       <FurnitureCatalog
         open={catalogOpen}

@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { EmptyState } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { EmptyState, Spinner } from '@/components/Fields';
+import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { useCollection } from '@/data/hooks';
 import { COL, type Contact, type ContactLog } from '@/data/types';
-import { saveContactLog, deleteContactLog } from '@/data/repos';
+import { saveContactLog, deleteContactLog, emptyContactLog } from '@/data/repos';
 import { useOptions } from '@/data/useOptions';
 import { formatDateTime } from '@/lib/date';
 import { ContactLogEditor, logPreview } from './ContactLogSection';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 /**
  * All Gesprächsprotokoll entries in one place, across every contact - the per-contact list
@@ -17,7 +21,16 @@ import { ContactLogEditor, logPreview } from './ContactLogSection';
  * does not delete its log entries) gets a new home rather than staying stuck.
  */
 export default function ContactLogsPage() {
-  const { data: logs } = useCollection<ContactLog>(COL.contactLogs);
+  const { data: logs, loading } = useCollection<ContactLog>(COL.contactLogs);
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
+
+  function removeLog(log: ContactLog) {
+    const stored = logs.find((item) => item.id === log.id);
+    if (!stored) return;
+    undoableDelete('Gesprächseintrag gelöscht', () => deleteContactLog(stored.id), () => saveContactLog(stored));
+  }
   const { data: contacts } = useCollection<Contact>(COL.contacts);
   const { label } = useOptions();
   const [search, setSearch] = useState('');
@@ -31,6 +44,18 @@ export default function ContactLogsPage() {
     const log = logs.find((item) => item.id === wanted);
     if (log) setOpen(log);
   }, [wanted, logs]);
+
+  // a new entry from the capture button or after a call (?neu=1&kontakt=…&kanal=…)
+  useEffect(() => {
+    if (params.get('neu') !== '1') return;
+    const log = emptyContactLog(params.get('kontakt') ?? '');
+    const channel = params.get('kanal');
+    setOpen(channel ? { ...log, channel } : log);
+    const next = new URLSearchParams(params);
+    for (const key of ['neu', 'kontakt', 'kanal']) next.delete(key);
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   function close() {
     setOpen(null);
@@ -57,7 +82,17 @@ export default function ContactLogsPage() {
 
   return (
     <>
-      <TopBar title="Gespräche" subtitle={`${logs.length} Einträge`} />
+      <TopBar
+        title="Gespräche"
+        subtitle={`${logs.length} Einträge`}
+        action={
+          <button type="button" className="btn btn-primary px-3 min-h-11" onClick={() => setOpen(emptyContactLog(''))}>
+            <Icon name="plus" className="w-5 h-5" />
+            Neu
+          </button>
+        }
+      />
+      <SectionTabs label="Kontakte" tabs={AREA_TABS.contacts('logs')} />
 
       <div className="p-3">
         <input
@@ -69,18 +104,28 @@ export default function ContactLogsPage() {
         />
       </div>
 
-      {filtered.length === 0 && (
-        <EmptyState
-          title="Keine Gesprächseinträge"
-          hint="Steht bei einem Kontakt unter „Gesprächsprotokoll“."
-        />
-      )}
+      {loading && logs.length === 0 && <Spinner label="Gespräche werden geladen…" />}
+
+      {!(loading && logs.length === 0) && filtered.length === 0 &&
+        (search.trim() ? (
+          <EmptyState title="Nichts gefunden" hint={`Kein Gespräch passt zu „${search.trim()}“.`} />
+        ) : (
+          <EmptyState
+            title="Noch keine Gesprächseinträge"
+            hint="Ein Gespräch wird beim Kontakt unter „Gesprächsprotokoll“ eingetragen."
+          />
+        ))}
 
       <ul>
         {filtered.map((log) => {
           const orphaned = !contactName.has(log.contactId);
           return (
-            <li key={log.id}>
+            <li
+              key={log.id}
+              {...rowActions.bind(contactName.get(log.contactId) ?? 'Gespräch', [
+                { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeLog(log) },
+              ])}
+            >
               <button type="button" className="list-row w-full text-left" onClick={() => setOpen(log)}>
                 <span className="flex-1 min-w-0">
                   <span className={`block truncate font-medium ${orphaned ? 'text-bad' : ''}`}>
@@ -97,19 +142,26 @@ export default function ContactLogsPage() {
           );
         })}
       </ul>
+      {rowActions.sheet}
 
       {open && (
         <ContactLogEditor
           log={open}
           contacts={contacts}
+          isNew={!logs.some((item) => item.id === open.id)}
           onClose={close}
           onSave={async (log) => {
-            await saveContactLog(log);
+            try {
+              await saveContactLog(log);
+            } catch {
+              toast('Der Eintrag konnte nicht gespeichert werden.');
+              return;
+            }
             close();
           }}
-          onDelete={async (log) => {
-            await deleteContactLog(log.id);
+          onDelete={(log) => {
             close();
+            removeLog(log);
           }}
         />
       )}

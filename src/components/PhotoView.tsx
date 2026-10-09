@@ -1,4 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useBackClose } from '@/platform/backHandlers';
+import { Icon } from './Icon';
+import { Hint } from './Hint';
 import { resolveFileUrl } from '@/offline/fileUrls';
 import type { Photo } from '@/data/types';
 import { PdfViewer } from './PdfViewer';
@@ -72,12 +75,16 @@ interface LightboxProps {
 
 /** full screen viewer with swipe, used from the diary and the cost detail */
 export function Lightbox({ photos, index, onClose, onIndexChange, footer }: LightboxProps) {
+  // Android back closes the photo, not the page behind it
+  useBackClose(true, onClose);
   const photo = photos[index];
   const isPdf = photo?.contentType === 'application/pdf';
   // the original can be several megabytes, so it is only fetched when asked for
   const [showOriginal, setShowOriginal] = useState(false);
   // swiping to the next photo only makes sense while the picture is not zoomed
   const [zoomed, setZoomed] = useState(false);
+  // once the user swiped, the hint about swiping has done its job
+  const [swiped, setSwiped] = useState(false);
 
   useEffect(() => {
     setShowOriginal(false);
@@ -99,14 +106,14 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
 
   let startX = 0;
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black flex flex-col" data-no-swipe>
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 min-h-14 shrink-0 pt-[env(safe-area-inset-top)] text-muted">
         <div className="flex items-center gap-1">
           {photos.length > 1 && <button type="button" className="btn btn-ghost w-11 h-11 p-0" aria-label="Vorherige Datei" title="Vorherige Datei"
-            disabled={index === 0} onClick={() => onIndexChange(index - 1)}>&#8592;</button>}
+            disabled={index === 0} onClick={() => onIndexChange(index - 1)}><Icon name="chevronLeft" /></button>}
           <span className="text-sm whitespace-nowrap">{index + 1} / {photos.length}</span>
           {photos.length > 1 && <button type="button" className="btn btn-ghost w-11 h-11 p-0" aria-label="Nächste Datei" title="Nächste Datei"
-            disabled={index === photos.length - 1} onClick={() => onIndexChange(index + 1)}>&#8594;</button>}
+            disabled={index === photos.length - 1} onClick={() => onIndexChange(index + 1)}><Icon name="chevronRight" /></button>}
         </div>
         <span className="flex items-center gap-2">
           {photo.originalPath &&
@@ -137,6 +144,7 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
           const delta = (event.changedTouches[0]?.clientX ?? 0) - startX;
           if (delta < -50) onIndexChange(Math.min(index + 1, photos.length - 1));
           if (delta > 50) onIndexChange(Math.max(index - 1, 0));
+          if (Math.abs(delta) > 50) setSwiped(true);
         }}
       >
         {isPdf ? <PdfViewer key={photo.storagePath} storagePath={photo.storagePath} /> : (
@@ -147,6 +155,11 @@ export function Lightbox({ photos, index, onClose, onIndexChange, footer }: Ligh
           </ZoomPan>
         )}
       </div>
+      {photos.length > 1 && !isPdf && (
+        <Hint id="lightbox-wischen" done={swiped} className="mx-3 mb-2 shrink-0">
+          Seitlich wischen für das nächste Foto.
+        </Hint>
+      )}
       {footer && <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-xs text-muted shrink-0 max-h-[25dvh] overflow-auto break-words">{footer(photo)}</div>}
     </div>
   );

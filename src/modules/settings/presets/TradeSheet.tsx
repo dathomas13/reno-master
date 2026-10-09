@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sheet } from '@/components/Sheet';
+import { useConfirm } from '@/components/Confirm';
 import { Field } from '@/components/Fields';
 import { OptionChips } from '@/components/OptionFields';
 import { PRIORITY_MEDIUM, TRADE_STATUS_DEFAULT } from '@/data/options';
@@ -23,6 +24,7 @@ function amountText(value: number | undefined): string {
 /** edit one trade; "Fertig" saves, hiding and deleting act at once */
 export default function TradeSheet({ trade, trades, usage, onClose }: TradeSheetProps) {
   const [name, setName] = useState('');
+  const confirm = useConfirm();
   const [status, setStatus] = useState<string | undefined>(TRADE_STATUS_DEFAULT);
   const [priority, setPriority] = useState<string | undefined>(PRIORITY_MEDIUM);
   const [budget, setBudget] = useState('');
@@ -80,9 +82,15 @@ export default function TradeSheet({ trade, trades, usage, onClose }: TradeSheet
     onClose();
   }
 
-  function remove() {
+  async function remove() {
     if (!trade || usage > 0) return;
-    if (!window.confirm(`„${trade.name}“ endgültig löschen?`)) return;
+    const go = await confirm({
+      title: `„${trade.name}“ löschen?`,
+      message: 'Wird endgültig entfernt. Wer es nur nicht mehr sehen will, blendet es aus.',
+      confirmLabel: 'Endgültig löschen',
+      danger: true,
+    });
+    if (!go) return;
     deleteTrade(trade.id);
     onClose();
   }
@@ -152,7 +160,7 @@ export default function TradeSheet({ trade, trades, usage, onClose }: TradeSheet
             {trade.archived ? 'Wieder anzeigen' : 'Ausblenden'}
           </button>
           {usage === 0 ? (
-            <button type="button" className="btn btn-danger w-full min-h-11" onClick={remove}>
+            <button type="button" className="btn btn-danger w-full min-h-11" onClick={() => void remove()}>
               Löschen
             </button>
           ) : (

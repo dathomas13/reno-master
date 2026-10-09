@@ -10,6 +10,7 @@ import {
 } from '@/platform/contactsImport';
 import { debugLog, readDebugLog } from '@/platform/debugLog';
 import { emptyContact, saveContact } from '@/data/repos';
+import { Icon } from '@/components/Icon';
 
 /**
  * Bringing contacts in from outside the app: the device's own address book (native plugin
@@ -177,8 +178,15 @@ export function ContactImportSheet({
                 const duplicate = known.has(contact.name.trim().toLowerCase());
                 return (
                   <li key={index}>
-                    <button type="button" className="list-row w-full text-left" onClick={() => toggle(index)}>
-                      <span className={`w-5 ${selected.has(index) ? 'text-accent' : 'text-transparent'}`}>✓</span>
+                    <button
+                      type="button"
+                      className="list-row w-full text-left"
+                      aria-pressed={selected.has(index)}
+                      onClick={() => toggle(index)}
+                    >
+                      <span className={`w-5 shrink-0 ${selected.has(index) ? 'text-accent' : 'text-transparent'}`}>
+                        <Icon name="check" className="w-5 h-5" strokeWidth={2.2} />
+                      </span>
                       <span className="flex-1 min-w-0">
                         <span className="block truncate">{contact.name}</span>
                         <span className="block text-xs text-muted truncate">

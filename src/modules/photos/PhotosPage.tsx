@@ -8,8 +8,15 @@ import { COL, type Cost, type DiaryEntry, type Phase, type Photo } from '@/data/
 import { photoDate, photosForRoom, sortByDate, type PhotoSource } from '@/data/photoRooms';
 import { formatDate, formatMonth, monthKey } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
+import { Icon } from '@/components/Icon';
+import { Segmented } from '@/components/Segmented';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 type Grouping = 'phase' | 'month';
+const GROUPINGS = [
+  { value: 'phase', label: 'Nach Phase' },
+  { value: 'month', label: 'Nach Monat' },
+] as const;
 
 /**
  * Every photo in one place, filtered by room when asked.
@@ -67,30 +74,33 @@ export default function PhotosPage() {
     <>
       <TopBar
         title={title}
-        back={roomFilter ? `/3d?raum=${roomFilter}` : '/dateien'}
+        back={roomFilter ? `/3d?raum=${roomFilter}` : undefined}
         subtitle={`${visible.length} ${visible.length === 1 ? 'Bild' : 'Bilder'}`}
       />
+      {!roomFilter && <SectionTabs label="Tagebuch" tabs={AREA_TABS.diary('photos')} />}
 
-      {roomFilter && (
-        <div className="flex gap-2 overflow-x-auto p-3 no-scrollbar">
-          <button type="button" className="chip chip-on shrink-0" onClick={() => setParams({}, { replace: true })}>
-            {roomLabel(roomFilter)} ×
-          </button>
-        </div>
-      )}
-
-      {visible.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto px-3 pt-3 no-scrollbar">
-          {(['phase', 'month'] as Grouping[]).map((item) => (
+      {(roomFilter || visible.length > 0) && (
+        <div className="flex flex-wrap items-center gap-2 p-3">
+          {visible.length > 0 && (
+            <Segmented<Grouping>
+              label="Gruppieren"
+              options={GROUPINGS}
+              value={grouping}
+              onChange={setGrouping}
+              className="flex-1 max-w-xs"
+            />
+          )}
+          {roomFilter && (
             <button
-              key={item}
               type="button"
-              className={`chip shrink-0 ${grouping === item ? 'chip-on' : ''}`}
-              onClick={() => setGrouping(item)}
+              className="chip chip-on shrink-0"
+              aria-label={`Raumfilter ${roomLabel(roomFilter)} aufheben`}
+              onClick={() => setParams({}, { replace: true })}
             >
-              {item === 'phase' ? 'Nach Phase' : 'Nach Monat'}
+              {roomLabel(roomFilter)}
+              <Icon name="close" className="w-4 h-4" />
             </button>
-          ))}
+          )}
         </div>
       )}
 
@@ -116,6 +126,7 @@ export default function PhotosPage() {
                 key={photo.id}
                 type="button"
                 className="aspect-square relative"
+                aria-label={`Foto vergrößern${photo.originalName ? `: ${photo.originalName}` : ''}`}
                 onClick={() => setOpen(lightboxPhotos.indexOf(photo))}
               >
                 <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />
@@ -143,13 +154,23 @@ export default function PhotosPage() {
                   {photo.originalName ? ` · ${photo.originalName}` : ''}
                 </span>
                 {entry && (
-                  <Link to={`/tagebuch/${entry.id}`} className="text-accent" onClick={() => setOpen(null)}>
-                    {entry.title} ›
+                  <Link
+                    to={`/tagebuch/${entry.id}`}
+                    className="text-accent inline-flex items-center gap-1 min-h-10"
+                    onClick={() => setOpen(null)}
+                  >
+                    {entry.title}
+                    <Icon name="chevronRight" className="w-4 h-4" />
                   </Link>
                 )}
                 {cost && (
-                  <Link to={`/kosten/${cost.id}`} className="text-accent" onClick={() => setOpen(null)}>
-                    {cost.vendor || 'Beleg'} ›
+                  <Link
+                    to={`/kosten/${cost.id}`}
+                    className="text-accent inline-flex items-center gap-1 min-h-10"
+                    onClick={() => setOpen(null)}
+                  >
+                    {cost.vendor || 'Beleg'}
+                    <Icon name="chevronRight" className="w-4 h-4" />
                   </Link>
                 )}
               </div>

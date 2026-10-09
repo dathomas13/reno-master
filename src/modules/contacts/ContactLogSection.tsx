@@ -7,6 +7,8 @@ import { COL, type Contact, type ContactLog } from '@/data/types';
 import { emptyContactLog, saveContactLog, deleteContactLog } from '@/data/repos';
 import { Field } from '@/components/Fields';
 import { Sheet } from '@/components/Sheet';
+import { Icon } from '@/components/Icon';
+import { useToast, useUndoableDelete } from '@/components/Toast';
 import { formatDateTime } from '@/lib/date';
 
 /** the dated call/meeting log of one contact - what used to just pile up in the notes field */
@@ -15,6 +17,8 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
   const logs = useMemo(() => [...data].sort((a, b) => b.at.localeCompare(a.at)), [data]);
   const [open, setOpen] = useState<ContactLog | null>(null);
   const { label } = useOptions();
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
 
   return (
     <Field label="Gesprächsprotokoll">
@@ -37,19 +41,28 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
         </ul>
       )}
       <button type="button" className="btn w-full" onClick={() => setOpen(emptyContactLog(contactId))}>
-        + Gesprächseintrag
+        <Icon name="plus" className="w-5 h-5" />
+        Gesprächseintrag
       </button>
       {open && (
         <ContactLogEditor
           log={open}
           onClose={() => setOpen(null)}
+          isNew={!data.some((item) => item.id === open.id)}
           onSave={async (log) => {
-            await saveContactLog(log);
+            try {
+              await saveContactLog(log);
+            } catch {
+              toast('Der Eintrag konnte nicht gespeichert werden.');
+              return;
+            }
             setOpen(null);
           }}
-          onDelete={async (log) => {
-            await deleteContactLog(log.id);
+          onDelete={(log) => {
+            const stored = data.find((item) => item.id === log.id);
             setOpen(null);
+            if (!stored) return;
+            undoableDelete('Gesprächseintrag gelöscht', () => deleteContactLog(stored.id), () => saveContactLog(stored));
           }}
         />
       )}
@@ -86,22 +99,26 @@ export function ContactLogEditor({
   onClose,
   onSave,
   onDelete,
+  isNew = false,
 }: {
   log: ContactLog;
   contacts?: Contact[];
   onClose(): void;
   onSave(log: ContactLog): Promise<void>;
-  onDelete(log: ContactLog): Promise<void>;
+  onDelete(log: ContactLog): void;
+  /** a log not stored yet: nothing to delete, and leaving it empty saves nothing */
+  isNew?: boolean;
 }) {
   const [draft, setDraft] = useState(log);
   const update = (patch: Partial<ContactLog>) => setDraft({ ...draft, ...patch });
   const contactPicked = !contacts || contacts.some((contact) => contact.id === draft.contactId);
+  const canSave = contactPicked && (!isNew || draft.text.trim().length > 0 || !!draft.channel);
 
   return (
     <Sheet
       open
       onClose={onClose}
-      onDone={contactPicked ? () => void onSave(draft) : onClose}
+      onDone={canSave ? () => void onSave(draft) : onClose}
       title="Gesprächseintrag"
     >
       <div className="p-4">
@@ -150,14 +167,16 @@ export function ContactLogEditor({
           <button
             type="button"
             className="btn btn-primary flex-1"
-            disabled={!contactPicked}
+            disabled={!canSave}
             onClick={() => void onSave(draft)}
           >
             Speichern
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
-            Löschen
-          </button>
+          {!isNew && (
+            <button type="button" className="btn btn-danger" onClick={() => onDelete(draft)}>
+              Löschen
+            </button>
+          )}
         </div>
       </div>
     </Sheet>

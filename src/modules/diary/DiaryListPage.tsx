@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
 import { PhotoImage } from '@/components/PhotoView';
 import { useCollection } from '@/data/hooks';
 import { COL, type DiaryEntry, type Phase, type Photo } from '@/data/types';
@@ -10,10 +11,22 @@ import { formatDateWithWeekday, formatMonth, monthKey, today } from '@/lib/date'
 import { useRooms } from '@/data/RoomsContext';
 import { useOptions } from '@/data/useOptions';
 import { weatherIcon } from './weatherIcons';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
+import { useRowActions } from '@/components/RowActions';
+import { useUndoableDelete } from '@/components/Toast';
+import { deleteDiaryEntry, saveDiaryEntry } from '@/data/repos';
 
 export default function DiaryListPage() {
   const [params, setParams] = useSearchParams();
   const { data: entries, loading } = useCollection<DiaryEntry>(COL.diary, [orderBy('date', 'desc')]);
+  const navigate = useNavigate();
+  const rowActions = useRowActions();
+  const undoableDelete = useUndoableDelete();
+
+  function removeEntry(entry: DiaryEntry) {
+    // the photos keep their entryId, so writing the entry again brings everything back
+    undoableDelete('Eintrag gelöscht', () => deleteDiaryEntry(entry.id), () => saveDiaryEntry(entry));
+  }
   const { data: photos } = useCollection<Photo>(COL.photos);
   const { data: phases } = useCollection<Phase>(COL.phases);
   const { shortLabel: roomLabel, matches } = useRooms();
@@ -58,11 +71,13 @@ export default function DiaryListPage() {
             : `${entries.length} Einträge`
         }
         action={
-          <Link className="btn btn-primary px-3 min-h-0 py-2" to="/tagebuch/neu">
+          <Link className="btn btn-primary px-3 min-h-11" to="/tagebuch/neu">
+            <Icon name="plus" className="w-5 h-5" />
             Neu
           </Link>
         }
       />
+      <SectionTabs label="Tagebuch" tabs={AREA_TABS.diary('entries')} />
 
       <div className="p-3">
         <input
@@ -79,32 +94,53 @@ export default function DiaryListPage() {
           <button
             type="button"
             className="chip chip-on"
+            aria-label={`Filter ${filterLabel} aufheben`}
             onClick={() => setParams(new URLSearchParams(), { replace: true })}
           >
-            Filter: {filterLabel} ×
+            Filter: {filterLabel}
+            <Icon name="close" className="w-4 h-4" />
           </button>
         </div>
       )}
 
       {!hasToday && !search && !roomFilter && !phaseFilter && (
-        <Link to="/tagebuch/neu" className="mx-3 mb-3 card p-4 flex items-center gap-3 active:bg-panel2">
-          <span className="text-2xl">📝</span>
+        <Link
+          to="/tagebuch/neu"
+          className="mx-3 mb-3 card p-4 flex items-center gap-3 border-accent/40 active:bg-panel2"
+        >
+          <span className="w-10 h-10 rounded-full bg-accent/15 text-accent grid place-items-center shrink-0">
+            <Icon name="diary" className="w-5 h-5" />
+          </span>
           <span className="flex-1">
             <span className="block">Für heute gibt es noch keinen Eintrag</span>
             <span className="block text-xs text-muted">{formatDateWithWeekday(today())}</span>
           </span>
-          <span className="text-accent">›</span>
+          <span className="text-accent"><Icon name="chevronRight" className="w-5 h-5" /></span>
         </Link>
       )}
 
       {loading && entries.length === 0 && <Spinner label="Einträge werden geladen…" />}
 
-      {!loading && filtered.length === 0 && (
-        <EmptyState
-          title={search ? 'Nichts gefunden' : 'Noch keine Einträge'}
-          hint={search ? undefined : 'Jeden Abend kurz festhalten, was passiert ist.'}
-        />
-      )}
+      {!loading && filtered.length === 0 &&
+        (entries.length > 0 ? (
+          <EmptyState
+            title="Nichts gefunden"
+            hint={search ? `Kein Eintrag passt zu „${search.trim()}“.` : `Zu ${filterLabel} gibt es keine Einträge.`}
+            action={
+              (roomFilter || phaseFilter) && (
+                <button
+                  type="button"
+                  className="btn mt-2"
+                  onClick={() => setParams(new URLSearchParams(), { replace: true })}
+                >
+                  Filter aufheben
+                </button>
+              )
+            }
+          />
+        ) : (
+          <EmptyState title="Noch keine Einträge" hint="Jeden Abend kurz festhalten, was passiert ist." />
+        ))}
 
       <ul>
         {filtered.map((entry, index) => {
@@ -112,7 +148,13 @@ export default function DiaryListPage() {
           const showMonth = !previous || monthKey(previous.date) !== monthKey(entry.date);
           const entryPhotos = (photosByEntry.get(entry.id) ?? []).slice(0, 3);
           return (
-            <li key={entry.id}>
+            <li
+              key={entry.id}
+              {...rowActions.bind(entry.title || formatDateWithWeekday(entry.date), [
+                { label: 'Bearbeiten', icon: 'diary', onSelect: () => navigate(`/tagebuch/${entry.id}/bearbeiten`) },
+                { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeEntry(entry) },
+              ])}
+            >
               {showMonth && <div className="section-title">{formatMonth(entry.date)}</div>}
               <Link to={`/tagebuch/${entry.id}`} className="list-row">
                 <div className="min-w-0 flex-1">
@@ -144,6 +186,7 @@ export default function DiaryListPage() {
           );
         })}
       </ul>
+      {rowActions.sheet}
     </>
   );
 }

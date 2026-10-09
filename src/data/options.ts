@@ -140,6 +140,9 @@ export const PRIORITY_HIGH = 'hoch';
 export const PRIORITY_MEDIUM = 'mittel';
 export const PAYMENT_OPEN = 'offen';
 export const PAYMENT_PAID = 'bezahlt';
+/** contact log channels a call or chat from the app is filed under */
+export const CHANNEL_CALL = 'anruf';
+export const CHANNEL_MESSAGE = 'nachricht';
 /** default status of a new trade */
 export const TRADE_STATUS_DEFAULT = 'noch-offen';
 

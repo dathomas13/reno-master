@@ -11,6 +11,7 @@ import TradesEditor from './TradesEditor';
 import PhasesEditor from './PhasesEditor';
 import RoomsEditor from './RoomsEditor';
 import RoomMapEditor from './RoomMapEditor';
+import { Icon } from '@/components/Icon';
 
 const OVERVIEW = '/einstellungen/voreinstellungen';
 
@@ -34,7 +35,7 @@ function OptionsPage({ preset, setKey }: { preset: PresetDef; setKey: OptionSetK
             aria-label="Weitere Aktionen"
             onClick={() => setMenuOpen(true)}
           >
-            ⋯
+            <Icon name="more" />
           </button>
         }
       />

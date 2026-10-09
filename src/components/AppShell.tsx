@@ -1,9 +1,12 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { SyncBadge } from './SyncBadge';
 import { Sheet } from './Sheet';
 import { loadSettings, SETTINGS_EVENT, type LocalSettings } from '@/lib/settings';
-import { entryOf, normalizeNavLayout, splitNav } from '@/lib/navLayout';
+import { entryOf, navRouteFor, normalizeNavLayout, splitNav } from '@/lib/navLayout';
+import { Icon, type IconName } from './Icon';
+import { CaptureSheet } from './CaptureSheet';
+import { useCallFollowUp } from '@/modules/contacts/useCallFollowUp';
 
 interface NavItem {
   to: string;
@@ -11,52 +14,24 @@ interface NavItem {
   icon: ReactNode;
 }
 
-/** inline icons keep the app free of an icon package and work offline */
-function Icon({ path }: { path: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="1.7"
-         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={path} />
-    </svg>
-  );
-}
-
-const ICONS = {
-  home: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5',
-  diary: 'M4 4h11l5 5v11H4zM15 4v5h5M8 13h8M8 17h5',
-  cube: 'M12 3 3 7.5v9L12 21l9-4.5v-9zM3 7.5 12 12l9-4.5M12 12v9',
-  euro: 'M17 6.5A6 6 0 0 0 8 12a6 6 0 0 0 9 5.5M5 10.5h8M5 13.5h8',
-  more: 'M5 12h.01M12 12h.01M19 12h.01',
-  plan: 'M3 5h18v14H3zM9 5v14M3 12h6M15 5v6M15 11h6',
-  task: 'M5 12l4 4 10-10M4 20h16',
-  note: 'M5 4h11l4 4v12H5zM16 4v4h4M9 12h6M9 16h6',
-  contact: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 20c0-3.3 3.6-6 8-6s8 2.7 8 6',
-  chat: 'M4 4h16v12H8l-4 4z',
-  photo: 'M3 7h4l1.5-2h7L17 7h4v13H3zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
-  receipt: 'M6 3h12v18l-2.5-1.5L13 21l-2.5-1.5L8 21l-2-1.5zM8.5 8h7M8.5 12h7M8.5 16h4',
-  search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM16.5 16.5 21 21',
-  settings: 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM4.5 12a7.5 7.5 0 0 1 .2-1.6l-2-1.5 2-3.4 2.3 1a7.6 7.6 0 0 1 2.8-1.6L10.2 2h3.6l.4 2.9c1 .3 2 .9 2.8 1.6l2.3-1 2 3.4-2 1.5a7.6 7.6 0 0 1 0 3.2l2 1.5-2 3.4-2.3-1a7.6 7.6 0 0 1-2.8 1.6l-.4 2.9h-3.6l-.4-2.9a7.6 7.6 0 0 1-2.8-1.6l-2.3 1-2-3.4 2-1.5A7.5 7.5 0 0 1 4.5 12z',
-  files: 'M4 5h6l2 2h8v12H4zM4 9h16',
+const ROUTE_ICONS: Record<string, IconName> = {
+  '/': 'home',
+  '/tagebuch': 'diary',
+  '/3d': 'cube',
+  '/kosten': 'euro',
+  '/suche': 'search',
+  '/aufgaben': 'task',
+  '/notizen': 'note',
+  '/kontakte': 'contact',
+  '/gespraeche': 'chat',
+  '/einstellungen': 'settings',
 };
 
-const ROUTE_ICONS: Record<string, string> = {
-  '/': ICONS.home,
-  '/tagebuch': ICONS.diary,
-  '/3d': ICONS.cube,
-  '/kosten': ICONS.euro,
-  '/suche': ICONS.search,
-  '/dateien': ICONS.files,
-  '/aufgaben': ICONS.task,
-  '/notizen': ICONS.note,
-  '/kontakte': ICONS.contact,
-  '/gespraeche': ICONS.chat,
-  '/einstellungen': ICONS.settings,
-};
 
 function navItems(routes: string[]): NavItem[] {
   return routes.flatMap((route) => {
     const entry = entryOf(route);
-    return entry ? [{ ...entry, icon: <Icon path={ROUTE_ICONS[route] ?? ICONS.more} /> }] : [];
+    return entry ? [{ ...entry, icon: <Icon name={ROUTE_ICONS[route] ?? 'more'} /> }] : [];
   });
 }
 
@@ -76,6 +51,8 @@ function useNavLayout() {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
+  useCallFollowUp();
   const layout = useNavLayout();
   const split = splitNav(layout);
   const mainNav = navItems(split.bar);
@@ -83,9 +60,28 @@ export function AppShell({ children }: { children: ReactNode }) {
   const allNav = navItems(layout.order);
   const location = useLocation();
   const fullBleed = location.pathname.startsWith('/3d') || location.pathname.startsWith('/plaene/');
+  // NavLink only knows its own path; this also marks the parent of a screen without an entry
+  const current = navRouteFor(location.pathname);
+  const isCurrent = (to: string) => (to === '/' ? location.pathname === '/' : current === to);
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex flex-col items-center justify-center gap-0.5 flex-1 py-2 text-[11px] ${
+  // the capture button sits in the middle of the bar, whatever the bar holds
+  const captureSlot = Math.ceil(mainNav.length / 2);
+  const captureButton = (
+    <div className="flex-1 min-w-0 flex items-center justify-center">
+      <button
+        type="button"
+        aria-label="Erfassen"
+        className="w-12 h-12 -mt-5 rounded-full bg-accent text-bg grid place-items-center shadow-lg
+                   ring-4 ring-bg active:scale-95 transition-transform"
+        onClick={() => setCaptureOpen(true)}
+      >
+        <Icon name="plus" className="w-7 h-7" strokeWidth={2.2} />
+      </button>
+    </div>
+  );
+
+  const linkClass = (isActive: boolean) =>
+    `flex flex-col items-center justify-center gap-0.5 flex-1 min-w-0 py-2 text-[11px] ${
       isActive ? 'text-accent' : 'text-muted'
     }`;
 
@@ -97,14 +93,18 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="font-semibold">Reno Master</div>
           <div className="text-xs text-muted">Schlesierstraße 31</div>
         </div>
+        <button type="button" className="btn btn-primary mx-1 mb-2" onClick={() => setCaptureOpen(true)}>
+          <Icon name="plus" className="w-5 h-5" />
+          Erfassen
+        </button>
         {allNav.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.to === '/'}
-            className={({ isActive }) =>
+            className={() =>
               `flex items-center gap-3 rounded-xl px-3 py-2.5 ${
-                isActive ? 'bg-accent/15 text-accent' : 'text-muted hover:text-ink'
+                isCurrent(item.to) ? 'bg-accent/15 text-accent' : 'text-muted hover:text-ink'
               }`
             }
           >
@@ -128,25 +128,36 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="md:hidden fixed bottom-0 inset-x-0 z-30 flex border-t border-line bg-panel/95 backdrop-blur
                    pb-[env(safe-area-inset-bottom)]"
       >
-        {mainNav.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.to === '/'} className={linkClass}>
-            {item.icon}
-            <span>{item.label}</span>
-          </NavLink>
+        {mainNav.map((item, index) => (
+          <Fragment key={item.to}>
+            {index === captureSlot && captureButton}
+            <NavLink to={item.to} end={item.to === '/'} className={() => linkClass(isCurrent(item.to))}
+                     aria-current={isCurrent(item.to) ? 'page' : undefined}>
+              {item.icon}
+              <span className="truncate max-w-full">{item.label}</span>
+            </NavLink>
+          </Fragment>
         ))}
-        <button type="button" className={linkClass({ isActive: moreOpen })} onClick={() => setMoreOpen(true)}>
-          <Icon path={ICONS.more} />
+        {captureSlot >= mainNav.length && captureButton}
+        <button
+          type="button"
+          className={linkClass(moreOpen || moreNav.some((item) => isCurrent(item.to)))}
+          onClick={() => setMoreOpen(true)}
+        >
+          <Icon name="more" />
           <span>Mehr</span>
         </button>
       </nav>
 
-      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Mehr">
+      <CaptureSheet open={captureOpen} onClose={() => setCaptureOpen(false)} />
+
+      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Mehr" doneLabel="Schließen">
         <div className="flex flex-col">
           {moreNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
-              className="list-row text-ink"
+              className={`list-row ${isCurrent(item.to) ? 'text-accent' : 'text-ink'}`}
               onClick={() => setMoreOpen(false)}
             >
               <span className="text-accent">{item.icon}</span>

@@ -34,7 +34,7 @@ const attachedPhoto = {
   id: 'photo-1', entryId: 'new-entry', originalName: 'test.jpg', uploadState: 'pending',
 } as Photo;
 
-vi.mock('@/components/TopBar', () => ({ TopBar: () => null }));
+vi.mock('@/components/TopBar', () => ({ TopBar: ({ action }: { action?: React.ReactNode }) => <>{action}</> }));
 vi.mock('@/components/Pickers', () => ({
   RoomPicker: () => null,
   TradePicker: () => null,
@@ -168,6 +168,7 @@ describe('diary editor', () => {
 
   it('uses compact controls for weather and people instead of always-visible chips', () => {
     renderNewEditor();
+    fireEvent.click(screen.getByRole('button', { name: /Details/ }));
 
     expect(screen.getByLabelText('Wetter')).toHaveRole('combobox');
     expect(screen.getByRole('button', { name: 'Anwesend auswählen' })).toBeInTheDocument();
@@ -175,9 +176,18 @@ describe('diary editor', () => {
 
   it('shows the active phase as automatic context instead of another picker', async () => {
     renderNewEditor();
+    fireEvent.click(screen.getByRole('button', { name: /Details/ }));
 
     await waitFor(() => expect(screen.getByText('Phase 2: Entkernung & Rückbau')).toBeInTheDocument());
     expect(screen.queryByRole('combobox', { name: 'Phase' })).not.toBeInTheDocument();
     expect(screen.getByText('Phase 2: Entkernung & Rückbau').closest('.field')).toBeNull();
+  });
+
+  it('keeps the rare fields behind "Details" and offers to take over the last entry', () => {
+    renderNewEditor();
+    expect(screen.queryByRole('button', { name: 'Anwesend auswählen' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Wie beim letzten Mal' }));
+    expect(screen.getByText(/Übernommen vom/)).toBeInTheDocument();
   });
 });

@@ -4,6 +4,7 @@ import { newRoomId, previewMap, previewRooms, type RoomRow } from '@/data/roomEd
 import { useRoomDraft, useRoomTables, useRoomUsage } from '@/data/useRoomDraft';
 import { RoomDraftBar } from './RoomDraftBar';
 import { FLOOR_NAMES, FLOOR_ORDER_LIST, RoomSheet, type RoomSheetResult } from './RoomSheet';
+import { Icon } from '@/components/Icon';
 
 type Table = 'ist' | 'soll';
 
@@ -118,7 +119,7 @@ export default function RoomsEditor() {
                           </span>
                         </span>
                         <span className="text-sm text-muted tabular-nums">{used}×</span>
-                        <span aria-hidden="true" className="text-muted">›</span>
+                        <span className="text-muted"><Icon name="chevronRight" className="w-5 h-5" /></span>
                       </button>
                     </li>
                   );
@@ -130,7 +131,8 @@ export default function RoomsEditor() {
 
         {table === 'soll' && (
           <button type="button" className="btn btn-primary w-full mt-5" onClick={() => setSheet({ mode: 'add' })}>
-            ＋ Planungsraum hinzufügen
+            <Icon name="plus" className="w-5 h-5" />
+            Planungsraum hinzufügen
           </button>
         )}
 

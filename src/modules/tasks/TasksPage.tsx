@@ -2,16 +2,22 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
-import { Field, EmptyState } from '@/components/Fields';
+import { Field, EmptyState, Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { MoreFields } from '@/components/MoreFields';
+import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { RoomPicker, TradeSelect, PhaseSelect } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
 import { hasAssignee, isTaskDone, PRIORITY_MEDIUM, TASK_DONE, TASK_OPEN } from '@/data/options';
-import { OptionChips, OptionMultiChips } from '@/components/OptionFields';
-import { COL, type Task } from '@/data/types';
+import { OptionChips, OptionMultiPicker } from '@/components/OptionFields';
+import { COL, type Task, type Trade } from '@/data/types';
 import { emptyTask, saveTask, toggleTaskDone, deleteTask } from '@/data/repos';
-import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, type DueBucket } from '@/lib/date';
+import { dueBucket, DUE_BUCKET_LABEL, formatRelativeDay, today, type DueBucket } from '@/lib/date';
+import { parseQuickTask, type QuickHit, type QuickKind } from './quickParse';
 import { useRooms } from '@/data/RoomsContext';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 const BUCKETS: DueBucket[] = ['overdue', 'today', 'week', 'later', 'none'];
 const PRIORITY_COLOR: Record<string, string> = {
@@ -39,12 +45,19 @@ function formatReminder(value: string | undefined): string {
 
 export default function TasksPage() {
   const [params, setParams] = useSearchParams();
-  const { data: tasks } = useCollection<Task>(COL.tasks);
+  const { data: tasks, loading } = useCollection<Task>(COL.tasks);
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
   const { sets, label } = useOptions();
-  const { shortLabel: roomLabel, matches, writeId } = useRooms();
-  const [filter, setFilter] = useState<'offen' | 'alle' | 'erledigt'>('offen');
+  const { shortLabel: roomLabel, matches, writeId, rooms } = useRooms();
+  const { data: trades } = useCollection<Trade>(COL.trades);
+  // open tasks unless "Erledigte" is on - one chip instead of a second switch row
+  const [showDone, setShowDone] = useState(false);
   const [assignee, setAssignee] = useState<string | null>(null);
   const [quick, setQuick] = useState('');
+  const [ignored, setIgnored] = useState<QuickKind[]>([]);
+  const [quickFocus, setQuickFocus] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [pendingTasks, setPendingTasks] = useState<Record<string, Partial<Task>>>({});
 
@@ -72,6 +85,16 @@ export default function TasksPage() {
     });
   }, [tasks]);
 
+  // the capture button opens a new task straight away (?neu=1, with ?raum= when a room is open)
+  useEffect(() => {
+    if (params.get('neu') !== '1') return;
+    newTask();
+    const next = new URLSearchParams(params);
+    next.delete('neu');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
   function dropWanted() {
     if (!wanted) return;
     const next = new URLSearchParams(params);
@@ -92,11 +115,9 @@ export default function TasksPage() {
     return viewTasks.filter((task) => {
       if (roomFilter && !matches(task.roomIds, roomFilter)) return false;
       if (assignee && !hasAssignee(task, assignee)) return false;
-      if (filter === 'offen') return !isTaskDone(task);
-      if (filter === 'erledigt') return isTaskDone(task);
-      return true;
+      return showDone ? isTaskDone(task) : !isTaskDone(task);
     });
-  }, [viewTasks, filter, assignee, roomFilter, matches]);
+  }, [viewTasks, showDone, assignee, roomFilter, matches]);
 
   const grouped = useMemo(() => {
     const map = new Map<DueBucket, Task[]>();
@@ -112,16 +133,64 @@ export default function TasksPage() {
     return map;
   }, [visible]);
 
+  // short-hand in the quick field: "Fliesenkleber bestellen morgen ! Bad"
+  const parsed = useMemo(
+    () =>
+      parseQuickTask(
+        quick,
+        {
+          today: today(),
+          rooms,
+          people: sets.people.map((person) => ({ id: person.id, name: person.label })),
+          trades: trades.filter((trade) => !trade.archived),
+        },
+        ignored,
+      ),
+    [quick, rooms, sets.people, trades, ignored],
+  );
+
+  function hitLabel(hit: QuickHit): string {
+    if (hit.kind === 'due') return `Fällig ${formatRelativeDay(hit.value)}`;
+    if (hit.kind === 'priority') return 'Priorität hoch';
+    if (hit.kind === 'room') return `Raum ${roomLabel(hit.value)}`;
+    if (hit.kind === 'person') return `Zuständig ${label('people', hit.value)}`;
+    return `Gewerk ${trades.find((trade) => trade.id === hit.value)?.name ?? hit.text}`;
+  }
+
+  function newTask() {
+    setEditing({ ...emptyTask(), roomIds: roomFilter ? [writeId(roomFilter)] : [] });
+  }
+
   async function addQuick() {
     const title = quick.trim();
-    if (!title) {
-      // no text typed: open the editor for a new task instead of doing nothing
-      setEditing({ ...emptyTask(), roomIds: roomFilter ? [writeId(roomFilter)] : [] });
-      return;
-    }
+    if (!title) return;
+    const typed = quick;
+    const hit = (kind: QuickKind) => parsed.hits.find((item) => item.kind === kind)?.value;
+    const roomIds = [roomFilter, hit('room')].filter((id): id is string => !!id).map(writeId);
+    const person = hit('person');
     setQuick('');
+    setIgnored([]);
     // a task added while a room filter is active must land in that room, or it vanishes from view
-    await saveTask({ ...emptyTask(), title, roomIds: roomFilter ? [writeId(roomFilter)] : [] });
+    try {
+      await saveTask({
+        ...emptyTask(),
+        title: parsed.title || title,
+        roomIds: [...new Set(roomIds)],
+        ...(hit('due') ? { due: hit('due') } : {}),
+        ...(hit('priority') ? { priority: hit('priority')! } : {}),
+        ...(person ? { assignees: [person] } : {}),
+        ...(hit('trade') ? { tradeId: hit('trade') } : {}),
+      });
+    } catch {
+      setQuick(typed);
+      toast('Die Aufgabe konnte nicht gespeichert werden.');
+    }
+  }
+
+  function removeTask(task: Task) {
+    const stored = tasks.find((item) => item.id === task.id);
+    if (!stored) return;
+    undoableDelete(`„${stored.title}“ gelöscht`, () => deleteTask(stored.id), () => saveTask(stored));
   }
 
   async function toggleDone(task: Task) {
@@ -136,61 +205,139 @@ export default function TasksPage() {
         delete next[task.id];
         return next;
       });
+      toast('Konnte nicht gespeichert werden.');
     }
   }
 
+  const filtered = !!roomFilter || !!assignee;
+  const emptyTitle = filtered ? 'Nichts gefunden' : showDone ? 'Noch nichts erledigt' : 'Nichts offen';
+  const emptyHint = filtered
+    ? 'Mit diesem Filter gibt es keine Aufgaben.'
+    : showDone
+      ? 'Erledigte Aufgaben erscheinen hier.'
+      : 'Alles erledigt oder noch nichts angelegt.';
+
   return (
     <>
-      <TopBar title="Aufgaben" subtitle={`${visible.length} angezeigt`} />
+      <TopBar
+        title="Aufgaben"
+        action={
+          <button type="button" className="btn btn-primary px-3 min-h-11" onClick={newTask}>
+            <Icon name="plus" className="w-5 h-5" />
+            Neu
+          </button>
+        }
+      />
+      <SectionTabs label="Aufgaben" tabs={AREA_TABS.tasks('tasks')} />
 
       <div className="p-3 flex flex-col gap-3">
-        <div className="flex gap-2">
+        {/* "Neu" in the top bar opens the full form; here only the quick line, sent from the keyboard */}
+        <div className="relative">
           <input
-            className="field"
+            className={`field ${quick.trim() ? 'pr-12' : ''}`}
             placeholder="Neue Aufgabe…"
+            aria-label="Neue Aufgabe"
+            enterKeyHint="send"
+            onFocus={() => setQuickFocus(true)}
+            onBlur={() => setQuickFocus(false)}
             value={quick}
-            onChange={(event) => setQuick(event.target.value)}
+            onChange={(event) => {
+              setQuick(event.target.value);
+              if (!event.target.value.trim()) setIgnored([]);
+            }}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') void addQuick();
+              if (event.key === 'Enter' && quick.trim()) void addQuick();
             }}
           />
-          <button type="button" className="btn btn-primary px-4" onClick={() => void addQuick()}>
-            +
-          </button>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {(['offen', 'alle', 'erledigt'] as const).map((item) => (
+          {quick.trim() && (
             <button
-              key={item}
               type="button"
-              className={`chip ${filter === item ? 'chip-on' : ''}`}
-              onClick={() => setFilter(item)}
+              className="absolute right-0 top-0 h-full w-12 grid place-items-center text-accent"
+              aria-label="Aufgabe hinzufügen"
+              onClick={() => void addQuick()}
             >
-              {item === 'offen' ? 'Offen' : item === 'alle' ? 'Alle' : 'Erledigt'}
-            </button>
-          ))}
-          <span className="w-px bg-line mx-1" />
-          {assigneeChips.map((person) => (
-            <button
-              key={person.id}
-              type="button"
-              className={`chip ${assignee === person.id ? 'chip-on' : ''}`}
-              onClick={() => setAssignee(assignee === person.id ? null : person.id)}
-            >
-              {person.label}
-            </button>
-          ))}
-          {roomFilter && (
-            <button type="button" className="chip chip-on" onClick={() => setParams(new URLSearchParams())}>
-              {roomLabel(roomFilter)} ×
+              <Icon name="check" className="w-6 h-6" strokeWidth={2.2} />
             </button>
           )}
         </div>
+
+        {quickFocus && parsed.hits.length === 0 && (
+          <p className="text-xs text-muted -mt-1 px-1 truncate">
+            Kurzschrift: heute · Fr · 12.10. · ! dringend · Raum/Person
+          </p>
+        )}
+        {parsed.hits.length > 0 && (
+          <div className="flex flex-wrap gap-2 -mt-1" aria-label="Erkannt">
+            {parsed.hits.map((hit) => (
+              <button
+                key={hit.kind}
+                type="button"
+                className="chip chip-on"
+                aria-label={`${hitLabel(hit)} nicht übernehmen`}
+                onClick={() => setIgnored((current) => [...current, hit.kind])}
+              >
+                {hitLabel(hit)}
+                <Icon name="close" className="w-3.5 h-3.5" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-wrap gap-2" aria-label="Filter">
+          <button
+            type="button"
+            aria-pressed={showDone}
+            className={`chip ${showDone ? 'chip-on' : ''}`}
+            onClick={() => setShowDone(!showDone)}
+          >
+            Erledigte
+          </button>
+            {assigneeChips.map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                aria-pressed={assignee === person.id}
+                className={`chip ${assignee === person.id ? 'chip-on' : ''}`}
+                onClick={() => setAssignee(assignee === person.id ? null : person.id)}
+              >
+                {person.label}
+              </button>
+            ))}
+            {roomFilter && (
+              <button
+                type="button"
+                className="chip chip-on"
+                aria-label={`Raumfilter ${roomLabel(roomFilter)} aufheben`}
+                onClick={() => setParams(new URLSearchParams())}
+              >
+                {roomLabel(roomFilter)}
+                <Icon name="close" className="w-4 h-4" />
+              </button>
+            )}
+        </div>
       </div>
 
-      {visible.length === 0 && (
-        <EmptyState title="Nichts offen" hint="Alles erledigt oder noch nichts angelegt." />
+      {loading && tasks.length === 0 && <Spinner label="Aufgaben werden geladen…" />}
+
+      {!(loading && tasks.length === 0) && visible.length === 0 && (
+        <EmptyState
+          title={emptyTitle}
+          hint={emptyHint}
+          action={
+            filtered && (
+              <button
+                type="button"
+                className="btn mt-2"
+                onClick={() => {
+                  setAssignee(null);
+                  if (roomFilter) setParams(new URLSearchParams());
+                }}
+              >
+                Filter aufheben
+              </button>
+            )
+          }
+        />
       )}
 
       {BUCKETS.map((bucket) => {
@@ -198,19 +345,38 @@ export default function TasksPage() {
         if (!rows?.length) return null;
         return (
           <section key={bucket}>
-            <div className="section-title">{DUE_BUCKET_LABEL[bucket]}</div>
+            <div className="section-title">
+              {showDone ? 'Erledigt' : DUE_BUCKET_LABEL[bucket]} · {rows.length}
+            </div>
             <ul>
               {rows.map((task) => (
-                <li key={task.id} className="list-row">
+                <li
+                  key={task.id}
+                  className="list-row"
+                  {...rowActions.bind(task.title, [
+                    {
+                      label: isTaskDone(task) ? 'Wieder öffnen' : 'Erledigt',
+                      icon: 'check',
+                      onSelect: () => void toggleDone(task),
+                    },
+                    { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeTask(task) },
+                  ])}
+                >
+                  {/* the box stays small, the tap area is the full 44 px a thumb needs */}
                   <button
                     type="button"
-                    aria-label={isTaskDone(task) ? 'Wieder öffnen' : 'Erledigt'}
-                    className={`w-6 h-6 rounded-md border shrink-0 ${
-                      isTaskDone(task) ? 'bg-accent border-accent text-bg' : 'border-line'
-                    }`}
+                    aria-label={isTaskDone(task) ? `Wieder öffnen: ${task.title}` : `Erledigt: ${task.title}`}
+                    aria-pressed={isTaskDone(task)}
+                    className="w-11 h-11 -m-2.5 shrink-0 grid place-items-center"
                     onClick={() => void toggleDone(task)}
                   >
-                    {isTaskDone(task) ? '✓' : ''}
+                    <span
+                      className={`w-6 h-6 rounded-md border grid place-items-center ${
+                        isTaskDone(task) ? 'bg-accent border-accent text-bg' : 'border-muted'
+                      }`}
+                    >
+                      {isTaskDone(task) && <Icon name="check" className="w-4 h-4" strokeWidth={2.5} />}
+                    </span>
                   </button>
                   <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(task)}>
                     <span
@@ -237,22 +403,30 @@ export default function TasksPage() {
         );
       })}
 
+      {rowActions.sheet}
       <TaskSheet
         task={editing}
+        regularAssignees={assigneeChips.map((person) => person.id)}
         onClose={() => {
           setEditing(null);
           dropWanted();
         }}
         onSave={async (task) => {
-          await saveTask(task);
+          try {
+            await saveTask(task);
+          } catch {
+            toast('Die Aufgabe konnte nicht gespeichert werden.');
+            return;
+          }
           setEditing(null);
           dropWanted();
         }}
-        onDelete={async (task) => {
-          await deleteTask(task.id);
+        onDelete={(task) => {
           setEditing(null);
           dropWanted();
+          removeTask(task);
         }}
+        isNew={(task) => !tasks.some((item) => item.id === task.id)}
       />
     </>
   );
@@ -263,13 +437,19 @@ function TaskSheet({
   onClose,
   onSave,
   onDelete,
+  isNew,
+  regularAssignees,
 }: {
   task: Task | null;
+  /** the people who already have tasks - offered as chips, the rest behind "+ Person" */
+  regularAssignees: string[];
   onClose(): void;
   onSave(task: Task): Promise<void>;
-  onDelete(task: Task): Promise<void>;
+  onDelete(task: Task): void;
+  isNew(task: Task): boolean;
 }) {
   const [draft, setDraft] = useState<Task | null>(task);
+  const { label } = useOptions();
 
   useEffect(() => {
     if (!task) {
@@ -283,6 +463,14 @@ function TaskSheet({
 
   const update = (patch: Partial<Task>) => setDraft({ ...draft, ...patch });
   const canSave = draft.title.trim().length > 0;
+  const moreFilled = [
+    !!draft.notes,
+    !!draft.reminderAt,
+    !!draft.area,
+    !!draft.tradeId,
+    !!draft.phaseId,
+    draft.roomIds.length > 0,
+  ].filter(Boolean).length;
   const saveDraft = () => void onSave({ ...draft, title: draft.title.trim() });
 
   return (
@@ -293,13 +481,6 @@ function TaskSheet({
             className="field"
             value={draft.title}
             onChange={(event) => update({ title: event.target.value })}
-          />
-        </Field>
-        <Field label="Notizen">
-          <textarea
-            className="field min-h-[5rem]"
-            value={draft.notes ?? ''}
-            onChange={(event) => update({ notes: event.target.value })}
           />
         </Field>
         <Field label="Status">
@@ -319,11 +500,34 @@ function TaskSheet({
           />
         </Field>
         <Field label="Zuständig">
-          <OptionMultiChips
-            setKey="people"
-            value={draft.assignees}
-            onChange={(value) => update({ assignees: value })}
-          />
+          {/* only who already has tasks, plus who is set here - everyone else behind "+ Person" */}
+          <div className="flex flex-wrap gap-2">
+            {[...new Set([...regularAssignees, ...draft.assignees])].map((person) => {
+              const on = draft.assignees.includes(person);
+              return (
+                <button
+                  key={person}
+                  type="button"
+                  aria-pressed={on}
+                  className={`chip ${on ? 'chip-on' : ''}`}
+                  onClick={() =>
+                    update({
+                      assignees: on ? draft.assignees.filter((item) => item !== person) : [...draft.assignees, person],
+                    })
+                  }
+                >
+                  {label('people', person)}
+                </button>
+              );
+            })}
+            <OptionMultiPicker
+              setKey="people"
+              label="Zuständig"
+              chipLabel="Person"
+              value={draft.assignees}
+              onChange={(value) => update({ assignees: value })}
+            />
+          </div>
         </Field>
         <Field label="Fällig am">
           <input
@@ -333,37 +537,48 @@ function TaskSheet({
             onChange={(event) => update({ due: event.target.value || undefined })}
           />
         </Field>
-        <Field label="Erinnerung">
-          <input
-            className="field"
-            type="datetime-local"
-            value={toDateTimeInput(draft.reminderAt)}
-            onChange={(event) => update({ reminderAt: fromDateTimeInput(event.target.value) })}
-          />
-          <p className="text-xs text-muted mt-1">
-            Kommt zuverlässig in der Android-App. In der Benachrichtigung kannst du die Aufgabe direkt als
-            erledigt markieren.
-          </p>
-        </Field>
-        <Field label="Bereich">
-          <OptionChips setKey="taskAreas" value={draft.area} onChange={(value) => update({ area: value })} />
-        </Field>
-        <Field label="Gewerk">
-          <TradeSelect value={draft.tradeId} onChange={(value) => update({ tradeId: value })} />
-        </Field>
-        <Field label="Phase">
-          <PhaseSelect value={draft.phaseId} onChange={(value) => update({ phaseId: value })} />
-        </Field>
-        <Field label="Räume">
-          <RoomPicker value={draft.roomIds} onChange={(value) => update({ roomIds: value })} />
-        </Field>
+        <MoreFields filled={moreFilled}>
+          <Field label="Notizen">
+            <textarea
+              className="field min-h-[5rem]"
+              value={draft.notes ?? ''}
+              onChange={(event) => update({ notes: event.target.value })}
+            />
+          </Field>
+          <Field label="Erinnerung">
+            <input
+              className="field"
+              type="datetime-local"
+              value={toDateTimeInput(draft.reminderAt)}
+              onChange={(event) => update({ reminderAt: fromDateTimeInput(event.target.value) })}
+            />
+            <p className="text-xs text-muted mt-1">
+              Kommt zuverlässig in der Android-App. In der Benachrichtigung kannst du die Aufgabe direkt als
+              erledigt markieren.
+            </p>
+          </Field>
+          <Field label="Bereich">
+            <OptionChips setKey="taskAreas" value={draft.area} onChange={(value) => update({ area: value })} />
+          </Field>
+          <Field label="Gewerk">
+            <TradeSelect value={draft.tradeId} onChange={(value) => update({ tradeId: value })} />
+          </Field>
+          <Field label="Phase">
+            <PhaseSelect value={draft.phaseId} onChange={(value) => update({ phaseId: value })} />
+          </Field>
+          <Field label="Räume">
+            <RoomPicker value={draft.roomIds} onChange={(value) => update({ roomIds: value })} />
+          </Field>
+        </MoreFields>
         <div className="flex gap-3">
           <button type="button" className="btn btn-primary flex-1" onClick={saveDraft} disabled={!canSave}>
             Speichern
           </button>
-          <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
-            Löschen
-          </button>
+          {!isNew(draft) && (
+            <button type="button" className="btn btn-danger" onClick={() => onDelete(draft)}>
+              Löschen
+            </button>
+          )}
         </div>
       </div>
     </Sheet>

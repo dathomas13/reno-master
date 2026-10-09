@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { Sheet } from '@/components/Sheet';
-import { Field, EmptyState } from '@/components/Fields';
+import { Field, EmptyState, Spinner } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { RoomPicker } from '@/components/Pickers';
 import { useCollection } from '@/data/hooks';
 import { COL, type Note } from '@/data/types';
 import { emptyNote, saveNote, deleteNote } from '@/data/repos';
 import { useRooms } from '@/data/RoomsContext';
+import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 
 function formatWhen(at: string): string {
   const [date, time] = at.split('T');
@@ -22,7 +26,20 @@ function titleOf(text: string): string {
 
 export default function NotesPage() {
   const [params, setParams] = useSearchParams();
-  const { data: notes } = useCollection<Note>(COL.notes);
+  const { data: notes, loading } = useCollection<Note>(COL.notes);
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
+
+  function removeNote(note: Note) {
+    const stored = notes.find((item) => item.id === note.id);
+    if (!stored) return;
+    undoableDelete('Notiz gelöscht', () => deleteNote(stored.id), () => saveNote(stored));
+  }
+
+  function togglePinned(note: Note) {
+    saveNote({ ...note, pinned: !note.pinned }).catch(() => toast('Die Notiz konnte nicht gespeichert werden.'));
+  }
   const { shortLabel: roomLabel, shortLabels, matches, writeId } = useRooms();
   const [editing, setEditing] = useState<Note | null>(null);
 
@@ -43,6 +60,16 @@ export default function NotesPage() {
     if (note) setEditing(note);
   }, [wanted, notes]);
 
+  // the capture button opens a new note straight away (?neu=1, with ?raum= when a room is open)
+  useEffect(() => {
+    if (params.get('neu') !== '1') return;
+    setEditing(emptyNote(roomFilter ? [writeId(roomFilter)] : []));
+    const next = new URLSearchParams(params);
+    next.delete('neu');
+    setParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
   function dropWanted() {
     if (!wanted) return;
     const next = new URLSearchParams(params);
@@ -52,35 +79,70 @@ export default function NotesPage() {
 
   return (
     <>
-      <TopBar title="Notizen" subtitle={`${visible.length} angezeigt`} />
+      <TopBar
+        title="Notizen"
+        subtitle={`${visible.length} angezeigt`}
+        action={
+          <button
+            type="button"
+            className="btn btn-primary px-3 min-h-11"
+            onClick={() => setEditing(emptyNote(roomFilter ? [writeId(roomFilter)] : []))}
+          >
+            <Icon name="plus" className="w-5 h-5" />
+            Neu
+          </button>
+        }
+      />
+      <SectionTabs label="Aufgaben" tabs={AREA_TABS.tasks('notes')} />
 
-      <div className="p-3 flex flex-col gap-3">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={() => setEditing(emptyNote(roomFilter ? [writeId(roomFilter)] : []))}
-        >
-          + Neue Notiz
-        </button>
-        {roomFilter && (
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="chip chip-on" onClick={() => setParams(new URLSearchParams())}>
-              {roomLabel(roomFilter)} ×
-            </button>
-          </div>
-        )}
-      </div>
-
-      {visible.length === 0 && (
-        <EmptyState title="Noch keine Notizen" hint="Kurze Gedanken, ohne Raum oder einem Raum zugeordnet." />
+      {roomFilter && (
+        <div className="p-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="chip chip-on"
+            aria-label={`Raumfilter ${roomLabel(roomFilter)} aufheben`}
+            onClick={() => setParams(new URLSearchParams())}
+          >
+            {roomLabel(roomFilter)}
+            <Icon name="close" className="w-4 h-4" />
+          </button>
+        </div>
       )}
+
+      {loading && notes.length === 0 && <Spinner label="Notizen werden geladen…" />}
+
+      {!(loading && notes.length === 0) && visible.length === 0 &&
+        (roomFilter ? (
+          <EmptyState
+            title="Nichts gefunden"
+            hint={`Zu ${roomLabel(roomFilter)} gibt es keine Notizen.`}
+            action={
+              <button type="button" className="btn mt-2" onClick={() => setParams(new URLSearchParams())}>
+                Filter aufheben
+              </button>
+            }
+          />
+        ) : (
+          <EmptyState title="Noch keine Notizen" hint="Kurze Gedanken, ohne Raum oder einem Raum zugeordnet." />
+        ))}
 
       <ul>
         {visible.map((note) => (
-          <li key={note.id} className="list-row">
+          <li
+            key={note.id}
+            className="list-row"
+            {...rowActions.bind(titleOf(note.text), [
+              { label: note.pinned ? 'Lösen' : 'Anheften', icon: 'pin', onSelect: () => togglePinned(note) },
+              { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeNote(note) },
+            ])}
+          >
             <button type="button" className="flex-1 min-w-0 text-left" onClick={() => setEditing(note)}>
               <span className="flex items-center gap-1">
-                {note.pinned && <span aria-hidden="true">📌</span>}
+                {note.pinned && (
+                  <span className="text-accent shrink-0" title="Angeheftet">
+                    <Icon name="pin" className="w-4 h-4" />
+                  </span>
+                )}
                 <span className="block truncate font-medium">{titleOf(note.text)}</span>
               </span>
               <span className="block text-xs text-muted truncate">
@@ -92,6 +154,7 @@ export default function NotesPage() {
         ))}
       </ul>
 
+      {rowActions.sheet}
       <NoteSheet
         note={editing}
         onClose={() => {
@@ -99,14 +162,19 @@ export default function NotesPage() {
           dropWanted();
         }}
         onSave={async (note) => {
-          await saveNote(note);
+          try {
+            await saveNote(note);
+          } catch {
+            toast('Die Notiz konnte nicht gespeichert werden.');
+            return;
+          }
           setEditing(null);
           dropWanted();
         }}
-        onDelete={async (note) => {
-          await deleteNote(note.id);
+        onDelete={(note) => {
           setEditing(null);
           dropWanted();
+          removeNote(note);
         }}
       />
     </>
@@ -122,7 +190,7 @@ function NoteSheet({
   note: Note | null;
   onClose(): void;
   onSave(note: Note): Promise<void>;
-  onDelete(note: Note): Promise<void>;
+  onDelete(note: Note): void;
 }) {
   const [draft, setDraft] = useState<Note | null>(note);
 
@@ -155,9 +223,10 @@ function NoteSheet({
         <Field label="Räume">
           <RoomPicker value={draft.roomIds} onChange={(value) => update({ roomIds: value })} />
         </Field>
-        <label className="flex items-center gap-2 mb-4">
+        <label className="flex items-center gap-3 min-h-11 mb-4">
           <input
             type="checkbox"
+            className="w-5 h-5 accent-accent"
             checked={draft.pinned}
             onChange={(event) => update({ pinned: event.target.checked })}
           />
@@ -168,7 +237,7 @@ function NoteSheet({
             Speichern
           </button>
           {!isNew && (
-            <button type="button" className="btn btn-danger" onClick={() => void onDelete(draft)}>
+            <button type="button" className="btn btn-danger" onClick={() => onDelete(draft)}>
               Löschen
             </button>
           )}

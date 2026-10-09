@@ -5,6 +5,7 @@ import HomePage from './HomePage';
 import type { Phase, Task } from '@/data/types';
 
 const patchPhase = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const toggleTaskDone = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
 const phases: Phase[] = [
   { id: 'phase-2', name: 'Phase 2: Entkernung & Rückbau', status: 'in-arbeit', start: '2026-06-15', order: 2 },
@@ -21,7 +22,7 @@ vi.mock('@/data/hooks', () => ({
     loading: false,
   }),
 }));
-vi.mock('@/data/repos', () => ({ patchPhase }));
+vi.mock('@/data/repos', () => ({ patchPhase, toggleTaskDone }));
 vi.mock('@/data/useOptions', async () => {
   const options = await vi.importActual<typeof import('@/data/options')>('@/data/options');
   const sets = options.normalizeSets();
@@ -62,6 +63,13 @@ describe('home phase', () => {
     expect(patchPhase).toHaveBeenCalledWith('phase-3', expect.objectContaining({ status: 'in-arbeit' }));
   });
 
+  it('ticks an urgent task off right on the start page', async () => {
+    renderHome();
+    fireEvent.click(screen.getByRole('button', { name: 'Erledigt: Fenster pruefen' }));
+    await waitFor(() => expect(toggleTaskDone).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' })));
+    expect(screen.queryByRole('link', { name: 'Fenster pruefen' })).not.toBeInTheDocument();
+  });
+
   it('links urgent tasks to their task sheet', () => {
     renderHome();
 
@@ -83,5 +91,16 @@ describe('home phase', () => {
     const urgent = screen.getByText('Dringend');
     const search = screen.getByRole('link', { name: 'Suchen' });
     expect(urgent.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows the quick access tiles chosen in the settings', () => {
+    renderHome();
+    expect(screen.getByRole('link', { name: 'Notizen' })).toHaveAttribute('href', '/notizen');
+    cleanup();
+
+    localStorage.setItem('reno.settings', JSON.stringify({ shortcuts: { order: ['haus', 'notizen'], shown: 1 } }));
+    renderHome();
+    expect(screen.getByRole('link', { name: '3D-Modell' })).toHaveAttribute('href', '/3d');
+    expect(screen.queryByRole('link', { name: 'Notizen' })).not.toBeInTheDocument();
   });
 });

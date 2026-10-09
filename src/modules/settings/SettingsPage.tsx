@@ -11,7 +11,8 @@ import { ExportSection } from './ExportSection';
 import { FolderExportSection } from './FolderExportSection';
 import { ModelSection } from './ModelSection';
 import { NavSection } from './NavSection';
-import { HomeSection } from './HomeSection';
+import { homeSettingsSummary } from './HomeSettingsPage';
+import { Icon } from '@/components/Icon';
 import { listJobs, retryAll, type OutboxJob } from '@/offline/outbox';
 import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
@@ -22,6 +23,7 @@ import { describeDiagnosis, describeReminder, type ReminderDiagnosis } from '@/p
 import { useReminderStatus } from '@/data/useReminder';
 import { formatBytes } from '@/lib/image';
 import { isNative } from '@/platform';
+import { useToast } from '@/components/Toast';
 
 export default function SettingsPage() {
   const { user, profile } = useAuth();
@@ -32,6 +34,7 @@ export default function SettingsPage() {
   const [reminderTime, setReminderTime] = useState(profile?.reminderTime ?? '20:00');
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   const reminder = useReminderStatus();
+  const toast = useToast();
   const [diagnosis, setDiagnosis] = useState<ReminderDiagnosis | null>(null);
 
   useEffect(() => {
@@ -69,7 +72,11 @@ export default function SettingsPage() {
 
   async function updateProfile(patch: Record<string, unknown>) {
     if (!user) return;
-    await patchDoc(COL.users, user.uid, patch);
+    try {
+      await patchDoc(COL.users, user.uid, patch);
+    } catch {
+      toast('Die Einstellung konnte nicht gespeichert werden.');
+    }
   }
 
   function updateReminderTime(value: string) {
@@ -81,35 +88,15 @@ export default function SettingsPage() {
     <>
       <TopBar title="Einstellungen" />
 
-      <div className="p-4 max-w-2xl flex flex-col gap-6">
+      <div className="p-4 max-w-2xl flex flex-col gap-4">
+        {/* the everyday settings first, the technical ones further down, the account last */}
+        <GroupTitle>Alltag</GroupTitle>
         <section className="card p-4">
-          <h2 className="font-semibold mb-3">Konto</h2>
-          <p className="text-sm text-muted">{profile?.displayName ?? user?.email}</p>
-          <p className="text-sm text-muted mb-3">{user?.email}</p>
-          <button type="button" className="btn" onClick={() => void signOut()}>
-            Abmelden
-          </button>
-        </section>
-
-        <Link to="/einstellungen/voreinstellungen" className="card p-4 min-h-16 flex items-center gap-3 text-ink">
-          <span className="min-w-0 flex-1">
-            <span className="block font-semibold">Voreinstellungen</span>
-            <span className="block text-sm text-muted">
-              Räume, Gewerke, Personen, Wetter und weitere Auswahllisten · für alle Geräte
-            </span>
-          </span>
-          <svg viewBox="0 0 24 24" className="w-5 h-5 text-muted shrink-0" fill="none" stroke="currentColor"
-            strokeWidth="1.8" aria-hidden="true">
-            <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
-
-        <section className="card p-4">
-          <h2 className="font-semibold mb-3">Abend-Erinnerung</h2>
+          <SettingsHeading title="Abend-Erinnerung" />
           <label className="flex items-center gap-3 mb-3">
             <input
               type="checkbox"
-              className="w-5 h-5 accent-[#c9a86a]"
+              className="w-5 h-5 accent-accent"
               checked={profile?.reminderEnabled ?? false}
               onChange={(event) => void updateProfile({ reminderEnabled: event.target.checked })}
             />
@@ -186,10 +173,6 @@ export default function SettingsPage() {
             </ul>
           </details>
         </section>
-
-        <NavSection />
-
-        <HomeSection />
         <section className="card p-4">
           <SettingsHeading title="Fotos">
             Neben der verkleinerten Fassung wird die unveränderte Datei gespeichert. Das braucht deutlich mehr
@@ -199,7 +182,7 @@ export default function SettingsPage() {
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
-              className="w-5 h-5 accent-[#c9a86a] mt-0.5"
+              className="w-5 h-5 accent-accent mt-0.5"
               checked={settings.keepOriginals}
               onChange={(event) => update({ keepOriginals: event.target.checked })}
             />
@@ -207,8 +190,48 @@ export default function SettingsPage() {
           </label>
         </section>
 
+        <Link to="/einstellungen/startseite" className="card p-4 min-h-16 flex items-center gap-3 text-ink">
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Startseite</span>
+            <span className="block text-sm text-muted truncate">{homeSettingsSummary()}</span>
+          </span>
+          <Icon name="chevronRight" className="w-5 h-5 text-muted shrink-0" />
+        </Link>
+        <NavSection />
+
+        <GroupTitle>Daten</GroupTitle>
+        <Link to="/einstellungen/voreinstellungen" className="card p-4 min-h-16 flex items-center gap-3 text-ink">
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Voreinstellungen</span>
+            <span className="block text-sm text-muted">
+              Räume, Gewerke, Personen, Wetter und weitere Auswahllisten · für alle Geräte
+            </span>
+          </span>
+          <svg viewBox="0 0 24 24" className="w-5 h-5 text-muted shrink-0" fill="none" stroke="currentColor"
+            strokeWidth="1.8" aria-hidden="true">
+            <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </Link>
+
+        {isNative() ? <FolderExportSection /> : <ExportSection />}
         <section className="card p-4">
-          <h2 className="font-semibold mb-3">Beleg-Auslesen</h2>
+          <SettingsHeading title="Offline" />
+          <p className="text-sm text-muted">Belegter Speicher: {storage || 'unbekannt'}</p>
+          <p className="text-sm text-muted mb-3">Wartende Uploads: {jobs.length}</p>
+          {jobs.length > 0 && (
+            <button
+              type="button"
+              className="btn"
+              onClick={() => void retryAll().then(() => void listJobs().then(setJobs))}
+            >
+              Jetzt hochladen
+            </button>
+          )}
+        </section>
+
+        <GroupTitle>Fortgeschritten</GroupTitle>
+        <section className="card p-4">
+          <SettingsHeading title="Beleg-Auslesen" />
           <p className="text-sm text-muted mb-3">Aktiv: {engine}</p>
           <Field
             label="Verfahren"
@@ -315,30 +338,24 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {isNative() ? <FolderExportSection /> : <ExportSection />}
-
         <ModelSection signedIn={!!user} />
-
-
-        <section className="card p-4">
-          <h2 className="font-semibold mb-3">Offline</h2>
-          <p className="text-sm text-muted">Belegter Speicher: {storage || 'unbekannt'}</p>
-          <p className="text-sm text-muted mb-3">Wartende Uploads: {jobs.length}</p>
-          {jobs.length > 0 && (
-            <button
-              type="button"
-              className="btn"
-              onClick={() => void retryAll().then(() => void listJobs().then(setJobs))}
-            >
-              Jetzt hochladen
-            </button>
-          )}
-        </section>
-
         <AppUpdateSection />
-
         <DiagSection />
+
+        <GroupTitle>Konto</GroupTitle>
+        <section className="card p-4">
+          <SettingsHeading title="Konto" />
+          <p className="text-sm text-muted">{profile?.displayName ?? user?.email}</p>
+          <p className="text-sm text-muted mb-3">{user?.email}</p>
+          <button type="button" className="btn" onClick={() => void signOut()}>
+            Abmelden
+          </button>
+        </section>
       </div>
     </>
   );
+}
+
+function GroupTitle({ children }: { children: string }) {
+  return <h2 className="text-xs uppercase tracking-wide text-muted px-1 mt-4 first:mt-0 -mb-1">{children}</h2>;
 }

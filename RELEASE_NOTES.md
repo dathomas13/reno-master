@@ -8,6 +8,140 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.85.3 – Letzter Schliff
+
+- Lange drücken jetzt auch bei Plänen (statt Mülleimer) und Belegen; Gespräche haben oben „Neu“.
+- Zurück schließt auch die Foto-Ansicht; im Tagebuch steht „Speichern“ nur noch oben.
+- Die Belegsuche sagt „Nichts gefunden“, wenn nichts passt.
+
+## 0.85.2 – Zurück schließt Menüs
+
+- Die Zurück-Taste schließt ein offenes Menü oder Fenster, statt die Seite zu verlassen.
+- Der lange gedrückte Eintrag bleibt scharf, nur der Rest wird abgedunkelt.
+
+## 0.85.1 – Menü direkt am Eintrag
+
+- Lange drücken öffnet das Menü jetzt direkt am Eintrag statt unten am Bildschirm; der Rest wird kurz abgedunkelt.
+
+## 0.85.0 – Lange drücken für mehr
+
+- Einen Eintrag lange drücken öffnet ein kleines Menü: Löschen, bei Aufgaben auch Erledigt, bei Notizen Anheften – mit „Rückgängig“ wie gewohnt.
+- Beim Wischen zwischen den Reitern folgt der goldene Strich dem Finger, und der neue Reiter gleitet sanft herein.
+
+## 0.84.0 – Wischen zwischen den Reitern
+
+- Seitlich über die Liste wischen wechselt den Reiter, z. B. zwischen Aufgaben und Notizen oder Einträgen und Fotos.
+
+## 0.83.3 – Ruhigere Köpfe, kleiner Raum-Steckbrief
+
+- Bereichs-Reiter sind jetzt unterstrichen statt als Kasten; Aufgaben haben nur noch eine Filterzeile („Erledigte“, Personen).
+- Die Schnelleingabe schickt über die Tastatur oder den Haken im Feld ab – kein zweites „+“ mehr.
+- Der Raum-Steckbrief ist eine kompakte Karte und verschwindet beim Einrichten; die Schalter unten sind auf hellem Modell lesbar.
+
+## 0.83.2 – Übersichtliches „Zuständig“
+
+- Bei „Zuständig“ stehen nur noch die Leute, die schon Aufgaben haben; alle anderen über „+ Person“.
+
+## 0.83.1 – Kurzschrift verbessert
+
+- „!“ wirkt jetzt auch direkt am Wort („heute!“, „bestellen!“).
+- Das Aufgabenfeld ist wieder kurz beschriftet; die Kurzschrift-Hilfe erscheint beim Antippen darunter.
+
+## 0.83.0 – Schneller erfassen
+
+- Aufgaben verstehen Kurzschrift: „Silikon kaufen morgen ! Bad“ setzt Fälligkeit, Priorität und Raum; ein Tipp auf einen Chip nimmt die Erkennung zurück.
+- Nach dem Auslesen eines Belegs stehen Betrag, Datum, Händler und Kategorie oben zum Prüfen, mit „Passt – speichern“.
+- Die Startseiten-Einstellungen haben eine eigene Seite.
+
+## 0.82.0 – Schnellzugriff nach Wunsch
+
+- Auf der Startseite steht jetzt „Notizen“ im Schnellzugriff statt „3D-Modell“ – ein Tipp, und die Notizen sind offen.
+- Welche Kacheln dort stehen und in welcher Reihenfolge, stellst du unter Einstellungen → Startseite → Schnellzugriff ein (bis zu sechs).
+
+## 0.81.1 – Sechs Bereiche statt vieler Bildschirme
+
+- Was zusammengehört, steht jetzt als Reiter nebeneinander: Tagebuch · Fotos, Haus (3D · Pläne), Kosten (Liste · Übersicht · Belege), Aufgaben · Notizen, Kontakte · Gespräche.
+- „Dateien“ und die Einzelpunkte im Menü fallen weg; hattest du Notizen oder Gespräche in der Leiste, steht dort jetzt ihr Bereich.
+
+## 0.81.0 – Sechs Bereiche statt vieler Bildschirme
+
+- Was zusammengehört, steht jetzt als Reiter nebeneinander: Tagebuch · Fotos, Haus (3D · Pläne), Kosten (Liste · Übersicht · Belege), Aufgaben · Notizen, Kontakte · Gespräche.
+- „Dateien“ und die Einzelpunkte im Menü fallen weg; hattest du Notizen oder Gespräche in der Leiste, steht dort jetzt ihr Bereich.
+
+## 0.80.2 – Mehrere Einträge am Tag
+
+- Mehrere Tagebucheinträge pro Tag sind ausdrücklich möglich: der Plus-Knopf bietet „Weiteren Tagebucheintrag für heute“ an, die Startseite zeigt „Heute 2 Einträge – alle ansehen“.
+
+## 0.80.1 – Heutiger Eintrag eindeutig
+
+- „Tagebuch heute“ und „Fotos von heute“ öffnen zuverlässig den heutigen Eintrag, statt manchmal einen zweiten anzulegen.
+- Gibt es heute schon zwei Einträge, sagt die Startseite das und führt zur Liste.
+
+## 0.80.0 – Heute auf der Startseite, Tagebuch schneller
+
+- Startseite: dringende Aufgaben direkt abhaken (mit Rückgängig); in der App steht unter dem Tagebuch „Fotos von heute übernehmen“.
+- Tagebuch: zuerst Text und Fotos, der Rest unter „Details“; „Wie beim letzten Mal“ übernimmt Anwesende, Räume, Gewerke und Wetter.
+
+## 0.79.0 – Alles mit einem Tipp erfassen
+
+- Neuer runder Plus-Knopf in der Mitte der unteren Leiste: Tagebuch, Fotos von heute, Beleg, Aufgabe, Notiz oder Gespräch, von überall aus. Ist gerade ein Raum offen, gehört der neue Eintrag gleich dazu.
+- Nach einem Anruf oder WhatsApp aus den Kontakten fragt die App, ob du das Gespräch notieren willst – Kontakt, Art und Uhrzeit sind schon eingetragen.
+
+## 0.78.2 – Start ohne Netz
+
+- Die App öffnet sich auch bei schlechtem oder fehlendem Empfang sofort, statt beim Start zu hängen.
+
+## 0.78.1 – 3D: Ansicht nicht mehr abgeschnitten
+
+- „Ansicht“ sitzt jetzt unten an der Geschossleiste und ist immer ganz zu sehen.
+
+## 0.78.0 – Kürzere Formulare, ruhigere 3D-Ansicht
+
+- 3D: Die Geschosse stehen rechts übereinander wie im Haus, unten bleibt nur eine Zeile für Räume, Tragwände und Ansicht.
+- Rechnung und Aufgabe zeigen zuerst das Wichtige; der Rest steckt unter „Weitere Angaben“.
+- Kurze Hinweise zu Raum antippen und Wischen in der Fotoansicht; Rechnungen kehren nach dem Speichern dorthin zurück, wo sie geöffnet wurden.
+
+## 0.77.0 – Aufgeräumte Einstellungen
+
+- Einstellungen geordnet nach Alltag, Daten und Fortgeschrittenem; das Konto steht am Ende.
+- Personen und Rollen lassen sich direkt im Auswahlfenster neu anlegen.
+- Die Phase auf der Startseite ist wieder dezent, mit kleinem Pfeil zum Ändern.
+
+## 0.76.2 – Löschen mit Rückgängig, größere Tippflächen
+
+- Aufgaben, Notizen, Kontakte, Einträge, Rechnungen und Pläne lassen sich nach dem Löschen
+  zurückholen; Tippen neben ein Formular speichert statt zu verwerfen.
+- Größere Knöpfe und Haken, einheitliche Symbole statt Emojis, „Neu“ immer oben rechts.
+- Planansicht nicht mehr von der unteren Leiste verdeckt, Belege zeigen den Kategorienamen.
+
+## 0.76.1 – Löschen mit Rückgängig, größere Tippflächen
+
+- Aufgaben, Notizen, Kontakte, Einträge, Rechnungen und Pläne lassen sich nach dem Löschen
+  zurückholen; Tippen neben ein Formular speichert statt zu verwerfen.
+- Größere Knöpfe und Haken, einheitliche Symbole statt Emojis, „Neu“ immer oben rechts.
+- Planansicht nicht mehr von der unteren Leiste verdeckt, Belege zeigen den Kategorienamen.
+
+## 0.76.0 – Löschen mit Rückgängig, größere Tippflächen
+
+- Aufgaben, Notizen, Kontakte, Einträge, Rechnungen und Pläne lassen sich nach dem Löschen
+  zurückholen; Tippen neben ein Formular speichert statt zu verwerfen.
+- Größere Knöpfe und Haken, einheitliche Symbole statt Emojis, „Neu“ immer oben rechts.
+- Planansicht nicht mehr von der unteren Leiste verdeckt, Belege zeigen den Kategorienamen.
+
+## 0.75.4 – Wartung
+
+- Keine sichtbaren Änderungen.
+
+## 0.75.3 – Möbel kommen ins oberste sichtbare Geschoss
+
+- Neue Möbel landen im höchsten Geschoss, das gerade angezeigt wird, nicht mehr im
+  Erdgeschoss.
+
+## 0.75.2 – Neue Geräte starten im Plan
+
+- Auf einem frisch eingerichteten Gerät steht der Schalter jetzt auf „Plan“. Räume und
+  Modell sind damit gleich der Planung. Bestehende Geräte behalten ihre Einstellung.
+
 ## 0.75.1 – Keine Abend-Erinnerung mehr trotz Eintrag
 
 - Nach einem Neustart der App kam die Abend-Erinnerung auch für Tage, die schon einen

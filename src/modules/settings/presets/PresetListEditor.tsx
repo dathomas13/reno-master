@@ -6,6 +6,7 @@ import { findDuplicate, normalizeEntry } from '@/data/presetLists';
 import { isFixedSet, type OptionEntry, type OptionSetKey } from '@/data/options';
 import { OrderList } from '../OrderList';
 import { PresetRow } from './PresetRow';
+import { Icon } from '@/components/Icon';
 
 export interface PresetListEditorProps {
   setKey: OptionSetKey;
@@ -155,11 +156,11 @@ export function PresetListEditor({
             />
             <button
               type="submit"
-              className="btn btn-primary w-11 px-0 text-xl"
+              className="btn btn-primary w-11 px-0"
               aria-label={`${singular} hinzufügen`}
               disabled={!draft.trim()}
             >
-              ＋
+              <Icon name="plus" />
             </button>
           </div>
           {error && (

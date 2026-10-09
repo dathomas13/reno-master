@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
-import { Field, Spinner } from '@/components/Fields';
+import { EmptyState, Field, Spinner } from '@/components/Fields';
+import { MoreFields } from '@/components/MoreFields';
+import { Icon } from '@/components/Icon';
+import { useToast, useUndoableDelete } from '@/components/Toast';
+import { useRooms } from '@/data/RoomsContext';
 import { RoomPicker, TradeSelect } from '@/components/Pickers';
 import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
-import { findOptionByName, PAYMENT_OPEN } from '@/data/options';
+import { findOptionByName, PAYMENT_OPEN, PAYMENT_PAID } from '@/data/options';
 import { OptionChips, OptionSelect } from '@/components/OptionFields';
 import { COL, type Cost, type Photo } from '@/data/types';
 import { emptyCost, saveCost, deleteCost } from '@/data/repos';
@@ -27,11 +31,19 @@ function CostEditor() {
   const { id } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const toast = useToast();
+  const undoableDelete = useUndoableDelete();
   const isNew = !id;
 
   const { data: existing, loading } = useDocument<Cost>(COL.costs, id);
   const options = useOptions();
-  const [cost, setCost] = useState<Cost>(() => emptyCost(today()));
+  const { writeId } = useRooms();
+  // from the capture button: a room the new cost belongs to
+  const [cost, setCost] = useState<Cost>(() => {
+    const room = params.get('raum');
+    return { ...emptyCost(today()), roomIds: room ? [writeId(room)] : [] };
+  });
   const [addedPhotos, setAddedPhotos] = useState<Photo[]>([]);
   const [removedPhotoIds, setRemovedPhotoIds] = useState<string[]>([]);
   const [duplicateCostId, setDuplicateCostId] = useState<string | null>(null);
@@ -179,7 +191,10 @@ function CostEditor() {
     setSaveError(null);
     try {
       await saveCost({ ...cost, receiptPhotoIds: photos.map((photo) => photo.id) });
-      navigate('/kosten', { replace: true });
+      toast('Rechnung gespeichert');
+      // back to where it was opened from (list, receipts, search); the list on a cold start
+      if (location.key !== 'default') navigate(-1);
+      else navigate('/kosten', { replace: true });
     } catch (cause) {
       setSaveError(cause instanceof Error ? cause.message : 'Rechnung konnte nicht gespeichert werden.');
     } finally {
@@ -187,16 +202,45 @@ function CostEditor() {
     }
   }
 
-  async function remove() {
-    if (!confirm('Diese Position löschen?')) return;
-    await deleteCost(cost.id);
+  function remove() {
+    const stored = existing ?? cost;
+    // the receipts keep their costId, so writing the cost again links them again
+    undoableDelete('Rechnung gelöscht', () => deleteCost(stored.id), () => saveCost(stored));
     navigate('/kosten', { replace: true });
   }
 
-  const autoMark = (key: keyof Cost) =>
-    auto[key] ? <span className="text-[10px] text-accent ml-2">automatisch erkannt</span> : null;
+  // what sits behind "Weitere Angaben" - "bezahlt" is the default and does not count
+  const moreFilled = [
+    cost.vatRate != null,
+    cost.paymentStatus !== PAYMENT_PAID,
+    !!cost.paidBy,
+    !!cost.paymentMethod,
+    !!cost.tradeId,
+    cost.roomIds.length > 0,
+    !!cost.invoiceNumber,
+    !!cost.notes,
+  ].filter(Boolean).length;
 
-  if (!isNew && loading && !ready) return <Spinner />;
+  // after reading a receipt the main fields come first as a card to check, with one tap to save
+  const reviewing = ocrState === 'done';
+  const big = reviewing ? 'text-lg font-semibold' : '';
+  const autoMark = (key: keyof Cost) =>
+    auto[key] ? (
+      <span className="inline-flex items-center gap-1 mt-1.5 rounded-full bg-accent/15 text-accent text-xs font-semibold px-2 py-0.5">
+        <Icon name="check" className="w-3.5 h-3.5" strokeWidth={2.2} />
+        erkannt
+      </span>
+    ) : null;
+
+  if (!isNew && loading && !ready) return <Spinner label="Rechnung wird geladen…" />;
+  if (!isNew && !loading && !existing && !ready) {
+    return (
+      <>
+        <TopBar title="Rechnung" back="/kosten" />
+        <EmptyState title="Diese Rechnung gibt es nicht mehr." hint="Sie wurde gelöscht." />
+      </>
+    );
+  }
 
   return (
     <>
@@ -204,7 +248,7 @@ function CostEditor() {
         title={isNew ? 'Neue Rechnung' : 'Rechnung'}
         back="/kosten"
         action={
-          <button type="button" className="btn btn-primary px-3 min-h-0 py-2" onClick={() => void save()} disabled={saveBlocked}>
+          <button type="button" className="btn btn-primary px-3 min-h-11" onClick={() => void save()} disabled={saveBlocked}>
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
         }
@@ -255,46 +299,73 @@ function CostEditor() {
           )}
         </Field>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Field label="Datum">
-              <input
-                className="field"
-                type="date"
-                value={cost.date}
-                onChange={(event) => {
-                  update({ date: event.target.value });
-                  setAuto((current) => ({ ...current, date: false }));
-                }}
-              />
-              {autoMark('date')}
-            </Field>
+        <div className={reviewing ? 'rounded-2xl border border-accent/50 bg-accent/5 p-3 mb-4' : ''}>
+          {reviewing && (
+            <p className="font-semibold mb-3 flex items-center gap-2">
+              <Icon name="eye" className="w-5 h-5 text-accent" />
+              Bitte prüfen
+            </p>
+          )}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Field label="Datum">
+                <input
+                  className={`field ${big}`}
+                  type="date"
+                  value={cost.date}
+                  onChange={(event) => {
+                    update({ date: event.target.value });
+                    setAuto((current) => ({ ...current, date: false }));
+                  }}
+                />
+                {autoMark('date')}
+              </Field>
+            </div>
+            <div className="flex-1">
+              <Field label="Betrag brutto">
+                <input
+                  className={`field text-right ${big}`}
+                  inputMode="decimal"
+                  placeholder="0,00"
+                  value={amountText}
+                  onChange={(event) => setGross(event.target.value)}
+                />
+                {autoMark('amountGross')}
+              </Field>
+            </div>
           </div>
-          <div className="flex-1">
-            <Field label="Betrag brutto">
-              <input
-                className="field text-right"
-                inputMode="decimal"
-                placeholder="0,00"
-                value={amountText}
-                onChange={(event) => setGross(event.target.value)}
-              />
-              {autoMark('amountGross')}
-            </Field>
-          </div>
-        </div>
 
-        <Field label="Händler / Firma">
-          <input
-            className="field"
-            value={cost.vendor}
-            onChange={(event) => {
-              update({ vendor: event.target.value });
-              setAuto((current) => ({ ...current, vendor: false }));
-            }}
-          />
-          {autoMark('vendor')}
-        </Field>
+          <Field label="Händler / Firma">
+            <input
+              className={`field ${big}`}
+              value={cost.vendor}
+              onChange={(event) => {
+                update({ vendor: event.target.value });
+                setAuto((current) => ({ ...current, vendor: false }));
+              }}
+            />
+            {autoMark('vendor')}
+          </Field>
+
+          <Field label="Kategorie">
+            <OptionSelect
+              setKey="costCategories"
+              value={cost.category || undefined}
+              emptyLabel="ohne Kategorie"
+              onChange={(value) => {
+                update({ category: value ?? '' });
+                setAuto((current) => ({ ...current, category: false }));
+              }}
+            />
+            {autoMark('category')}
+          </Field>
+          {reviewing && (
+            <button type="button" className="btn btn-primary w-full" onClick={() => void save()} disabled={saveBlocked}>
+              <Icon name="check" className="w-5 h-5" />
+              {saving ? 'Speichert…' : 'Passt – speichern'}
+            </button>
+          )}
+        </div>
 
         <Field label="Beschreibung">
           <input
@@ -305,88 +376,80 @@ function CostEditor() {
           />
         </Field>
 
-        <Field label="Kategorie">
-          <OptionSelect
-            setKey="costCategories"
-            value={cost.category || undefined}
-            emptyLabel="ohne Kategorie"
-            onChange={(value) => update({ category: value ?? '' })}
-          />
-          {autoMark('category')}
-        </Field>
+        <MoreFields filled={moreFilled}>
+          <Field label="MwSt">
+            <div className="flex gap-2 items-center">
+              {[19, 7, 0].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  className={`chip ${cost.vatRate === rate ? 'chip-on' : ''}`}
+                  onClick={() => setVatRate(cost.vatRate === rate ? null : rate)}
+                >
+                  {rate} %
+                </button>
+              ))}
+              {cost.amountNet !== undefined && (
+                <span className="text-xs text-muted ml-2">
+                  netto {formatAmount(cost.amountNet)} · MwSt {formatAmount(cost.vatAmount ?? 0)}
+                </span>
+              )}
+            </div>
+          </Field>
 
-        <Field label="MwSt">
-          <div className="flex gap-2 items-center">
-            {[19, 7, 0].map((rate) => (
-              <button
-                key={rate}
-                type="button"
-                className={`chip ${cost.vatRate === rate ? 'chip-on' : ''}`}
-                onClick={() => setVatRate(cost.vatRate === rate ? null : rate)}
-              >
-                {rate} %
-              </button>
-            ))}
-            {cost.amountNet !== undefined && (
-              <span className="text-xs text-muted ml-2">
-                netto {formatAmount(cost.amountNet)} · MwSt {formatAmount(cost.vatAmount ?? 0)}
-              </span>
-            )}
-          </div>
-        </Field>
+          <Field label="Status">
+            <OptionChips
+              setKey="paymentStatus"
+              value={cost.paymentStatus}
+              allowEmpty={false}
+              onChange={(value) => update({ paymentStatus: value ?? PAYMENT_OPEN })}
+            />
+          </Field>
 
-        <Field label="Status">
-          <OptionChips
-            setKey="paymentStatus"
-            value={cost.paymentStatus}
-            allowEmpty={false}
-            onChange={(value) => update({ paymentStatus: value ?? PAYMENT_OPEN })}
-          />
-        </Field>
+          <Field label="Bezahlt von">
+            <OptionChips setKey="payers" value={cost.paidBy} onChange={(value) => update({ paidBy: value })} />
+          </Field>
 
-        <Field label="Bezahlt von">
-          <OptionChips setKey="payers" value={cost.paidBy} onChange={(value) => update({ paidBy: value })} />
-        </Field>
+          <Field label="Zahlungsart">
+            <OptionChips
+              setKey="paymentMethods"
+              value={cost.paymentMethod}
+              onChange={(value) => update({ paymentMethod: value })}
+            />
+          </Field>
 
-        <Field label="Zahlungsart">
-          <OptionChips
-            setKey="paymentMethods"
-            value={cost.paymentMethod}
-            onChange={(value) => update({ paymentMethod: value })}
-          />
-        </Field>
+          <Field label="Gewerk">
+            <TradeSelect value={cost.tradeId} onChange={(value) => update({ tradeId: value })} />
+          </Field>
 
-        <Field label="Gewerk">
-          <TradeSelect value={cost.tradeId} onChange={(value) => update({ tradeId: value })} />
-        </Field>
+          <Field label="Räume">
+            <RoomPicker value={cost.roomIds} onChange={(value) => update({ roomIds: value })} />
+          </Field>
 
-        <Field label="Räume">
-          <RoomPicker value={cost.roomIds} onChange={(value) => update({ roomIds: value })} />
-        </Field>
+          <Field label="Rechnungsnummer">
+            <input
+              className="field"
+              value={cost.invoiceNumber ?? ''}
+              onChange={(event) => update({ invoiceNumber: event.target.value })}
+            />
+            {autoMark('invoiceNumber')}
+          </Field>
 
-        <Field label="Rechnungsnummer">
-          <input
-            className="field"
-            value={cost.invoiceNumber ?? ''}
-            onChange={(event) => update({ invoiceNumber: event.target.value })}
-          />
-          {autoMark('invoiceNumber')}
-        </Field>
-
-        <Field label="Notizen">
-          <textarea
-            className="field min-h-[5rem]"
-            value={cost.notes ?? ''}
-            onChange={(event) => update({ notes: event.target.value })}
-          />
-        </Field>
+          <Field label="Notizen">
+            <textarea
+              className="field min-h-[5rem]"
+              value={cost.notes ?? ''}
+              onChange={(event) => update({ notes: event.target.value })}
+            />
+          </Field>
+        </MoreFields>
 
         <div className="flex gap-3 mt-4">
           <button type="button" className="btn btn-primary flex-1" onClick={() => void save()} disabled={saveBlocked}>
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
           {!isNew && (
-            <button type="button" className="btn btn-danger" onClick={() => void remove()}>
+            <button type="button" className="btn btn-danger" onClick={remove}>
               Löschen
             </button>
           )}

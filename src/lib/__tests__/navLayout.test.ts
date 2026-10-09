@@ -5,6 +5,7 @@ import {
   NAV_ENTRIES,
   moveNavEntry,
   normalizeNavLayout,
+  navRouteFor,
   splitNav,
 } from '../navLayout';
 
@@ -27,6 +28,28 @@ describe('normalizeNavLayout', () => {
     const all = NAV_ENTRIES.map((entry) => entry.to);
     expect(normalizeNavLayout({ order: all, bar: all }).bar).toHaveLength(MAX_BAR_ITEMS);
     expect(normalizeNavLayout({ order: all, bar: [] }).bar).toEqual([]);
+  });
+});
+
+describe('areas instead of screens', () => {
+  it('turns a stored Notizen or Gespräche entry into its area and drops Dateien', () => {
+    const layout = normalizeNavLayout({
+      order: ['/', '/tagebuch', '/notizen', '/dateien', '/gespraeche'],
+      bar: ['/', '/tagebuch', '/3d', '/notizen'],
+    });
+    // Aufgaben takes the place Notizen had, in the stored order
+    expect(layout.bar).toEqual(['/', '/tagebuch', '/aufgaben', '/3d']);
+    expect(layout.order).not.toContain('/notizen');
+    expect(layout.order).not.toContain('/dateien');
+    expect(layout.order.indexOf('/kontakte')).toBeLessThan(layout.order.indexOf('/einstellungen'));
+  });
+
+  it('lights up the area of a screen that became a tab', () => {
+    expect(navRouteFor('/fotos')).toBe('/tagebuch');
+    expect(navRouteFor('/belege')).toBe('/kosten');
+    expect(navRouteFor('/plaene/eg')).toBe('/3d');
+    expect(navRouteFor('/notizen')).toBe('/aufgaben');
+    expect(navRouteFor('/gespraeche')).toBe('/kontakte');
   });
 });
 

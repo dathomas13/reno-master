@@ -28,6 +28,7 @@ vi.mock('@/data/useOptions', async () => {
   return { useOptions: () => value };
 });
 vi.mock('@/firebase/db', () => ({ orderBy: vi.fn() }));
+vi.mock('@/data/repos', () => ({ deleteCost: vi.fn(), saveCost: vi.fn() }));
 vi.mock('@/data/RoomsContext', () => ({
   useRooms: () => ({
     name: (id: string) => id,
@@ -56,7 +57,7 @@ describe('cost CSV export', () => {
   it('shows the CSV download in the browser', () => {
     renderCosts();
 
-    expect(screen.getByRole('button', { name: 'CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'CSV-Export' })).toBeInTheDocument();
   });
 
   it('hides the CSV download in the app', () => {
@@ -64,6 +65,6 @@ describe('cost CSV export', () => {
 
     renderCosts();
 
-    expect(screen.queryByRole('button', { name: 'CSV' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'CSV-Export' })).not.toBeInTheDocument();
   });
 });

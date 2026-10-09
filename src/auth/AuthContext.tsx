@@ -4,6 +4,7 @@ import { watchUser, ensureProfile } from '@/firebase/auth';
 import { seedIfEmpty } from '@/data/seed';
 import { COL, type UserProfile } from '@/data/types';
 import { watchDoc } from '@/firebase/db';
+import { debugLog } from '@/platform/debugLog';
 
 interface AuthValue {
   user: User | null;
@@ -22,7 +23,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(
     () => {
+      const started = performance.now();
+      let logged = false;
       const stopAuth = watchUser((nextUser) => {
+        if (!logged) {
+          logged = true;
+          // how long the app waited before it could show anything - the start-up hang
+          // with bad reception showed up here
+          debugLog(
+            'app',
+            `Anmeldung bereit nach ${Math.round(performance.now() - started)} ms (${
+              nextUser ? 'angemeldet' : 'abgemeldet'
+            }, ${navigator.onLine ? 'online' : 'offline'})`,
+          );
+        }
         profileRun.current += 1;
         const run = profileRun.current;
         profileStop.current?.();

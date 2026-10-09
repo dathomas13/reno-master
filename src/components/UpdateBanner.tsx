@@ -136,12 +136,12 @@ export function UpdateBanner() {
         </button>
         {!busy && (
           <>
-            <button type="button" className="btn btn-ghost px-3 py-1 min-h-0" onClick={later}>
+            <button type="button" className="btn btn-ghost px-3" onClick={later}>
               Später
             </button>
             <button
               type="button"
-              className="btn btn-primary px-3 py-1 min-h-0 disabled:opacity-50"
+              className="btn btn-primary px-3 disabled:opacity-50"
               onClick={() => void install(remote)}
               disabled={stillBuilding}
             >
@@ -172,7 +172,7 @@ export function UpdateBanner() {
       )}
 
       {busy && (
-        <div className="mt-2 h-1.5 rounded bg-black/30 overflow-hidden" aria-hidden="true">
+        <div className="mt-2 h-1.5 rounded bg-bg overflow-hidden" aria-hidden="true">
           <div
             className="h-full bg-accent transition-[width] duration-200"
             style={{ width: percent === null ? '100%' : `${percent}%` }}

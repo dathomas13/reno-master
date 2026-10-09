@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useConfirm } from '@/components/Confirm';
 import * as THREE from 'three';
 import { Sheet } from '@/components/Sheet';
 import { addFurnitureModel, deleteFurnitureModel } from '@/data/furniture';
@@ -45,6 +46,7 @@ export function FurnitureCatalog({ open, onClose, models, items, onPick }: Props
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [keepRatio, setKeepRatio] = useState(true);
+  const confirm = useConfirm();
 
   const usage = (model: FurnitureModel) => items.filter((item) => item.modelId === model.id).length;
 
@@ -157,10 +159,15 @@ export function FurnitureCatalog({ open, onClose, models, items, onPick }: Props
                     {used === 0 && (
                       <button
                         type="button"
-                        className="btn btn-ghost px-2 py-1 min-h-0 text-bad"
-                        onClick={() => {
-                          if (window.confirm(`„${model.name}“ löschen?`)) deleteFurnitureModel(model);
-                        }}
+                        className="btn btn-ghost px-3 text-bad"
+                        onClick={() =>
+                          void confirm({
+                            title: `„${model.name}“ löschen?`,
+                            message: 'Das eigene Modell wird mit seiner Datei entfernt.',
+                            confirmLabel: 'Löschen',
+                            danger: true,
+                          }).then((go) => go && deleteFurnitureModel(model))
+                        }
                       >
                         Löschen
                       </button>

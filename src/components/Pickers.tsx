@@ -4,6 +4,7 @@ import { useRooms } from '@/data/RoomsContext';
 import { useCollection } from '@/data/hooks';
 import { COL, type Phase, type Trade } from '@/data/types';
 import { LAYER_LABEL, type Layer } from '@/modules/viewer3d/houseScene';
+import { Icon } from './Icon';
 
 interface MultiPickerProps {
   label: string;
@@ -11,13 +12,33 @@ interface MultiPickerProps {
   onChange(value: string[]): void;
   options: { id: string; name: string; group?: string }[];
   emptyLabel?: string;
-  onAdd?(): void;
+  /** offers a field at the bottom of the sheet that creates a new entry by name */
+  onAddName?(name: string): void;
   addLabel?: string;
+  /** shows a small "+ <text>" chip instead of the field with the picked names */
+  chipLabel?: string;
 }
 
 /** compact multi select: shows the picked names, opens a sheet with the full list */
-export function MultiPicker({ label, value, onChange, options, emptyLabel = 'keine', onAdd, addLabel }: MultiPickerProps) {
+export function MultiPicker({
+  label,
+  value,
+  onChange,
+  options,
+  emptyLabel = 'keine',
+  onAddName,
+  addLabel,
+  chipLabel,
+}: MultiPickerProps) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  function addDraft() {
+    const name = draft.trim();
+    if (!name || !onAddName) return;
+    onAddName(name);
+    setDraft('');
+  }
   const byId = useMemo(() => new Map(options.map((option) => [option.id, option])), [options]);
   const groups = useMemo(() => {
     const map = new Map<string, typeof options>();
@@ -32,12 +53,19 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
 
   return (
     <>
-      <button type="button" className="field text-left flex items-center gap-2" onClick={() => setOpen(true)}>
-        <span className={`flex-1 truncate ${picked.length ? '' : 'text-muted'}`}>
-          {picked.length ? picked.join(', ') : emptyLabel}
-        </span>
-        <span className="text-muted">›</span>
-      </button>
+      {chipLabel ? (
+        <button type="button" className="chip text-muted" onClick={() => setOpen(true)}>
+          <Icon name="plus" className="w-4 h-4" />
+          {chipLabel}
+        </button>
+      ) : (
+        <button type="button" className="field text-left flex items-center gap-2" onClick={() => setOpen(true)}>
+          <span className={`flex-1 truncate ${picked.length ? '' : 'text-muted'}`}>
+            {picked.length ? picked.join(', ') : emptyLabel}
+          </span>
+          <span className="text-muted"><Icon name="chevronRight" className="w-5 h-5" /></span>
+        </button>
+      )}
       <Sheet open={open} onClose={() => setOpen(false)} title={label}>
         <div className="pb-4">
           {groups.map(([group, entries]) => (
@@ -50,11 +78,14 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
                     key={option.id}
                     type="button"
                     className="list-row w-full text-left"
+                    aria-pressed={on}
                     onClick={() =>
                       onChange(on ? value.filter((id) => id !== option.id) : [...value, option.id])
                     }
                   >
-                    <span className={`w-5 ${on ? 'text-accent' : 'text-transparent'}`}>✓</span>
+                    <span className={`w-5 shrink-0 ${on ? 'text-accent' : 'text-transparent'}`}>
+                      <Icon name="check" className="w-5 h-5" strokeWidth={2.2} />
+                    </span>
                     <span className="flex-1">{option.name}</span>
                   </button>
                 );
@@ -66,10 +97,32 @@ export function MultiPicker({ label, value, onChange, options, emptyLabel = 'kei
               Auswahl leeren
             </button>
           )}
-          {onAdd && (
-            <button type="button" className="btn w-full mt-2" onClick={onAdd}>
-              {addLabel ?? 'Hinzufügen'}
-            </button>
+          {onAddName && (
+            // the same add field as in the presets: type, tap +, it is created and ticked
+            <form
+              className="flex gap-2 px-4 mt-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                addDraft();
+              }}
+            >
+              <input
+                className="field flex-1"
+                aria-label={addLabel ?? 'Neuer Eintrag'}
+                placeholder={`${addLabel ?? 'Hinzufügen'} …`}
+                value={draft}
+                maxLength={60}
+                onChange={(event) => setDraft(event.target.value)}
+              />
+              <button
+                type="submit"
+                className="btn btn-primary w-11 px-0"
+                aria-label={addLabel ?? 'Hinzufügen'}
+                disabled={!draft.trim()}
+              >
+                <Icon name="plus" />
+              </button>
+            </form>
           )}
         </div>
       </Sheet>
