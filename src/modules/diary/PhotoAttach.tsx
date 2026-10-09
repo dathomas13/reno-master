@@ -64,7 +64,10 @@ interface PhotoAttachProps {
   existingPhotos?: Photo[];
   existingCosts?: Cost[];
   disabled?: boolean;
-  /** the untouched file, handed over before it is shrunk - used to read a receipt */
+  /**
+   * the untouched file of the first receipt, handed over as soon as it is known not to be a
+   * duplicate - while it is still being shrunk and stored - so reading it starts right away
+   */
   onFileChosen?(file: Blob, contentType: string): void | Promise<void>;
   /** open the camera as soon as the screen is shown (app shortcut "Beleg erfassen") */
   autoCapture?: boolean;
@@ -222,8 +225,15 @@ export function PhotoAttach({
     setBusy(true);
     onBusyChange?.(true);
     const knownPhotos = [...existingPhotos];
+    let extraction: Promise<void> | undefined;
     try {
       for (const item of items) {
+        const startExtraction = item === items[0] && onFileChosen
+          ? () => {
+              extraction = Promise.resolve(onFileChosen(item.blob, item.blob.type || 'image/jpeg'))
+                .catch(() => undefined);
+            }
+          : undefined;
         const photo = await addPhoto({
           file: item.blob,
           kind,
@@ -236,21 +246,20 @@ export function PhotoAttach({
           originalFile: item.original,
           existingPhotos: knownPhotos,
           existingCosts,
+          onAccepted: startExtraction,
         });
-        const alreadyAttached = photos.some((current) => current.id === photo.id);
         if (knownPhotos.some((current) => current.id === photo.id)) {
           setWarning('Dieser Beleg ist bereits vorhanden und wird nicht erneut gespeichert.');
         }
         knownPhotos.push(photo);
         onAdded(photo);
-        if (!alreadyAttached && item === items[0]) {
-          await onFileChosen?.(item.blob, item.blob.type || 'image/jpeg');
-        }
       }
     } catch (cause) {
       if (cause instanceof ReceiptAlreadyLinkedError) onDuplicate?.(cause.photo);
       setWarning(cause instanceof Error ? cause.message : 'Datei konnte nicht hinzugefügt werden.');
     } finally {
+      // busy until the reading is done too, so nothing is saved half-filled
+      await extraction;
       processing.current = false;
       setBusy(false);
       onBusyChange?.(false);

@@ -12,6 +12,7 @@ Commit-Nachricht, und die liest sich im Banner auch so.
 
 - Gesprächseinträge: speichern auch ohne Kontakt, „+ Neuer Kontakt…“ legt ihn gleich mit an, und „Beteiligt“ hält fest, wer dabei war.
 - Fotos sind wieder zuerst nach Monat sortiert; „Nach Phase“ zeigt die neueste Phase oben.
+- Ein Beleg wird jetzt sofort nach dem Foto ausgelesen, nicht erst nach dem Speichern.
 
 ## 0.85.3 – Letzter Schliff
 
