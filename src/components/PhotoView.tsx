@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { useBackClose } from '@/platform/backHandlers';
 import { Icon } from './Icon';
 import { Hint } from './Hint';
 import { resolveFileUrl } from '@/offline/fileUrls';
@@ -74,6 +75,8 @@ interface LightboxProps {
 
 /** full screen viewer with swipe, used from the diary and the cost detail */
 export function Lightbox({ photos, index, onClose, onIndexChange, footer }: LightboxProps) {
+  // Android back closes the photo, not the page behind it
+  useBackClose(true, onClose);
   const photo = photos[index];
   const isPdf = photo?.contentType === 'application/pdf';
   // the original can be several megabytes, so it is only fetched when asked for

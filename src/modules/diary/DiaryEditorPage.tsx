@@ -326,15 +326,7 @@ export default function DiaryEditorPage() {
             {saveError}
           </p>
         )}
-        <button
-          type="button"
-          className="btn btn-primary w-full mt-4"
-          onClick={() => void save()}
-          disabled={saving || attaching}
-        >
-          {saving ? 'Speichert…' : 'Speichern'}
-        </button>
-        {/* far from "Speichern" and quiet: throwing a draft away is the rare case */}
+        {/* "Speichern" sits in the top bar only; down here the quiet way out of a new draft */}
         {isNew && (
           <button
             type="button"

@@ -34,7 +34,7 @@ const attachedPhoto = {
   id: 'photo-1', entryId: 'new-entry', originalName: 'test.jpg', uploadState: 'pending',
 } as Photo;
 
-vi.mock('@/components/TopBar', () => ({ TopBar: () => null }));
+vi.mock('@/components/TopBar', () => ({ TopBar: ({ action }: { action?: React.ReactNode }) => <>{action}</> }));
 vi.mock('@/components/Pickers', () => ({
   RoomPicker: () => null,
   TradePicker: () => null,

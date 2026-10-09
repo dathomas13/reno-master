@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.85.3 – Letzter Schliff
+
+- Lange drücken jetzt auch bei Plänen (statt Mülleimer) und Belegen; Gespräche haben oben „Neu“.
+- Zurück schließt auch die Foto-Ansicht; im Tagebuch steht „Speichern“ nur noch oben.
+- Die Belegsuche sagt „Nichts gefunden“, wenn nichts passt.
+
 ## 0.85.2 – Zurück schließt Menüs
 
 - Die Zurück-Taste schließt ein offenes Menü oder Fenster, statt die Seite zu verlassen.

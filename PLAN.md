@@ -364,20 +364,47 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 ## 8. Module / Screens
 
 ### 8.0 App-Shell & Navigation
-- Mobil (< 900 px): **Bottom-Navigation** mit 5 Tabs: **Start · Tagebuch · 3D · Kosten · Mehr**. "Mehr" öffnet ein Sheet mit: Suche, Dateien, Aufgaben, Notizen, Kontakte, Gespräche, Einstellungen.
-- Desktop (≥ 900 px): linke Sidebar mit allen 8 Zielen, Inhalt max. 1100 px breit, Listen zweispaltig wo sinnvoll.
-- TopBar: Titel, Sync-Badge, kontextabhängige Aktion (z. B. "+").
+- **Bereiche statt Einzelbildschirme** (seit 0.81): Start, Tagebuch (Einträge · Fotos), Haus (3D · Pläne),
+  Kosten (Liste · Übersicht · Belege), Aufgaben (Aufgaben · Notizen), Kontakte (Kontakte · Gespräche), Suche,
+  Einstellungen. Die Reiter eines Bereichs (`components/SectionTabs.tsx`, `AREA_TABS`) sind echte Links,
+  unterstrichen statt umrandet, damit sie nicht wie Filter im Bildschirm aussehen. Alle alten Routen bleiben;
+  `/dateien` leitet auf `/tagebuch` um, gespeicherte Menü-Anordnungen werfen entfallene Einträge selbst heraus
+  (`lib/navLayout.ts`).
+- Mobil (< 900 px): **Bottom-Navigation** mit den Einträgen aus „Menü“ in den Einstellungen und in der Mitte
+  dem runden **Erfassen-Knopf** „+“ (`components/CaptureSheet.tsx`): Tagebuch heute bzw. ergänzen, Fotos von
+  heute, Beleg, Aufgabe, Notiz, Gespräch. Ein offener Raum (`?raum=` in der Adresse oder `lib/openRoom.ts`
+  aus 3D/Plan) geht als `?raum=` mit. „Mehr“ enthält den Rest.
+- Desktop (≥ 900 px): linke Sidebar mit allen Zielen, Inhalt max. 1100 px breit, Listen zweispaltig wo sinnvoll.
+- TopBar: Titel, Sync-Badge, rechts **„Neu“** (Plus-Icon mit Text) auf jedem Listen-Bildschirm. Der Pfeil
+  zurück geht mit `navigate(-1)`, wenn es Verlauf in der App gibt, sonst mit `replace` aufs Ziel.
+- **Bedienmuster, überall gleich:**
+  - Löschen geht sofort und bietet „Rückgängig“ (`useUndoableDelete`, der Datensatz wird mit derselben id
+    zurückgeschrieben). Nur Unumkehrbares fragt vorher, mit `useConfirm` statt `window.confirm`.
+  - Rückmeldungen und Fehler über einen app-weiten Hinweis (`components/Toast.tsx`).
+  - **Seitlich wischen** wechselt zum Nachbarreiter des Bereichs (`lib/swipe.ts` entscheidet, `SectionTabs`
+    animiert: der Strich folgt dem Finger, der Inhalt gleitet herein). Nicht vom Bildschirmrand (Android-Zurück),
+    nicht in Eingaben, Sheets, Lightbox und 3D.
+  - **Lange drücken** auf einen Listeneintrag öffnet ein Kontextmenü direkt am Eintrag
+    (`components/RowActions.tsx`): Löschen, je nach Liste Erledigt, Anheften, Bearbeiten, Rechnung öffnen.
+    Bewusst kein Wischen auf Zeilen – das würde sich mit dem Reiterwechsel um jede Berührung streiten.
+  - Die **Android-Zurück-Taste** schließt zuerst ein offenes Menü, Sheet oder die Lightbox
+    (`platform/backHandlers.ts`), erst dann geht sie im Verlauf zurück.
+  - Lange Formulare zeigen oben das Nötige, der Rest steht unter „Weitere Angaben“ (`components/MoreFields.tsx`),
+    zugeklappt, solange dort nichts ausgefüllt ist.
+  - Versteckte Gesten erklärt einmal ein Hinweis (`components/Hint.tsx`, gemerkt in `lib/hints.ts`).
+  - Symbole kommen aus einem Satz (`components/Icon.tsx`), keine Emojis außer dem Wetter.
 - **Sheets werden per Portal an `document.body` gehängt.** `backdrop-blur` (wie `filter` und `transform`) macht ein Element zum Bezugsrahmen für `position: fixed` darin – TopBar und Bottom-Navigation haben es. Ein Sheet, das im Baum darunter steht, misst sich sonst an einer 56 px hohen Kopfzeile und erscheint am Telefon verschoben und unlesbar.
-- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/gespraeche` (alle Gesprächsprotokolle über alle Kontakte, aus "Mehr" erreichbar), `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
-- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/gespraeche?eintrag=<id>` (öffnet den Gesprächseintrag), `/fotos?raum=<id>` und `?art=photo|receipt`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
+- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/gespraeche` (alle Gesprächsprotokolle über alle Kontakte, Reiter im Bereich Kontakte), `/notizen`, `/fotos`, `/belege`, `/einstellungen/startseite`, `/einstellungen/voreinstellungen`, `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
+- Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>` und `?phase=<id>`, `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/gespraeche?eintrag=<id>` (öffnet den Gesprächseintrag), `/fotos?raum=<id>` und `?art=photo|receipt`, `?neu=1` bei Aufgaben, Notizen und Gesprächen (öffnet ein neues Sheet, mit `?raum=` schon zugeordnet), `/tagebuch/neu?fotos=heute` (öffnet die Tagesauswahl der Galerie), `/kosten?ansicht=uebersicht`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
 - PWA-Manifest: `name: "Reno Master"`, `short_name: "Reno"`, `display: standalone`, `orientation: any`, `start_url: ./`, Icons 192/512 + maskable (einfaches Haus-Piktogramm in Akzentfarbe auf `#1d2126`), **Shortcuts**: "Neuer Tagebuch-Eintrag" (`#/tagebuch/neu`), "Beleg erfassen" (`#/kosten/neu?capture=1`), "3D-Modell" (`#/3d`).
 
 ### 8.1 Start (Dashboard)
 - Hero: Nordansicht-Foto (`public/img/nordansicht.jpg`) mit Overlay-Titel "Schlesierstraße 31" und aktueller Phase (aus `phases` mit Status "In Arbeit"). Die Phase bleibt nur eine dezente Zeile im Bild, ist aber antippbar: ein kleines Sheet setzt genau eine Phase auf "In Arbeit", schließt bisher laufende Phasen ab und hält damit die automatische Phase für neue Tagebuch-Einträge und Aufgaben aktuell. Keine eigene Phasen-Karte auf dem Startscreen.
-- Karte "Heute": wenn kein Eintrag für heute → großer Button "Tagebuch-Eintrag für heute anlegen"; sonst Vorschau des Eintrags + "Bearbeiten".
-- Schnellaktionen: "Beleg erfassen" (öffnet Kosten-Editor mit Kamera), "Foto zum Tagebuch", "Aufgabe".
+- Karte "Heute": wenn kein Eintrag für heute → großer Button "Tagebuch-Eintrag für heute anlegen"; sonst Vorschau des Eintrags + "Bearbeiten". In der App darunter „n Fotos von heute übernehmen“ (Tagesgalerie, `?fotos=heute`). Mehrere Einträge am Tag sind gewollt (`modules/diary/entriesOfDay.ts`).
+- „Dringend“: offene Aufgaben mit Haken direkt auf der Startseite, danach „Rückgängig“.
+- Schnellzugriff: bis zu 6 Kacheln, Auswahl und Reihenfolge je Gerät (`lib/shortcuts.ts`), Standard Beleg, Notizen, Aufgaben. Blöcke und Schnellzugriff stellt die Unterseite Einstellungen → Startseite ein.
 - Letzte 3 Tagebucheinträge (Datum, Titel, erstes Thumbnail).
 - Offene Aufgaben (fällig ≤ 7 Tage oder Priorität Hoch), max. 5.
 - Kosten-Kachel: Summe gesamt, Summe laufender Monat.
@@ -411,7 +438,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - **Eigene Orbit-Steuerung** 1:1 übernehmen: Pointer-Events, 1 Finger drehen, 2 Finger zoomen+verschieben, Mausrad, Rechtsklick/Shift = pan, Tippen ohne Bewegung = Auswahl (Raycaster), Kamera-Parameter `theta/phi/dist/target`, Limits (phi 0.08…π/2−0.02, dist 4…120).
 - Layer-Buttons **KG · EG · OG · Dach · Garage** (an/aus), Ansichten-Select **Außen · EG-Grundriss · OG-Grundriss · KG-Grundriss** (setzen Sichtbarkeit + Kamera wie im Template), Button **Tragwände**, Legende (Konfidenz bzw. tragend/nicht tragend), Vollbild-Button, Info-Panel bei Auswahl (Name, Geschoss, Maße aus `bb`, Koordinaten, Konfidenztext, tragend).
 - **Neu: Modell-Umschalter** oben: Segment-Control **"Ist" | "Soll"** (Default aus Einstellungen, URL-Param `variant`). Wechsel lädt die andere JSON (aus Precache/IndexedDB), baut die Szene neu, behält Kamera + Layer-Zustand. Versionsinfo (aus der aktiven Fassung, `src/data/models.ts` → `activeRelease`) klein im Header, z. B. "Ist v0.23 · 16.09.2026"; kommt das Modell nicht aus dem App-Bündel, steht der Kanal dahinter ("Sync", "Website").
-- **Neu: Räume** (Abschnitt 9.4): pro Raum ein flaches, halbtransparentes Bodenpolygon (Extrusion 20 mm, Farbe Akzent 15 % Opazität, pickbar, eigene Layer-Zuordnung zum Geschoss). Tippen auf Raum → **RoomPanel** (Bottom-Sheet): Raumname, Geschoss, Fläche (aus Polygon), Zähler "12 Einträge · 34 Fotos · 3 Kosten · 2 Aufgaben" mit Links (führen in die jeweiligen Listen mit Raumfilter). Umschalter "Räume anzeigen" (Default an in Grundriss-Ansichten, aus in Außenansicht). Über URL `?room=<id>` wird der Raum vorselektiert und die passende Grundriss-Ansicht gesetzt.
+- **Neu: Räume** (Abschnitt 9.4): pro Raum ein flaches, halbtransparentes Bodenpolygon (Extrusion 20 mm, Farbe Akzent 15 % Opazität, pickbar, eigene Layer-Zuordnung zum Geschoss). Tippen auf Raum → **RoomPanel** (kompakte Karte über den Schaltern): eine Zeile Raumname · Geschoss · Fläche, darunter nur die Zähler über null als Link-Chips ("9 Einträge · 61 Fotos · 1 offen", führen in die Listen mit Raumfilter), sonst „Noch nichts zu diesem Raum“. Beim Einrichten (Möbel) ausgeblendet; die Einrichten-Karte sagt dann, in welchen Raum neue Möbel kommen. Eine eigene „Raumakte“-Seite ist bewusst verworfen (doppelte Ansichten). Umschalter "Räume anzeigen" (Default an in Grundriss-Ansichten, aus in Außenansicht). Über URL `?room=<id>` wird der Raum vorselektiert und die passende Grundriss-Ansicht gesetzt.
 - Performance: `setPixelRatio(min(dpr, 2))`, Rendering nur bei Änderung (`invalidate()`-Pattern statt dauerhaftem RAF-Loop, um Akku zu schonen), Szene beim Verlassen der Route disposen.
 - Modell laden: über `loadScene(variant)` – die in IndexedDB liegende Fassung, wenn sie mindestens so neu ist wie die gebündelte, sonst `fetch(`${base}models/${variant}.json`)` (≈95 KB, 132 Bauteile, 4512 Dreiecke – unkritisch). Ladefehler offline → Meldung "Modell noch nicht heruntergeladen – einmal online öffnen". Ein Modell, das während der Ansicht ankommt, meldet sich über das Fenster-Ereignis `reno:model`; der Viewer baut die Szene dann neu.
 - **Die Ansicht bleibt stehen.** Kamera (theta, phi, Abstand, Ziel), sichtbare Geschosse, Tragwand-Modus, Raum-Overlay, gewählte Ansicht und der offene Raum werden beim Verlassen des Bildschirms gemerkt (`viewerState.ts`: im Modul für den Weg zu einem anderen Bildschirm, in `localStorage` für den Weg durch eine geschlossene App, gesichert auch bei `pagehide`/`visibilitychange`). Beim Aufbau gewinnt der gemerkte Blick über die Standardansicht – auch beim Wechsel Bestand/Zielzustand, damit das Haus nicht unter dem Finger springt. Nur `?raum=<id>` sticht ihn, das ist ja eine Ansage. Was aus dem Speicher kommt, geht durch `parseViewerState`: ein einziges NaN stellt die Kamera sonst ins Nichts und der Bildschirm bleibt schwarz.
@@ -443,6 +470,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - **Editor**:
   - Oben **Beleg-Bereich**: Buttons "Foto aufnehmen", "Aus Galerie", "Datei (PDF)". Sobald ein Beleg hinzugefügt wurde und die Felder noch leer sind → automatisch `platform/ocr.extract(file)` starten (Spinner "Beleg wird gelesen…"), Ergebnis in die Felder vorbefüllen, jedes vorbefüllte Feld mit dezentem Marker "automatisch erkannt" (Tippen entfernt Marker); nichts wird ohne Speichern übernommen. Button "Erneut auslesen" und Engine-Anzeige ("ML Kit" / "Claude" / "nicht verfügbar – Felder manuell ausfüllen").
   - Felder: Datum, Händler, Beschreibung, Betrag brutto (numerisches Tastatur-Feld, Komma erlaubt), MwSt-Satz (19/7/0) → Netto/MwSt automatisch, Kategorie (Chips + Select), Gewerk, Räume, Status, bezahlt von, Zahlungsart, Rechnungsnummer, Notizen.
+  - Nach dem Auslesen stehen Datum, Betrag, Händler und Kategorie oben in einer **Prüfkarte** („Bitte prüfen“, größere Felder, Marke „erkannt“) mit **„Passt – speichern“**; MwSt, Status, Zahlungsart, Gewerk, Räume, Nummer und Notizen unter „Weitere Angaben“.
   - Mehrere Belege pro Kosteneintrag möglich (Vorder-/Rückseite).
 - Belege werden wie Fotos verkleinert (max. 2000 px, damit Text lesbar bleibt), PDFs unverändert gespeichert.
 - Tippen auf einen angehängten Beleg öffnet dieselbe Vollbildansicht wie in der Beleg- und
@@ -453,8 +481,9 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Ladefehler und Zeitüberschreitungen zeigen einen Wiederholen-Knopf, keine Endlos-Ladeanzeige.
 
 ### 8.6 Aufgaben
-- Liste mit Segment "Offen | Alle | Erledigt"; Gruppierung nach Fälligkeit (Überfällig, Heute, Diese Woche, Später, Ohne Datum); Zeile: Checkbox, Titel, Chips (Priorität farbig, Bereich, Zuständig), Fälligkeit. Filter: Zuständig (Thomas/Sarah/Beide), Bereich, Gewerk, Phase, Raum.
-- Schnellanlage: Eingabefeld oben ("Aufgabe… ⏎"), Details später.
+- Liste mit offenen Aufgaben, gruppiert nach Fälligkeit (Überfällig, Heute, Diese Woche, Später, Ohne Datum) mit Anzahl am Abschnittskopf; Zeile: Checkbox, Titel, Chips (Priorität farbig, Bereich, Zuständig), Fälligkeit. Eine Filterzeile aus Chips: „Erledigte“ (zeigt nur die erledigten), die Personen, die Aufgaben haben, und ein Raumfilter aus der Adresse.
+- Schnellanlage: Eingabefeld oben, abgeschickt über die Tastatur oder den Haken im Feld. Es versteht **Kurzschrift** (`modules/tasks/quickParse.ts`): heute, morgen, übermorgen, Wochentage, `12.10.`, `!` (auch am Wort) für hohe Priorität, eindeutige Raum-, Personen- und Gewerknamen. Erkanntes steht als Chips unter dem Feld; ein Tipp nimmt die Erkennung zurück.
+- „Zuständig“ im Editor bietet als Chips nur die Personen an, die schon Aufgaben haben, plus die gesetzten; alle übrigen aus der Personenliste über „+ Person“.
 - Editor: Titel, Notizen, Status, Priorität, Fällig am, Erinnerung, Zuständig (Multi), Bereich, Gewerk, Phase, Räume.
 - Erledigt-Haken setzt `status:'Erledigt'`, `doneAt` und löscht eine geplante Erinnerung. In der Android-App wird `reminderAt` beim Speichern der Aufgabe direkt als lokale Benachrichtigung gestellt oder gelöscht; dieser direkte Weg wartet nicht auf den nächsten Aufgaben-Snapshot. Falls die Benachrichtigungserlaubnis noch fehlt, fragt der Speichervorgang mit Erinnerung danach. Der laufende Aufgaben-Listener gleicht die Liste danach nur noch als Sicherheitsnetz ab. Kann Android die Aktion „Erledigt“ nicht registrieren, wird die Erinnerung trotzdem geplant; deren Aktion „Erledigt“ markiert die Aufgabe als abgeschlossen, wenn sie verfügbar ist.
 
@@ -484,7 +513,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Nachricht/Sonstiges –, Text) statt Fließtext in den Notizen; Collection `contactLogs`, Feld `contactId`.
   Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.
   Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
-  Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, aus "Mehr" erreichbar) zeigt alle Einträge über
+  Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, Reiter „Gespräche“ im Bereich Kontakte, mit „Neu“) zeigt alle Einträge über
   alle Kontakte, neueste zuerst, mit Suchfeld und bis zu dreizeiliger Vorschau (Zeilenumbrüche zu
   Leerzeichen gefaltet); Tippen öffnet den Eintrag selbst (`ContactLogEditor` mit „Kontakt“-Feld),
   ebenso ein Suchtreffer über `?eintrag=<id>`.

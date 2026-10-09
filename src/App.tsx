@@ -28,7 +28,6 @@ import NotesPage from '@/modules/notes/NotesPage';
 import ContactsPage from '@/modules/contacts/ContactsPage';
 import ContactLogsPage from '@/modules/contacts/ContactLogsPage';
 import SearchPage from '@/modules/search/SearchPage';
-import FilesPage from '@/modules/files/FilesPage';
 import PhotosPage from '@/modules/photos/PhotosPage';
 import ReceiptsPage from '@/modules/receipts/ReceiptsPage';
 import SettingsPage from '@/modules/settings/SettingsPage';
@@ -98,7 +97,8 @@ function Protected() {
           <Route path="/kontakte" element={<ContactsPage />} />
           <Route path="/gespraeche" element={<ContactLogsPage />} />
           <Route path="/suche" element={<SearchPage />} />
-          <Route path="/dateien" element={<FilesPage />} />
+          {/* the old "Dateien" page: its contents now sit in the tabs of Tagebuch, Haus and Kosten */}
+          <Route path="/dateien" element={<Navigate to="/tagebuch" replace />} />
           <Route path="/fotos" element={<PhotosPage />} />
           <Route path="/belege" element={<ReceiptsPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />

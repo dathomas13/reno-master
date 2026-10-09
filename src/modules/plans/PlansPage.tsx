@@ -5,6 +5,7 @@ import { Sheet } from '@/components/Sheet';
 import { Field, EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { useUndoableDelete } from '@/components/Toast';
+import { useRowActions } from '@/components/RowActions';
 import { useCollection } from '@/data/hooks';
 import { COL, type Plan } from '@/data/types';
 import { savePlan, deletePlan } from '@/data/repos';
@@ -27,6 +28,13 @@ const GROUP_LABEL: Record<string, string> = {
 export default function PlansPage() {
   const { data: uploaded, loading } = useCollection<Plan>(COL.plans);
   const undoableDelete = useUndoableDelete();
+  const rowActions = useRowActions();
+
+  function removePlan(id: string) {
+    const stored = uploaded.find((item) => item.id === id);
+    if (!stored) return;
+    undoableDelete(`„${stored.title}“ gelöscht`, () => deletePlan(stored.id), () => savePlan(stored));
+  }
   // generated from the model in use; loadPlanSvg draws them when one is opened
   const [bundled] = useState(modelPlans);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -116,8 +124,15 @@ export default function PlansPage() {
             <div className="section-title">{GROUP_LABEL[group]}</div>
             <ul>
               {rows.map((plan) => (
-                <li key={plan.id} className="flex items-center border-b border-line/60">
-                  <Link to={`/plaene/${plan.id}`} className="list-row flex-1 min-w-0 border-b-0">
+                <li
+                  key={plan.id}
+                  {...(plan.source === 'upload'
+                    ? rowActions.bind(plan.title, [
+                        { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removePlan(plan.id) },
+                      ])
+                    : {})}
+                >
+                  <Link to={`/plaene/${plan.id}`} className="list-row">
                     <span className="w-10 h-10 rounded-lg bg-panel2 grid place-items-center text-muted shrink-0">
                       <Icon name={plan.kind === 'pdf' ? 'files' : plan.kind === 'svg' ? 'plan' : 'photo'} className="w-5 h-5" />
                     </span>
@@ -130,20 +145,6 @@ export default function PlansPage() {
                       </span>
                     </span>
                   </Link>
-                  {plan.source === 'upload' && (
-                    <button
-                      type="button"
-                      className="btn btn-ghost w-11 px-0 mr-2 shrink-0"
-                      aria-label={`Plan löschen: ${plan.title}`}
-                      onClick={() => {
-                        const stored = uploaded.find((item) => item.id === plan.id);
-                        if (!stored) return;
-                        undoableDelete(`„${stored.title}“ gelöscht`, () => deletePlan(stored.id), () => savePlan(stored));
-                      }}
-                    >
-                      <Icon name="trash" className="w-5 h-5" />
-                    </button>
-                  )}
                 </li>
               ))}
             </ul>
@@ -151,6 +152,7 @@ export default function PlansPage() {
         );
       })}
 
+      {rowActions.sheet}
       <Sheet open={uploadOpen} onClose={() => setUploadOpen(false)} title="Plan hochladen" doneLabel="Abbrechen">
         <div className="p-4">
           <Field label="Datei">

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { PhotoImage, Lightbox } from '@/components/PhotoView';
@@ -11,6 +11,7 @@ import { formatDate, formatMonth, monthKey } from '@/lib/date';
 import { useOptions } from '@/data/useOptions';
 import { Icon } from '@/components/Icon';
 import { SectionTabs } from '@/components/SectionTabs';
+import { useRowActions } from '@/components/RowActions';
 
 interface Row {
   photo: Photo;
@@ -41,6 +42,8 @@ export default function ReceiptsPage() {
   const { data: photos, loading } = useCollection<Photo>(COL.photos);
   const { data: costs } = useCollection<Cost>(COL.costs, [orderBy('date', 'desc')]);
   const [search, setSearch] = useState('');
+  const navigate = useNavigate();
+  const rowActions = useRowActions();
   const [open, setOpen] = useState<number | null>(null);
   const { label } = useOptions();
   // the cost stores the category's key; people read and search for its name
@@ -121,19 +124,37 @@ export default function ReceiptsPage() {
 
       {loading && photos.length === 0 && <Spinner label="Belege werden geladen…" />}
 
-      {!loading && visible.length === 0 && (
-        <EmptyState
-          title="Keine Belege"
-          hint="Belege entstehen bei den Kosten, beim Fotografieren oder Hochladen einer Rechnung."
-        />
-      )}
+      {!loading && visible.length === 0 &&
+        (search.trim() ? (
+          <EmptyState
+            title="Nichts gefunden"
+            hint={`Kein Beleg passt zu „${search.trim()}“.`}
+            action={
+              <button type="button" className="btn mt-2" onClick={() => setSearch('')}>
+                Suche leeren
+              </button>
+            }
+          />
+        ) : (
+          <EmptyState
+            title="Keine Belege"
+            hint="Belege entstehen bei den Kosten, beim Fotografieren oder Hochladen einer Rechnung."
+          />
+        ))}
 
       {months.map(([key, list]) => (
         <section key={key || 'ohne'}>
           <div className="section-title">{key ? formatMonth(`${key}-01`) : 'Ohne Datum'}</div>
           <ul>
             {list.map((row) => (
-              <li key={row.photo.id}>
+              <li
+                key={row.photo.id}
+                {...(row.cost
+                  ? rowActions.bind(row.cost.vendor || 'Beleg', [
+                      { label: 'Rechnung öffnen', icon: 'euro', onSelect: () => navigate(`/kosten/${row.cost!.id}`) },
+                    ])
+                  : {})}
+              >
                 <button
                   type="button"
                   className="list-row w-full text-left"
@@ -160,6 +181,7 @@ export default function ReceiptsPage() {
         </section>
       ))}
 
+      {rowActions.sheet}
       {open !== null && visible[open] && (
         <Lightbox
           photos={visible.map((row) => row.photo)}

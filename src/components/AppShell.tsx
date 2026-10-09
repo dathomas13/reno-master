@@ -20,7 +20,6 @@ const ROUTE_ICONS: Record<string, IconName> = {
   '/3d': 'cube',
   '/kosten': 'euro',
   '/suche': 'search',
-  '/dateien': 'files',
   '/aufgaben': 'task',
   '/notizen': 'note',
   '/kontakte': 'contact',

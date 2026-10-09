@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, within } from '@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { Task } from '@/data/types';
+import { ToastProvider } from '@/components/Toast';
 import TasksPage from './TasksPage';
 
 const mocks = vi.hoisted(() => ({
@@ -9,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   trades: [{ id: 'maler', name: 'Maler', status: 'offen', priority: 'mittel' }],
   saveTask: vi.fn().mockResolvedValue('task-1'),
   toggleTaskDone: vi.fn().mockResolvedValue(undefined),
+  deleteTask: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/components/TopBar', () => ({ TopBar: ({ action }: { action?: React.ReactNode }) => <>{action}</> }));
@@ -54,7 +56,7 @@ vi.mock('@/data/repos', () => ({
   }),
   saveTask: mocks.saveTask,
   toggleTaskDone: mocks.toggleTaskDone,
-  deleteTask: vi.fn(),
+  deleteTask: mocks.deleteTask,
 }));
 
 beforeEach(() => {
@@ -71,6 +73,7 @@ beforeEach(() => {
   ];
   mocks.saveTask.mockClear();
   mocks.toggleTaskDone.mockClear();
+  mocks.deleteTask.mockClear();
 });
 afterEach(cleanup);
 
@@ -200,5 +203,38 @@ describe('tasks page', () => {
     expect(within(dialog).getByRole('button', { name: 'Thomas' })).toHaveAttribute('aria-pressed', 'false');
     expect(within(dialog).queryByRole('button', { name: 'Sarah' })).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Person' })).toBeInTheDocument();
+  });
+
+  it('opens a new task straight away from the capture button (?neu=1)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/aufgaben?neu=1']} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <TasksPage />
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    expect(screen.getByRole('dialog', { name: 'Aufgabe' })).toBeInTheDocument();
+  });
+
+  it('deletes a task and brings it back with "Rückgängig"', async () => {
+    render(
+      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <ToastProvider>
+          <TasksPage />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    await act(async () => {});
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /^Fenster pruefen/ }));
+    });
+    await act(async () => {
+      fireEvent.click(within(screen.getByRole('dialog', { name: 'Aufgabe' })).getByRole('button', { name: 'Löschen' }));
+    });
+    expect(mocks.deleteTask).toHaveBeenCalledWith('task-1');
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Rückgängig' }));
+    });
+    expect(mocks.saveTask).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1', title: 'Fenster pruefen' }));
   });
 });

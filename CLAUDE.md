@@ -81,7 +81,7 @@ Veröffentlichung trägt ihre Hausdatei mit, damit der Export immer den Stand in
 herausgibt (Anleitung in `tools/model/README-MODELL.md`, Abschnitt 5). Ohne Anmeldung
 zeigt die App nur die Anmeldeseite.
 
-## Stand (16.09.2026)
+## Stand (09.10.2026)
 
 Live unter <https://dathomas13.github.io/reno-master/>, gebaut und veröffentlicht von
 GitHub Actions. Die CI-, Pages- und APK-Workflows laufen auf jedem Branch-Push; der
@@ -99,7 +99,7 @@ Steht:
   veröffentlichter APKs (identischer Fingerabdruck, Aussteller „Reno Master“) - falls das
   hier je wieder als offen auftaucht, zuerst dagegen prüfen statt einen Debug-Schlüssel-Fix
   zu bauen, der dann nie zum Zug kommt.
-- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 248 Unit-Tests (Zahl aus dem vitest-Lauf in der CI, nicht geschätzt).
+- Modell-Pipeline, alle Bildschirme, Service Worker, Suche über alle Module, Fotogalerie, 627 Unit-Tests (Zahl aus dem vitest-Lauf in der CI, nicht geschätzt).
 - **Das EG ist aufgemessen** (Thomas, 09/2026, DXF „Grundriss_EG_Bestand_Fertigmasse“):
   Ist-Modell v0.24 trägt im EG **Fertigmaße inkl. Putz**, Haus 12.995 × 11.815 statt
   13.240 × 11.820. Das KG ist darauf gesetzt (tragende Wände stehen übereinander),
@@ -179,6 +179,12 @@ Steht:
   Auswahlwerte (`meta/options`), Phasen und Gewerke (ausblenden statt löschen) sowie
   Raumnamen und `roomMap` – Letztere über die Hausdatei und eine neue Modellversion, nie über
   Overrides. Registry `src/data/presets.ts`, Details in `PLAN.md` 5.7 und 8.8.
+- **UI-Überarbeitung** (0.76–0.85, 10/2026): sechs Bereiche mit Reitern statt 14 Menüpunkten,
+  Erfassen-Knopf „+“ in der Leiste, Löschen überall mit „Rückgängig“, Startseite „Heute“, Kurzschrift in
+  der Aufgaben-Schnelleingabe, Beleg-Prüfkarte, seitliches Wischen zwischen Reitern, langes Drücken für
+  ein Kontextmenü am Eintrag, Android-Zurück schließt erst Menüs und Sheets. Die Regeln dazu stehen in
+  `PLAN.md` 8.0 („Bedienmuster“) – **neue Bildschirme folgen ihnen**, statt eigene Wege für Neu,
+  Löschen, Zurück oder Umschalten zu erfinden. Offen und bewusst nicht begonnen: ein heller Modus.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
   (App oder Webansicht); es gibt keinen Import von außen mehr.

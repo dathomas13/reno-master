@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { TopBar } from '@/components/TopBar';
+import { Icon } from '@/components/Icon';
 import { EmptyState, Spinner } from '@/components/Fields';
 import { useToast, useUndoableDelete } from '@/components/Toast';
 import { useRowActions } from '@/components/RowActions';
@@ -81,7 +82,16 @@ export default function ContactLogsPage() {
 
   return (
     <>
-      <TopBar title="Gespräche" subtitle={`${logs.length} Einträge`} />
+      <TopBar
+        title="Gespräche"
+        subtitle={`${logs.length} Einträge`}
+        action={
+          <button type="button" className="btn btn-primary px-3 min-h-11" onClick={() => setOpen(emptyContactLog(''))}>
+            <Icon name="plus" className="w-5 h-5" />
+            Neu
+          </button>
+        }
+      />
       <SectionTabs label="Kontakte" tabs={AREA_TABS.contacts('logs')} />
 
       <div className="p-3">
