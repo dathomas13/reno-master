@@ -16,9 +16,10 @@ import { AREA_TABS, SectionTabs } from '@/components/SectionTabs';
 /**
  * All Gesprächsprotokoll entries in one place, across every contact - the per-contact list
  * (`ContactLogSection`) only shows one contact's own. Tapping an entry opens the entry
- * itself right here, not its contact. The editor carries a "Kontakt" field, so an entry can
- * be moved to another contact - which is also how an orphaned entry (deleting a contact
- * does not delete its log entries) gets a new home rather than staying stuck.
+ * itself right here, not its contact. The editor carries a "Kontakt" field: an entry may have
+ * no contact at all, get a new one created on the spot, or be moved to another contact -
+ * which is also how an orphaned entry (deleting a contact does not delete its log entries)
+ * gets a new home rather than staying stuck.
  */
 export default function ContactLogsPage() {
   const { data: logs, loading } = useCollection<ContactLog>(COL.contactLogs);
@@ -112,24 +113,27 @@ export default function ContactLogsPage() {
         ) : (
           <EmptyState
             title="Noch keine Gesprächseinträge"
-            hint="Ein Gespräch wird beim Kontakt unter „Gesprächsprotokoll“ eingetragen."
+            hint="Mit „Neu“ oben ein Gespräch eintragen – mit oder ohne Kontakt."
           />
         ))}
 
       <ul>
         {filtered.map((log) => {
-          const orphaned = !contactName.has(log.contactId);
+          const orphaned = !!log.contactId && !contactName.has(log.contactId);
+          const person = log.contactId ? (contactName.get(log.contactId) ?? 'Kontakt gelöscht') : 'Ohne Kontakt';
           return (
             <li
               key={log.id}
-              {...rowActions.bind(contactName.get(log.contactId) ?? 'Gespräch', [
+              {...rowActions.bind(person, [
                 { label: 'Löschen', icon: 'trash', danger: true, onSelect: () => removeLog(log) },
               ])}
             >
               <button type="button" className="list-row w-full text-left" onClick={() => setOpen(log)}>
                 <span className="flex-1 min-w-0">
-                  <span className={`block truncate font-medium ${orphaned ? 'text-bad' : ''}`}>
-                    {contactName.get(log.contactId) ?? 'Kontakt gelöscht'}
+                  <span
+                    className={`block truncate font-medium ${orphaned ? 'text-bad' : log.contactId ? '' : 'text-muted'}`}
+                  >
+                    {person}
                   </span>
                   <span className="block text-xs text-muted truncate">
                     {[formatDateTime(log.at), log.channel ? label('contactChannels', log.channel) : '']

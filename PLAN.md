@@ -511,6 +511,8 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   weil `Contact` selbst nur ein Telefonfeld hat.
 - **Gesprächsprotokoll**: eigene, datierte Einträge je Kontakt (Datum/Uhrzeit, Art – Anruf/Termin/E-Mail/
   Nachricht/Sonstiges –, Text) statt Fließtext in den Notizen; Collection `contactLogs`, Feld `contactId`.
+  Unter „Gespräche“ darf `contactId` leer bleiben („Ohne Kontakt“), und „+ Neuer Kontakt…“ legt den
+  Kontakt mit Namen direkt aus dem Eintrag heraus an.
   Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.
   Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
   Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, Reiter „Gespräche“ im Bereich Kontakte, mit „Neu“) zeigt alle Einträge über
