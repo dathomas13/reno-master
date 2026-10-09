@@ -65,4 +65,20 @@ describe('contact log editor', () => {
     expect(mocks.saveContact).toHaveBeenCalledWith(expect.objectContaining({ id: 'new-contact', name: 'Fliesen Meier' }));
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ contactId: 'new-contact' }));
   });
+
+  it('offers the usual people as chips and records who took part', async () => {
+    const onSave = renderEditor();
+    for (const name of ['Thomas', 'Sarah', 'Wolfgang', 'Handwerker']) {
+      expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'false');
+    }
+    expect(screen.queryByRole('button', { name: 'Christine' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sarah' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Handwerker' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    });
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ participants: ['sarah', 'handwerker'] }));
+  });
 });

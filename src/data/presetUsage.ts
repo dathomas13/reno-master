@@ -18,7 +18,7 @@ export interface UsageSources {
   costs?: Pick<Cost, 'category' | 'paymentStatus' | 'paidBy' | 'paymentMethod'>[];
   tasks?: Pick<Task, 'status' | 'priority' | 'area' | 'assignees'>[];
   contacts?: Pick<Contact, 'roles' | 'status'>[];
-  contactLogs?: Pick<ContactLog, 'channel'>[];
+  contactLogs?: Pick<ContactLog, 'channel' | 'participants'>[];
   trades?: Pick<Trade, 'status' | 'priority'>[];
   phases?: Pick<Phase, 'status'>[];
 }
@@ -44,6 +44,7 @@ export function countUsage(
     case 'people':
       sources.diary?.forEach((entry) => bumpEach(entry.present));
       sources.tasks?.forEach((task) => bumpEach(task.assignees));
+      sources.contactLogs?.forEach((log) => bumpEach(log.participants));
       break;
     case 'weather':
       sources.diary?.forEach((entry) => bumpOne(entry.weather));

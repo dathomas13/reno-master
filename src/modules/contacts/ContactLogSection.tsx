@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { where } from '@/firebase/db';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
-import { OptionChips } from '@/components/OptionFields';
+import { OptionChips, OptionMultiPicker } from '@/components/OptionFields';
+import { LOG_DEFAULT_PEOPLE } from '@/data/options';
 import { COL, type Contact, type ContactLog } from '@/data/types';
 import { emptyContact, emptyContactLog, saveContact, saveContactLog, deleteContactLog } from '@/data/repos';
 import { Field } from '@/components/Fields';
@@ -32,6 +33,9 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
                   <span className="block text-xs text-muted">
                     {formatDateTime(log.at)}
                     {log.channel ? ` · ${label('contactChannels', log.channel)}` : ''}
+                    {log.participants?.length
+                      ? ` · ${log.participants.map((person) => label('people', person)).join(', ')}`
+                      : ''}
                   </span>
                   <span className="block line-clamp-3">{logPreview(log.text)}</span>
                 </span>
@@ -116,10 +120,21 @@ export function ContactLogEditor({
   const [draft, setDraft] = useState(log);
   const [newName, setNewName] = useState<string | null>(null);
   const toast = useToast();
+  const { sets, label } = useOptions();
+  const participants = draft.participants ?? [];
+  // the usual people (those still in the list) plus whoever is set here - the rest behind "+ Person"
+  const peopleChips = [
+    ...new Set([
+      ...LOG_DEFAULT_PEOPLE.filter((id) => sets.people.some((person) => person.id === id && !person.archived)),
+      ...participants,
+    ]),
+  ];
   const update = (patch: Partial<ContactLog>) => setDraft({ ...draft, ...patch });
   const orphaned = !!contacts && !!draft.contactId && !contacts.some((contact) => contact.id === draft.contactId);
   const nameMissing = newName !== null && newName.trim().length === 0;
-  const canSave = !nameMissing && (!isNew || draft.text.trim().length > 0 || !!draft.channel || newName !== null);
+  const canSave =
+    !nameMissing &&
+    (!isNew || draft.text.trim().length > 0 || !!draft.channel || !!draft.participants?.length || newName !== null);
 
   function save() {
     if (newName === null) {
@@ -191,6 +206,35 @@ export function ContactLogEditor({
         </Field>
         <Field label="Art">
           <OptionChips setKey="contactChannels" value={draft.channel} onChange={(value) => update({ channel: value })} />
+        </Field>
+        <Field label="Beteiligt">
+          <div className="flex flex-wrap gap-2">
+            {peopleChips.map((person) => {
+              const on = participants.includes(person);
+              return (
+                <button
+                  key={person}
+                  type="button"
+                  aria-pressed={on}
+                  className={`chip ${on ? 'chip-on' : ''}`}
+                  onClick={() =>
+                    update({
+                      participants: on ? participants.filter((item) => item !== person) : [...participants, person],
+                    })
+                  }
+                >
+                  {label('people', person)}
+                </button>
+              );
+            })}
+            <OptionMultiPicker
+              setKey="people"
+              label="Beteiligt"
+              chipLabel="Person"
+              value={participants}
+              onChange={(value) => update({ participants: value })}
+            />
+          </div>
         </Field>
         <Field label="Notiz">
           <textarea

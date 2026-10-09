@@ -143,6 +143,8 @@ export const PAYMENT_PAID = 'bezahlt';
 /** contact log channels a call or chat from the app is filed under */
 export const CHANNEL_CALL = 'anruf';
 export const CHANNEL_MESSAGE = 'nachricht';
+/** `people` offered as chips in every contact log, before anyone has been picked there */
+export const LOG_DEFAULT_PEOPLE = ['thomas', 'sarah', 'wolfgang', 'handwerker'];
 /** default status of a new trade */
 export const TRADE_STATUS_DEFAULT = 'noch-offen';
 

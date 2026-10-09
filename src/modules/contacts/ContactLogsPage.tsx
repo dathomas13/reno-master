@@ -72,7 +72,12 @@ export default function ContactLogsPage() {
     const needle = search.trim().toLowerCase();
     const rows = needle
       ? logs.filter((log) =>
-          [contactName.get(log.contactId) ?? '', log.channel ? label('contactChannels', log.channel) : '', log.text]
+          [
+            contactName.get(log.contactId) ?? '',
+            log.channel ? label('contactChannels', log.channel) : '',
+            ...(log.participants ?? []).map((person) => label('people', person)),
+            log.text,
+          ]
             .join(' ')
             .toLowerCase()
             .includes(needle),
@@ -136,7 +141,11 @@ export default function ContactLogsPage() {
                     {person}
                   </span>
                   <span className="block text-xs text-muted truncate">
-                    {[formatDateTime(log.at), log.channel ? label('contactChannels', log.channel) : '']
+                    {[
+                      formatDateTime(log.at),
+                      log.channel ? label('contactChannels', log.channel) : '',
+                      (log.participants ?? []).map((person) => label('people', person)).join(', '),
+                    ]
                       .filter(Boolean).join(' · ')}
                   </span>
                   <span className="block text-xs text-muted line-clamp-3">{logPreview(log.text)}</span>

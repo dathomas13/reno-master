@@ -43,7 +43,7 @@ export const PRESETS: PresetDef[] = [
     subtitle: 'Wohin alte Einträge wandern', singular: 'Zuordnung',
     placeholder: '', maxLength: 40,
   },
-  options('personen', 'people', 'Bautagebuch', 'Anwesende Personen', 'Auswahl im Bautagebuch, auch „Zuständig“', 'Person'),
+  options('personen', 'people', 'Bautagebuch', 'Anwesende Personen', 'Auswahl im Bautagebuch, auch „Zuständig“ und „Beteiligt“', 'Person'),
   options('wetter', 'weather', 'Bautagebuch', 'Wetter', 'Auswahl im Bautagebuch', 'Wetter'),
   {
     key: 'phasen', kind: 'phases', section: 'Projekt', title: 'Phasen',

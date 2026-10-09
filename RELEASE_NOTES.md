@@ -10,8 +10,7 @@ Commit-Nachricht, und die liest sich im Banner auch so.
 
 ## 0.85.4 – Kleine Korrekturen
 
-- Ein Gesprächseintrag lässt sich jetzt auch ohne Kontakt speichern.
-- Im Feld „Kontakt“ legt „+ Neuer Kontakt…“ den Kontakt gleich mit an.
+- Gesprächseinträge: speichern auch ohne Kontakt, „+ Neuer Kontakt…“ legt ihn gleich mit an, und „Beteiligt“ hält fest, wer dabei war.
 - Fotos sind wieder zuerst nach Monat sortiert; „Nach Phase“ zeigt die neueste Phase oben.
 
 ## 0.85.3 – Letzter Schliff

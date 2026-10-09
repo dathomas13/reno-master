@@ -271,7 +271,12 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       title: firstLine,
       subtitle: [person, name('contactChannels', log.channel), ...dateWords(log.at.slice(0, 10))].filter(Boolean).join(' · '),
       body: log.text,
-      meta: [person, name('contactChannels', log.channel), ...dateWords(log.at.slice(0, 10))].filter(Boolean),
+      meta: [
+        person,
+        name('contactChannels', log.channel),
+        ...nameAll('people', log.participants ?? []),
+        ...dateWords(log.at.slice(0, 10)),
+      ].filter(Boolean),
       date: log.at.slice(0, 10),
       to: `/gespraeche?eintrag=${log.id}`,
     });

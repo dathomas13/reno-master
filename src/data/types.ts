@@ -166,6 +166,8 @@ export interface ContactLog extends BaseDoc {
   contactId: string;
   at: IsoDateTime;
   channel?: ContactLogChannel;
+  /** who took part: ids of the `people` option set */
+  participants?: string[];
   text: string;
 }
 
