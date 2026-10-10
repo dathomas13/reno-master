@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.87.0 – Aufgaben-Erinnerungen für die richtige Person
+
+- Neu in den Einstellungen: „Ich bin“. Danach kommen auf deinem Telefon nur noch Erinnerungen für Aufgaben, die dir oder niemandem zugewiesen sind.
+- Der Aufgaben-Editor zeigt bei der Erinnerung, bei wem sie ankommt.
+
 ## 0.86.1 – Startseite, Tagebuch, Erinnerungen
 
 - Langes Drücken öffnet jetzt auch auf der Startseite das Menü am Eintrag.

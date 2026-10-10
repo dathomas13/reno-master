@@ -35,6 +35,13 @@ vi.mock('./FolderExportSection', () => ({ FolderExportSection: () => <h2>Export 
 vi.mock('./ModelSection', () => ({ ModelSection: () => null }));
 vi.mock('./AppUpdateSection', () => ({ AppUpdateSection: () => null }));
 vi.mock('./DiagSection', () => ({ DiagSection: () => null }));
+vi.mock('@/data/useOptions', () => {
+  const people = [
+    { id: 'thomas', label: 'Thomas' },
+    { id: 'sarah', label: 'Sarah' },
+  ];
+  return { useOptions: () => ({ sets: { people }, active: () => people }) };
+});
 
 beforeEach(() => {
   localStorage.clear();
@@ -132,5 +139,15 @@ describe('settings disclosure', () => {
 
     expect(patchDoc).toHaveBeenCalledWith('users', 'user-1', { reminderTime: '18:30' });
   });
-});
 
+  it('links the account to a person for the task reminders', async () => {
+    await openSettings();
+
+    const select = screen.getByRole('combobox', { name: 'Ich bin' });
+    expect(select).toHaveValue('');
+    expect(screen.getByText(/die Erinnerungen aller Aufgaben/)).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: 'sarah' } });
+
+    expect(patchDoc).toHaveBeenCalledWith('users', 'user-1', { personId: 'sarah' });
+  });
+});

@@ -219,6 +219,11 @@ export interface UserProfile {
   reminderTime: string;
   fcmTokens: string[];
   tz: string;
+  /**
+   * id from the `people` option set: who this account is. Task reminders on this account's
+   * devices then only come for tasks assigned to this person or to nobody; unset means all.
+   */
+  personId?: string;
 }
 
 /** collection names, used by the repositories and the security rules */

@@ -55,7 +55,7 @@ function StartupWait() {
 }
 
 function Protected() {
-  const { user, ready } = useAuth();
+  const { user, profile, ready } = useAuth();
 
   useEffect(() => (user ? startOutboxWorker() : undefined), [user]);
   // The model lives in the database, so the sync needs an account: it listens to the
@@ -65,7 +65,8 @@ function Protected() {
   useEffect(() => (user ? startDiagUpload() : undefined), [user]);
   // the evening reminder: planned on the device, so it also fires with no connection
   useDiaryReminder();
-  useTaskReminders(!!user);
+  // task reminders only for this account's person, once the profile says who that is
+  useTaskReminders(!!user, profile ? (profile.personId ?? null) : undefined);
 
   if (!ready) return <StartupWait />;
 

@@ -553,8 +553,10 @@ function TaskSheet({
               onChange={(event) => update({ reminderAt: fromDateTimeInput(event.target.value) })}
             />
             <p className="text-xs text-muted mt-1">
-              Kommt zuverlässig in der Android-App. In der Benachrichtigung kannst du die Aufgabe direkt als
-              erledigt markieren.
+              {draft.assignees.length
+                ? `Kommt bei ${draft.assignees.map((person) => label('people', person)).join(', ')}. `
+                : 'Kommt bei allen. '}
+              Zuverlässig in der Android-App; in der Benachrichtigung lässt sich die Aufgabe direkt abhaken.
             </p>
           </Field>
           <Field label="Bereich">

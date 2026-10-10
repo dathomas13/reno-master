@@ -133,15 +133,24 @@ async function applyTaskReminderPlanNow(tasks: readonly PlannedTaskReminder[]): 
   }
 }
 
+// the person the signed-in account is linked to (`UserProfile.personId`); set by
+// useTaskReminders, read by the direct path below, which runs from the repositories
+let reminderPerson: string | null = null;
+
+export function setTaskReminderPerson(personId: string | null): void {
+  reminderPerson = personId;
+}
+
 export async function applyTaskReminderForTask(task: Task): Promise<void> {
   try {
     const local = plugin();
     if (!local) return;
-    if (!(await hasPermission(local, true))) return;
-    await registerActionsBestEffort(local);
+    const [planned] = planTaskReminders([task], new Date(), reminderPerson);
+    // a task for someone else only withdraws what may still be set here, and asks for nothing
+    if (planned && !(await hasPermission(local, true))) return;
     await withDeadline(local.cancel({ notifications: [{ id: taskReminderId(task.id) }] }));
-    const [planned] = planTaskReminders([task]);
     if (!planned) return;
+    await registerActionsBestEffort(local);
     await withDeadline(local.schedule({ notifications: [notificationFor(planned)] }));
   } catch {
     // Task saving stays local/offline even when Android refuses notification scheduling.

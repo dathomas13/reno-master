@@ -16,6 +16,7 @@ import { Icon } from '@/components/Icon';
 import { listJobs, retryAll, type OutboxJob } from '@/offline/outbox';
 import { activeExtractor } from '@/platform/ocr';
 import { patchDoc } from '@/firebase/db';
+import { deleteField } from 'firebase/firestore';
 import { COL } from '@/data/types';
 import { parseClock } from '@/lib/date';
 import { enableReminders, reminderDiagnosis, showReminderNow } from '@/platform/reminder';
@@ -24,6 +25,8 @@ import { useReminderStatus } from '@/data/useReminder';
 import { formatBytes } from '@/lib/image';
 import { isNative } from '@/platform';
 import { useToast } from '@/components/Toast';
+import { useOptions } from '@/data/useOptions';
+import { optionById } from '@/data/options';
 
 export default function SettingsPage() {
   const { user, profile } = useAuth();
@@ -36,6 +39,12 @@ export default function SettingsPage() {
   const reminder = useReminderStatus();
   const toast = useToast();
   const [diagnosis, setDiagnosis] = useState<ReminderDiagnosis | null>(null);
+  const { sets, active } = useOptions();
+  const personId = profile?.personId ?? '';
+  // a hidden person stays selectable as long as the account is linked to it
+  const people = active('people');
+  const linked = personId ? optionById(sets.people, personId) : undefined;
+  const personChoices = linked && !people.some((entry) => entry.id === linked.id) ? [...people, linked] : people;
 
   useEffect(() => {
     void listJobs().then(setJobs);
@@ -172,6 +181,28 @@ export default function SettingsPage() {
               )}
             </ul>
           </details>
+        </section>
+        <section className="card p-4">
+          <SettingsHeading title="Aufgaben-Erinnerungen" />
+          <Field label="Ich bin">
+            <select
+              className="field"
+              value={personId}
+              onChange={(event) => void updateProfile({ personId: event.target.value || deleteField() })}
+            >
+              <option value="">Nicht festgelegt</option>
+              {personChoices.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <p className="text-sm text-muted -mt-2">
+            {personId
+              ? 'Auf deinen Geräten kommen nur Erinnerungen für Aufgaben, die dir oder niemandem zugewiesen sind.'
+              : 'Nicht festgelegt – auf deinen Geräten kommen die Erinnerungen aller Aufgaben.'}
+          </p>
         </section>
         <section className="card p-4">
           <SettingsHeading title="Fotos">
