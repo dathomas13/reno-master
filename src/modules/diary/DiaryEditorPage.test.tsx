@@ -174,13 +174,14 @@ describe('diary editor', () => {
     expect(screen.getByRole('button', { name: 'Anwesend auswählen' })).toBeInTheDocument();
   });
 
-  it('shows the active phase as automatic context instead of another picker', async () => {
+  it('preselects the running phase and lets it be changed', async () => {
     renderNewEditor();
     fireEvent.click(screen.getByRole('button', { name: /Details/ }));
 
-    await waitFor(() => expect(screen.getByText('Phase 2: Entkernung & Rückbau')).toBeInTheDocument());
-    expect(screen.queryByRole('combobox', { name: 'Phase' })).not.toBeInTheDocument();
-    expect(screen.getByText('Phase 2: Entkernung & Rückbau').closest('.field')).toBeNull();
+    const phase = screen.getByRole('combobox', { name: 'Phase' });
+    await waitFor(() => expect(phase).toHaveValue('phase-2'));
+    fireEvent.change(phase, { target: { value: '' } });
+    expect(phase).toHaveValue('');
   });
 
   it('keeps the rare fields behind "Details" and offers to take over the last entry', () => {

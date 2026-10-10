@@ -45,6 +45,7 @@ import {
   type ReminderInput,
 } from './reminderPlan';
 import { isTaskReminderId } from './taskReminderPlan';
+import { handleTaskNotificationAction } from './taskReminder';
 import { debugLog } from './debugLog';
 import { hasDiaryReminderDate } from './diaryReminderMarker';
 
@@ -64,6 +65,7 @@ export type ReminderMode = 'native' | 'web' | 'none';
 
 /** the part of the plugin's tap event this module reads */
 interface TapEvent {
+  actionId?: string;
   notification: { extra?: unknown };
 }
 
@@ -465,7 +467,8 @@ async function logTap(date: string): Promise<void> {
 }
 
 /**
- * A tap on the reminder opens the editor for today.
+ * A tap on the reminder opens the editor for today; a task reminder's tap or "Erledigt"
+ * goes on to the task side.
  *
  * The hash is set directly instead of going through the router: the tap usually starts the
  * app cold, and at that moment there is no router to talk to yet.
@@ -476,6 +479,8 @@ export async function watchReminderTaps(): Promise<() => void> {
     if (!local) return () => undefined;
     const handle = await withDeadline(
       local.addListener('localNotificationActionPerformed', (event: TapEvent) => {
+        // the task reminders come through here too - see handleTaskNotificationAction
+        if (handleTaskNotificationAction(event)) return;
         const extra = event.notification.extra as { route?: string; date?: string } | undefined;
         const route = extra?.route;
         if (extra?.date) void logTap(extra.date);

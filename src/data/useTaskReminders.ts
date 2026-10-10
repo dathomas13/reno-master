@@ -19,15 +19,6 @@ export function useTaskReminders(enabled: boolean): void {
 
   useEffect(() => {
     if (!enabled) return;
-    let stop: (() => void) | undefined;
-    let gone = false;
-    void watchTaskReminderActions((taskId) => markTaskDone(taskId)).then((remove) => {
-      if (gone) remove();
-      else stop = remove;
-    });
-    return () => {
-      gone = true;
-      stop?.();
-    };
+    return watchTaskReminderActions((taskId) => markTaskDone(taskId));
   }, [enabled]);
 }

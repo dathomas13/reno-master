@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { deleteField } from 'firebase/firestore';
 import { saveDiaryEntry, saveTask, toggleTaskDone } from '@/data/repos';
 import type { DiaryEntry, Task } from '@/data/types';
 
@@ -47,6 +48,17 @@ describe('diary repository', () => {
 
     expect(rememberDiaryReminderDate).toHaveBeenCalledWith('2026-09-18');
     expect(cancelDiaryReminderForDate).toHaveBeenCalledWith('2026-09-18');
+  });
+
+  it('removes a phase or weather taken away instead of keeping the stored one', () => {
+    saveDoc.mockClear();
+    saveDoc.mockReturnValue(new Promise(() => undefined));
+
+    void saveDiaryEntry({ ...entry, weather: 'sonnig' });
+
+    const written = saveDoc.mock.calls[0][1] as Record<string, unknown>;
+    expect(written.weather).toBe('sonnig');
+    expect(written.phaseId).toEqual(deleteField());
   });
 });
 
