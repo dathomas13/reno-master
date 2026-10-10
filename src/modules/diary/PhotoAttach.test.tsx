@@ -218,7 +218,7 @@ describe('receipt file picker', () => {
     expect(onFileChosen).toHaveBeenCalledTimes(1);
   });
 
-  it('stays busy until both attachment and extraction finish', async () => {
+  it('starts reading the receipt while it is still being stored, busy until both finish', async () => {
     let finishSave!: (id: string) => void;
     let finishOcr!: () => void;
     mocks.saveDoc.mockImplementationOnce(() => new Promise<string>((resolve) => { finishSave = resolve; }));
@@ -230,17 +230,16 @@ describe('receipt file picker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'PDF / Datei' }));
     await waitFor(() => expect(mocks.saveDoc).toHaveBeenCalledTimes(1));
     expect(onAdded).not.toHaveBeenCalled();
-    expect(onFileChosen).not.toHaveBeenCalled();
+    expect(onFileChosen).toHaveBeenCalledTimes(1);
     expect(onBusyChange.mock.calls).toEqual([[true]]);
     await act(async () => finishSave('receipt-1'));
     expect(onAdded).toHaveBeenCalledTimes(1);
-    expect(onFileChosen).toHaveBeenCalledTimes(1);
     expect(onBusyChange.mock.calls).toEqual([[true]]);
     await act(async () => finishOcr());
     expect(onBusyChange.mock.calls).toEqual([[true], [false]]);
   });
 
-  it('shows import failures and releases the controls without running OCR', async () => {
+  it('shows import failures and releases the controls', async () => {
     mocks.saveDoc.mockRejectedValueOnce(new Error('Speicherzugriff verweigert'));
     const onFileChosen = vi.fn();
     render(<PhotoAttach photos={[]} costId="new-cost" kind="receipt"
@@ -248,6 +247,7 @@ describe('receipt file picker', () => {
     fireEvent.click(screen.getByRole('button', { name: 'PDF / Datei' }));
     await waitFor(() => expect(screen.getByText('Speicherzugriff verweigert')).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'PDF / Datei' })).toBeEnabled();
-    expect(onFileChosen).not.toHaveBeenCalled();
+    // the reading had already started; what it found stays in the form
+    expect(onFileChosen).toHaveBeenCalledTimes(1);
   });
 });

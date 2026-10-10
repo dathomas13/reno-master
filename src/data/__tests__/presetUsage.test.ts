@@ -23,6 +23,13 @@ describe('countUsage', () => {
     expect(usage.get('handwerker')).toBe(1);
   });
 
+  it('counts the people who took part in a conversation', () => {
+    const usage = countUsage('people', {
+      contactLogs: [{ participants: ['wolfgang', 'wolfgang'] }, { channel: 'anruf' }],
+    });
+    expect(usage.get('wolfgang')).toBe(1);
+  });
+
   it('counts weather, categories and areas', () => {
     expect(countUsage('weather', { diary: [{ present: [], weather: 'regen' }, { present: [] }] }).get('regen')).toBe(1);
     expect(countUsage('costCategories', { costs: [{ category: 'dach' }, { category: 'dach' }] } as never).get('dach')).toBe(2);

@@ -2,9 +2,10 @@ import { useMemo, useState } from 'react';
 import { where } from '@/firebase/db';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
-import { OptionChips } from '@/components/OptionFields';
+import { OptionChips, OptionMultiPicker } from '@/components/OptionFields';
+import { LOG_DEFAULT_PEOPLE } from '@/data/options';
 import { COL, type Contact, type ContactLog } from '@/data/types';
-import { emptyContactLog, saveContactLog, deleteContactLog } from '@/data/repos';
+import { emptyContact, emptyContactLog, saveContact, saveContactLog, deleteContactLog } from '@/data/repos';
 import { Field } from '@/components/Fields';
 import { Sheet } from '@/components/Sheet';
 import { Icon } from '@/components/Icon';
@@ -32,6 +33,9 @@ export function ContactLogSection({ contactId }: { contactId: string }) {
                   <span className="block text-xs text-muted">
                     {formatDateTime(log.at)}
                     {log.channel ? ` · ${label('contactChannels', log.channel)}` : ''}
+                    {log.participants?.length
+                      ? ` · ${log.participants.map((person) => label('people', person)).join(', ')}`
+                      : ''}
                   </span>
                   <span className="block line-clamp-3">{logPreview(log.text)}</span>
                 </span>
@@ -87,11 +91,15 @@ function fromDateTimeInput(value: string): string {
   return value ? `${value}:00` : value;
 }
 
+/** select value that switches the "Kontakt" field to a name input for a new contact */
+const NEW_CONTACT = '__neu__';
+
 /**
  * `contacts` is passed from the cross-contact list (`ContactLogsPage`) - then the sheet shows
- * a "Kontakt" field, which also gives an entry whose contact was deleted a new home instead
- * of leaving it orphaned. Editing from inside a contact's own sheet (`ContactLogSection`
- * above) never passes it: the contact there is fixed by context.
+ * a "Kontakt" field: an entry may stay without a contact (`contactId` empty), get a contact
+ * created right here by name, or be moved to another one - which also gives an entry whose
+ * contact was deleted a new home. Editing from inside a contact's own sheet
+ * (`ContactLogSection` above) never passes it: the contact there is fixed by context.
  */
 export function ContactLogEditor({
   log,
@@ -110,15 +118,40 @@ export function ContactLogEditor({
   isNew?: boolean;
 }) {
   const [draft, setDraft] = useState(log);
+  const [newName, setNewName] = useState<string | null>(null);
+  const toast = useToast();
+  const { sets, label } = useOptions();
+  const participants = draft.participants ?? [];
+  // the usual people (those still in the list) plus whoever is set here - the rest behind "+ Person"
+  const peopleChips = [
+    ...new Set([
+      ...LOG_DEFAULT_PEOPLE.filter((id) => sets.people.some((person) => person.id === id && !person.archived)),
+      ...participants,
+    ]),
+  ];
   const update = (patch: Partial<ContactLog>) => setDraft({ ...draft, ...patch });
-  const contactPicked = !contacts || contacts.some((contact) => contact.id === draft.contactId);
-  const canSave = contactPicked && (!isNew || draft.text.trim().length > 0 || !!draft.channel);
+  const orphaned = !!contacts && !!draft.contactId && !contacts.some((contact) => contact.id === draft.contactId);
+  const nameMissing = newName !== null && newName.trim().length === 0;
+  const canSave =
+    !nameMissing &&
+    (!isNew || draft.text.trim().length > 0 || !!draft.channel || !!draft.participants?.length || newName !== null);
+
+  function save() {
+    if (newName === null) {
+      void onSave(draft);
+      return;
+    }
+    const contact = { ...emptyContact(), name: newName.trim() };
+    // not awaited: offline the write only settles once the device is back online
+    saveContact(contact).catch(() => toast('Der neue Kontakt konnte nicht gespeichert werden.'));
+    void onSave({ ...draft, contactId: contact.id });
+  }
 
   return (
     <Sheet
       open
       onClose={onClose}
-      onDone={canSave ? () => void onSave(draft) : onClose}
+      onDone={canSave ? save : onClose}
       title="Gesprächseintrag"
     >
       <div className="p-4">
@@ -126,12 +159,21 @@ export function ContactLogEditor({
           <Field label="Kontakt">
             <select
               className="field"
-              value={contactPicked ? draft.contactId : ''}
-              onChange={(event) => update({ contactId: event.target.value })}
+              value={newName !== null ? NEW_CONTACT : draft.contactId}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (value === NEW_CONTACT) {
+                  setNewName('');
+                  return;
+                }
+                setNewName(null);
+                update({ contactId: value });
+              }}
             >
-              {!contactPicked && (
-                <option value="" disabled>
-                  Kontakt wählen…
+              <option value="">Ohne Kontakt</option>
+              {orphaned && (
+                <option value={draft.contactId} disabled>
+                  Kontakt gelöscht
                 </option>
               )}
               {[...contacts]
@@ -141,7 +183,17 @@ export function ContactLogEditor({
                     {contact.name || '(ohne Namen)'}
                   </option>
                 ))}
+              <option value={NEW_CONTACT}>+ Neuer Kontakt…</option>
             </select>
+            {newName !== null && (
+              <input
+                className="field mt-2"
+                autoFocus
+                placeholder="Name des neuen Kontakts"
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+              />
+            )}
           </Field>
         )}
         <Field label="Wann">
@@ -154,6 +206,35 @@ export function ContactLogEditor({
         </Field>
         <Field label="Art">
           <OptionChips setKey="contactChannels" value={draft.channel} onChange={(value) => update({ channel: value })} />
+        </Field>
+        <Field label="Beteiligt">
+          <div className="flex flex-wrap gap-2">
+            {peopleChips.map((person) => {
+              const on = participants.includes(person);
+              return (
+                <button
+                  key={person}
+                  type="button"
+                  aria-pressed={on}
+                  className={`chip ${on ? 'chip-on' : ''}`}
+                  onClick={() =>
+                    update({
+                      participants: on ? participants.filter((item) => item !== person) : [...participants, person],
+                    })
+                  }
+                >
+                  {label('people', person)}
+                </button>
+              );
+            })}
+            <OptionMultiPicker
+              setKey="people"
+              label="Beteiligt"
+              chipLabel="Person"
+              value={participants}
+              onChange={(value) => update({ participants: value })}
+            />
+          </div>
         </Field>
         <Field label="Notiz">
           <textarea
@@ -168,7 +249,7 @@ export function ContactLogEditor({
             type="button"
             className="btn btn-primary flex-1"
             disabled={!canSave}
-            onClick={() => void onSave(draft)}
+            onClick={save}
           >
             Speichern
           </button>

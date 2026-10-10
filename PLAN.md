@@ -455,6 +455,16 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Outbox nach R2 und kommt über denselben Cache zurück, gesehen ist sie also auch offline da. Farben und Texturen
   aus glTF werden auf die Farbbehandlung des Viewers (ohne Farbmanagement, lineare Ausgabe) umgerechnet, sonst
   wären sie viel zu dunkel. In den 2D-Plänen und im Modell-Export stehen die Möbel (noch) nicht.
+- **Maßband** (seit 0.86.0): Chip „Messen“. Zwei Punkte auf beliebigen sichtbaren Flächen (Bauteile und
+  Möbel, nicht das Raum-Overlay, das über dem Boden schwebt) ergeben eine Strecke im Raum; die Länge steht als
+  Etikett an der Linie, das Fenster unten zeigt dazu Millimeter, waagrecht, Höhe sowie Ost–West und Nord–Süd
+  (zwei Punkte auf parallelen Wänden geben so den lichten Abstand, ohne genau zielen zu müssen). Ein Punkt rastet
+  auf die nächste Ecke der getroffenen Dreiecksfläche ein, wenn sie auf dem Bildschirm nah genug liegt (Maus
+  10 px, Finger 22 px; Alt hält ihn frei). Gesetzte Punkte lassen sich ziehen, am Telefon mit einer Lupe
+  (dreifach, über dem Finger), weil der Finger den Punkt verdeckt. Ein dritter Tipp beginnt neu, Esc nimmt den
+  letzten Punkt zurück, Zurück beendet das Messen. Punkte und Linie bleiben durch Wände sichtbar, der verdeckte
+  Teil der Linie blass. Rechnen in `viewer3d/measure.ts` (getestet), Zeichnen in `viewer3d/measureLayer.ts`;
+  Etikett und Lupenrahmen setzt die Renderschleife direkt, nicht React. Gespeichert wird nichts.
 - **Alles Untere ist ein Stapel**: Bauteil-Info, Raumfenster und die Schalter-Chips stehen in *einem* Container über der Bottom-Navigation (`bottom-[calc(64px+env(safe-area-inset-bottom))]`), nicht als drei Einblendungen mit eigenen Abständen. Sonst liegt das Raumfenster am Telefon hinter der Navigation und unter den Chips – die Kachelleiste war dort zur Hälfte unsichtbar.
 
 ### 8.4 Pläne
@@ -468,7 +478,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - **Liste**: absteigend nach Datum; Zeile: Datum, Händler, Beschreibung, Betrag brutto, Kategorie-Chip, Status-Punkt, Beleg-Icon. Summenleiste oben (Gesamt, gefiltert). Filter: Zeitraum (Monat/Jahr/frei), Kategorie, Gewerk, Raum, Status, bezahlt von. Suchfeld.
 - **Übersicht** (Tab): Summe gesamt; Balken nach Kategorie; Balken nach Monat; Tabelle Kategorie × Summe; optional Vergleich mit Gewerk-Budget (`trades.budgetPlanned` vs. Summe der Kosten mit `tradeId`). Export CSV (Semikolon, `de-DE`-Zahlen) über Web Share / Download.
 - **Editor**:
-  - Oben **Beleg-Bereich**: Buttons "Foto aufnehmen", "Aus Galerie", "Datei (PDF)". Sobald ein Beleg hinzugefügt wurde und die Felder noch leer sind → automatisch `platform/ocr.extract(file)` starten (Spinner "Beleg wird gelesen…"), Ergebnis in die Felder vorbefüllen, jedes vorbefüllte Feld mit dezentem Marker "automatisch erkannt" (Tippen entfernt Marker); nichts wird ohne Speichern übernommen. Button "Erneut auslesen" und Engine-Anzeige ("ML Kit" / "Claude" / "nicht verfügbar – Felder manuell ausfüllen").
+  - Oben **Beleg-Bereich**: Buttons "Foto aufnehmen", "Aus Galerie", "Datei (PDF)". Sobald ein Beleg hinzugefügt wurde und die Felder noch leer sind → automatisch `platform/ocr.extract(file)` starten – gleich nach der Duplikatprüfung, parallel zum Verkleinern und Speichern, nicht erst danach (Spinner "Beleg wird gelesen…"), Ergebnis in die Felder vorbefüllen, jedes vorbefüllte Feld mit dezentem Marker "automatisch erkannt" (Tippen entfernt Marker); nichts wird ohne Speichern übernommen. Button "Erneut auslesen" und Engine-Anzeige ("ML Kit" / "Claude" / "nicht verfügbar – Felder manuell ausfüllen").
   - Felder: Datum, Händler, Beschreibung, Betrag brutto (numerisches Tastatur-Feld, Komma erlaubt), MwSt-Satz (19/7/0) → Netto/MwSt automatisch, Kategorie (Chips + Select), Gewerk, Räume, Status, bezahlt von, Zahlungsart, Rechnungsnummer, Notizen.
   - Nach dem Auslesen stehen Datum, Betrag, Händler und Kategorie oben in einer **Prüfkarte** („Bitte prüfen“, größere Felder, Marke „erkannt“) mit **„Passt – speichern“**; MwSt, Status, Zahlungsart, Gewerk, Räume, Nummer und Notizen unter „Weitere Angaben“.
   - Mehrere Belege pro Kosteneintrag möglich (Vorder-/Rückseite).
@@ -511,6 +521,10 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   weil `Contact` selbst nur ein Telefonfeld hat.
 - **Gesprächsprotokoll**: eigene, datierte Einträge je Kontakt (Datum/Uhrzeit, Art – Anruf/Termin/E-Mail/
   Nachricht/Sonstiges –, Text) statt Fließtext in den Notizen; Collection `contactLogs`, Feld `contactId`.
+  Unter „Gespräche“ darf `contactId` leer bleiben („Ohne Kontakt“), und „+ Neuer Kontakt…“ legt den
+  Kontakt mit Namen direkt aus dem Eintrag heraus an.
+  „Beteiligt“ (`participants`, ids aus `people`) zeigt wie „Zuständig“ bei Aufgaben Chips – vorbelegt mit
+  Thomas, Sarah, Wolfgang, Handwerker (`LOG_DEFAULT_PEOPLE`), alle anderen hinter „+ Person“.
   Liste und Editor sitzen im Kontakt-Editor (`src/modules/contacts/ContactLogSection.tsx`), neueste zuerst.
   Das freie Notizfeld bleibt für alles andere, alte Telefonat-Vermerke wandern nicht automatisch um.
   Eigener Bildschirm `/gespraeche` (`ContactLogsPage.tsx`, Reiter „Gespräche“ im Bereich Kontakte, mit „Neu“) zeigt alle Einträge über
@@ -523,7 +537,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
-- Die Standardgruppierung ist nach Bauphase: Fotos erben die Phase ausschließlich über ihren Tagebuch-Eintrag (`entry.phaseId`), nicht über ein eigenes Pflegefeld. Ein dezenter Umschalter bietet weiter die Monatsgruppierung. Belege werden hier nicht nach Phase gruppiert; die Fotos-Seite zeigt nur `kind:'photo'`.
+- Die Standardgruppierung ist nach Monat (neuester zuerst); der Umschalter bietet rechts daneben „Nach Phase“ (höchste Phase zuerst, „Ohne Phase“ ganz unten). Fotos erben die Phase ausschließlich über ihren Tagebuch-Eintrag (`entry.phaseId`), nicht über ein eigenes Pflegefeld. Belege werden hier nicht nach Phase gruppiert; die Fotos-Seite zeigt nur `kind:'photo'`.
 - Chips: Alle · Fotos · Belege. `?raum=<id>` filtert auf einen Raum – dorthin führt die Kachel „Fotos“ im Raumfenster des 3D-Modells, und zurück führt der Pfeil dorthin.
 - **Der Raum eines Fotos steht nicht am Foto.** `addPhoto` setzt `roomIds` nie: beim Fotografieren wählt niemand Räume aus. Ein Bild gehört zu einem Raum, wenn sein Tagebucheintrag oder sein Beleg ihn trägt (`src/data/photoRooms.ts`, testbar); das Feld am Foto zählt zusätzlich. Ohne diese Regel zeigt die Kachel „Fotos“ eines Raums null, so voll das Tagebuch auch ist.
 - Das Datum eines Fotos ist `takenAt`, sonst der Tag seines Eintrags, sonst der seines Belegs – Bilder ohne alles stehen unter „Ohne Datum“.
