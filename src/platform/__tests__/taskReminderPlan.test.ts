@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Task } from '@/data/types';
 import {
+  isTaskForPerson,
   isTaskReminderId,
   parseTaskReminderAt,
   planTaskReminders,
@@ -39,6 +40,30 @@ describe('task reminder plan', () => {
         at: new Date('2026-09-19T08:00:00'),
       }),
     ]);
+  });
+
+  it('plans only the tasks for the linked person and for nobody', () => {
+    const tasks = [
+      task({ id: 'sarah', assignees: ['sarah'], reminderAt: '2026-09-19T08:00:00' }),
+      task({ id: 'thomas', assignees: ['thomas'], reminderAt: '2026-09-19T09:00:00' }),
+      task({ id: 'both', assignees: ['thomas', 'sarah'], reminderAt: '2026-09-19T10:00:00' }),
+      task({ id: 'nobody', assignees: [], reminderAt: '2026-09-19T11:00:00' }),
+    ];
+    const now = new Date('2026-09-18T12:00:00');
+
+    expect(planTaskReminders(tasks, now, 'sarah').map((item) => item.taskId)).toEqual([
+      'sarah',
+      'both',
+      'nobody',
+    ]);
+    // not linked: every reminder, as before
+    expect(planTaskReminders(tasks, now, null)).toHaveLength(4);
+  });
+
+  it('treats a task without an assignee list as one for everybody', () => {
+    expect(isTaskForPerson({ assignees: undefined as unknown as string[] }, 'sarah')).toBe(true);
+    expect(isTaskForPerson({ assignees: ['thomas'] }, 'sarah')).toBe(false);
+    expect(isTaskForPerson({ assignees: ['thomas'] }, null)).toBe(true);
   });
 
   it('uses stable notification ids in its own range', () => {

@@ -4,6 +4,7 @@ import {
   applyTaskReminderPlan,
   cancelTaskReminderForTask,
   handleTaskNotificationAction,
+  setTaskReminderPerson,
   watchTaskReminderActions,
 } from '../taskReminder';
 
@@ -157,6 +158,29 @@ describe('task reminder notifications', () => {
     ]);
 
     expect(api.requestPermissions).not.toHaveBeenCalled();
+    expect(api.schedule).not.toHaveBeenCalled();
+  });
+
+  it('only withdraws a saved task for someone else, without asking for permission', async () => {
+    const api = {
+      checkPermissions: vi.fn().mockResolvedValue({ display: 'prompt' }),
+      requestPermissions: vi.fn().mockResolvedValue({ display: 'granted' }),
+      cancel: vi.fn().mockResolvedValue(undefined),
+      schedule: vi.fn().mockResolvedValue(undefined),
+    };
+    setLocalNotifications(api);
+    setTaskReminderPerson('thomas');
+    try {
+      await applyTaskReminderForTask({
+        id: 'task-1', title: 'Fenster pruefen', status: 'offen', priority: 'mittel', assignees: ['sarah'],
+        roomIds: [], reminderAt: '2099-09-19T08:00:00',
+      });
+    } finally {
+      setTaskReminderPerson(null);
+    }
+
+    expect(api.requestPermissions).not.toHaveBeenCalled();
+    expect(api.cancel).toHaveBeenCalledWith({ notifications: [{ id: expect.any(Number) }] });
     expect(api.schedule).not.toHaveBeenCalled();
   });
 
