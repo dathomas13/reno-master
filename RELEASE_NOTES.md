@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.89.0 – Claude kann mehr
+
+- Claude kann Einträge jetzt auch ändern, Gespräche mit Handwerkern festhalten, Kosten auswerten und alles durchsuchen.
+- Räume lassen sich über die Planungsnamen zuordnen.
+- In den Einstellungen lassen sich die Rechte eines Tokens nachträglich ändern.
+
 ## 0.88.0 – API-Zugang für Claude
 
 - Neu in den Einstellungen: „API-Zugang“. Ein Token dort erlaubt Claude im Chat, Kosten, Aufgaben, Tagebucheinträge und Notizen direkt einzutragen.

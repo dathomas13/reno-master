@@ -3,7 +3,7 @@ import { SettingsFold } from './SettingsFold';
 import { SettingsField as Field } from './SettingsHelp';
 import { useAuth } from '@/auth/AuthContext';
 import { useToast, useUndoableDelete } from '@/components/Toast';
-import { createApiToken, restoreApiToken, revokeApiToken, useApiTokens } from '@/data/apiTokens';
+import { createApiToken, restoreApiToken, revokeApiToken, setApiTokenScopes, useApiTokens } from '@/data/apiTokens';
 import {
   API_SCOPES,
   apiAddresses,
@@ -88,13 +88,19 @@ export function ApiSection() {
     );
   }
 
+  function changeScope(token: ApiToken, id: ApiScope, on: boolean) {
+    const next = API_SCOPES.map((scope) => scope.id).filter((scope) => (scope === id ? on : token.scopes.includes(scope)));
+    void setApiTokenScopes(token, next).catch(() => toast('Die Rechte konnten nicht gespeichert werden.'));
+  }
+
   const addresses = apiAddresses(FILES_URL, fresh?.token);
 
   return (
     <SettingsFold title="API-Zugang" summary={summary}>
       <p className="text-sm text-muted mb-3">
-        Damit können andere Programme – vor allem Claude im Chat – Kosten, Aufgaben, Tagebucheinträge und Notizen
-        anlegen. Jedes Token wird genau einmal angezeigt und lässt sich jederzeit widerrufen.
+        Damit können andere Programme – vor allem Claude im Chat – Kosten, Aufgaben, Tagebucheinträge, Notizen und
+        Gespräche eintragen, ändern und durchsuchen. Jedes Token wird genau einmal angezeigt und lässt sich jederzeit
+        widerrufen.
       </p>
 
       {!FILES_URL && (
@@ -125,6 +131,20 @@ export function ApiSection() {
                     ? `${isExpired(token) ? 'abgelaufen' : 'gilt bis'} ${formatTokenDate(token.expiresAt)}`
                     : 'unbegrenzt'}
                 </p>
+                <details className="mt-1">
+                  <summary className="text-xs text-muted cursor-pointer min-h-11 flex items-center">Rechte ändern</summary>
+                  {API_SCOPES.map((scope) => (
+                    <label key={scope.id} className="flex items-center gap-3 min-h-11 text-sm">
+                      <input
+                        type="checkbox"
+                        className="w-5 h-5 accent-accent"
+                        checked={token.scopes.includes(scope.id)}
+                        onChange={(event) => changeScope(token, scope.id, event.target.checked)}
+                      />
+                      <span>{scope.label}</span>
+                    </label>
+                  ))}
+                </details>
               </div>
               <button type="button" className="btn" onClick={() => revoke(token)}>
                 Widerrufen

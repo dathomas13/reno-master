@@ -8,14 +8,15 @@
  * next request.
  */
 
-export type ApiScope = 'costs' | 'tasks' | 'diary' | 'notes' | 'read';
+export type ApiScope = 'costs' | 'tasks' | 'diary' | 'notes' | 'contacts' | 'read';
 
 /** the rights a token can carry, in the order the settings list them */
 export const API_SCOPES: readonly { id: ApiScope; label: string }[] = [
-  { id: 'costs', label: 'Kosten anlegen' },
-  { id: 'tasks', label: 'Aufgaben anlegen und abhaken' },
+  { id: 'costs', label: 'Kosten anlegen und ändern' },
+  { id: 'tasks', label: 'Aufgaben anlegen und ändern' },
   { id: 'diary', label: 'Ins Tagebuch schreiben' },
   { id: 'notes', label: 'Notizen anlegen' },
+  { id: 'contacts', label: 'Kontakte und Gespräche festhalten' },
   { id: 'read', label: 'Einträge lesen' },
 ];
 

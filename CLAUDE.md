@@ -201,6 +201,11 @@ Steht:
   aus der Antwort nennen. Die Worker-Kopie der Auswahl-Startwerte hält
   `src/data/__tests__/apiWorker.test.ts` gleich mit `options.ts` – wer dort etwas ändert,
   passt `OPTION_LABELS` im Worker an und fügt den Worker neu im Dashboard ein.
+  Seit 0.89.0 auch Ändern (eigene Einträge ganz, App-Einträge nur in wenigen Feldern und per
+  `appendText`), Kontakte und Gespräche, Räume über die Planungsnamen, Kostenauswertung
+  (`reno.py summary`) und Suche (`reno.py search`). Felder und Regeln je Sammlung stehen an
+  einer Stelle: `SPECS` im Worker. Eine Markierung „über Claude“ in der App gibt es bewusst
+  nicht; `createdVia` steht aber in jedem Datensatz.
 
 Offen:
 

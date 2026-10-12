@@ -93,8 +93,15 @@ Claude ──Token──▶ Worker /api/v1, /mcp ──Dienstkonto──▶ Fire
   „zuletzt benutzt“. Weder die Datenbank noch ein Export verrät also ein brauchbares Token.
 - Widerrufen löscht den Eintrag; die nächste Anfrage mit dem Token scheitert.
 - Ein Token gilt nur, solange sein Besitzer in `ALLOWED_EMAILS` steht.
-- Löschen über die API geht nur bei Einträgen, die über die API angelegt wurden
-  (`createdVia: "api:<token-id>"`) – ein verlorenes Token kann nichts Älteres zerstören.
+- Ändern und Löschen sind gestuft. Einträge, die über die API angelegt wurden
+  (`createdVia: "api:<token-id>"`), lassen sich ganz ändern und löschen. Einträge aus der
+  App nur in wenigen Feldern (Kosten: Zahlungsstatus, bezahlt von, Zahlungsart; Aufgaben:
+  Status, Fälligkeit, Priorität, Zuständige; Notizen: angeheftet; Kontakte: Telefon,
+  E-Mail, Status) und per `appendText` (ein Absatz angehängt) – nie löschen. Ein verlorenes
+  Token kann so nichts Älteres zerstören, und ein Missverständnis im Chat schreibt keine
+  gepflegte Rechnung um.
+- Rechte (Kosten, Aufgaben, Tagebuch, Notizen, Kontakte und Gespräche, Lesen) lassen sich
+  in der App nachträglich ändern; das Token bleibt dasselbe.
 
 Das ist dasselbe Muster wie die „personal access tokens“ bei GitHub: für einen einzelnen
 Menschen mit eigenem Werkzeug einfacher und genauso sicher wie OAuth, solange das Token wie
@@ -126,7 +133,8 @@ Besitzer und Rechte.
   (Worker-Adresse) und `RENO_API_TOKEN`, den Worker-Host im Netzwerkzugriff erlaubt.
 
 Der MCP-Server (Streamable HTTP, zustandslos) bietet `get_catalog`, `create_cost`,
-`create_task`, `create_diary_entry`, `create_note`, `list_entries`, `complete_task` und
+`create_task`, `create_diary_entry`, `create_note`, `create_contact`, `create_contact_log`,
+`update_entry`, `complete_task`, `list_entries`, `search`, `summarize_costs` und
 `delete_entry` – nur die, die das Token darf.
 
 ### REST-Routen
@@ -142,8 +150,15 @@ Alle mit `Authorization: Bearer <token>`, Antworten als JSON, Fehler als `{ "err
 | `POST /api/v1/tasks/<id>/done` | tasks | Aufgabe abhaken |
 | `POST /api/v1/diary` | diary | Tagebuch: gibt es für den Tag schon einen Eintrag, wird angehängt (`"newEntry": true` legt einen eigenen an) |
 | `POST /api/v1/notes` | notes | Notiz anlegen |
-| `GET /api/v1/<sammlung>?since=JJJJ-MM-TT&limit=20` | read | letzte Einträge; Aufgaben: die offenen (`open=false` alle) |
+| `POST /api/v1/contacts` | contacts | Kontakt anlegen |
+| `POST /api/v1/contactLogs` | contacts | Gespräch festhalten (`contact` als id, Name oder Firmenteil; leer = ohne Kontakt) |
+| `PATCH /api/v1/<sammlung>/<id>` | Schreibrecht der Sammlung | ändern, gestuft wie oben; `null` leert ein Feld, `appendText` hängt an |
+| `GET /api/v1/<sammlung>?since=JJJJ-MM-TT&query=…&limit=20` | read | letzte Einträge; Aufgaben: die offenen (`open=false` alle); Kontakte alphabetisch; Gespräche auch `contact=` |
+| `GET /api/v1/costs/summary?groupBy=category&from=…&to=…` | read | Summen nach `category`, `trade` (mit Budget und Rest), `month`, `paidBy`, `paymentStatus` oder `room`; Filter `category`, `trade`, `paidBy`, `paymentStatus`, `room` |
+| `GET /api/v1/search?q=…` | read | Wörter in allen Sammlungen, Wortteile zählen, Umlaute egal; `collections=` grenzt ein |
 | `DELETE /api/v1/<sammlung>/<id>` | Schreibrecht der Sammlung | nur über die API Angelegtes |
+
+Sammlungen: `costs`, `tasks`, `diary`, `notes`, `contacts`, `contactLogs`.
 
 Felder wie im Datenmodell (`PLAN.md`, Abschnitt 5), z. B. für Kosten `amountGross`
 (Pflicht, Zahl oder „12,40“), `vendor`, `description`, `category`, `date`, `paidBy`,
@@ -152,8 +167,9 @@ Auswahlwerte gehen als Kennung **oder** Name (`"category": "Verpflegung Helfer"`
 gespeichert wird immer die Kennung, Unbekanntes lehnt der Worker mit den möglichen Werten
 ab. Gewerke und Phasen auch über einen eindeutigen Namensteil (`"trade": "Elektrik"`).
 Ohne `date` gilt heute in Europe/Berlin. Eine mitgeschickte `id` macht eine Wiederholung
-unschädlich: dieselbe id ein zweites Mal legt nichts Neues an. Räume und Belegfotos kann
-die API (noch) nicht setzen.
+unschädlich: dieselbe id ein zweites Mal legt nichts Neues an. Räume (`rooms`) gehen über
+die Namen der **Planung** (`meta/model-soll`); ein Name, den es in zwei Geschossen gibt,
+braucht das Geschoss („Flur OG“). Belegfotos kann die API nicht hochladen.
 
 ```bash
 curl -X POST https://<worker>/api/v1/costs \
@@ -167,7 +183,8 @@ curl -X POST https://<worker>/api/v1/costs \
 Ablauf der Anzeige-Adressen, die Pfad-Prüfung (`..`, führende Schrägstriche, Leerzeichen)
 und dass ein selbst gebautes Ticket mit `alg: none` abgewiesen wird. Die API läuft dort
 vollständig gegen ein nachgebautes Firestore: Dienstkonto-Ticket, Token-Prüfung (Ablauf,
-Besitzer, Rechte), Anlegen, Anhängen ans Tagebuch, Lesen, Abhaken, Löschen und MCP. Die CI
+Besitzer, Rechte), Anlegen, gestuftes Ändern, Anhängen ans Tagebuch, Räume, Kontakte und
+Gespräche, Auswertung, Suche, Lesen, Abhaken, Löschen und MCP. Die CI
 führt den Selbsttest bei jedem Push aus.
 
 Nicht geprüft werden kann hier: der Worker im echten Betrieb, das Zusammenspiel mit R2 und

@@ -58,6 +58,11 @@ export function revokeApiToken(id: string): Promise<void> {
   return removeMapEntries(COL.meta, API_TOKEN_DOC, [{ field: 'tokens', key: id }]);
 }
 
+/** new rights for an existing token; the secret stays the same, so no client needs a new one */
+export function setApiTokenScopes(token: ApiToken, scopes: ApiScope[]): Promise<void> {
+  return restoreApiToken({ ...token, scopes });
+}
+
 /** "Rückgängig" after revoking: the same entry again, so the same secret works again */
 export function restoreApiToken(token: ApiToken): Promise<void> {
   const { id, ...entry } = token;

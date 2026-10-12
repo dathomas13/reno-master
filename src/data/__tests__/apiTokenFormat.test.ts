@@ -49,7 +49,7 @@ describe('API tokens', () => {
   });
 
   it('name every scope the worker knows', () => {
-    expect(API_SCOPES.map((scope) => scope.id)).toEqual(['costs', 'tasks', 'diary', 'notes', 'read']);
+    expect(API_SCOPES.map((scope) => scope.id)).toEqual(['costs', 'tasks', 'diary', 'notes', 'contacts', 'read']);
   });
 
   it('give the client addresses', () => {

@@ -326,7 +326,7 @@ Geschoss, Maß 0, gelöschtes Modell), lässt `parseFurnitureDoc` Stück für St
 { tokens: { [id]: { name: string            // zum Wiedererkennen, z. B. "Claude-App"
                     hash: string            // SHA-256 des Tokens, hex – das Token selbst steht nirgends
                     hint: string            // "reno_AbCd…", die ersten Zeichen für die Liste
-                    scopes: ('costs'|'tasks'|'diary'|'notes'|'read')[]
+                    scopes: ('costs'|'tasks'|'diary'|'notes'|'contacts'|'read')[]
                     createdAt: string       // ISO UTC
                     createdBy: string       // E-Mail des Besitzers, klein
                     expiresAt?: string      // ISO UTC, fehlt = unbegrenzt
@@ -338,7 +338,11 @@ Dienstkonto nach Firestore; Einrichtung und Felder in `worker/README.md`, Abschn
 Zufallsbytes base64url, in der App erzeugt (`src/data/apiTokenFormat.ts`), genau einmal angezeigt. Der Worker
 prüft Hash, Ablauf, Besitzer in `ALLOWED_EMAILS` und das Recht der Sammlung. Er baut Datensätze wie
 `src/data/repos.ts` (Auswahlwerte als Kennung, `findOptionByName`-Regel für Namen, `createdBy` = Besitzer) und
-vermerkt `createdVia: 'api:<id>'`; nur solche Einträge darf die API wieder löschen. Ein Tagebucheintrag für einen
+vermerkt `createdVia: 'api:<id>'`; nur solche Einträge darf die API ganz ändern und löschen, Einträge aus der App
+nur in einer kurzen Liste von Feldern (`foreign` in den Feldregeln `SPECS` des Workers) und per `appendText`.
+Anlegen und Ändern laufen durch dieselben Feldregeln. Räume nur über die Planung (`meta/model-soll`, Feld `rooms`),
+gespeichert wird die Planungs-id. Dazu Kontakte und Gespräche (`contactLogs`), Kostenauswertung wie
+`costAggregation.ts` und eine Suche über alle Sammlungen. Ein Tagebucheintrag für einen
 Tag, der schon einen hat, wird angehängt (5.1: „Eintrag für heute“ ist ein Singleton). Der Worker trägt eine Kopie
 der Startwerte der Auswahllisten; `src/data/__tests__/apiWorker.test.ts` hält sie gleich mit `options.ts`.
 Map-Einträge wie in 5.13, keine neue Regel nötig.

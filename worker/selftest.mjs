@@ -176,7 +176,7 @@ globalThis.fetch = async (input, init = {}) => {
   return failure(400, 'INVALID_ARGUMENT');
 };
 
-const { encodeFields, decodeFields, sha256Hex, buildCost, normalizeOptions, parseAmount, berlinDate, mergeDiaryEntry, tokenProblem } =
+const { encodeFields, decodeFields, sha256Hex, buildRecord, normalizeOptions, parseAmount, berlinDate, mergeDiaryEntry, tokenProblem, fold, planningRooms } =
   await import('./reno-files.js');
 
 const fullToken = `reno_${'A'.repeat(20)}${'b'.repeat(23)}`;
@@ -185,7 +185,7 @@ const strangers = `reno_${'S'.repeat(43)}`;
 const put = (key, value) => docs.set(key, { fields: encodeFields(value), updateTime: stamp() });
 put('meta/api-tokens', {
   tokens: {
-    t1: { name: 'Claude', hash: await sha256Hex(fullToken), scopes: ['costs', 'tasks', 'diary', 'notes', 'read'], createdBy: 'Thomas@example.de', createdAt: '2026-10-01T10:00:00Z' },
+    t1: { name: 'Claude', hash: await sha256Hex(fullToken), scopes: ['costs', 'tasks', 'diary', 'notes', 'contacts', 'read'], createdBy: 'Thomas@example.de', createdAt: '2026-10-01T10:00:00Z' },
     t2: { name: 'nur lesen', hash: await sha256Hex(readOnly), scopes: ['read'], createdBy: 'sarah@example.de', createdAt: '2026-10-01T10:00:00Z' },
     t3: { name: 'fremd', hash: await sha256Hex(strangers), scopes: ['costs'], createdBy: 'wer@anders.de', createdAt: '2026-10-01T10:00:00Z' },
     t5: { name: 'nur Kosten', hash: await sha256Hex(`reno_${'K'.repeat(43)}`), scopes: ['costs'], createdBy: 'sarah@example.de' },
@@ -196,6 +196,12 @@ put('meta/options', { costCategories: [{ id: 'verpflegung-helfer', label: 'Verpf
 put('trades/tr1', { id: 'tr1', name: 'Elektrik komplett', status: 'noch-offen', priority: 'hoch' });
 put('trades/tr2', { id: 'tr2', name: 'Sanitär / Wasser / Abwasser', status: 'noch-offen', priority: 'mittel' });
 put('phases/ph1', { id: 'ph1', name: 'Phase 2: Entkernung & Rückbau', status: 'in-arbeit', order: 2 });
+put('meta/model-soll', { version: '0.1', rooms: JSON.stringify({ rooms: [{ id: 'bad-og', name: 'Bad', floor: 'OG', rects: [] }, { id: 'flur-eg', name: 'Flur', floor: 'EG', rects: [] }, { id: 'flur-og', name: 'Flur', floor: 'OG', rects: [] }, { id: 'technik', name: 'Technikraum', floor: 'KG', rects: [] }] }) });
+put('contacts/c1', { id: 'c1', name: 'Max Müller', company: 'Elektro Müller GmbH', roles: ['elektriker'], tradeIds: ['tr1'] });
+put('contacts/c2', { id: 'c2', name: 'Petra Schmidt', company: 'Fliesen Schmidt', roles: ['fliesenleger'], tradeIds: [] });
+put('costs/appcost1', { id: 'appcost1', date: '2026-09-01', vendor: 'Elektro Müller GmbH', description: 'Abschlag Elektrik', amountGross: 1000, category: 'werkzeug', tradeId: 'tr1', roomIds: [], paymentStatus: 'offen', receiptPhotoIds: ['foto1'] });
+put('costs/appcost2', { id: 'appcost2', date: '2026-09-02', vendor: '', description: '', amountGross: 50, category: '', roomIds: [], paymentStatus: 'offen', receiptPhotoIds: [] });
+put('notes/appnote1', { id: 'appnote1', text: 'Estrich braucht vier Wochen', at: '2026-09-20T10:00:00', roomIds: [], pinned: false });
 put('tasks/old1', { id: 'old1', title: 'aus der App', status: 'offen', priority: 'mittel', assignees: [], roomIds: [], reminderAt: '2026-10-13T08:00:00' });
 
 const call = async (method, path, token, body) => {
@@ -254,6 +260,7 @@ check('Aufgabe: Personen und Priorität als Kennung', storedTask.assignees.join(
 check('Aufgabe: falsches Datum: 400', (await call('POST', '/api/v1/tasks', fullToken, { title: 'x', due: '2026-02-30' })).status === 400);
 const open = await call('GET', '/api/v1/tasks', readOnly);
 check('offene Aufgaben lesen', open.body.entries.length === 2 && open.body.entries[0].id === task.body.id);
+check('Katalog: Räume der Planung', catalog.body.rooms.map((r) => r.name).join() === 'Bad,Flur (EG),Flur (OG),Technikraum');
 const done = await call('POST', '/api/v1/tasks/old1/done', fullToken);
 const storedDone = decodeFields(docs.get('tasks/old1').fields);
 check('Aufgabe abhaken: Status, doneAt, Erinnerung entfernt', done.status === 200 && storedDone.status === 'erledigt' && storedDone.doneAt && !('reminderAt' in storedDone));
@@ -272,7 +279,7 @@ const note = await call('POST', '/api/v1/notes', fullToken, { text: 'Fliesenkleb
 check('Notiz anlegen', note.status === 201 && decodeFields(docs.get(`notes/${note.body.id}`).fields).pinned === false);
 
 const recent = await call('GET', '/api/v1/costs?since=2026-01-01', readOnly);
-check('Kosten lesen', recent.status === 200 && recent.body.entries.length === 2 && !('updatedAt' in recent.body.entries[0]));
+check('Kosten lesen', recent.status === 200 && recent.body.entries.length === 4 && !('updatedAt' in recent.body.entries[0]));
 check('lesen ohne Leserecht: 403', (await call('GET', '/api/v1/costs', `reno_${'K'.repeat(43)}`)).status === 403);
 
 check('API-Eintrag löschen', (await call('DELETE', `/api/v1/costs/${cost.body.id}`, fullToken)).status === 200 && !docs.has(`costs/${cost.body.id}`));
@@ -284,9 +291,9 @@ const init = await rpc(fullToken, { jsonrpc: '2.0', id: 1, method: 'initialize',
 check('MCP initialize', init.body.result.protocolVersion === '2025-06-18' && init.body.result.capabilities.tools);
 check('MCP Benachrichtigung: 202 ohne Antwort', (await rpc(fullToken, { jsonrpc: '2.0', method: 'notifications/initialized' })).status === 202);
 const tools = await rpc(fullToken, { jsonrpc: '2.0', id: 2, method: 'tools/list' });
-check('MCP: alle Werkzeuge für das volle Token', tools.body.result.tools.length === 8);
+check('MCP: alle Werkzeuge für das volle Token', tools.body.result.tools.length === 13);
 const readTools = await rpc(readOnly, { jsonrpc: '2.0', id: 3, method: 'tools/list' });
-check('MCP: Lese-Token sieht nur Katalog und Lesen', readTools.body.result.tools.map((t) => t.name).join() === 'get_catalog,list_entries');
+check('MCP: Lese-Token sieht nur Katalog und Lesen', readTools.body.result.tools.map((t) => t.name).join() === 'get_catalog,list_entries,search,summarize_costs');
 const viaPath = await rpc('', { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'create_cost', arguments: { amountGross: 12.4, vendor: 'Hornbach', description: 'Schrauben', category: 'werkzeug' } } }, `/mcp/${fullToken}`);
 const created = JSON.parse(viaPath.body.result.content[0].text);
 check('MCP mit Token im Pfad: Kosten angelegt', !viaPath.body.result.isError && decodeFields(docs.get(`costs/${created.id}`).fields).amountGross === 12.4);
@@ -295,11 +302,82 @@ check('MCP: Prüffehler als isError mit Grund', bad.body.result.isError === true
 check('MCP ohne Token: 401', (await rpc('', { jsonrpc: '2.0', id: 6, method: 'ping' })).status === 401);
 check('MCP GET: 405', (await call('GET', `/mcp/${fullToken}`, '')).status === 405);
 
+
+// Ändern, Räume, Kontakte, Gespräche, Auswertung, Suche
+const own = await call('POST', '/api/v1/costs', fullToken, { amountGross: 12, vendor: 'Hornbach', description: 'Schrauben', category: 'Werkzeug', rooms: ['Bad'], vatRate: 19 });
+const ownDoc = () => decodeFields(docs.get(`costs/${own.body.id}`).fields);
+check('Raum über den Planungsnamen', ownDoc().roomIds.join() === 'bad-og');
+check('mehrdeutiger Raumname: 400 mit beiden', await call('POST', '/api/v1/notes', fullToken, { text: 'x', rooms: ['Flur'] }).then((r) => r.status === 400 && r.body.error.includes('Flur (EG)') && r.body.error.includes('Flur (OG)')));
+check('Raum mit Geschoss', await call('POST', '/api/v1/notes', fullToken, { text: 'x', rooms: ['Flur OG'] }).then((r) => decodeFields(docs.get(`notes/${r.body.id}`).fields).roomIds.join() === 'flur-og'));
+const fixed = await call('PATCH', `/api/v1/costs/${own.body.id}`, fullToken, { amountGross: 15, paidBy: 'Sarah' });
+check('eigene Kosten ändern: Betrag, Netto folgt', fixed.status === 200 && ownDoc().amountGross === 15 && ownDoc().amountNet === 12.61 && ownDoc().vatAmount === 2.39 && ownDoc().paidBy === 'sarah');
+check('Ändern lässt die übrigen Felder stehen', ownDoc().vendor === 'Hornbach' && ownDoc().roomIds.join() === 'bad-og' && ownDoc().createdVia === 'api:t1');
+check('null leert ein Feld', (await call('PATCH', `/api/v1/costs/${own.body.id}`, fullToken, { paidBy: null, rooms: null })).status === 200 && !('paidBy' in ownDoc()) && ownDoc().roomIds.length === 0);
+check('Pflichtfeld lässt sich nicht leeren', (await call('PATCH', `/api/v1/costs/${own.body.id}`, fullToken, { amountGross: null })).status === 400);
+check('ohne Satz fallen Netto und MwSt. weg', (await call('PATCH', `/api/v1/costs/${own.body.id}`, fullToken, { vatRate: null })).status === 200 && !('amountNet' in ownDoc()) && !('vatAmount' in ownDoc()));
+const appDoc = () => decodeFields(docs.get('costs/appcost1').fields);
+check('Rechnung aus der App als bezahlt markieren', (await call('PATCH', '/api/v1/costs/appcost1', fullToken, { paymentStatus: 'Bezahlt' })).status === 200 && appDoc().paymentStatus === 'bezahlt');
+const denied = await call('PATCH', '/api/v1/costs/appcost1', fullToken, { amountGross: 1 });
+check('Betrag einer App-Rechnung: 403 mit den erlaubten Feldern', denied.status === 403 && denied.body.error.includes('paymentStatus') && appDoc().amountGross === 1000);
+check('appendText an App-Rechnung hängt an die Notizen', (await call('PATCH', '/api/v1/costs/appcost1', fullToken, { appendText: 'Restbetrag nach Abnahme' })).status === 200 && appDoc().notes === 'Restbetrag nach Abnahme');
+check('alte Rechnung ohne Händler lässt sich trotzdem bezahlen', (await call('PATCH', '/api/v1/costs/appcost2', fullToken, { paymentStatus: 'bezahlt' })).status === 200);
+check('eigene Kosten: Händler und Beschreibung nicht beide leeren', (await call('PATCH', `/api/v1/costs/${own.body.id}`, fullToken, { vendor: null, description: null })).status === 400);
+check('Belegfotos bleiben beim Ändern', appDoc().receiptPhotoIds.join() === 'foto1');
+check('appendText an eine App-Notiz', (await call('PATCH', '/api/v1/notes/appnote1', fullToken, { appendText: 'Heizen erst danach.' })).status === 200 && decodeFields(docs.get('notes/appnote1').fields).text === 'Estrich braucht vier Wochen\n\nHeizen erst danach.');
+check('Text einer App-Notiz ersetzen: 403', (await call('PATCH', '/api/v1/notes/appnote1', fullToken, { text: 'weg' })).status === 403);
+const moved = await call('PATCH', `/api/v1/tasks/${task.body.id}`, fullToken, { due: '2026-11-01', assignees: ['Sarah'], status: 'Erledigt' });
+const movedDoc = decodeFields(docs.get(`tasks/${task.body.id}`).fields);
+check('Aufgabe ändern: Fälligkeit, Zuständige, erledigt mit doneAt', moved.status === 200 && movedDoc.due === '2026-11-01' && movedDoc.assignees.join() === 'sarah' && typeof movedDoc.doneAt === 'string');
+check('wieder offen nimmt doneAt weg', (await call('PATCH', `/api/v1/tasks/${task.body.id}`, fullToken, { status: 'offen' })).status === 200 && !('doneAt' in decodeFields(docs.get(`tasks/${task.body.id}`).fields)));
+check('Aufgabe aus der App verschieben', (await call('PATCH', '/api/v1/tasks/old1', fullToken, { due: '2026-12-24' })).status === 200 && decodeFields(docs.get('tasks/old1').fields).due === '2026-12-24');
+check('Titel einer App-Aufgabe: 403', (await call('PATCH', '/api/v1/tasks/old1', fullToken, { title: 'neu' })).status === 403);
+check('unbekanntes Feld beim Ändern: 400', (await call('PATCH', `/api/v1/tasks/${task.body.id}`, fullToken, { farbe: 'rot' })).status === 400);
+check('nichts zu ändern: 400', (await call('PATCH', `/api/v1/tasks/${task.body.id}`, fullToken, {})).status === 400);
+check('Ändern ohne Schreibrecht: 403', (await call('PATCH', '/api/v1/costs/appcost1', readOnly, { paymentStatus: 'offen' })).status === 403);
+
+const person = await call('POST', '/api/v1/contacts', fullToken, { name: 'Jan Dach', company: 'Dachbau Jan', roles: ['Dachdecker'], phone: '0171 123' });
+check('Kontakt anlegen mit Rolle als Kennung', person.status === 201 && decodeFields(docs.get(`contacts/${person.body.id}`).fields).roles.join() === 'dachdecker');
+const call1 = await call('POST', '/api/v1/contactLogs', fullToken, { contact: 'Müller', text: 'Kommt Donnerstag zum Aufmaß.', channel: 'Anruf', participants: ['Thomas'], at: '2026-10-12T09:30' });
+const callDoc = decodeFields(docs.get(`contactLogs/${call1.body.id}`).fields);
+check('Gespräch über Firmenteil dem Kontakt zugeordnet', call1.status === 201 && callDoc.contactId === 'c1' && callDoc.channel === 'anruf' && callDoc.at === '2026-10-12T09:30:00');
+check('Gespräch: Link ins Protokoll', call1.body.link.endsWith(`#/gespraeche?eintrag=${call1.body.id}`));
+const nobody = await call('POST', '/api/v1/contactLogs', fullToken, { contact: 'Unbekannt', text: 'x' });
+check('unbekannter Kontakt: Hinweis auf create_contact', nobody.status === 400 && nobody.body.error.includes('create_contact'));
+check('Gespräch ohne Kontakt', await call('POST', '/api/v1/contactLogs', fullToken, { text: 'Nachbar gefragt' }).then((r) => decodeFields(docs.get(`contactLogs/${r.body.id}`).fields).contactId === ''));
+check('Kontakte suchen', (await call('GET', '/api/v1/contacts?query=fliesen', readOnly)).body.entries.map((c) => c.id).join() === 'c2');
+check('Gespräche eines Kontakts', (await call('GET', '/api/v1/contactLogs?contact=c1', readOnly)).body.entries.length === 1);
+check('Kontakt aus der App: Telefon ja, Name nein', (await call('PATCH', '/api/v1/contacts/c2', fullToken, { phone: '0160 9' })).status === 200 && (await call('PATCH', '/api/v1/contacts/c2', fullToken, { name: 'x' })).status === 403);
+check('ohne Kontaktrecht kein Gespräch: 403', (await call('POST', '/api/v1/contactLogs', `reno_${'K'.repeat(43)}`, { text: 'x' })).status === 403);
+
+const summary = await call('GET', '/api/v1/costs/summary?groupBy=trade', readOnly);
+const elektrik = summary.body.groups?.find((g) => g.key === 'tr1');
+check('Auswertung nach Gewerk', summary.status === 200 && elektrik?.total === 1000 && elektrik.label === 'Elektrik komplett');
+check('Auswertung: offene Summe', summary.body.unpaid.count === 0 && summary.body.count === docs.size - [...docs.keys()].filter((k) => !k.startsWith('costs/')).length);
+const october = await call('GET', '/api/v1/costs/summary?groupBy=category&from=2026-10-01', readOnly);
+check('Auswertung ab Datum ohne die Septemberrechnung', october.body.count > 0 && !october.body.groups.some((g) => g.total >= 1000));
+check('Auswertung nach Monat chronologisch', (await call('GET', '/api/v1/costs/summary?groupBy=month', readOnly)).body.groups.map((g) => g.key).join() === '2026-09,2026-10');
+check('unbekannte Gruppierung: 400', (await call('GET', '/api/v1/costs/summary?groupBy=farbe', readOnly)).status === 400);
+
+const found = await call('GET', '/api/v1/search?q=estrich', readOnly);
+check('Suche findet die App-Notiz', found.status === 200 && found.body.hits.some((h) => h.id === 'appnote1' && h.snippet.includes('Estrich')));
+const byName = await call('GET', '/api/v1/search?q=mueller%20aufmass', readOnly);
+check('Suche findet ein Gespräch über den Kontaktnamen', byName.body.hits.length === 1 && byName.body.hits[0].collection === 'contactLogs');
+check('Suche ohne Leserecht: 403', (await call('GET', '/api/v1/search?q=x', `reno_${'K'.repeat(43)}`)).status === 403);
+const mcpUpdate = await rpc(fullToken, { jsonrpc: '2.0', id: 7, method: 'tools/call', params: { name: 'update_entry', arguments: { collection: 'notes', id: 'appnote1', appendText: 'Und lüften.' } } });
+check('MCP update_entry mit appendText', !mcpUpdate.body.result.isError && decodeFields(docs.get('notes/appnote1').fields).text.endsWith('Und lüften.'));
+const mcpSum = await rpc(readOnly, { jsonrpc: '2.0', id: 8, method: 'tools/call', params: { name: 'summarize_costs', arguments: { groupBy: 'paidBy' } } });
+check('MCP summarize_costs', !mcpSum.body.result.isError && JSON.parse(mcpSum.body.result.content[0].text).groups.length > 0);
+
 // reine Helfer
 check('Betrag "1.234,56" wird 1234.56', parseAmount('1.234,56', 'x') === 1234.56);
 check('Betrag 0 wird abgelehnt', (() => { try { parseAmount(0, 'x'); return false; } catch { return true; } })());
 check('heute in Berlin, auch kurz nach Mitternacht', berlinDate(new Date('2026-10-11T22:30:00Z')) === '2026-10-12');
-check('MwSt. wird aufgeteilt', (() => { const c = buildCost({ amountGross: 119, vendor: 'x', vatRate: 19 }, { options: normalizeOptions(null), trades: [], phases: [] }); return c.amountNet === 100 && c.vatAmount === 19; })());
+const bare = { options: normalizeOptions(null), trades: [], phases: [], rooms: [], contacts: [] };
+check('MwSt. wird aufgeteilt', (() => { const c = buildRecord('costs', { amountGross: 119, vendor: 'x', vatRate: 19 }, bare); return c.amountNet === 100 && c.vatAmount === 19; })());
+check('unbekanntes Feld wird abgelehnt', (() => { try { buildRecord('tasks', { title: 'x', farbe: 'rot' }, bare); return false; } catch (e) { return e.message.includes('farbe'); } })());
+check('Suche faltet Umlaute und Schreibweisen', fold('Gartentür Straße 1.234,56') === fold('gartentuer strasse 123456'));
+check('gleiche Raumnamen bekommen das Geschoss', planningRooms(JSON.stringify({ rooms: [{ id: 'a', name: 'Flur', floor: 'EG' }, { id: 'b', name: 'Flur', floor: 'OG' }, { id: 'c', name: 'Bad', floor: 'OG' }] })).map((r) => r.name).join() === 'Flur (EG),Flur (OG),Bad');
+check('kaputte Raumliste ergibt keine Räume', planningRooms('{kaputt').length === 0);
 check('Anhängen an leeren Eintrag', mergeDiaryEntry({ text: '' }, { text: 'a', present: [], tradeIds: [], defects: false }).text === 'a');
 check('Token ohne Ablauf und mit Besitzer gilt', tokenProblem({ hash: 'x', createdBy: 'a@b.de' }, ['a@b.de']) === null);
 

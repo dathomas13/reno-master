@@ -317,16 +317,8 @@ const LAST_USED_EVERY_MS = 60 * 60 * 1000;
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_APP_URL = 'https://dathomas13.github.io/reno-master/';
 
-/** Rechte eines Tokens: je Sammlung schreiben, dazu lesen */
-export const API_SCOPES = ['costs', 'tasks', 'diary', 'notes', 'read'];
-
-/** die Sammlungen der API, mit dem Recht zum Schreiben und dem Feld, nach dem sie datiert sind */
-const COLLECTIONS = {
-  costs: { scope: 'costs', dateField: 'date', link: (id) => `#/kosten/${id}` },
-  tasks: { scope: 'tasks', dateField: null, link: (id) => `#/aufgaben?aufgabe=${id}` },
-  diary: { scope: 'diary', dateField: 'date', link: (id) => `#/tagebuch/${id}` },
-  notes: { scope: 'notes', dateField: 'at', link: () => '#/notizen' },
-};
+/** Rechte eines Tokens: je Bereich schreiben (contacts: Kontakte und Gespräche), dazu lesen */
+export const API_SCOPES = ['costs', 'tasks', 'diary', 'notes', 'contacts', 'read'];
 
 export class ApiError extends Error {
   constructor(status, message) {
@@ -366,6 +358,13 @@ export const OPTION_LABELS = {
   ],
   paymentMethods: ['Karte', 'Bar', 'Überweisung', 'PayPal'],
   payers: ['Thomas', 'Sarah', 'Gemeinsam'],
+  contactRoles: [
+    'Energieberater (iSFP)', 'Statiker', 'Dachdecker', 'Heizungsbauer', 'Elektriker',
+    'Fensterbauer', 'Sanitär', 'Trockenbauer', 'Estrichleger', 'Fliesenleger', 'Maler',
+    'PV-Installateur', 'Baustoffhandel', 'Notar', 'Bank/Finanzierung', 'Immobilienmaklerin',
+  ],
+  contactChannels: ['Anruf', 'Termin', 'E-Mail', 'Nachricht', 'Sonstiges'],
+  contactStatus: ['Angefragt', 'Angebot erhalten', 'Beauftragt', 'Aktiv', 'Abgeschlossen', 'Abgelehnt'],
 };
 /** feste Sets: die Kennungen stehen im Code, das Dokument benennt und sortiert nur */
 const FIXED_OPTION_SETS = ['taskStatus', 'priority', 'paymentStatus'];
@@ -447,15 +446,15 @@ export function resolveOption(entries, value, field) {
   return hit.id;
 }
 
-/** wie resolveOption, für Gewerke und Phasen: id, Name, oder ein eindeutiger Namensteil */
+/** wie resolveOption, für Gewerke, Phasen, Räume und Kontakte: id, Name, oder ein eindeutiger Namensteil */
 export function resolveObject(objects, value, field) {
   if (value === undefined || value === null || value === '') return undefined;
   if (typeof value !== 'string') throw new ApiError(400, `${field}: Text erwartet`);
   const text = value.trim();
   const exact = objects.find((o) => o.id === text) ?? objects.find((o) => sameName(o.name, text));
   if (exact) return exact.id;
-  const needle = text.toLocaleLowerCase('de');
-  const partial = objects.filter((o) => !o.archived && o.name.toLocaleLowerCase('de').includes(needle));
+  const needle = fold(text);
+  const partial = needle ? objects.filter((o) => !o.archived && fold([o.name, o.company].filter(Boolean).join(' ')).includes(needle)) : [];
   if (partial.length === 1) return partial[0].id;
   if (partial.length > 1) {
     throw new ApiError(400, `${field}: „${text}“ ist nicht eindeutig: ${partial.map((o) => o.name).join(', ')}`);
@@ -552,105 +551,285 @@ function withoutUndefined(value) {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined));
 }
 
-// ------------------------------------------------ Datensätze bauen (wie src/data/repos.ts)
+// ------------------------------------------------ Datensätze (wie src/data/repos.ts)
+//
+// Jede Sammlung ist eine Liste von Feldregeln. Anlegen und Ändern laufen durch dieselben
+// Regeln, so kann ein Ändern nie etwas speichern, was ein Anlegen abgelehnt hätte.
+//   parse     Eingabe → gespeicherter Wert (Kennung statt Name); undefined = nichts angegeben
+//   fallback  beim Anlegen, wenn nichts angegeben ist
+//   empty     was "leer" gespeichert wird ('' oder []), statt das Feld zu entfernen
+//   required  darf nie fehlen (Anlegen) und nie geleert werden (Ändern)
 
-export function buildCost(input, catalog, now = new Date()) {
-  const body = asObject(input);
-  const { options } = catalog;
-  const amountGross = parseAmount(body.amountGross, 'amountGross');
-  const vendor = optionalText(body.vendor, 'vendor', 200) ?? '';
-  const description = optionalText(body.description, 'description', 2000) ?? '';
-  if (!vendor && !description) throw new ApiError(400, 'vendor oder description angeben');
+const textField = (field, max) => (value) => optionalText(value, field, max);
+const option = (set, field) => (value, catalog) => resolveOption(catalog.options[set], value, field);
+const options = (set, field) => (value, catalog) => resolveMany(value, field, (v, f) => resolveOption(catalog.options[set], v, f));
+const trade = (field) => (value, catalog) => resolveObject(catalog.trades, value, field);
+const trades = (field) => (value, catalog) => resolveMany(value, field, (v, f) => resolveObject(catalog.trades, v, f));
+const phase = (field) => (value, catalog) => resolveObject(catalog.phases, value, field);
+const rooms = (field) => (value, catalog) => resolveMany(value, field, (v, f) => resolveObject(catalog.rooms, v, f));
 
-  let vat = {};
-  if (body.vatRate !== undefined && body.vatRate !== null) {
-    if (![0, 7, 19].includes(body.vatRate)) throw new ApiError(400, 'vatRate: 0, 7 oder 19');
-    vat = { vatRate: body.vatRate };
-    if (body.vatRate > 0) {
-      const net = round2(amountGross / (1 + body.vatRate / 100));
-      vat = { vatRate: body.vatRate, amountNet: net, vatAmount: round2(amountGross - net) };
-    }
+function parseVatRate(value) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (![0, 7, 19].includes(value)) throw new ApiError(400, 'vatRate: 0, 7 oder 19');
+  return value;
+}
+
+function optionalDateTime(value, field) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/.test(value)) {
+    throw new ApiError(400, `${field}: Datum als JJJJ-MM-TT oder JJJJ-MM-TTThh:mm erwartet`);
   }
-
-  return withoutUndefined({
-    date: optionalDate(body.date, 'date') ?? berlinDate(now),
-    vendor,
-    description,
-    amountGross,
-    ...vat,
-    category: resolveOption(options.costCategories, body.category, 'category') ?? '',
-    tradeId: resolveObject(catalog.trades, body.tradeId ?? body.trade, 'tradeId'),
-    roomIds: [],
-    paymentStatus: resolveOption(options.paymentStatus, body.paymentStatus, 'paymentStatus') ?? 'bezahlt',
-    paidBy: resolveOption(options.payers, body.paidBy, 'paidBy'),
-    paymentMethod: resolveOption(options.paymentMethods, body.paymentMethod, 'paymentMethod'),
-    invoiceNumber: optionalText(body.invoiceNumber, 'invoiceNumber', 100),
-    receiptPhotoIds: [],
-    notes: optionalText(body.notes, 'notes', 5000),
-  });
+  optionalDate(value.slice(0, 10), field);
+  if (value.length === 10) return `${value}T12:00:00`;
+  return value.length === 16 ? `${value}:00` : value;
 }
 
-export function buildTask(input, catalog, now = new Date()) {
-  const body = asObject(input);
-  const { options } = catalog;
-  const status = resolveOption(options.taskStatus, body.status, 'status') ?? 'offen';
-  return withoutUndefined({
-    title: requiredText(body.title, 'title', 300),
-    notes: optionalText(body.notes, 'notes', 5000),
-    status,
-    priority: resolveOption(options.priority, body.priority, 'priority') ?? 'mittel',
-    due: optionalDate(body.due, 'due'),
-    assignees: resolveMany(body.assignees, 'assignees', (v, f) => resolveOption(options.people, v, f)),
-    area: resolveOption(options.taskAreas, body.area, 'area'),
-    tradeId: resolveObject(catalog.trades, body.tradeId ?? body.trade, 'tradeId'),
-    phaseId: resolveObject(catalog.phases, body.phaseId ?? body.phase, 'phaseId'),
-    roomIds: [],
-    doneAt: status === 'erledigt' ? berlinDateTime(now) : undefined,
-  });
-}
-
-export function buildDiaryEntry(input, catalog, now = new Date()) {
-  const body = asObject(input);
-  const { options } = catalog;
-  const date = optionalDate(body.date, 'date') ?? berlinDate(now);
-  const [, month, day] = date.split('-');
-  return withoutUndefined({
-    date,
-    title: optionalText(body.title, 'title', 200) ?? `Tagebuch ${day}.${month}.`,
-    text: requiredText(body.text, 'text', 20000),
-    weather: resolveOption(options.weather, body.weather, 'weather'),
-    present: resolveMany(body.present, 'present', (v, f) => resolveOption(options.people, v, f)),
-    defects: optionalBoolean(body.defects, 'defects') ?? false,
-    phaseId: resolveObject(catalog.phases, body.phaseId ?? body.phase, 'phaseId'),
-    tradeIds: resolveMany(body.tradeIds ?? body.trades, 'tradeIds', (v, f) => resolveObject(catalog.trades, v, f)),
-    roomIds: [],
-    photoIds: [],
-  });
-}
-
-export function buildNote(input, _catalog, now = new Date()) {
-  const body = asObject(input);
-  return {
-    text: requiredText(body.text, 'text', 20000),
-    at: berlinDateTime(now),
-    roomIds: [],
-    pinned: optionalBoolean(body.pinned, 'pinned') ?? false,
+function contact(field) {
+  return (value, catalog) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    try {
+      return resolveObject(catalog.contacts, value, field);
+    } catch (error) {
+      if (error instanceof ApiError && error.message.includes('gibt es nicht')) {
+        throw new ApiError(400, `${field}: „${value}“ gibt es nicht als Kontakt. Erst mit create_contact anlegen oder ohne Kontakt speichern.`);
+      }
+      throw error;
+    }
   };
+}
+
+function priceSplit(gross, rate) {
+  if (!(rate > 0) || !(gross > 0)) return { amountNet: undefined, vatAmount: undefined };
+  const net = round2(gross / (1 + rate / 100));
+  return { amountNet: net, vatAmount: round2(gross - net) };
+}
+
+const SPECS = {
+  costs: {
+    scope: 'costs',
+    dateField: 'date',
+    link: (id) => `#/kosten/${id}`,
+    fields: {
+      date: { parse: (v) => optionalDate(v, 'date'), fallback: (now) => berlinDate(now), required: true },
+      vendor: { parse: textField('vendor', 200), empty: '' },
+      description: { parse: textField('description', 2000), empty: '' },
+      amountGross: { parse: (v) => parseAmount(v, 'amountGross'), required: true },
+      vatRate: { parse: parseVatRate },
+      category: { parse: option('costCategories', 'category'), empty: '' },
+      tradeId: { parse: trade('tradeId') },
+      roomIds: { parse: rooms('rooms'), empty: [] },
+      paymentStatus: { parse: option('paymentStatus', 'paymentStatus'), fallback: () => 'bezahlt', required: true },
+      paidBy: { parse: option('payers', 'paidBy') },
+      paymentMethod: { parse: option('paymentMethods', 'paymentMethod') },
+      invoiceNumber: { parse: textField('invoiceNumber', 100) },
+      notes: { parse: textField('notes', 5000) },
+    },
+    created: { receiptPhotoIds: [] },
+    /** Netto und MwSt. folgen Brutto und Satz, wie im Kosten-Editor */
+    derive(record, existing, touched) {
+      if (!touched.has('amountGross') && !touched.has('vatRate')) return {};
+      const gross = touched.has('amountGross') ? record.amountGross : existing.amountGross;
+      const rate = touched.has('vatRate') ? record.vatRate : existing.vatRate;
+      return priceSplit(gross, rate);
+    },
+    check(merged) {
+      if (!merged.vendor && !merged.description) throw new ApiError(400, 'vendor oder description angeben');
+    },
+    foreign: ['paymentStatus', 'paidBy', 'paymentMethod'],
+    appendTo: 'notes',
+    search: ['vendor', 'description', 'notes', 'invoiceNumber'],
+    title: (doc) => `${doc.vendor || doc.description || 'Kosten'} · ${doc.amountGross} €`,
+  },
+  tasks: {
+    scope: 'tasks',
+    dateField: null,
+    link: (id) => `#/aufgaben?aufgabe=${id}`,
+    fields: {
+      title: { parse: textField('title', 300), required: true },
+      notes: { parse: textField('notes', 5000) },
+      status: { parse: option('taskStatus', 'status'), fallback: () => 'offen', required: true },
+      priority: { parse: option('priority', 'priority'), fallback: () => 'mittel', required: true },
+      due: { parse: (v) => optionalDate(v, 'due') },
+      assignees: { parse: options('people', 'assignees'), empty: [] },
+      area: { parse: option('taskAreas', 'area') },
+      tradeId: { parse: trade('tradeId') },
+      phaseId: { parse: phase('phaseId') },
+      roomIds: { parse: rooms('rooms'), empty: [] },
+    },
+    created: {},
+    /** wie toggleTaskDone: erledigt setzt doneAt und nimmt die Erinnerung weg, offen nimmt doneAt weg */
+    derive(record, existing, touched, now) {
+      if (!touched.has('status')) return {};
+      const done = record.status === 'erledigt';
+      const was = existing.status === 'erledigt';
+      if (done && !was) return { doneAt: berlinDateTime(now), reminderAt: undefined };
+      if (!done && was) return { doneAt: undefined };
+      return {};
+    },
+    foreign: ['status', 'due', 'priority', 'assignees'],
+    appendTo: 'notes',
+    search: ['title', 'notes'],
+    title: (doc) => doc.title,
+  },
+  diary: {
+    scope: 'diary',
+    dateField: 'date',
+    link: (id) => `#/tagebuch/${id}`,
+    fields: {
+      date: { parse: (v) => optionalDate(v, 'date'), fallback: (now) => berlinDate(now), required: true },
+      title: { parse: textField('title', 200), fallback: (now, record) => `Tagebuch ${record.date.slice(8, 10)}.${record.date.slice(5, 7)}.`, required: true },
+      text: { parse: textField('text', 20000), required: true },
+      weather: { parse: option('weather', 'weather') },
+      present: { parse: options('people', 'present'), empty: [] },
+      defects: { parse: (v) => optionalBoolean(v, 'defects'), fallback: () => false, required: true },
+      phaseId: { parse: phase('phaseId') },
+      tradeIds: { parse: trades('trades'), empty: [] },
+      roomIds: { parse: rooms('rooms'), empty: [] },
+    },
+    created: { photoIds: [] },
+    foreign: [],
+    appendTo: 'text',
+    search: ['title', 'text'],
+    title: (doc) => doc.title,
+  },
+  notes: {
+    scope: 'notes',
+    dateField: 'at',
+    link: () => '#/notizen',
+    fields: {
+      text: { parse: textField('text', 20000), required: true },
+      at: { parse: (v) => optionalDateTime(v, 'at'), fallback: (now) => berlinDateTime(now), required: true },
+      pinned: { parse: (v) => optionalBoolean(v, 'pinned'), fallback: () => false, required: true },
+      roomIds: { parse: rooms('rooms'), empty: [] },
+    },
+    created: {},
+    foreign: ['pinned'],
+    appendTo: 'text',
+    search: ['text'],
+    title: (doc) => String(doc.text ?? '').split('\n')[0].slice(0, 80),
+  },
+  contacts: {
+    scope: 'contacts',
+    dateField: null,
+    link: (id) => `#/kontakte?kontakt=${id}`,
+    fields: {
+      name: { parse: textField('name', 200), required: true },
+      company: { parse: textField('company', 200) },
+      roles: { parse: options('contactRoles', 'roles'), empty: [] },
+      phone: { parse: textField('phone', 60) },
+      email: { parse: textField('email', 200) },
+      tradeIds: { parse: trades('trades'), empty: [] },
+      status: { parse: option('contactStatus', 'status') },
+      notes: { parse: textField('notes', 5000) },
+    },
+    created: {},
+    foreign: ['phone', 'email', 'status'],
+    appendTo: 'notes',
+    search: ['name', 'company', 'phone', 'email', 'notes'],
+    title: (doc) => (doc.company ? `${doc.name} (${doc.company})` : doc.name),
+  },
+  contactLogs: {
+    scope: 'contacts',
+    dateField: 'at',
+    link: (id) => `#/gespraeche?eintrag=${id}`,
+    fields: {
+      contactId: { parse: contact('contact'), empty: '' },
+      at: { parse: (v) => optionalDateTime(v, 'at'), fallback: (now) => berlinDateTime(now), required: true },
+      channel: { parse: option('contactChannels', 'channel') },
+      participants: { parse: options('people', 'participants'), empty: [] },
+      text: { parse: textField('text', 20000), required: true },
+    },
+    created: {},
+    foreign: [],
+    appendTo: 'text',
+    search: ['text'],
+    title: (doc) => `Gespräch ${String(doc.at ?? '').slice(0, 10)}`,
+  },
+};
+
+/** wie die Felder in Eingaben heißen dürfen, außer ihrem eigenen Namen */
+const FIELD_ALIASES = { trade: 'tradeId', phase: 'phaseId', trades: 'tradeIds', rooms: 'roomIds', contact: 'contactId' };
+
+/** die gespeicherten Feldnamen einer Eingabe; Unbekanntes ist ein Fehler, kein stilles Weglassen */
+function storedKeys(spec, input, ignore) {
+  const result = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (ignore.includes(key)) continue;
+    const stored = FIELD_ALIASES[key] ?? key;
+    if (!spec.fields[stored]) {
+      throw new ApiError(400, `${key}: unbekanntes Feld. Möglich: ${Object.keys(spec.fields).join(', ')}`);
+    }
+    result[stored] = value;
+  }
+  return result;
+}
+
+/** ein neuer Datensatz aus einer Eingabe */
+export function buildRecord(collection, input, catalog, now = new Date()) {
+  const spec = SPECS[collection];
+  const given = storedKeys(spec, asObject(input), ['id', 'newEntry']);
+  const record = {};
+  for (const [key, rule] of Object.entries(spec.fields)) {
+    let value = rule.parse(given[key], catalog);
+    if (value === undefined && rule.fallback) value = rule.fallback(now, record);
+    if (value === undefined && 'empty' in rule) value = rule.empty;
+    if (value === undefined && rule.required) throw new ApiError(400, `${key} fehlt`);
+    if (value !== undefined) record[key] = value;
+  }
+  spec.check?.(record);
+  const derived = spec.derive?.(record, {}, new Set(Object.keys(record)), now) ?? {};
+  return withoutUndefined({ ...record, ...derived, ...structuredClone(spec.created) });
+}
+
+/**
+ * Was ein Ändern schreibt: `set` die neuen Werte, `remove` die Felder, die wegfallen.
+ * Nur die genannten Felder (und was aus ihnen folgt) werden angefasst – ein Foto, das
+ * inzwischen in der App am Eintrag hängt, bleibt, wo es ist.
+ */
+export function buildPatch(collection, existing, input, catalog, now = new Date()) {
+  const spec = SPECS[collection];
+  const body = asObject(input);
+  const given = storedKeys(spec, body, ['appendText']);
+  const append = optionalText(body.appendText, 'appendText', 20000);
+  if (append) {
+    const before = typeof existing[spec.appendTo] === 'string' ? existing[spec.appendTo].trimEnd() : '';
+    given[spec.appendTo] = before ? `${before}\n\n${append}` : append;
+  }
+  const touched = new Set(Object.keys(given));
+  if (touched.size === 0) throw new ApiError(400, 'Nichts zu ändern');
+
+  const record = {};
+  const remove = [];
+  for (const key of touched) {
+    const rule = spec.fields[key];
+    let value = rule.parse(given[key], catalog);
+    if (value === undefined && rule.required) throw new ApiError(400, `${key} darf nicht leer sein`);
+    if (value === undefined && 'empty' in rule) value = rule.empty;
+    if (value === undefined) remove.push(key);
+    else record[key] = value;
+  }
+  // nur prüfen, was diese Änderung berührt – eine alte Rechnung ohne Händler bleibt bezahlbar
+  if (touched.has('vendor') || touched.has('description')) spec.check?.({ ...existing, ...record });
+  for (const [key, value] of Object.entries(spec.derive?.(record, existing, touched, now) ?? {})) {
+    if (value === undefined) remove.push(key);
+    else record[key] = value;
+  }
+  return { set: record, remove: [...new Set(remove)], touched: [...touched], appended: !!append };
 }
 
 /** hängt einen neuen Text an einen bestehenden Tagebucheintrag desselben Tages an */
 export function mergeDiaryEntry(existing, addition) {
-  const union = (a, b) => [...new Set([...(Array.isArray(a) ? a : []), ...b])];
+  const list = (value) => (Array.isArray(value) ? value : []);
+  const union = (a, b) => [...new Set([...list(a), ...list(b)])];
   const before = typeof existing.text === 'string' ? existing.text.trimEnd() : '';
   return {
     text: before ? `${before}\n\n${addition.text}` : addition.text,
     present: union(existing.present, addition.present),
     tradeIds: union(existing.tradeIds, addition.tradeIds),
+    roomIds: union(existing.roomIds, addition.roomIds),
     defects: existing.defects === true || addition.defects === true,
   };
 }
-
-const BUILDERS = { costs: buildCost, tasks: buildTask, diary: buildDiaryEntry, notes: buildNote };
 
 // ------------------------------------------------ Tokens
 
@@ -885,20 +1064,65 @@ const SERVER_TIME = (fieldPath) => ({ fieldPath, setToServerValue: 'REQUEST_TIME
 // ------------------------------------------------ Vorgänge (gemeinsam für REST und MCP)
 
 async function listObjects(env, collection) {
-  const docs = await firestoreQuery(env, { from: [{ collectionId: collection }], limit: 500 });
+  const docs = await firestoreQuery(env, { from: [{ collectionId: collection }], limit: 1000 });
   return docs
     .filter((doc) => typeof doc.name === 'string')
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name, 'de'))
-    .map((doc) => withoutUndefined({ id: doc.id, name: doc.name, status: doc.status, archived: doc.archived === true || undefined }));
+    .map((doc) =>
+      withoutUndefined({
+        id: doc.id,
+        name: doc.name,
+        status: doc.status,
+        company: doc.company,
+        budgetPlanned: typeof doc.budgetPlanned === 'number' ? doc.budgetPlanned : undefined,
+        offer: typeof doc.offer === 'number' ? doc.offer : undefined,
+        archived: doc.archived === true || undefined,
+      }),
+    );
 }
 
-async function loadCatalog(env) {
-  const [options, trades, phases] = await Promise.all([
+/**
+ * Die Räume der Planung (meta/model-soll, Feld `rooms` als JSON-Text). Nur die: die App
+ * zeigt in der Planungs-Ansicht genau diese ids, und der Bestand ist hier nicht gefragt.
+ * Ein gleicher Name in zwei Geschossen bekommt das Geschoss dazu ("Flur (EG)").
+ */
+export function planningRooms(roomsJson) {
+  let rooms = [];
+  try {
+    const parsed = typeof roomsJson === 'string' ? JSON.parse(roomsJson) : null;
+    rooms = Array.isArray(parsed?.rooms) ? parsed.rooms : [];
+  } catch {
+    return [];
+  }
+  const valid = rooms.filter((room) => room && typeof room.id === 'string' && typeof room.name === 'string');
+  const count = new Map();
+  for (const room of valid) count.set(room.name, (count.get(room.name) ?? 0) + 1);
+  return valid.map((room) => ({
+    id: room.id,
+    name: count.get(room.name) > 1 ? `${room.name} (${room.floor})` : room.name,
+    floor: room.floor,
+  }));
+}
+
+async function loadRooms(env) {
+  try {
+    const doc = await firestore(env, 'GET', '/meta/model-soll?mask.fieldPaths=rooms');
+    return planningRooms(decodeFields(doc.fields ?? {}).rooms);
+  } catch (error) {
+    if (error.firestoreStatus === 'NOT_FOUND') return [];
+    throw error;
+  }
+}
+
+async function loadCatalog(env, { contacts = false } = {}) {
+  const [stored, tradeList, phaseList, roomList, contactList] = await Promise.all([
     firestoreGet(env, 'meta/options'),
     listObjects(env, 'trades'),
     listObjects(env, 'phases'),
+    loadRooms(env),
+    contacts ? listObjects(env, 'contacts') : Promise.resolve([]),
   ]);
-  return { options: normalizeOptions(options), trades, phases };
+  return { options: normalizeOptions(stored), trades: tradeList, phases: phaseList, rooms: roomList, contacts: contactList };
 }
 
 /** was ein Client zum Ausfüllen braucht: nur sichtbare Einträge, Kennung und Name */
@@ -911,20 +1135,33 @@ function publicCatalog(catalog) {
     ),
     trades: active(catalog.trades).map(({ id, name, status }) => ({ id, name, status })),
     phases: active(catalog.phases).map(({ id, name, status }) => ({ id, name, status })),
+    rooms: catalog.rooms.map(({ id, name, floor }) => ({ id, name, floor })),
   };
+}
+
+function specOf(collection) {
+  const spec = SPECS[collection];
+  if (!spec) throw new ApiError(404, `Unbekannte Sammlung. Möglich: ${Object.keys(SPECS).join(', ')}`);
+  return spec;
 }
 
 function appLink(env, collection, id) {
   const base = String(env.APP_URL || DEFAULT_APP_URL).replace(/\/?$/, '/');
-  return `${base}${COLLECTIONS[collection].link(id)}`;
+  return `${base}${SPECS[collection].link(id)}`;
+}
+
+function isOwn(doc) {
+  return String(doc.createdVia ?? '').startsWith('api:');
 }
 
 async function createEntry(env, auth, collection, input) {
-  requireScope(auth, COLLECTIONS[collection].scope);
-  const catalog = collection === 'notes' ? null : await loadCatalog(env);
-  const record = BUILDERS[collection](input, catalog);
+  const spec = specOf(collection);
+  requireScope(auth, spec.scope);
+  const body = asObject(input);
+  const catalog = await loadCatalog(env, { contacts: collection === 'contactLogs' });
+  const record = buildRecord(collection, body, catalog);
 
-  if (collection === 'diary' && input.newEntry !== true) {
+  if (collection === 'diary' && body.newEntry !== true) {
     // die App behandelt "Eintrag für heute" als einen: an den bestehenden anhängen
     const [existing] = await firestoreQuery(env, {
       from: [{ collectionId: 'diary' }],
@@ -945,7 +1182,7 @@ async function createEntry(env, auth, collection, input) {
     }
   }
 
-  const id = input.id === undefined ? newDocId() : newDocIdFrom(input.id);
+  const id = body.id === undefined ? newDocId() : newDocIdFrom(body.id);
   const fields = encodeFields({ ...record, id, createdBy: auth.owner, updatedBy: auth.owner, createdVia: `api:${auth.id}` });
   try {
     await firestoreCommit(env, [
@@ -965,6 +1202,45 @@ async function createEntry(env, auth, collection, input) {
   return { collection, id, created: true, link: appLink(env, collection, id), record };
 }
 
+/**
+ * Ändert einen Eintrag. Was über die API angelegt wurde, darf in allen Feldern geändert
+ * werden; ein Eintrag aus der App nur in den wenigen Feldern unter `foreign` und per
+ * `appendText` – so schreibt ein Missverständnis im Chat keine gepflegte Rechnung um.
+ */
+async function updateEntry(env, auth, collection, id, input) {
+  const spec = specOf(collection);
+  requireScope(auth, spec.scope);
+  existingDocId(id);
+  const body = asObject(input);
+  const existing = await firestoreGet(env, `${collection}/${id}`);
+  if (!existing) throw new ApiError(404, 'Diesen Eintrag gibt es nicht');
+
+  if (!isOwn(existing)) {
+    const keys = Object.keys(body)
+      .filter((key) => key !== 'appendText')
+      .map((key) => FIELD_ALIASES[key] ?? key);
+    const forbidden = keys.filter((key) => !spec.foreign.includes(key));
+    if (forbidden.length) {
+      const allowed = [...spec.foreign, 'appendText'].join(', ');
+      throw new ApiError(403, `Bei Einträgen aus der App darf die API nur ${allowed} ändern, nicht ${forbidden.join(', ')}`);
+    }
+  }
+
+  const catalog = await loadCatalog(env, { contacts: collection === 'contactLogs' });
+  const patch = buildPatch(collection, existing, body, catalog);
+  const paths = [...Object.keys(patch.set), ...patch.remove, 'updatedBy'];
+  await firestoreCommit(env, [
+    {
+      update: { name: docName(env, `${collection}/${id}`), fields: encodeFields({ ...patch.set, updatedBy: auth.owner }) },
+      // ein Feld in der Maske, das in `fields` fehlt, löscht Firestore
+      updateMask: { fieldPaths: paths },
+      updateTransforms: [SERVER_TIME('updatedAt')],
+      currentDocument: { updateTime: existing._updateTime },
+    },
+  ]);
+  return { collection, id, updated: patch.touched, removed: patch.remove, link: appLink(env, collection, id), changes: patch.set };
+}
+
 /** Felder, die ein Client nicht braucht (Zeitstempel, Bearbeiter) */
 function publicRecord(doc) {
   const record = { ...doc };
@@ -972,32 +1248,50 @@ function publicRecord(doc) {
   return record;
 }
 
+function flag(value, otherwise) {
+  if (value === undefined || value === null || value === '') return otherwise;
+  return !(value === false || value === 'false' || value === '0');
+}
+
 async function listEntries(env, auth, collection, params) {
   requireScope(auth, 'read');
-  if (!COLLECTIONS[collection]) throw new ApiError(404, 'Unbekannte Sammlung');
+  const spec = specOf(collection);
   const limit = Math.min(Math.max(Number(params.limit ?? 20) || 20, 1), 100);
-  const dateField = COLLECTIONS[collection].dateField;
+  const query = optionalText(params.query, 'query', 200);
 
-  if (!dateField) {
-    const all = await firestoreQuery(env, { from: [{ collectionId: collection }], limit: 1000 });
-    const open = params.open !== false && params.open !== 'false' && params.open !== '0';
-    return all
-      .filter((task) => !open || task.status !== 'erledigt')
-      .sort((a, b) => String(a.due ?? '9999').localeCompare(String(b.due ?? '9999')) || String(a.title).localeCompare(String(b.title), 'de'))
-      .slice(0, limit)
-      .map(publicRecord);
+  if (!spec.dateField) {
+    let all = await firestoreQuery(env, { from: [{ collectionId: collection }], limit: 1000 });
+    if (collection === 'tasks') {
+      const open = flag(params.open, true);
+      all = all
+        .filter((task) => !open || task.status !== 'erledigt')
+        .sort((a, b) => String(a.due ?? '9999').localeCompare(String(b.due ?? '9999')) || String(a.title).localeCompare(String(b.title), 'de'));
+    } else {
+      all = all.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
+    }
+    if (query) all = all.filter((doc) => matchesQuery(spec, doc, query));
+    return all.slice(0, limit).map(publicRecord);
   }
 
   const since = optionalDate(params.since, 'since');
-  const query = {
+  // ein Filter auf ein zweites Feld bräuchte einen eigenen Index; daher mehr holen und hier filtern
+  const filtering = !!query || !!params.contact;
+  const structured = {
     from: [{ collectionId: collection }],
-    orderBy: [{ field: { fieldPath: dateField }, direction: 'DESCENDING' }],
-    limit,
+    orderBy: [{ field: { fieldPath: spec.dateField }, direction: 'DESCENDING' }],
+    limit: filtering ? 1000 : limit,
   };
   if (since) {
-    query.where = { fieldFilter: { field: { fieldPath: dateField }, op: 'GREATER_THAN_OR_EQUAL', value: encodeValue(since) } };
+    structured.where = { fieldFilter: { field: { fieldPath: spec.dateField }, op: 'GREATER_THAN_OR_EQUAL', value: encodeValue(since) } };
   }
-  return (await firestoreQuery(env, query)).map(publicRecord);
+  let rows = await firestoreQuery(env, structured);
+  if (collection === 'contactLogs' && params.contact) {
+    const catalog = await loadCatalog(env, { contacts: true });
+    const contactId = contact('contact')(params.contact, catalog);
+    rows = rows.filter((row) => row.contactId === contactId);
+  }
+  if (query) rows = rows.filter((doc) => matchesQuery(spec, doc, query));
+  return rows.slice(0, limit).map(publicRecord);
 }
 
 async function completeTask(env, auth, id) {
@@ -1025,16 +1319,182 @@ async function completeTask(env, auth, id) {
 
 /** löscht nur, was über die API entstanden ist – ein verlorenes Token kann nichts Älteres zerstören */
 async function deleteEntry(env, auth, collection, id) {
-  if (!COLLECTIONS[collection]) throw new ApiError(404, 'Unbekannte Sammlung');
-  requireScope(auth, COLLECTIONS[collection].scope);
+  const spec = specOf(collection);
+  requireScope(auth, spec.scope);
   existingDocId(id);
   const doc = await firestoreGet(env, `${collection}/${id}`);
   if (!doc) throw new ApiError(404, 'Diesen Eintrag gibt es nicht');
-  if (!String(doc.createdVia ?? '').startsWith('api:')) {
+  if (!isOwn(doc)) {
     throw new ApiError(403, 'Über die API lässt sich nur löschen, was über die API angelegt wurde');
   }
   await firestoreCommit(env, [{ delete: docName(env, `${collection}/${id}`), currentDocument: { updateTime: doc._updateTime } }]);
   return { collection, id, deleted: true };
+}
+
+// ------------------------------------------------ Kostenauswertung
+
+const GROUPINGS = ['category', 'trade', 'month', 'paidBy', 'paymentStatus', 'room'];
+
+/**
+ * Summen über die Kosten, wie die Übersicht in der App (costAggregation.ts): Brutto, jeder
+ * Eintrag zählt, gleich welcher Zahlungsstatus. Eine Rechnung an zwei Räumen zählt bei
+ * beiden – die Summe über die Räume ist dann größer als die Gesamtsumme.
+ */
+export function summarize(costs, catalog, params = {}) {
+  const groupBy = params.groupBy ?? 'category';
+  if (!GROUPINGS.includes(groupBy)) throw new ApiError(400, `groupBy: ${GROUPINGS.join(', ')}`);
+  const from = optionalDate(params.from, 'from');
+  const to = optionalDate(params.to, 'to');
+  const category = resolveOption(catalog.options.costCategories, params.category, 'category');
+  const tradeId = resolveObject(catalog.trades, params.trade ?? params.tradeId, 'trade');
+  const paidBy = resolveOption(catalog.options.payers, params.paidBy, 'paidBy');
+  const paymentStatus = resolveOption(catalog.options.paymentStatus, params.paymentStatus, 'paymentStatus');
+  const roomId = resolveObject(catalog.rooms, params.room, 'room');
+
+  const amount = (cost) => (Number.isFinite(cost.amountGross) ? cost.amountGross : 0);
+  const chosen = costs.filter(
+    (cost) =>
+      (!from || String(cost.date) >= from) &&
+      (!to || String(cost.date) <= to) &&
+      (!category || cost.category === category) &&
+      (!tradeId || cost.tradeId === tradeId) &&
+      (!paidBy || cost.paidBy === paidBy) &&
+      (!paymentStatus || cost.paymentStatus === paymentStatus) &&
+      (!roomId || (cost.roomIds ?? []).includes(roomId)),
+  );
+
+  const labelIn = (entries, id, none) => (id ? (entries.find((e) => e.id === id)?.label ?? id) : none);
+  const keysOf = {
+    category: (c) => [[c.category || '', labelIn(catalog.options.costCategories, c.category, 'ohne Kategorie')]],
+    trade: (c) => [[c.tradeId || '', c.tradeId ? (catalog.trades.find((t) => t.id === c.tradeId)?.name ?? c.tradeId) : 'ohne Gewerk']],
+    month: (c) => [[String(c.date).slice(0, 7), String(c.date).slice(0, 7)]],
+    paidBy: (c) => [[c.paidBy || '', labelIn(catalog.options.payers, c.paidBy, 'nicht angegeben')]],
+    paymentStatus: (c) => [[c.paymentStatus || '', labelIn(catalog.options.paymentStatus, c.paymentStatus, 'nicht angegeben')]],
+    room: (c) =>
+      (c.roomIds?.length ? c.roomIds : ['']).map((id) => [id, id ? (catalog.rooms.find((r) => r.id === id)?.name ?? id) : 'ohne Raum']),
+  }[groupBy];
+
+  const groups = new Map();
+  for (const cost of chosen) {
+    for (const [key, label] of keysOf(cost)) {
+      const group = groups.get(key) ?? { key, label, total: 0, count: 0 };
+      group.total += amount(cost);
+      group.count += 1;
+      groups.set(key, group);
+    }
+  }
+  let list = [...groups.values()].map((group) => ({ ...group, total: round2(group.total) }));
+  if (groupBy === 'month') list.sort((a, b) => a.key.localeCompare(b.key));
+  else list.sort((a, b) => b.total - a.total);
+  if (groupBy === 'trade') {
+    list = list.map((group) => {
+      const found = catalog.trades.find((t) => t.id === group.key);
+      if (!found || found.budgetPlanned === undefined) return { ...group, offer: found?.offer };
+      return withoutUndefined({ ...group, budgetPlanned: found.budgetPlanned, offer: found.offer, remaining: round2(found.budgetPlanned - group.total) });
+    });
+  }
+  const open = chosen.filter((cost) => cost.paymentStatus === 'offen');
+  return {
+    from,
+    to,
+    groupBy,
+    total: round2(chosen.reduce((sum, cost) => sum + amount(cost), 0)),
+    count: chosen.length,
+    unpaid: { total: round2(open.reduce((sum, cost) => sum + amount(cost), 0)), count: open.length },
+    groups: list,
+  };
+}
+
+async function summarizeCosts(env, auth, params) {
+  requireScope(auth, 'read');
+  const [costs, catalog] = await Promise.all([
+    firestoreQuery(env, { from: [{ collectionId: 'costs' }], limit: 10000 }),
+    loadCatalog(env),
+  ]);
+  return summarize(costs, catalog, params);
+}
+
+// ------------------------------------------------ Suche
+
+/**
+ * Faltet Text wie die Suche der App (src/search/normalize.ts), vereinfacht: klein, ohne
+ * Akzente, ä/ae → a, ß/ss → s, Tausender- und Datumspunkte zwischen Ziffern weg.
+ */
+export function fold(value) {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/ß/g, 'ss')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/(\d)[.,](?=\d)/g, '$1')
+    .replace(/ae/g, 'a')
+    .replace(/oe/g, 'o')
+    .replace(/ue/g, 'u')
+    .replace(/ss/g, 's')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+function haystack(spec, doc, extra = '') {
+  return fold([...spec.search.map((key) => doc[key]), extra].filter((v) => typeof v === 'string' || typeof v === 'number').join(' '));
+}
+
+function matchesQuery(spec, doc, query, extra = '') {
+  const text = haystack(spec, doc, extra);
+  return fold(query).split(' ').filter(Boolean).every((word) => text.includes(word));
+}
+
+function snippet(spec, doc, query) {
+  const first = fold(query).split(' ')[0] ?? '';
+  for (const key of spec.search) {
+    const value = doc[key];
+    if (typeof value !== 'string' || !fold(value).includes(first)) continue;
+    const at = Math.max(0, Math.round((fold(value).indexOf(first) / Math.max(fold(value).length, 1)) * value.length) - 80);
+    const cut = value.slice(at, at + 240).replace(/\s+/g, ' ').trim();
+    return `${at > 0 ? '…' : ''}${cut}${at + 240 < value.length ? '…' : ''}`;
+  }
+  return '';
+}
+
+async function searchEntries(env, auth, params) {
+  requireScope(auth, 'read');
+  const query = requiredText(params.query ?? params.q, 'query', 200);
+  if (!fold(query)) throw new ApiError(400, 'query: keine Buchstaben oder Ziffern');
+  const wanted = params.collections
+    ? (Array.isArray(params.collections) ? params.collections : String(params.collections).split(','))
+    : Object.keys(SPECS);
+  for (const collection of wanted) specOf(collection);
+  const limit = Math.min(Math.max(Number(params.limit ?? 20) || 20, 1), 50);
+
+  const loaded = await Promise.all(
+    wanted.map((collection) => firestoreQuery(env, { from: [{ collectionId: collection }], limit: 2000 }).then((docs) => [collection, docs])),
+  );
+  const contactNames = new Map();
+  if (wanted.includes('contactLogs')) {
+    const contacts = loaded.find(([c]) => c === 'contacts')?.[1] ?? (await firestoreQuery(env, { from: [{ collectionId: 'contacts' }], limit: 1000 }));
+    for (const doc of contacts) contactNames.set(doc.id, [doc.name, doc.company].filter(Boolean).join(' '));
+  }
+
+  const hits = [];
+  for (const [collection, docs] of loaded) {
+    const spec = SPECS[collection];
+    for (const doc of docs) {
+      const extra = collection === 'contactLogs' ? (contactNames.get(doc.contactId) ?? '') : '';
+      if (!matchesQuery(spec, doc, query, extra)) continue;
+      hits.push(
+        withoutUndefined({
+          collection,
+          id: doc.id,
+          date: spec.dateField ? String(doc[spec.dateField] ?? '').slice(0, 10) : (doc.due ?? undefined),
+          title: collection === 'contactLogs' && extra ? `Gespräch mit ${extra}` : spec.title(doc),
+          snippet: snippet(spec, doc, query),
+          link: appLink(env, collection, doc.id),
+        }),
+      );
+    }
+  }
+  hits.sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')));
+  return { query, count: hits.length, hits: hits.slice(0, limit) };
 }
 
 // ------------------------------------------------ REST: /api/v1/…
@@ -1059,9 +1519,15 @@ function bearer(request) {
 async function handleApi(request, url, env, ctx) {
   try {
     const auth = await authenticate(env, ctx, bearer(request));
-    const parts = url.pathname.slice('/api/v1'.length).split('/').filter(Boolean).map(decodeURIComponent);
+    let parts;
+    try {
+      parts = url.pathname.slice('/api/v1'.length).split('/').filter(Boolean).map(decodeURIComponent);
+    } catch {
+      throw new ApiError(400, 'Ungültiger Pfad');
+    }
     const [collection, id, action] = parts;
     const method = request.method;
+    const params = Object.fromEntries(url.searchParams);
 
     if (parts.length === 0 && method === 'GET') {
       return json(200, { ok: true, token: { name: auth.name, scopes: auth.scopes, owner: auth.owner } });
@@ -1069,11 +1535,16 @@ async function handleApi(request, url, env, ctx) {
     if (collection === 'catalog' && parts.length === 1 && method === 'GET') {
       return json(200, publicCatalog(await loadCatalog(env)));
     }
-    if (COLLECTIONS[collection]) {
-      if (parts.length === 1 && method === 'POST') return json(201, await createEntry(env, auth, collection, asObject(await readBody(request))));
-      if (parts.length === 1 && method === 'GET') {
-        return json(200, { entries: await listEntries(env, auth, collection, Object.fromEntries(url.searchParams)) });
-      }
+    if (collection === 'search' && parts.length === 1 && method === 'GET') {
+      return json(200, await searchEntries(env, auth, params));
+    }
+    if (collection === 'costs' && id === 'summary' && parts.length === 2 && method === 'GET') {
+      return json(200, await summarizeCosts(env, auth, params));
+    }
+    if (SPECS[collection]) {
+      if (parts.length === 1 && method === 'POST') return json(201, await createEntry(env, auth, collection, await readBody(request)));
+      if (parts.length === 1 && method === 'GET') return json(200, { entries: await listEntries(env, auth, collection, params) });
+      if (parts.length === 2 && method === 'PATCH') return json(200, await updateEntry(env, auth, collection, id, await readBody(request)));
       if (parts.length === 2 && method === 'DELETE') return json(200, await deleteEntry(env, auth, collection, id));
       if (collection === 'tasks' && action === 'done' && parts.length === 3 && method === 'POST') {
         return json(200, await completeTask(env, auth, id));
@@ -1101,21 +1572,27 @@ const MCP_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'];
 
 const MCP_INSTRUCTIONS = [
   'Reno Master ist die Renovierungs-App für das Haus Schlesierstraße 31.',
-  'Vor dem ersten Anlegen get_catalog aufrufen: dort stehen das heutige Datum, Kostenkategorien, Personen, Gewerke und Phasen.',
-  'Auswahlwerte (category, paidBy, assignees, tradeId …) als Kennung oder genauen Namen aus dem Katalog angeben; unbekannte Werte lehnt der Server mit der Liste der möglichen ab.',
+  'Vor dem ersten Anlegen get_catalog aufrufen: dort stehen das heutige Datum, Kostenkategorien, Personen, Gewerke, Phasen und Räume.',
+  'Auswahlwerte (category, paidBy, assignees, trade, rooms …) als Kennung oder genauen Namen aus dem Katalog angeben; unbekannte Werte lehnt der Server mit der Liste der möglichen ab.',
   'Beträge sind Brutto in Euro. Ohne Datumsangabe gilt heute (Europe/Berlin).',
-  'Nach dem Anlegen kurz bestätigen, was eingetragen wurde, mit dem Link aus der Antwort.',
+  'Nach dem Anlegen oder Ändern kurz bestätigen, was eingetragen wurde, mit dem Link aus der Antwort.',
   'Ein Tagebucheintrag für einen Tag, an dem es schon einen gibt, wird an diesen angehängt.',
+  'Korrekturen mit update_entry statt löschen und neu anlegen. Selbst angelegte Einträge lassen sich ganz ändern, Einträge aus der App nur in wenigen Feldern und per appendText.',
+  'Für ein Telefonat oder Treffen mit einem Handwerker create_contact_log; den Kontakt vorher mit list_entries (collection contacts, query) suchen.',
+  'Fragen nach Ausgaben mit summarize_costs beantworten, nicht durch eigenes Zusammenzählen; Fragen nach früheren Ereignissen mit search.',
 ].join(' ');
 
 const ref = (description) => ({ type: 'string', description });
 const refs = (description) => ({ type: 'array', items: { type: 'string' }, description });
+const ROOMS = refs('Räume der Planung (rooms im Katalog), ids oder Namen');
+const COLLECTION_NAMES = Object.keys(SPECS);
+const COLLECTION_HELP = 'costs Kosten, tasks Aufgaben, diary Tagebuch, notes Notizen, contacts Kontakte, contactLogs Gespräche';
 
 const MCP_TOOLS = [
   {
     name: 'get_catalog',
     scope: null,
-    description: 'Heutiges Datum und alle Auswahlwerte: Kostenkategorien, Zahlungsarten, Bezahlt von, Personen, Aufgabenbereiche, Status, Prioritäten, Wetter, Gewerke und Phasen.',
+    description: 'Heutiges Datum und alle Auswahlwerte: Kostenkategorien, Zahlungsarten, Bezahlt von, Personen, Aufgabenbereiche, Status, Prioritäten, Wetter, Kontaktrollen, Gesprächsarten, Gewerke, Phasen und Räume.',
     inputSchema: { type: 'object', properties: {} },
     run: (env) => loadCatalog(env).then(publicCatalog),
   },
@@ -1134,7 +1611,8 @@ const MCP_TOOLS = [
         paidBy: ref('wer bezahlt hat (options.payers)'),
         paymentMethod: ref('Zahlungsart (options.paymentMethods)'),
         paymentStatus: ref('options.paymentStatus, ohne Angabe bezahlt'),
-        tradeId: ref('Gewerk (trades), id oder Name'),
+        trade: ref('Gewerk (trades), id oder Name'),
+        rooms: ROOMS,
         vatRate: { type: 'number', enum: [0, 7, 19], description: 'MwSt.-Satz, nur wenn bekannt' },
         invoiceNumber: ref('Rechnungsnummer'),
         notes: ref('Anmerkungen'),
@@ -1158,8 +1636,9 @@ const MCP_TOOLS = [
         status: ref('options.taskStatus, ohne Angabe offen'),
         assignees: refs('zuständige Personen (options.people)'),
         area: ref('Bereich (options.taskAreas)'),
-        tradeId: ref('Gewerk (trades), id oder Name'),
-        phaseId: ref('Phase (phases), id oder Name'),
+        trade: ref('Gewerk (trades), id oder Name'),
+        phase: ref('Phase (phases), id oder Name'),
+        rooms: ROOMS,
         id: ref('freiwillig: eigene id, macht eine Wiederholung unschädlich'),
       },
       required: ['title'],
@@ -1179,8 +1658,9 @@ const MCP_TOOLS = [
         present: refs('wer da war (options.people)'),
         weather: ref('options.weather'),
         defects: { type: 'boolean', description: 'Mängel festgestellt' },
-        phaseId: ref('Phase (phases), id oder Name'),
-        tradeIds: refs('Gewerke (trades), ids oder Namen'),
+        phase: ref('Phase (phases), id oder Name'),
+        trades: refs('Gewerke (trades), ids oder Namen'),
+        rooms: ROOMS,
         newEntry: { type: 'boolean', description: 'true: immer einen eigenen Eintrag anlegen statt anzuhängen' },
       },
       required: ['text'],
@@ -1193,20 +1673,89 @@ const MCP_TOOLS = [
     description: 'Legt eine kurze Notiz an.',
     inputSchema: {
       type: 'object',
-      properties: { text: ref('Inhalt der Notiz'), pinned: { type: 'boolean', description: 'oben anheften' } },
+      properties: { text: ref('Inhalt der Notiz'), pinned: { type: 'boolean', description: 'oben anheften' }, rooms: ROOMS },
       required: ['text'],
     },
     run: (env, auth, input) => createEntry(env, auth, 'notes', input),
   },
   {
-    name: 'list_entries',
-    scope: 'read',
-    description: 'Liest die letzten Einträge einer Sammlung, z. B. um Doppeltes zu vermeiden oder eine Frage zu beantworten. Aufgaben: die offenen.',
+    name: 'create_contact',
+    scope: 'contacts',
+    description: 'Legt einen Kontakt an (Handwerker, Firma, Berater). Vorher mit list_entries prüfen, ob es ihn schon gibt.',
     inputSchema: {
       type: 'object',
       properties: {
-        collection: { type: 'string', enum: Object.keys(COLLECTIONS) },
-        since: ref('JJJJ-MM-TT: nur ab diesem Datum (nicht bei Aufgaben)'),
+        name: ref('Name der Person, sonst der Firma'),
+        company: ref('Firma'),
+        roles: refs('Rollen (options.contactRoles)'),
+        phone: ref('Telefon'),
+        email: ref('E-Mail'),
+        trades: refs('Gewerke (trades), ids oder Namen'),
+        status: ref('options.contactStatus'),
+        notes: ref('Anmerkungen'),
+      },
+      required: ['name'],
+    },
+    run: (env, auth, input) => createEntry(env, auth, 'contacts', input),
+  },
+  {
+    name: 'create_contact_log',
+    scope: 'contacts',
+    description: 'Hält ein Gespräch fest (Anruf, Termin, Nachricht) – im Gesprächsprotokoll, beim Kontakt.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        contact: ref('Kontakt: id, Name oder Firma (list_entries collection contacts); leer = ohne Kontakt'),
+        text: ref('was besprochen wurde, mit Absprachen und Terminen'),
+        at: ref('JJJJ-MM-TT oder JJJJ-MM-TTThh:mm, ohne Angabe jetzt'),
+        channel: ref('Gesprächsart (options.contactChannels)'),
+        participants: refs('wer von uns dabei war (options.people)'),
+      },
+      required: ['text'],
+    },
+    run: (env, auth, input) => createEntry(env, auth, 'contactLogs', input),
+  },
+  {
+    name: 'update_entry',
+    scope: 'write',
+    description:
+      'Ändert einen Eintrag. Über diese Schnittstelle angelegte Einträge: alle Felder wie beim Anlegen (null leert ein Feld). ' +
+      'Einträge aus der App nur: Kosten paymentStatus, paidBy, paymentMethod; Aufgaben status, due, priority, assignees; ' +
+      'Notizen pinned; Kontakte phone, email, status – und überall appendText (hängt einen Absatz an Text oder Notizen an).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        collection: { type: 'string', enum: COLLECTION_NAMES, description: COLLECTION_HELP },
+        id: ref('id des Eintrags'),
+        changes: { type: 'object', description: 'die zu ändernden Felder, Namen wie beim Anlegen' },
+        appendText: ref('Absatz, der an den Text (Tagebuch, Notiz, Gespräch) oder die Notizen (Kosten, Aufgabe, Kontakt) angehängt wird'),
+      },
+      required: ['collection', 'id'],
+    },
+    run: (env, auth, input) =>
+      updateEntry(env, auth, String(input.collection ?? ''), input.id, {
+        ...(input.changes && typeof input.changes === 'object' ? input.changes : {}),
+        ...(input.appendText !== undefined ? { appendText: input.appendText } : {}),
+      }),
+  },
+  {
+    name: 'complete_task',
+    scope: 'tasks',
+    description: 'Hakt eine Aufgabe als erledigt ab (id aus list_entries oder search).',
+    inputSchema: { type: 'object', properties: { id: ref('id der Aufgabe') }, required: ['id'] },
+    run: (env, auth, input) => completeTask(env, auth, input.id),
+  },
+  {
+    name: 'list_entries',
+    scope: 'read',
+    description: 'Liest die letzten Einträge einer Sammlung, neueste zuerst. Aufgaben: die offenen, nach Fälligkeit. Kontakte: alphabetisch.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        collection: { type: 'string', enum: COLLECTION_NAMES, description: COLLECTION_HELP },
+        since: ref('JJJJ-MM-TT: nur ab diesem Datum (nicht bei Aufgaben und Kontakten)'),
+        query: ref('nur Einträge, die diese Wörter enthalten'),
+        contact: ref('nur bei contactLogs: Gespräche mit diesem Kontakt'),
         limit: { type: 'number', description: 'höchstens so viele, Standard 20, maximal 100' },
         open: { type: 'boolean', description: 'nur bei Aufgaben: false zeigt auch erledigte' },
       },
@@ -1215,27 +1764,56 @@ const MCP_TOOLS = [
     run: (env, auth, input) => listEntries(env, auth, String(input.collection ?? ''), input).then((entries) => ({ entries })),
   },
   {
-    name: 'complete_task',
-    scope: 'tasks',
-    description: 'Hakt eine Aufgabe als erledigt ab (id aus list_entries).',
-    inputSchema: { type: 'object', properties: { id: ref('id der Aufgabe') }, required: ['id'] },
-    run: (env, auth, input) => completeTask(env, auth, input.id),
+    name: 'search',
+    scope: 'read',
+    description: 'Sucht Wörter in allen Einträgen (Tagebuch, Kosten, Aufgaben, Notizen, Kontakte, Gespräche), z. B. "Estrich" oder "Müller Angebot". Neueste zuerst.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: ref('Suchwörter; alle müssen vorkommen, Wortteile zählen'),
+        collections: { type: 'array', items: { type: 'string', enum: COLLECTION_NAMES }, description: 'nur in diesen suchen' },
+        limit: { type: 'number', description: 'höchstens so viele Treffer, Standard 20' },
+      },
+      required: ['query'],
+    },
+    run: (env, auth, input) => searchEntries(env, auth, input),
+  },
+  {
+    name: 'summarize_costs',
+    scope: 'read',
+    description: 'Summen der Kosten (brutto), gruppiert und gefiltert – für Fragen wie "Was hat die Elektrik bisher gekostet?". Bei groupBy trade mit Budget und Rest.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        groupBy: { type: 'string', enum: GROUPINGS, description: 'Standard category' },
+        from: ref('JJJJ-MM-TT, ab einschließlich'),
+        to: ref('JJJJ-MM-TT, bis einschließlich'),
+        category: ref('nur diese Kategorie'),
+        trade: ref('nur dieses Gewerk'),
+        paidBy: ref('nur von dieser Person bezahlt'),
+        paymentStatus: ref('nur dieser Zahlungsstatus'),
+        room: ref('nur dieser Raum'),
+      },
+    },
+    run: (env, auth, input) => summarizeCosts(env, auth, input),
   },
   {
     name: 'delete_entry',
-    scope: null,
-    description: 'Löscht einen Eintrag, der über diese Schnittstelle angelegt wurde – für Korrekturen direkt nach einem Fehler. Ältere Einträge aus der App bleiben unberührt.',
+    scope: 'write',
+    description: 'Löscht einen Eintrag, der über diese Schnittstelle angelegt wurde. Einträge aus der App bleiben unberührt. Für Korrekturen besser update_entry.',
     inputSchema: {
       type: 'object',
-      properties: { collection: { type: 'string', enum: Object.keys(COLLECTIONS) }, id: ref('id des Eintrags') },
+      properties: { collection: { type: 'string', enum: COLLECTION_NAMES, description: COLLECTION_HELP }, id: ref('id des Eintrags') },
       required: ['collection', 'id'],
     },
     run: (env, auth, input) => deleteEntry(env, auth, String(input.collection ?? ''), input.id),
   },
 ];
 
+const WRITE_SCOPES = ['costs', 'tasks', 'diary', 'notes', 'contacts'];
+
 function toolAllowed(tool, auth) {
-  if (tool.name === 'delete_entry') return ['costs', 'tasks', 'diary', 'notes'].some((s) => auth.scopes.includes(s));
+  if (tool.scope === 'write') return WRITE_SCOPES.some((scope) => auth.scopes.includes(scope));
   return !tool.scope || auth.scopes.includes(tool.scope);
 }
 
@@ -1260,7 +1838,7 @@ export async function mcpMessage(message, auth, env) {
       return rpcResult(id, {
         protocolVersion: MCP_VERSIONS.includes(asked) ? asked : MCP_VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'reno-master', title: 'Reno Master', version: '1.0.0' },
+        serverInfo: { name: 'reno-master', title: 'Reno Master', version: '1.1.0' },
         instructions: MCP_INSTRUCTIONS,
       });
     }
