@@ -35,6 +35,7 @@ vi.mock('./FolderExportSection', () => ({ FolderExportSection: () => <h2>Export 
 vi.mock('./ModelSection', () => ({ ModelSection: () => null }));
 vi.mock('./AppUpdateSection', () => ({ AppUpdateSection: () => null }));
 vi.mock('./DiagSection', () => ({ DiagSection: () => null }));
+vi.mock('./ApiSection', () => ({ ApiSection: () => null }));
 vi.mock('@/data/useOptions', () => {
   const people = [
     { id: 'thomas', label: 'Thomas' },

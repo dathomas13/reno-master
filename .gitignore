@@ -25,7 +25,7 @@ tools/model/scene.json
 tools/model/model_*.png
 tools/model/plan-*.png
 tools/model/package/
-tools/model/__pycache__/
+__pycache__/
 tools/model/.venv/
 
 .tmp-node-tests/
