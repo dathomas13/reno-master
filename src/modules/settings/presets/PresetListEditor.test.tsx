@@ -43,6 +43,13 @@ describe('PresetListEditor', () => {
     expect(props.onAdd).toHaveBeenCalledWith('Paul');
   });
 
+  it('"+" with an empty field puts the cursor into it instead of doing nothing', () => {
+    const props = setup();
+    fireEvent.click(screen.getByRole('button', { name: 'Person hinzufügen' }));
+    expect(props.onAdd).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText('Person hinzufügen …')).toHaveFocus();
+  });
+
   it('lets a hidden name through, the add shows it again', () => {
     const props = setup();
     const input = screen.getByPlaceholderText('Person hinzufügen …');

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { EmptyState } from '@/components/Fields';
 import { Sheet } from '@/components/Sheet';
 import { UndoBar } from '@/components/UndoBar';
@@ -69,6 +69,7 @@ export function PresetListEditor({
   const [error, setError] = useState<string | null>(null);
   const [hiddenNote, setHiddenNote] = useState<Hidden | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
 
   const visible = entries.filter((entry) => !entry.archived);
   const hidden = entries.filter((entry) => entry.archived);
@@ -80,7 +81,11 @@ export function PresetListEditor({
   function submit(event: { preventDefault(): void }) {
     event.preventDefault();
     const clean = normalizeEntry(draft, maxLength);
-    if (!clean) return;
+    // "+" with nothing typed yet: into the field, keyboard up - not a dead button
+    if (!clean) {
+      input.current?.focus();
+      return;
+    }
     const duplicate = findDuplicate(
       visible.map((entry) => entry.label),
       clean,
@@ -142,6 +147,7 @@ export function PresetListEditor({
         <form onSubmit={submit} className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-10 bg-bg px-3 pt-3 pb-2">
           <div className="flex gap-2">
             <input
+              ref={input}
               className="field flex-1 min-w-0"
               value={draft}
               maxLength={maxLength}
@@ -158,7 +164,6 @@ export function PresetListEditor({
               type="submit"
               className="btn btn-primary w-11 px-0"
               aria-label={`${singular} hinzufügen`}
-              disabled={!draft.trim()}
             >
               <Icon name="plus" />
             </button>
