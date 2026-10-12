@@ -1,0 +1,19 @@
+# Bereitstellung des Workers aus GitHub Actions (.github/workflows/worker.yml).
+# Im Dashboard muss danach nichts mehr eingefügt werden; Einrichtung in README.md,
+# Abschnitt „Automatisch bereitstellen“.
+name = "reno-files"
+main = "reno-files.js"
+compatibility_date = "2024-09-23"
+workers_dev = true
+
+# Die Text-Variablen (ALLOWED_EMAILS, FIREBASE_PROJECT, APP_URL) stehen im Dashboard und
+# bleiben dort – ohne diese Zeile würde jede Bereitstellung sie löschen. Secrets
+# (SIGNING_KEY, DIAG_TOKEN, FIREBASE_SERVICE_ACCOUNT) fasst eine Bereitstellung nie an.
+keep_vars = true
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "reno-master"
+
+[observability]
+enabled = true

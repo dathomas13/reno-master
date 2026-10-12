@@ -1,9 +1,9 @@
 /**
  * Reno Master – Dateispeicher auf Cloudflare R2.
  *
- * Eine einzige Datei, die sich im Cloudflare-Dashboard einfügen lässt (Workers & Pages →
- * Worker erstellen → Code bearbeiten). Es braucht keine Kommandozeile und keinen
- * Build-Schritt.
+ * Eine einzige Datei ohne Build-Schritt. Bereitgestellt wird sie bei jedem Push, der etwas
+ * unter worker/ ändert, vom Workflow .github/workflows/worker.yml (wrangler.toml); von Hand
+ * ins Cloudflare-Dashboard einfügen geht weiterhin.
  *
  * Warum überhaupt ein Worker: R2 kennt die Firebase-Anmeldung nicht. Der Worker prüft das
  * Anmelde-Ticket, das die App von Firebase bekommt, und lässt nur die beiden erlaubten

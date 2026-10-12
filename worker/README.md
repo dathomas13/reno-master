@@ -38,6 +38,28 @@ App ──Anmeldeticket──▶ Worker ──▶ R2 (privat)
 
 Danach einmal den Workflow *Android APK* starten und die neue Fassung installieren.
 
+## Automatisch bereitstellen
+
+Ändert ein Push etwas unter `worker/`, stellt der Workflow *Worker*
+(`.github/workflows/worker.yml`) den Worker selbst bei Cloudflare bereit – erst nach
+bestandenem Selbsttest. Konfiguration in `wrangler.toml`: Name, R2-Bindung `BUCKET`, und
+`keep_vars`, damit die Variablen aus dem Dashboard bleiben. Secrets fasst eine
+Bereitstellung nie an. Wie Seite und APK gewinnt der letzte Push, aus welchem Branch auch
+immer; ein Push ohne Änderung am Worker lässt ihn in Ruhe.
+
+Einmalig einrichten:
+
+1. Cloudflare-Dashboard → Profil (oben rechts) → **API Tokens** → *Create Token* →
+   Vorlage **„Edit Cloudflare Workers“** → bei *Account Resources* das eigene Konto,
+   bei *Zone Resources* „All zones“ lassen → *Create Token*. Das Token kopieren.
+2. Die **Account ID** steht im Dashboard unter *Workers & Pages* rechts in der Seitenleiste
+   (oder in der Adresszeile nach `dash.cloudflare.com/`).
+3. GitHub → Repo → *Settings → Secrets and variables → Actions* → **New repository secret**:
+   `CLOUDFLARE_API_TOKEN` und `CLOUDFLARE_ACCOUNT_ID`.
+4. Unter *Actions → Worker → Run workflow* einmal von Hand starten und prüfen, dass er grün wird.
+
+Ohne die beiden Secrets läuft nur der Selbsttest, und der Workflow meldet eine Warnung.
+
 ## Prüfen, ob es läuft
 
 In der App ein Foto zu einem Tagebucheintrag hinzufügen. Erscheint es nach kurzer Zeit

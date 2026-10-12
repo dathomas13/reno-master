@@ -206,6 +206,10 @@ Steht:
   (`reno.py summary`) und Suche (`reno.py search`). Felder und Regeln je Sammlung stehen an
   einer Stelle: `SPECS` im Worker. Eine Markierung „über Claude“ in der App gibt es bewusst
   nicht; `createdVia` steht aber in jedem Datensatz.
+  **Der Worker geht von selbst live** (0.89.1): ändert ein Push etwas unter `worker/`, stellt
+  der Workflow *Worker* ihn nach bestandenem Selbsttest mit `wrangler` bereit
+  (`worker/wrangler.toml`, Secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`). Niemand
+  muss mehr etwas ins Dashboard kopieren. Variablen dort bleiben (`keep_vars`), Secrets auch.
 
 Offen:
 

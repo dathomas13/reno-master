@@ -1,0 +1,36 @@
+name: Worker
+
+# Stellt worker/reno-files.js bei Cloudflare bereit, sobald sich unter worker/ etwas
+# ändert - aus jedem Branch, wie Seite und APK: der letzte Push gewinnt. Ein Push ohne
+# Änderung am Worker fasst ihn nicht an.
+on:
+  push:
+    paths:
+      - 'worker/**'
+      - '.github/workflows/worker.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: worker-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      # nichts geht live, was den Selbsttest nicht besteht
+      - run: node worker/selftest.mjs
+      - name: Bereitstellen
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        working-directory: worker
+        run: npx --yes wrangler@4 deploy
+      - name: Ohne Zugang zu Cloudflare
+        if: env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == ''
+        run: echo "::warning::CLOUDFLARE_API_TOKEN oder CLOUDFLARE_ACCOUNT_ID fehlt - der Worker wurde nicht bereitgestellt (worker/README.md, Automatisch bereitstellen)."
