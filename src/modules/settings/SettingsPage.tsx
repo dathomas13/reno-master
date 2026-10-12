@@ -5,6 +5,7 @@ import { SettingsField as Field, SettingsHeading } from './SettingsHelp';
 import { useAuth } from '@/auth/AuthContext';
 import { signOut } from '@/firebase/auth';
 import { loadSettings, saveSettings, CLAUDE_MODELS, type LocalSettings } from '@/lib/settings';
+import { ApiSection } from './ApiSection';
 import { AppUpdateSection } from './AppUpdateSection';
 import { DiagSection } from './DiagSection';
 import { ExportSection } from './ExportSection';
@@ -369,6 +370,7 @@ export default function SettingsPage() {
           )}
         </section>
 
+        <ApiSection />
         <ModelSection signedIn={!!user} />
         <AppUpdateSection />
         <DiagSection />

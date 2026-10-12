@@ -51,7 +51,10 @@ for (const file of files) {
 
 // ---------------------------------------------------------------- 2. internal imports
 function exportedNames(file) {
-  const source = sources.get(file);
+  // files outside the checked roots (the worker, imported by a test) are parsed on demand
+  const source =
+    sources.get(file) ??
+    (fs.existsSync(file) ? ts.createSourceFile(file, fs.readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true) : undefined);
   const names = new Set();
   if (!source) return names;
   const visit = (node) => {

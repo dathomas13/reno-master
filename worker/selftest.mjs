@@ -74,5 +74,234 @@ check('Liste nennt nur Geräte aus diag/', listing.devices.length === 1 && listi
 check('ein Protokoll lässt sich lesen', (await (await diag('/diag/app-abc123', diagEnv.DIAG_TOKEN)).text()) === stored['diag/app-abc123.json']);
 check('kein Ausbruch aus diag/', (await diag('/diag/..%2Fphotos%2Fgeheim', diagEnv.DIAG_TOKEN)).status === 400);
 
+
+// ---------------------------------------------------------------- API gegen ein nachgebautes Firestore
+//
+// Google und Firestore sind hier ein Speicher im Arbeitsspeicher hinter einem
+// ausgetauschten fetch: so läuft der ganze Weg (Dienstkonto-Ticket, Token-Prüfung, Schreiben,
+// Abfragen, MCP), ohne dass ein Netz da sein muss.
+const { generateKeyPairSync } = await import('node:crypto');
+const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+const apiEnv = {
+  FIREBASE_PROJECT: 'proj',
+  ALLOWED_EMAILS: 'thomas@example.de, sarah@example.de',
+  FIREBASE_SERVICE_ACCOUNT: JSON.stringify({
+    client_email: 'sa@proj.iam.gserviceaccount.com',
+    private_key: privateKey.export({ type: 'pkcs8', format: 'pem' }),
+  }),
+};
+const docs = new Map(); // 'costs/abc' → { fields, updateTime }
+let clock = 0;
+const stamp = () => new Date(Date.UTC(2026, 9, 12, 10, 0, clock++)).toISOString();
+const PREFIX = '/v1/projects/proj/databases/(default)/documents';
+
+function splitPath(path) {
+  return path.match(/`[^`]*`|[^.]+/g).map((part) => part.replace(/^`|`$/g, ''));
+}
+function setPath(fields, parts, value) {
+  const [head, ...rest] = parts;
+  if (!rest.length) {
+    if (value === undefined) delete fields[head];
+    else fields[head] = value;
+    return;
+  }
+  const next = fields[head]?.mapValue ?? { fields: {} };
+  next.fields ??= {};
+  fields[head] = { mapValue: next };
+  setPath(next.fields, rest, value);
+}
+function getPath(fields, parts) {
+  let value = { mapValue: { fields } };
+  for (const part of parts) value = value?.mapValue?.fields?.[part];
+  return value;
+}
+const failure = (status, code) => new Response(JSON.stringify({ error: { status: code, message: code } }), { status });
+const plain = (value) => (value ? Object.values(value)[0] : undefined);
+
+globalThis.fetch = async (input, init = {}) => {
+  const url = new URL(typeof input === 'string' ? input : input.url);
+  if (url.host === 'oauth2.googleapis.com') {
+    const assertion = new URLSearchParams(String(init.body)).get('assertion') ?? '';
+    return Response.json(assertion.split('.').length === 3 ? { access_token: 'ya29.test', expires_in: 3600 } : {}, { status: assertion ? 200 : 400 });
+  }
+  if (init.headers?.authorization !== 'Bearer ya29.test') return failure(401, 'UNAUTHENTICATED');
+  const path = decodeURIComponent(url.pathname).slice(PREFIX.length);
+  if (init.method === 'GET') {
+    const doc = docs.get(path.slice(1));
+    return doc ? Response.json({ name: `x${path}`, fields: doc.fields, updateTime: doc.updateTime }) : failure(404, 'NOT_FOUND');
+  }
+  const body = JSON.parse(init.body);
+  if (path === ':commit') {
+    for (const write of body.writes) {
+      const key = (write.update?.name ?? write.delete).split('/documents/')[1];
+      const current = docs.get(key);
+      const pre = write.currentDocument ?? {};
+      if (pre.exists === false && current) return failure(409, 'ALREADY_EXISTS');
+      if (pre.exists === true && !current) return failure(404, 'NOT_FOUND');
+      if (pre.updateTime && pre.updateTime !== current?.updateTime) return failure(400, 'FAILED_PRECONDITION');
+      if (write.delete) {
+        docs.delete(key);
+        continue;
+      }
+      let fields = structuredClone(write.update.fields);
+      if (write.updateMask) {
+        fields = structuredClone(current?.fields ?? {});
+        for (const p of write.updateMask.fieldPaths) setPath(fields, splitPath(p), getPath(write.update.fields, splitPath(p)));
+      }
+      const time = stamp();
+      for (const t of write.updateTransforms ?? []) fields[t.fieldPath] = { timestampValue: time };
+      docs.set(key, { fields, updateTime: time });
+    }
+    return Response.json({ writeResults: [] });
+  }
+  if (path === ':runQuery') {
+    const q = body.structuredQuery;
+    const col = q.from[0].collectionId;
+    let rows = [...docs.entries()].filter(([key]) => key.split('/')[0] === col && key.split('/').length === 2);
+    const filter = q.where?.fieldFilter;
+    if (filter) {
+      const want = plain(filter.value);
+      rows = rows.filter(([, d]) => {
+        const have = plain(d.fields[filter.field.fieldPath]);
+        return filter.op === 'EQUAL' ? have === want : have >= want;
+      });
+    }
+    for (const order of q.orderBy ?? []) {
+      const f = order.field.fieldPath;
+      rows.sort(([, a], [, b]) => String(plain(a.fields[f])).localeCompare(String(plain(b.fields[f]))) * (order.direction === 'DESCENDING' ? -1 : 1));
+    }
+    rows = rows.slice(0, q.limit ?? rows.length);
+    return Response.json(rows.length ? rows.map(([key, d]) => ({ document: { name: `x/documents/${key}`, fields: d.fields, updateTime: d.updateTime } })) : [{ readTime: 'x' }]);
+  }
+  return failure(400, 'INVALID_ARGUMENT');
+};
+
+const { encodeFields, decodeFields, sha256Hex, buildCost, normalizeOptions, parseAmount, berlinDate, mergeDiaryEntry, tokenProblem } =
+  await import('./reno-files.js');
+
+const fullToken = `reno_${'A'.repeat(20)}${'b'.repeat(23)}`;
+const readOnly = `reno_${'R'.repeat(43)}`;
+const strangers = `reno_${'S'.repeat(43)}`;
+const put = (key, value) => docs.set(key, { fields: encodeFields(value), updateTime: stamp() });
+put('meta/api-tokens', {
+  tokens: {
+    t1: { name: 'Claude', hash: await sha256Hex(fullToken), scopes: ['costs', 'tasks', 'diary', 'notes', 'read'], createdBy: 'Thomas@example.de', createdAt: '2026-10-01T10:00:00Z' },
+    t2: { name: 'nur lesen', hash: await sha256Hex(readOnly), scopes: ['read'], createdBy: 'sarah@example.de', createdAt: '2026-10-01T10:00:00Z' },
+    t3: { name: 'fremd', hash: await sha256Hex(strangers), scopes: ['costs'], createdBy: 'wer@anders.de', createdAt: '2026-10-01T10:00:00Z' },
+    t5: { name: 'nur Kosten', hash: await sha256Hex(`reno_${'K'.repeat(43)}`), scopes: ['costs'], createdBy: 'sarah@example.de' },
+    t4: { name: 'alt', hash: await sha256Hex(`reno_${'E'.repeat(43)}`), scopes: ['costs'], createdBy: 'thomas@example.de', expiresAt: '2026-01-01T00:00:00Z' },
+  },
+});
+put('meta/options', { costCategories: [{ id: 'verpflegung-helfer', label: 'Verpflegung' }, { id: 'werkzeug', label: 'Werkzeug' }, { id: 'alt', label: 'Alt', archived: true }] });
+put('trades/tr1', { id: 'tr1', name: 'Elektrik komplett', status: 'noch-offen', priority: 'hoch' });
+put('trades/tr2', { id: 'tr2', name: 'Sanitär / Wasser / Abwasser', status: 'noch-offen', priority: 'mittel' });
+put('phases/ph1', { id: 'ph1', name: 'Phase 2: Entkernung & Rückbau', status: 'in-arbeit', order: 2 });
+put('tasks/old1', { id: 'old1', title: 'aus der App', status: 'offen', priority: 'mittel', assignees: [], roomIds: [], reminderAt: '2026-10-13T08:00:00' });
+
+const call = async (method, path, token, body) => {
+  const response = await worker.fetch(
+    new Request(`https://w.example${path}`, {
+      method,
+      headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), 'content-type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    }),
+    apiEnv,
+    { waitUntil: () => undefined },
+  );
+  const isJson = (response.headers.get('content-type') ?? '').includes('json');
+  return { status: response.status, body: isJson ? await response.json() : await response.text() };
+};
+
+check('API ohne Token: 401', (await call('GET', '/api/v1', '')).status === 401);
+check('API mit unbekanntem Token: 401', (await call('GET', '/api/v1', `reno_${'x'.repeat(43)}`)).status === 401);
+check('abgelaufenes Token: 401', (await call('GET', '/api/v1', `reno_${'E'.repeat(43)}`)).status === 401);
+check('Token eines nicht freigeschalteten Besitzers: 401', (await call('GET', '/api/v1', strangers)).status === 401);
+const me = await call('GET', '/api/v1', fullToken);
+check('Selbstauskunft nennt Name und Besitzer', me.status === 200 && me.body.token.name === 'Claude' && me.body.token.owner === 'thomas@example.de');
+check('lastUsedAt wird vermerkt', typeof decodeFields(docs.get('meta/api-tokens').fields).tokens.t1.lastUsedAt === 'string');
+check('der Hash bleibt beim Vermerk erhalten', decodeFields(docs.get('meta/api-tokens').fields).tokens.t1.hash === (await sha256Hex(fullToken)));
+
+const catalog = await call('GET', '/api/v1/catalog', readOnly);
+check('Katalog: eigene Kategorien aus meta/options', catalog.body.options.costCategories.map((e) => e.label).join() === 'Verpflegung,Werkzeug');
+check('Katalog: Startwerte, wo meta/options nichts sagt', catalog.body.options.people[0].id === 'thomas');
+check('Katalog: Gewerke und Phasen', catalog.body.trades.length === 2 && catalog.body.phases[0].id === 'ph1');
+
+const cost = await call('POST', '/api/v1/costs', fullToken, { amountGross: '23,50 €', vendor: 'Edeka', description: 'Brötchen für die Helfer', category: 'Verpflegung', paidBy: 'Thomas', trade: 'Elektrik' });
+check('Kosten anlegen: 201', cost.status === 201 && cost.body.created === true);
+const storedCost = decodeFields(docs.get(`costs/${cost.body.id}`).fields);
+check('Kosten: Betrag als Zahl', storedCost.amountGross === 23.5);
+check('Kosten: Kategorie als Kennung, nicht als Name', storedCost.category === 'verpflegung-helfer');
+check('Kosten: bezahlt von als Kennung', storedCost.paidBy === 'thomas');
+check('Kosten: Gewerk über eindeutigen Namensteil', storedCost.tradeId === 'tr1');
+check('Kosten: Standard bezahlt', storedCost.paymentStatus === 'bezahlt');
+check('Kosten: Besitzer als Bearbeiter, Herkunft vermerkt', storedCost.createdBy === 'thomas@example.de' && storedCost.createdVia === 'api:t1');
+check('Kosten: Zeitstempel vom Server', typeof storedCost.createdAt === 'string' && typeof storedCost.updatedAt === 'string');
+check('Kosten: Link in die App', cost.body.link === `https://dathomas13.github.io/reno-master/#/kosten/${cost.body.id}`);
+
+const unknown = await call('POST', '/api/v1/costs', fullToken, { amountGross: 5, vendor: 'x', category: 'Luxus' });
+check('unbekannte Kategorie: 400 mit den möglichen Werten', unknown.status === 400 && unknown.body.error.includes('Verpflegung, Werkzeug'));
+check('ausgeblendete Kategorie wird nicht angeboten', !unknown.body.error.includes('Alt'));
+check('ohne Betrag: 400', (await call('POST', '/api/v1/costs', fullToken, { vendor: 'x' })).status === 400);
+check('Lese-Token darf nicht schreiben: 403', (await call('POST', '/api/v1/costs', readOnly, { amountGross: 5, vendor: 'x' })).status === 403);
+
+const again = await call('POST', '/api/v1/costs', fullToken, { id: 'wiederholung1', amountGross: 5, vendor: 'Bauhaus' });
+const twice = await call('POST', '/api/v1/costs', fullToken, { id: 'wiederholung1', amountGross: 5, vendor: 'Bauhaus' });
+check('gleiche id zweimal: kein zweiter Datensatz', again.body.created === true && twice.body.created === false && twice.body.duplicate === true);
+
+const task = await call('POST', '/api/v1/tasks', fullToken, { title: 'Steckdosen bestellen', assignees: ['Thomas', 'sarah'], priority: 'Hoch', due: '2026-10-20' });
+const storedTask = decodeFields(docs.get(`tasks/${task.body.id}`).fields);
+check('Aufgabe: Personen und Priorität als Kennung', storedTask.assignees.join() === 'thomas,sarah' && storedTask.priority === 'hoch' && storedTask.status === 'offen');
+check('Aufgabe: falsches Datum: 400', (await call('POST', '/api/v1/tasks', fullToken, { title: 'x', due: '2026-02-30' })).status === 400);
+const open = await call('GET', '/api/v1/tasks', readOnly);
+check('offene Aufgaben lesen', open.body.entries.length === 2 && open.body.entries[0].id === task.body.id);
+const done = await call('POST', '/api/v1/tasks/old1/done', fullToken);
+const storedDone = decodeFields(docs.get('tasks/old1').fields);
+check('Aufgabe abhaken: Status, doneAt, Erinnerung entfernt', done.status === 200 && storedDone.status === 'erledigt' && storedDone.doneAt && !('reminderAt' in storedDone));
+check('unbekannte Aufgabe abhaken: 404', (await call('POST', '/api/v1/tasks/gibtesnicht1/done', fullToken)).status === 404);
+
+const first = await call('POST', '/api/v1/diary', fullToken, { date: '2026-10-12', text: 'Schlitze gestemmt.', present: ['Thomas'], trades: ['Elektrik'] });
+check('Tagebuch: neuer Eintrag mit Standardtitel', first.body.created === true && decodeFields(docs.get(`diary/${first.body.id}`).fields).title === 'Tagebuch 12.10.');
+const second = await call('POST', '/api/v1/diary', fullToken, { date: '2026-10-12', text: 'Leitungen gezogen.', present: ['Wolfgang'], defects: true });
+const merged = decodeFields(docs.get(`diary/${first.body.id}`).fields);
+check('Tagebuch: zweiter Text am selben Tag wird angehängt', second.body.appended === true && second.body.id === first.body.id);
+check('Tagebuch: Text, Anwesende und Mängel zusammengeführt', merged.text === 'Schlitze gestemmt.\n\nLeitungen gezogen.' && merged.present.join() === 'thomas,wolfgang' && merged.defects === true && merged.tradeIds.join() === 'tr1');
+const separate = await call('POST', '/api/v1/diary', fullToken, { date: '2026-10-12', text: 'Extra.', newEntry: true });
+check('Tagebuch: newEntry legt einen eigenen an', separate.body.created === true && separate.body.id !== first.body.id);
+
+const note = await call('POST', '/api/v1/notes', fullToken, { text: 'Fliesenkleber reicht nicht' });
+check('Notiz anlegen', note.status === 201 && decodeFields(docs.get(`notes/${note.body.id}`).fields).pinned === false);
+
+const recent = await call('GET', '/api/v1/costs?since=2026-01-01', readOnly);
+check('Kosten lesen', recent.status === 200 && recent.body.entries.length === 2 && !('updatedAt' in recent.body.entries[0]));
+check('lesen ohne Leserecht: 403', (await call('GET', '/api/v1/costs', `reno_${'K'.repeat(43)}`)).status === 403);
+
+check('API-Eintrag löschen', (await call('DELETE', `/api/v1/costs/${cost.body.id}`, fullToken)).status === 200 && !docs.has(`costs/${cost.body.id}`));
+check('Eintrag aus der App lässt sich nicht löschen: 403', (await call('DELETE', '/api/v1/tasks/old1', fullToken)).status === 403 && docs.has('tasks/old1'));
+
+// MCP
+const rpc = (token, message, path = '/mcp') => call('POST', path, token, message);
+const init = await rpc(fullToken, { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 't', version: '1' } } });
+check('MCP initialize', init.body.result.protocolVersion === '2025-06-18' && init.body.result.capabilities.tools);
+check('MCP Benachrichtigung: 202 ohne Antwort', (await rpc(fullToken, { jsonrpc: '2.0', method: 'notifications/initialized' })).status === 202);
+const tools = await rpc(fullToken, { jsonrpc: '2.0', id: 2, method: 'tools/list' });
+check('MCP: alle Werkzeuge für das volle Token', tools.body.result.tools.length === 8);
+const readTools = await rpc(readOnly, { jsonrpc: '2.0', id: 3, method: 'tools/list' });
+check('MCP: Lese-Token sieht nur Katalog und Lesen', readTools.body.result.tools.map((t) => t.name).join() === 'get_catalog,list_entries');
+const viaPath = await rpc('', { jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'create_cost', arguments: { amountGross: 12.4, vendor: 'Hornbach', description: 'Schrauben', category: 'werkzeug' } } }, `/mcp/${fullToken}`);
+const created = JSON.parse(viaPath.body.result.content[0].text);
+check('MCP mit Token im Pfad: Kosten angelegt', !viaPath.body.result.isError && decodeFields(docs.get(`costs/${created.id}`).fields).amountGross === 12.4);
+const bad = await rpc(fullToken, { jsonrpc: '2.0', id: 5, method: 'tools/call', params: { name: 'create_task', arguments: {} } });
+check('MCP: Prüffehler als isError mit Grund', bad.body.result.isError === true && bad.body.result.content[0].text.includes('title'));
+check('MCP ohne Token: 401', (await rpc('', { jsonrpc: '2.0', id: 6, method: 'ping' })).status === 401);
+check('MCP GET: 405', (await call('GET', `/mcp/${fullToken}`, '')).status === 405);
+
+// reine Helfer
+check('Betrag "1.234,56" wird 1234.56', parseAmount('1.234,56', 'x') === 1234.56);
+check('Betrag 0 wird abgelehnt', (() => { try { parseAmount(0, 'x'); return false; } catch { return true; } })());
+check('heute in Berlin, auch kurz nach Mitternacht', berlinDate(new Date('2026-10-11T22:30:00Z')) === '2026-10-12');
+check('MwSt. wird aufgeteilt', (() => { const c = buildCost({ amountGross: 119, vendor: 'x', vatRate: 19 }, { options: normalizeOptions(null), trades: [], phases: [] }); return c.amountNet === 100 && c.vatAmount === 19; })());
+check('Anhängen an leeren Eintrag', mergeDiaryEntry({ text: '' }, { text: 'a', present: [], tradeIds: [], defects: false }).text === 'a');
+check('Token ohne Ablauf und mit Besitzer gilt', tokenProblem({ hash: 'x', createdBy: 'a@b.de' }, ['a@b.de']) === null);
+
 console.log(failed === 0 ? '\nalles in Ordnung' : `\n${failed} Fehler`);
 process.exit(failed ? 1 : 0);

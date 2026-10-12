@@ -188,8 +188,19 @@ Steht:
 - **Maßband im 3D** (0.86.0): Chip „Messen“, freie Strecken zwischen zwei Punkten mit Einrasten an Ecken
   und Lupe beim Ziehen am Telefon. Regeln in `PLAN.md` 8.3.
 - `public/img/nordansicht.jpg` liegt im Repo.
-- Das Bautagebuch ist vollständig in der App. Einträge entstehen nur noch dort
-  (App oder Webansicht); es gibt keinen Import von außen mehr.
+- Das Bautagebuch ist vollständig in der App. Einträge entstehen dort oder über die API
+  (nächster Punkt); einen Datei-Import von außen gibt es nicht mehr.
+- **API für Einträge von außen** (0.88.0): der Datei-Worker nimmt unter `/api/v1/…` und als
+  MCP-Server unter `/mcp` Kosten, Aufgaben, Tagebucheinträge und Notizen an und schreibt sie
+  mit einem Dienstkonto (Secret `FIREBASE_SERVICE_ACCOUNT`) nach Firestore. Anmeldung über
+  persönliche Tokens aus Einstellungen → API-Zugang; gespeichert ist nur der Hash in
+  `meta/api-tokens` (`PLAN.md` 5.14, Einrichtung in `worker/README.md`, Abschnitt „API“).
+  **Sagt der Benutzer im Chat, er habe etwas gekauft oder erledigt**, und die Umgebung hat
+  `RENO_API_URL`/`RENO_API_TOKEN`: zuerst `python3 tools/api/reno.py catalog`, dann
+  `python3 tools/api/reno.py add costs '{…}'` (bzw. `tasks`, `diary`, `notes`) und den Link
+  aus der Antwort nennen. Die Worker-Kopie der Auswahl-Startwerte hält
+  `src/data/__tests__/apiWorker.test.ts` gleich mit `options.ts` – wer dort etwas ändert,
+  passt `OPTION_LABELS` im Worker an und fügt den Worker neu im Dashboard ein.
 
 Offen:
 
@@ -273,4 +284,6 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   dort nicht.
 - Keine Geheimnisse ins Repo: Service-Account-JSON, `google-services.json`, `.env` sind gitignored.
 - Der Claude API-Key liegt nur im localStorage des Geräts, nie in Firestore.
+- API-Tokens der App nie im Klartext speichern, nirgends: in `meta/api-tokens` steht nur der
+  Hash. Der Worker ändert dort nichts außer `lastUsedAt`.
 - Vor dem Push: `npm run lint`, `npm run test`, `npm run build`.

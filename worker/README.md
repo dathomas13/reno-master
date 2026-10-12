@@ -54,6 +54,7 @@ lässt sich das nachsehen.
 | `GET /files/<pfad>?exp=…&sig=…` | liefert die Datei, prüft Signatur und Ablauf |
 | `GET /diag` | Liste der Geräteprotokolle, mit `Authorization: Bearer <DIAG_TOKEN>` |
 | `GET /diag/<gerät>` | ein Geräteprotokoll, dito |
+| `/api/v1/…`, `POST /mcp` | Einträge von außen, siehe „API“ |
 
 ## Geräteprotokolle (Diagnose)
 
@@ -73,15 +74,106 @@ Einmalig einrichten:
 Lesen: `python3 tools/diag/read_log.py` (Geräte und letzte Zeilen),
 `python3 tools/diag/read_log.py app-abc123 --scope erinnerung`.
 
+## API (Einträge von außen, z. B. aus einem Chat mit Claude)
+
+Der Worker nimmt Kosten, Aufgaben, Tagebucheinträge und Notizen auch von außerhalb der App
+an. Gedacht ist das für Claude: „Ich habe Verpflegung für 23,50 € gekauft“ wird zu einem
+Kosteneintrag mit Kategorie „Verpflegung Helfer“, ohne die App zu öffnen.
+
+```
+Claude ──Token──▶ Worker /api/v1, /mcp ──Dienstkonto──▶ Firestore ──▶ App (onSnapshot)
+```
+
+### Anmeldung: persönliche Zugangstokens
+
+- Erzeugt in der App unter **Einstellungen → API-Zugang**: Name, Rechte (Kosten, Aufgaben,
+  Tagebuch, Notizen, Lesen), Gültigkeit (30 Tage bis unbegrenzt).
+- Das Token (`reno_…`, 256 Bit Zufall) wird **genau einmal** angezeigt. In
+  `meta/api-tokens` steht nur sein SHA-256-Hash, dazu Name, Rechte, Ablauf, Besitzer und
+  „zuletzt benutzt“. Weder die Datenbank noch ein Export verrät also ein brauchbares Token.
+- Widerrufen löscht den Eintrag; die nächste Anfrage mit dem Token scheitert.
+- Ein Token gilt nur, solange sein Besitzer in `ALLOWED_EMAILS` steht.
+- Löschen über die API geht nur bei Einträgen, die über die API angelegt wurden
+  (`createdVia: "api:<token-id>"`) – ein verlorenes Token kann nichts Älteres zerstören.
+
+Das ist dasselbe Muster wie die „personal access tokens“ bei GitHub: für einen einzelnen
+Menschen mit eigenem Werkzeug einfacher und genauso sicher wie OAuth, solange das Token wie
+ein Passwort behandelt wird.
+
+### Einmalig einrichten
+
+1. Firebase-Konsole → Projekteinstellungen → **Dienstkonten** → „Neuen privaten Schlüssel
+   generieren“. Es kommt eine JSON-Datei.
+2. Im Worker unter **Settings → Variables and Secrets** ein **Secret**
+   `FIREBASE_SERVICE_ACCOUNT` anlegen und den **gesamten Inhalt** der JSON-Datei einfügen.
+   Die Datei danach löschen – sie gehört nie ins Repo.
+3. Den Code aus `reno-files.js` neu einfügen und bereitstellen.
+4. In der App: Einstellungen → API-Zugang → „Token erzeugen“.
+
+Firestore-Regeln müssen nicht geändert werden: die Tokens stehen unter `meta`, und das
+Dienstkonto schreibt an den Regeln vorbei. Deshalb prüft der Worker selbst Token, Ablauf,
+Besitzer und Rechte.
+
+### Claude anbinden
+
+- **Claude-App / claude.ai** (Chat, auch per Sprache am Telefon): Einstellungen →
+  Connectors → eigenen Connector hinzufügen, als Adresse `https://<worker>/mcp/<token>`.
+  Die Connector-Maske kann keine Kopfzeilen setzen, deshalb steckt das Token in der
+  Adresse – die Adresse ist damit selbst geheim. Am besten ein eigenes Token dafür
+  erzeugen; die App bietet „Adresse für Claude kopieren“ an.
+- **Claude Code**: `claude mcp add --transport http reno https://<worker>/mcp --header "Authorization: Bearer <token>"`.
+  Oder ohne MCP über `tools/api/reno.py` mit den Umgebungsvariablen `RENO_API_URL`
+  (Worker-Adresse) und `RENO_API_TOKEN`, den Worker-Host im Netzwerkzugriff erlaubt.
+
+Der MCP-Server (Streamable HTTP, zustandslos) bietet `get_catalog`, `create_cost`,
+`create_task`, `create_diary_entry`, `create_note`, `list_entries`, `complete_task` und
+`delete_entry` – nur die, die das Token darf.
+
+### REST-Routen
+
+Alle mit `Authorization: Bearer <token>`, Antworten als JSON, Fehler als `{ "error": "…" }`.
+
+| Route | Recht | Zweck |
+|---|---|---|
+| `GET /api/v1` | – | welches Token, welche Rechte |
+| `GET /api/v1/catalog` | – | heutiges Datum, Auswahlwerte (Kennung + Name), Gewerke, Phasen |
+| `POST /api/v1/costs` | costs | Kosten anlegen |
+| `POST /api/v1/tasks` | tasks | Aufgabe anlegen |
+| `POST /api/v1/tasks/<id>/done` | tasks | Aufgabe abhaken |
+| `POST /api/v1/diary` | diary | Tagebuch: gibt es für den Tag schon einen Eintrag, wird angehängt (`"newEntry": true` legt einen eigenen an) |
+| `POST /api/v1/notes` | notes | Notiz anlegen |
+| `GET /api/v1/<sammlung>?since=JJJJ-MM-TT&limit=20` | read | letzte Einträge; Aufgaben: die offenen (`open=false` alle) |
+| `DELETE /api/v1/<sammlung>/<id>` | Schreibrecht der Sammlung | nur über die API Angelegtes |
+
+Felder wie im Datenmodell (`PLAN.md`, Abschnitt 5), z. B. für Kosten `amountGross`
+(Pflicht, Zahl oder „12,40“), `vendor`, `description`, `category`, `date`, `paidBy`,
+`paymentMethod`, `paymentStatus`, `tradeId`, `vatRate`, `invoiceNumber`, `notes`.
+Auswahlwerte gehen als Kennung **oder** Name (`"category": "Verpflegung Helfer"`);
+gespeichert wird immer die Kennung, Unbekanntes lehnt der Worker mit den möglichen Werten
+ab. Gewerke und Phasen auch über einen eindeutigen Namensteil (`"trade": "Elektrik"`).
+Ohne `date` gilt heute in Europe/Berlin. Eine mitgeschickte `id` macht eine Wiederholung
+unschädlich: dieselbe id ein zweites Mal legt nichts Neues an. Räume und Belegfotos kann
+die API (noch) nicht setzen.
+
+```bash
+curl -X POST https://<worker>/api/v1/costs \
+  -H "Authorization: Bearer $RENO_API_TOKEN" -H "content-type: application/json" \
+  -d '{"amountGross": 12.4, "vendor": "Hornbach", "description": "Schrauben", "category": "Material allgemein"}'
+```
+
 ## Was geprüft ist, und was nicht
 
 `node worker/selftest.mjs` prüft die Teile, die ohne Cloudflare laufen: Signatur und
 Ablauf der Anzeige-Adressen, die Pfad-Prüfung (`..`, führende Schrägstriche, Leerzeichen)
-und dass ein selbst gebautes Ticket mit `alg: none` abgewiesen wird.
+und dass ein selbst gebautes Ticket mit `alg: none` abgewiesen wird. Die API läuft dort
+vollständig gegen ein nachgebautes Firestore: Dienstkonto-Ticket, Token-Prüfung (Ablauf,
+Besitzer, Rechte), Anlegen, Anhängen ans Tagebuch, Lesen, Abhaken, Löschen und MCP. Die CI
+führt den Selbsttest bei jedem Push aus.
 
 Nicht geprüft werden kann hier: der Worker im echten Betrieb, das Zusammenspiel mit R2 und
 die Prüfung eines echten Firebase-Tickets gegen Googles Schlüssel. Das zeigt sich erst beim
-ersten Foto.
+ersten Foto. Ebenso die echte Firestore-REST-Schnittstelle und das Dienstkonto: das zeigt
+sich beim ersten `GET /api/v1/catalog`.
 
 ## Kosten
 

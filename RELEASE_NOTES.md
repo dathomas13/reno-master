@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.88.0 – API-Zugang für Claude
+
+- Neu in den Einstellungen: „API-Zugang“. Ein Token dort erlaubt Claude im Chat, Kosten, Aufgaben, Tagebucheinträge und Notizen direkt einzutragen.
+- Jedes Token hat eigene Rechte und ein Ablaufdatum und lässt sich jederzeit widerrufen.
+
 ## 0.87.0 – Aufgaben-Erinnerungen für die richtige Person
 
 - Neu in den Einstellungen: „Ich bin“. Danach kommen auf deinem Telefon nur noch Erinnerungen für Aufgaben, die dir oder niemandem zugewiesen sind.

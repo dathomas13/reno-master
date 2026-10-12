@@ -19,6 +19,8 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
+      # the worker runs on Cloudflare; its self test needs nothing but Node
+      - run: npm run worker:test
 
   model:
     runs-on: ubuntu-latest
