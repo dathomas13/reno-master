@@ -341,7 +341,8 @@ prüft Hash, Ablauf, Besitzer in `ALLOWED_EMAILS` und das Recht der Sammlung. Er
 vermerkt `createdVia: 'api:<id>'`; nur solche Einträge darf die API ganz ändern und löschen, Einträge aus der App
 nur in einer kurzen Liste von Feldern (`foreign` in den Feldregeln `SPECS` des Workers) und per `appendText`.
 Anlegen und Ändern laufen durch dieselben Feldregeln. Räume nur über die Planung (`meta/model-soll`, Feld `rooms`),
-gespeichert wird die Planungs-id. Dazu Kontakte und Gespräche (`contactLogs`), Kostenauswertung wie
+gespeichert wird die Planungs-id. Aufgaben nehmen `reminderAt` (JJJJ-MM-TTThh:mm, Berlin), auch an App-Aufgaben;
+gestellt wird die Erinnerung wie jede andere vom Telefon, sobald es die Aufgabe sieht. Dazu Kontakte und Gespräche (`contactLogs`), Kostenauswertung wie
 `costAggregation.ts` und eine Suche über alle Sammlungen. Ein Tagebucheintrag für einen
 Tag, der schon einen hat, wird angehängt (5.1: „Eintrag für heute“ ist ein Singleton). Der Worker trägt eine Kopie
 der Startwerte der Auswahllisten; `src/data/__tests__/apiWorker.test.ts` hält sie gleich mit `options.ts`.

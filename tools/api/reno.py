@@ -13,6 +13,7 @@ Braucht zwei Umgebungsvariablen:
   python3 tools/api/reno.py catalog                              # Kategorien, Personen, Gewerke …
   python3 tools/api/reno.py add costs '{"amountGross": 12.4, "vendor": "Hornbach", "description": "Schrauben", "category": "Material allgemein"}'
   python3 tools/api/reno.py add tasks '{"title": "Fliesenkleber nachkaufen", "assignees": ["Thomas"]}'
+  python3 tools/api/reno.py add tasks '{"title": "Fliesenleger anrufen", "reminderAt": "2026-10-14T08:30"}'
   python3 tools/api/reno.py add diary '{"text": "Schlitze für die Leitungen gestemmt.", "present": ["Thomas", "Wolfgang"]}'
   python3 tools/api/reno.py add notes '{"text": "Estrich braucht 4 Wochen"}'
   python3 tools/api/reno.py add contactLogs '{"contact": "Müller", "text": "Kommt Donnerstag", "channel": "Anruf"}'

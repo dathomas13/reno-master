@@ -584,6 +584,18 @@ function optionalDateTime(value, field) {
   return value.length === 16 ? `${value}:00` : value;
 }
 
+/** Zeitpunkt einer Aufgaben-Erinnerung (Europe/Berlin): mit Uhrzeit, sonst wüsste das Telefon nicht, wann */
+function reminderDateTime(value, field) {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    throw new ApiError(400, `${field}: Zeitpunkt als JJJJ-MM-TTThh:mm erwartet (Uhrzeit Europe/Berlin)`);
+  }
+  optionalDate(value.slice(0, 10), field);
+  const [hour, minute] = value.slice(11, 16).split(':').map(Number);
+  if (hour > 23 || minute > 59) throw new ApiError(400, `${field}: ${value.slice(11, 16)} ist keine Uhrzeit`);
+  return value.length === 16 ? `${value}:00` : value;
+}
+
 function contact(field) {
   return (value, catalog) => {
     if (value === undefined || value === null || value === '') return undefined;
@@ -655,6 +667,7 @@ const SPECS = {
       tradeId: { parse: trade('tradeId') },
       phaseId: { parse: phase('phaseId') },
       roomIds: { parse: rooms('rooms'), empty: [] },
+      reminderAt: { parse: (v) => reminderDateTime(v, 'reminderAt') },
     },
     created: {},
     /** wie toggleTaskDone: erledigt setzt doneAt und nimmt die Erinnerung weg, offen nimmt doneAt weg */
@@ -666,7 +679,7 @@ const SPECS = {
       if (!done && was) return { doneAt: undefined };
       return {};
     },
-    foreign: ['status', 'due', 'priority', 'assignees'],
+    foreign: ['status', 'due', 'priority', 'assignees', 'reminderAt'],
     appendTo: 'notes',
     search: ['title', 'notes'],
     title: (doc) => doc.title,
@@ -1625,13 +1638,17 @@ const MCP_TOOLS = [
   {
     name: 'create_task',
     scope: 'tasks',
-    description: 'Legt eine Aufgabe an.',
+    description: 'Legt eine Aufgabe an, auf Wunsch mit Erinnerung aufs Telefon (reminderAt). Eine Erinnerung für eine bestehende Aufgabe setzt update_entry mit changes.reminderAt.',
     inputSchema: {
       type: 'object',
       properties: {
         title: ref('Aufgabe in wenigen Worten'),
         notes: ref('Details'),
         due: ref('fällig am, JJJJ-MM-TT'),
+        reminderAt: ref(
+          'Erinnerung aufs Telefon, JJJJ-MM-TTThh:mm (Europe/Berlin). Kommt auf den Geräten der zuständigen Person ' +
+            '(ohne assignees bei allen), sobald die App die Aufgabe einmal gesehen hat',
+        ),
         priority: ref('options.priority, ohne Angabe mittel'),
         status: ref('options.taskStatus, ohne Angabe offen'),
         assignees: refs('zuständige Personen (options.people)'),
@@ -1720,7 +1737,7 @@ const MCP_TOOLS = [
     scope: 'write',
     description:
       'Ändert einen Eintrag. Über diese Schnittstelle angelegte Einträge: alle Felder wie beim Anlegen (null leert ein Feld). ' +
-      'Einträge aus der App nur: Kosten paymentStatus, paidBy, paymentMethod; Aufgaben status, due, priority, assignees; ' +
+      'Einträge aus der App nur: Kosten paymentStatus, paidBy, paymentMethod; Aufgaben status, due, priority, assignees, reminderAt; ' +
       'Notizen pinned; Kontakte phone, email, status – und überall appendText (hängt einen Absatz an Text oder Notizen an).',
     inputSchema: {
       type: 'object',

@@ -260,6 +260,14 @@ check('Aufgabe: Personen und Priorität als Kennung', storedTask.assignees.join(
 check('Aufgabe: falsches Datum: 400', (await call('POST', '/api/v1/tasks', fullToken, { title: 'x', due: '2026-02-30' })).status === 400);
 const open = await call('GET', '/api/v1/tasks', readOnly);
 check('offene Aufgaben lesen', open.body.entries.length === 2 && open.body.entries[0].id === task.body.id);
+const reminded = await call('POST', '/api/v1/tasks', fullToken, { title: 'Fliesenleger anrufen', reminderAt: '2026-10-14T08:30' });
+check('Aufgabe mit Erinnerung: reminderAt mit Sekunden gespeichert',
+  reminded.status === 201 && decodeFields(docs.get(`tasks/${reminded.body.id}`).fields).reminderAt === '2026-10-14T08:30:00');
+check('Erinnerung ohne Uhrzeit: 400', (await call('POST', '/api/v1/tasks', fullToken, { title: 'x', reminderAt: '2026-10-14' })).status === 400);
+check('Erinnerung 25 Uhr: 400', (await call('POST', '/api/v1/tasks', fullToken, { title: 'x', reminderAt: '2026-10-14T25:00' })).status === 400);
+const remindApp = await call('PATCH', '/api/v1/tasks/old1', fullToken, { reminderAt: '2026-10-15T07:00' });
+check('Erinnerung an einer App-Aufgabe nachträglich setzen',
+  remindApp.status === 200 && decodeFields(docs.get('tasks/old1').fields).reminderAt === '2026-10-15T07:00:00');
 check('Katalog: Räume der Planung', catalog.body.rooms.map((r) => r.name).join() === 'Bad,Flur (EG),Flur (OG),Technikraum');
 const done = await call('POST', '/api/v1/tasks/old1/done', fullToken);
 const storedDone = decodeFields(docs.get('tasks/old1').fields);
