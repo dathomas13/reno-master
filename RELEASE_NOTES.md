@@ -8,6 +8,10 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.89.2 – Fotos von heute
+
+- „Fotos von heute“ öffnet wieder die Galerie mit den Fotos des Tages, auch beim neuen Eintrag.
+
 ## 0.89.1 – Wartung
 
 - Neue Funktionen für Claude kommen künftig von selbst an, ohne Umweg über Cloudflare.

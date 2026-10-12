@@ -30,6 +30,8 @@ const entries: DiaryEntry[] = [
 ];
 const emptyRows: unknown[] = [];
 const photoState = vi.hoisted(() => ({ rows: [] as Photo[] }));
+// fresh ids per new draft, like the real emptyDiaryEntry, and how often the photo block mounted
+const draftIds = vi.hoisted(() => ({ unique: false, next: 0, photoMounts: 0 }));
 const attachedPhoto = {
   id: 'photo-1', entryId: 'new-entry', originalName: 'test.jpg', uploadState: 'pending',
 } as Photo;
@@ -40,13 +42,22 @@ vi.mock('@/components/Pickers', () => ({
   TradePicker: () => null,
   MultiPicker: ({ label }: { label: string }) => <button type="button">{label} auswählen</button>,
 }));
-vi.mock('./PhotoAttach', () => ({ PhotoAttach: ({ photos, onAdded, onBusyChange }: {
-  photos: Photo[]; onAdded(photo: Photo): void; onBusyChange(busy: boolean): void;
-}) => <div>
-  <button onClick={() => onBusyChange(true)}>Import starten</button>
-  <button onClick={() => { onAdded(attachedPhoto); onBusyChange(false); }}>Import beenden</button>
-  {photos.map((photo) => <span key={photo.id}>{photo.id}: {photo.uploadState}</span>)}
-</div> }));
+vi.mock('./PhotoAttach', async () => {
+  const { useEffect } = await import('react');
+  function PhotoAttach({ photos, onAdded, onBusyChange }: {
+    photos: Photo[]; onAdded(photo: Photo): void; onBusyChange(busy: boolean): void;
+  }) {
+    useEffect(() => {
+      draftIds.photoMounts += 1;
+    }, []);
+    return <div>
+      <button onClick={() => onBusyChange(true)}>Import starten</button>
+      <button onClick={() => { onAdded(attachedPhoto); onBusyChange(false); }}>Import beenden</button>
+      {photos.map((photo) => <span key={photo.id}>{photo.id}: {photo.uploadState}</span>)}
+    </div>;
+  }
+  return { PhotoAttach };
+});
 vi.mock('@/data/hooks', () => ({
   useDocument: (_collection: string, id?: string) => ({
     data: entries.find((entry) => entry.id === id) ?? null,
@@ -72,7 +83,7 @@ vi.mock('@/data/useOptions', async () => {
 vi.mock('@/firebase/db', () => ({ where: vi.fn() }));
 vi.mock('@/data/repos', () => ({
   emptyDiaryEntry: (date = '2026-09-18') => ({
-    id: 'new-entry',
+    id: draftIds.unique ? `new-entry-${++draftIds.next}` : 'new-entry',
     date,
     title: '',
     text: '',
@@ -89,6 +100,8 @@ afterEach(() => {
   cleanup();
   localStorage.clear();
   photoState.rows = [];
+  draftIds.unique = false;
+  draftIds.photoMounts = 0;
 });
 
 function renderNewEditor() {
@@ -138,6 +151,14 @@ describe('diary editor', () => {
     });
     await waitFor(() => expect(screen.getByDisplayValue('Zweiter Eintrag')).toBeInTheDocument());
     expect(screen.queryByDisplayValue('Erster Eintrag')).not.toBeInTheDocument();
+  });
+
+  it('builds a new draft once, so the photo block (and its day gallery) is not swapped out', async () => {
+    draftIds.unique = true;
+    renderNewEditor();
+    await act(async () => {});
+
+    expect(draftIds.photoMounts).toBe(1);
   });
 
   it('keeps a started new entry as a draft and restores it', async () => {

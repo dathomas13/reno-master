@@ -51,12 +51,22 @@ export default function DiaryEditorPage() {
   // the running phase is only a default: once picked by hand (even "Ohne Phase") it stays
   const phasePicked = useRef(false);
 
+  // which new draft `entry` holds: the state above already built it for the first render.
+  // Building it again here gave it a new id, the photo block below (keyed by that id) was
+  // swapped out, and the day gallery that "?fotos=heute" had just opened went with it.
+  const draftFor = useRef<string | null>(isNew ? `${dateParam}|${initialDate}` : null);
+
   useEffect(() => {
     if (!isNew) {
+      draftFor.current = null;
       setReady(false);
       return;
     }
-    setEntry(loadDiaryDraft(dateParam ?? undefined) ?? fresh());
+    const wanted = `${dateParam}|${initialDate}`;
+    if (draftFor.current !== wanted) {
+      draftFor.current = wanted;
+      setEntry(loadDiaryDraft(dateParam ?? undefined) ?? fresh());
+    }
     setReady(true);
   }, [id, isNew, dateParam, initialDate]);
 
