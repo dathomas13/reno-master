@@ -13,6 +13,7 @@ const phases: Phase[] = [
 ];
 const tasks: Task[] = [
   { id: 'task-1', title: 'Fenster pruefen', status: 'offen', priority: 'hoch', assignees: [], roomIds: [] },
+  { id: 'task-2', title: 'Masse schicken', status: 'offen', priority: 'mittel', due: '2026-01-05', assignees: [], roomIds: [] },
 ];
 
 vi.mock('@/components/PhotoView', () => ({ PhotoImage: () => null }));
@@ -76,7 +77,7 @@ describe('home phase', () => {
     renderHome();
     fireEvent.click(screen.getByRole('button', { name: 'Erledigt: Fenster pruefen' }));
     await waitFor(() => expect(toggleTaskDone).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' })));
-    expect(screen.queryByRole('link', { name: 'Fenster pruefen' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Fenster pruefen/ })).not.toBeInTheDocument();
   });
 
   it('long press on an urgent task opens its actions instead of the task', async () => {
@@ -102,10 +103,19 @@ describe('home phase', () => {
     expect(toggleTaskDone).toHaveBeenCalledWith(expect.objectContaining({ id: 'task-1' }));
   });
 
+  it('says why a task is urgent: high priority or overdue', () => {
+    renderHome();
+
+    expect(screen.getByRole('link', { name: /Fenster pruefen/ })).toHaveTextContent('Hoch');
+    const late = screen.getByRole('link', { name: /Masse schicken/ });
+    expect(late).toHaveTextContent('überfällig');
+    expect(late).not.toHaveTextContent('Hoch');
+  });
+
   it('links urgent tasks to their task sheet', () => {
     renderHome();
 
-    expect(screen.getByRole('link', { name: 'Fenster pruefen' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Fenster pruefen/ })).toHaveAttribute(
       'href',
       '/aufgaben?aufgabe=task-1',
     );

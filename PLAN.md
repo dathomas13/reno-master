@@ -430,7 +430,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
 ### 8.1 Start (Dashboard)
 - Hero: Nordansicht-Foto (`public/img/nordansicht.jpg`) mit Overlay-Titel "Schlesierstraße 31" und aktueller Phase (aus `phases` mit Status "In Arbeit"). Die Phase bleibt nur eine dezente Zeile im Bild, ist aber antippbar: ein kleines Sheet setzt genau eine Phase auf "In Arbeit", schließt bisher laufende Phasen ab und hält damit die automatische Phase für neue Tagebuch-Einträge und Aufgaben aktuell. Keine eigene Phasen-Karte auf dem Startscreen.
 - Karte "Heute": wenn kein Eintrag für heute → großer Button "Tagebuch-Eintrag für heute anlegen"; sonst Vorschau des Eintrags + "Bearbeiten". In der App darunter „n Fotos von heute übernehmen“ (Tagesgalerie, `?fotos=heute`). Mehrere Einträge am Tag sind gewollt (`modules/diary/entriesOfDay.ts`).
-- „Dringend“: offene Aufgaben mit Haken direkt auf der Startseite, danach „Rückgängig“.
+- „Dringend“: offene Aufgaben mit hoher Priorität oder fällig bis heute, mit Haken direkt auf der Startseite, danach „Rückgängig“. Jede Zeile sagt klein, warum sie dort steht: Marke „Hoch“, Fälligkeit „heute“ (Gold) bzw. „überfällig“ (Rot).
 - Schnellzugriff: bis zu 6 Kacheln, Auswahl und Reihenfolge je Gerät (`lib/shortcuts.ts`), Standard Beleg, Notizen, Aufgaben. Blöcke und Schnellzugriff stellt die Unterseite Einstellungen → Startseite ein.
 - Letzte 3 Tagebucheinträge (Datum, Titel, erstes Thumbnail).
 - Offene Aufgaben (fällig ≤ 7 Tage oder Priorität Hoch), max. 5.

@@ -309,7 +309,19 @@ export default function HomePage() {
                   </button>
                   <Link to={`/aufgaben?aufgabe=${task.id}`} className="list-row flex-1 min-w-0 border-b-0 pl-1.5">
                     <span className="flex-1 min-w-0 truncate">{task.title}</span>
-                    {task.due && <span className="text-xs text-muted shrink-0">{formatRelativeDay(task.due)}</span>}
+                    {/* why it is urgent: high priority, due today, or overdue - one small mark each */}
+                    {isHighPriority(task.priority) && (
+                      <span className="text-xs font-semibold text-bad bg-bad/10 rounded-full px-2 py-0.5 shrink-0">Hoch</span>
+                    )}
+                    {task.due && (
+                      <span
+                        className={`text-xs shrink-0 ${
+                          task.due < today() ? 'text-bad font-semibold' : task.due === today() ? 'text-accent font-semibold' : 'text-muted'
+                        }`}
+                      >
+                        {task.due < today() ? 'überfällig' : formatRelativeDay(task.due)}
+                      </span>
+                    )}
                   </Link>
                 </li>
               ))}
