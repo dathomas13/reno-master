@@ -21,6 +21,7 @@ import {
   connectAuthEmulator,
   type Auth,
 } from 'firebase/auth';
+import { skipSessionCheckWhileRestoring } from './startupAuth';
 
 const config = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -63,9 +64,17 @@ export const db: Firestore = initializeFirestore(app, {
  * in with e-mail and password, so it needs no resolver: the stored user comes straight
  * from the device. localStorage first, because that is where the session has been kept.
  */
+// the stored session comes from the device, never from waiting on the server - see
+// startupAuth.ts. In place before Auth starts restoring, so its first request already meets it.
+let sessionRestored: () => void = () => undefined;
+if (typeof window !== 'undefined') {
+  skipSessionCheckWhileRestoring(window, new Promise<void>((resolve) => { sessionRestored = resolve; }));
+}
+
 export const auth: Auth = initializeAuth(app, {
   persistence: [browserLocalPersistence, indexedDBLocalPersistence],
 });
+void auth.authStateReady().then(sessionRestored, sessionRestored);
 
 if (useEmulators) {
   connectFirestoreEmulator(db, '127.0.0.1', 8080);

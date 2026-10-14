@@ -248,6 +248,9 @@ Platzhaltern und sperrt beide Konten aus. Vorher die Adressen einsetzen, klein g
   Auswahlwerte kommen als Set in `options.ts` und in die Voreinstellungen, nicht als
   Konstanten-Array. Details in `PLAN.md` 5.7.
 - Jede Netzwerkoperation muss offline sauber scheitern, nie in einen Endlos-Spinner laufen.
+- **Der App-Start wartet nie aufs Netz** (Offline first, auch bei schlechtem Empfang): erst das Gerät, dann
+  im Hintergrund der Server. Firebase Auth fragt beim Start sonst den Server und hielt die App 24 s an –
+  `src/firebase/startupAuth.ts` verhindert das. Details in `PLAN.md`, Abschnitt 7, Punkt 0.
 - **Zum Debuggen `src/platform/debugLog.ts` benutzen, nicht `console.log`.** Auf dem Telefon
   gibt es keine Konsole. **Das Protokoll kommt von selbst an:** `src/platform/diagUpload.ts`
   legt es als `diag/<gerät>.json` auf R2 ab (beim Wegschalten der App, nach dem Start, alle
