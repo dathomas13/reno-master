@@ -30,6 +30,8 @@ import ContactLogsPage from '@/modules/contacts/ContactLogsPage';
 import SearchPage from '@/modules/search/SearchPage';
 import PhotosPage from '@/modules/photos/PhotosPage';
 import ReceiptsPage from '@/modules/receipts/ReceiptsPage';
+import DocumentsPage from '@/modules/documents/DocumentsPage';
+import DocumentViewPage from '@/modules/documents/DocumentViewPage';
 import SettingsPage from '@/modules/settings/SettingsPage';
 import PresetsPage from '@/modules/settings/presets/PresetsPage';
 import HomeSettingsPage from '@/modules/settings/HomeSettingsPage';
@@ -102,6 +104,8 @@ function Protected() {
           <Route path="/dateien" element={<Navigate to="/tagebuch" replace />} />
           <Route path="/fotos" element={<PhotosPage />} />
           <Route path="/belege" element={<ReceiptsPage />} />
+          <Route path="/dokumente" element={<DocumentsPage />} />
+          <Route path="/dokumente/:id" element={<DocumentViewPage />} />
           <Route path="/einstellungen" element={<SettingsPage />} />
           <Route path="/einstellungen/startseite" element={<HomeSettingsPage />} />
           <Route path="/einstellungen/voreinstellungen" element={<PresetsPage />} />

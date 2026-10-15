@@ -211,6 +211,11 @@ Steht:
   (`worker/wrangler.toml`, Secrets `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`). Niemand
   muss mehr etwas ins Dashboard kopieren. Variablen dort bleiben (`keep_vars`), Secrets auch.
 
+- **Dokumentespeicher** (0.90.0): eigener Bereich `/dokumente` für Angebote, Berechnungen, Verträge,
+  Datenblätter – PDF oder Bild, eine Datei je Dokument, Sammlung `documents` (`PLAN.md` 5.15, 8.11), Arten als
+  Set `documentTypes`. **Braucht eine Zeile in den Regeln der Konsole** (`match /documents/{doc}`), sonst zeigt
+  der Bildschirm einen Hinweis. Lieferscheine sollen hier als Art `lieferschein` andocken, nicht in `photos`.
+
 Offen:
 
 1. **Push, wenn die App zu ist.** Die Abend-Erinnerung steht: sie wird auf dem Gerät

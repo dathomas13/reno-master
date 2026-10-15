@@ -25,6 +25,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { id: 'tagebuch', label: 'Tagebuch', icon: 'diary', to: '/tagebuch' },
   { id: 'kontakte', label: 'Kontakte', icon: 'contact', to: '/kontakte' },
   { id: 'gespraeche', label: 'Gespräche', icon: 'chat', to: '/gespraeche' },
+  { id: 'dokumente', label: 'Dokumente', icon: 'files', to: '/dokumente' },
   { id: 'suche', label: 'Suche', icon: 'search', to: '/suche' },
 ];
 

@@ -211,6 +211,33 @@ export interface Plan extends BaseDoc {
   offline?: boolean;
 }
 
+/**
+ * A file kept for the project that is neither a photo nor a receipt: an offer, a
+ * calculation, a contract, a data sheet, later the delivery notes. One file per document;
+ * what it is comes from the `documentTypes` option set.
+ */
+export interface ProjectDocument extends BaseDoc {
+  title: string;
+  /** id of the `documentTypes` option set */
+  docType: string;
+  /** the date on the document, not the upload */
+  date: Iso;
+  /** who issued it: company, dealer, planner */
+  vendor?: string;
+  /** gross EUR, e.g. the sum of an offer */
+  amount?: number;
+  tradeId?: string;
+  roomIds: string[];
+  notes?: string;
+  storagePath: string;
+  /** images only */
+  thumbPath?: string;
+  contentType: string;
+  bytes: number;
+  originalName?: string;
+  uploadState: 'pending' | 'uploaded' | 'failed';
+}
+
 export interface UserProfile {
   email: string;
   displayName: string;
@@ -240,4 +267,5 @@ export const COL = {
   users: 'users',
   meta: 'meta',
   contactLogs: 'contactLogs',
+  documents: 'documents',
 } as const;

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
-import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type Task, type Trade } from '@/data/types';
+import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type ProjectDocument, type Task, type Trade } from '@/data/types';
 import { archiveName, formatSize, planExport } from '@/data/exportArchive';
 import { canStreamToDisk, pickFileTarget, writeArchive, type ExportProgress } from '@/data/runExport';
 import { readFromStorage } from '@/data/exportFiles';
@@ -21,6 +21,7 @@ export function ExportSection() {
   const tasks = useCollection<Task>(COL.tasks);
   const contacts = useCollection<Contact>(COL.contacts);
   const trades = useCollection<Trade>(COL.trades);
+  const documents = useCollection<ProjectDocument>(COL.documents);
 
   const [progress, setProgress] = useState<ExportProgress | null>(null);
   const [running, setRunning] = useState(false);
@@ -40,9 +41,10 @@ export function ExportSection() {
         tasks: tasks.data,
         contacts: contacts.data,
         trades: trades.data,
+        documents: documents.data,
         sets,
       }),
-    [entries.data, photos.data, costs.data, tasks.data, contacts.data, trades.data, sets],
+    [documents.data, entries.data, photos.data, costs.data, tasks.data, contacts.data, trades.data, sets],
   );
 
   const streams = canStreamToDisk();

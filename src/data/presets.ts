@@ -57,6 +57,7 @@ export const PRESETS: PresetDef[] = [
     placeholder: 'Neues Gewerk …', maxLength: 60,
   },
   options('gewerkstatus', 'tradeStatus', 'Projekt', 'Gewerkstatus', 'Zustände eines Gewerks', 'Status'),
+  options('dokumentarten', 'documentTypes', 'Projekt', 'Dokumentarten', 'Art eines Dokuments: Angebot, Berechnung …', 'Art'),
   options('kategorien', 'costCategories', 'Kosten', 'Kategorien', 'Kostenkategorien', 'Kategorie'),
   options('zahlungsarten', 'paymentMethods', 'Kosten', 'Zahlungsarten', 'Wie bezahlt wurde', 'Zahlungsart'),
   options('bezahlt-von', 'payers', 'Kosten', 'Bezahlt von', 'Wer bezahlt hat', 'Eintrag'),

@@ -9,7 +9,7 @@
  * Planning is separated from writing so the list of files can be tested, and so the
  * caller can show what is going to happen before a gigabyte starts moving.
  */
-import type { Contact, Cost, DiaryEntry, Photo, Task, Trade } from './types';
+import type { Contact, Cost, DiaryEntry, Photo, ProjectDocument, Task, Trade } from './types';
 import { DEFAULT_OPTIONS, labelOf, type OptionSets } from './options';
 import { formatDate } from '@/lib/date';
 
@@ -20,6 +20,8 @@ export interface ExportSource {
   tasks: Task[];
   contacts: Contact[];
   trades: Trade[];
+  /** the document store; older callers leave it out */
+  documents?: ProjectDocument[];
   /** the option sets, so ids are written as names; the start values when missing */
   sets?: OptionSets;
 }
@@ -89,6 +91,13 @@ export function photoFileName(photo: Photo, index: number, entry?: DiaryEntry): 
   return `${folder}/${day}/${number}_${base}.${extension}`;
 }
 
+/** where a document lands: by type, then date and title, so the folder reads like a register */
+export function documentFileName(document: ProjectDocument, typeLabel: string): string {
+  const folder = safeName(typeLabel, 'Sonstiges');
+  const extension = document.contentType === 'application/pdf' ? 'pdf' : 'jpg';
+  return `dokumente/${folder}/${document.date}_${safeName(document.title, document.id)}.${extension}`;
+}
+
 const WEEKDAYS = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 /** the diary as one readable document, in the order the work happened */
@@ -136,6 +145,7 @@ const READ_ME = `Bautagebuch Schlesierstraße 31 – Archiv
 Bautagebuch.md   das ganze Tagebuch als Text, in zeitlicher Reihenfolge
 fotos/<Tag>/     die Fotos des jeweiligen Tages, nummeriert wie im Eintrag
 belege/<Tag>/    Rechnungen und Kassenzettel
+dokumente/<Art>/ Angebote, Berechnungen, Verträge und andere Unterlagen
 daten/           dieselben Inhalte als JSON, falls sie einmal in ein anderes
                  Programm sollen; optionen.json übersetzt die Kennungen
                  (Status, Kategorien, Personen ...) in ihre Namen
@@ -188,6 +198,22 @@ export function planExport(source: ExportSource, createdAt = new Date()): Export
     place(photo, placed.size, entry);
   }
 
+  const sets = source.sets ?? DEFAULT_OPTIONS;
+  const documentNames = new Set<string>();
+  for (const document of source.documents ?? []) {
+    let name = documentFileName(document, labelOf(sets.documentTypes, document.docType));
+    // two documents of one day with the same title must not overwrite each other
+    if (documentNames.has(name)) name = name.replace(/(\.[a-z]+)$/, `_${document.id}$1`);
+    documentNames.add(name);
+    files.push({
+      name,
+      storagePath: document.storagePath,
+      bytes: document.bytes,
+      original: document.contentType === 'application/pdf',
+      mime: document.contentType,
+    });
+  }
+
   const texts: ExportFile[] = [
     { name: 'LIESMICH.txt', text: READ_ME },
     { name: 'Bautagebuch.md', text: diaryToMarkdown(source, names) },
@@ -197,6 +223,7 @@ export function planExport(source: ExportSource, createdAt = new Date()): Export
     { name: 'daten/aufgaben.json', text: JSON.stringify(source.tasks, null, 2) },
     { name: 'daten/kontakte.json', text: JSON.stringify(source.contacts, null, 2) },
     { name: 'daten/gewerke.json', text: JSON.stringify(source.trades, null, 2) },
+    { name: 'daten/dokumente.json', text: JSON.stringify(source.documents ?? [], null, 2) },
     // the records carry ids; this is the key to them, should the app be gone
     { name: 'daten/optionen.json', text: JSON.stringify(source.sets ?? DEFAULT_OPTIONS, null, 2) },
     {

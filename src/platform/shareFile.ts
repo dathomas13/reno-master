@@ -27,7 +27,12 @@ function plugins(): Record<string, unknown> {
 
 export type HandOver = 'download' | 'share' | 'folder' | 'cancelled';
 
-export async function handOverFile(name: string, data: Uint8Array, mime: string): Promise<HandOver> {
+export async function handOverFile(
+  name: string,
+  data: Uint8Array,
+  mime: string,
+  dialogTitle = 'Modell weitergeben',
+): Promise<HandOver> {
   if (!isNative()) {
     const url = URL.createObjectURL(new Blob([data as unknown as BlobPart], { type: mime }));
     const link = document.createElement('a');
@@ -45,7 +50,7 @@ export async function handOverFile(name: string, data: Uint8Array, mime: string)
   if (filesystem && share) {
     try {
       const { uri } = await filesystem.writeFile({ path: name, data: toBase64(data), directory: 'CACHE' });
-      await share.share({ title: name, files: [uri], dialogTitle: 'Modell weitergeben' });
+      await share.share({ title: name, files: [uri], dialogTitle });
       return 'share';
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

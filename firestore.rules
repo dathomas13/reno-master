@@ -33,6 +33,8 @@ service cloud.firestore {
     match /trades/{doc}   { allow read, write: if allowed(); }
     match /phases/{doc}   { allow read, write: if allowed(); }
     match /plans/{doc}    { allow read, write: if allowed(); }
+    // Dokumentespeicher (Angebote, Berechnungen, Verträge …), seit 0.90.0
+    match /documents/{doc} { allow read, write: if allowed(); }
     // meta traegt auch die veroeffentlichten 3D-Modelle (model-ist, model-soll): Version,
     // Notiz und die Szene als JSON-Text, unter 1 MiB pro Dokument. Keine eigene Regel
     // noetig - wer die App benutzen darf, darf auch das Modell austauschen. Ebenso die

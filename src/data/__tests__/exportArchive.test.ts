@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   archiveName,
   diaryToMarkdown,
+  documentFileName,
   formatSize,
   photoFileName,
   planExport,
   safeName,
   type ExportSource,
 } from '@/data/exportArchive';
-import type { DiaryEntry, Photo } from '@/data/types';
+import type { DiaryEntry, Photo, ProjectDocument } from '@/data/types';
 
 function entry(patch: Partial<DiaryEntry> & { id: string; date: string }): DiaryEntry {
   return {
@@ -181,5 +182,32 @@ describe('archiveName', () => {
     expect(archiveName(new Date('2026-09-14T22:00:00Z'))).toBe(
       'bautagebuch-schlesierstrasse-31-2026-09-14.zip',
     );
+  });
+});
+
+describe('documents in the archive', () => {
+  const offer: ProjectDocument = {
+    id: 'd1',
+    title: 'Angebot: Dach/Gaube',
+    docType: 'angebot',
+    date: '2026-10-01',
+    roomIds: [],
+    storagePath: 'documents/d1.pdf',
+    contentType: 'application/pdf',
+    bytes: 50_000,
+    uploadState: 'uploaded',
+  };
+
+  it('files them by type, date and title', () => {
+    expect(documentFileName(offer, 'Angebot')).toBe('dokumente/Angebot/2026-10-01_Angebot- Dach-Gaube.pdf');
+  });
+
+  it('takes the files and their data along, two equal names apart', () => {
+    const plan = planExport({ ...empty, documents: [offer, { ...offer, id: 'd2', storagePath: 'documents/d2.pdf' }] });
+    const names = plan.files.map((file) => file.name);
+    expect(names).toContain('dokumente/Angebot/2026-10-01_Angebot- Dach-Gaube.pdf');
+    expect(names).toContain('dokumente/Angebot/2026-10-01_Angebot- Dach-Gaube_d2.pdf');
+    expect(names).toContain('daten/dokumente.json');
+    expect(plan.fileCount).toBe(2);
   });
 });

@@ -32,6 +32,7 @@ const KIND_COLOR: Record<SearchKind, string> = {
   trade: 'text-ink border-line bg-panel2',
   phase: 'text-muted border-line bg-panel2',
   plan: 'text-muted border-line bg-panel2',
+  document: 'text-muted border-line bg-panel2',
   photo: 'text-muted border-line bg-panel2',
 };
 

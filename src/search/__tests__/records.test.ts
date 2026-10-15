@@ -177,3 +177,32 @@ describe('buildRecords - room aliases', () => {
     expect(record?.subtitle).not.toContain('Heizung');
   });
 });
+
+describe('documents in the search', () => {
+  it('finds a document by title part, sender, type name and amount', () => {
+    const index = buildIndex(
+      buildRecords({
+        documents: [
+          {
+            id: 'x1',
+            title: 'U-Wert Gaubendämmung',
+            docType: 'berechnung-nachweis',
+            date: '2026-10-15',
+            vendor: 'Energieberatung Kunz',
+            amount: 1890,
+            roomIds: [],
+            storagePath: 'documents/x1.pdf',
+            contentType: 'application/pdf',
+            bytes: 1,
+            uploadState: 'uploaded',
+          },
+        ],
+        sets: DEFAULT_OPTIONS,
+      }),
+    );
+    for (const query of ['daemmung', 'kunz', 'nachweis', '1.890,00']) {
+      const hits = search(index, query);
+      expect(hits.map((hit) => hit.record.to)).toContain('/dokumente/x1');
+    }
+  });
+});
