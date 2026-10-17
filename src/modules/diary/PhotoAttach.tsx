@@ -14,6 +14,7 @@ import type { Cost, Photo } from '@/data/types';
 import { makeThumbnail } from '@/lib/image';
 import { newId } from '@/lib/ids';
 import { debugLog } from '@/platform/debugLog';
+import { localBlob } from '@/offline/outbox';
 
 interface PhotoBlob {
   blob: Blob;
@@ -442,13 +443,7 @@ export function PhotoAttach({
                   <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />
                 </button>
               ) : <PhotoImage photo={photo} thumb className="w-full h-full object-cover rounded-lg bg-panel2" />}
-              {photo.uploadState === 'pending' && (
-                <span role="status" aria-label={`Upload ausstehend: ${photo.originalName ?? 'Foto'}`}
-                  className="absolute bottom-1 left-1 flex items-center gap-1 text-[10px] bg-bg/80 px-1.5 py-1 rounded">
-                  <span className="w-3 h-3 rounded-full border-2 border-muted border-t-accent animate-spin" />
-                  Upload ausstehend
-                </span>
-              )}
+              {photo.uploadState === 'pending' && <PendingBadge photo={photo} />}
               {photo.uploadState === 'failed' && (
                 <span className="absolute bottom-1 left-1 text-[10px] bg-bad/90 text-bg px-1 rounded">Fehler</span>
               )}
@@ -555,5 +550,33 @@ export function PhotoAttach({
         </div>
       </Sheet>
     </div>
+  );
+}
+
+/**
+ * "Upload ausstehend" only where the file waits in this device's own queue. Taken on
+ * another phone and not sent from there yet, there is nothing to do here - and no spinner
+ * that suggests otherwise.
+ */
+function PendingBadge({ photo }: { photo: Photo }) {
+  const [here, setHere] = useState<boolean | null>(null);
+  useEffect(() => {
+    let active = true;
+    void localBlob(photo.storagePath).then(
+      (blob) => active && setHere(Boolean(blob)),
+      () => active && setHere(false),
+    );
+    return () => {
+      active = false;
+    };
+  }, [photo.storagePath]);
+  if (here === null) return null;
+  const label = here ? 'Upload ausstehend' : 'Wartet auf anderes Gerät';
+  return (
+    <span role="status" aria-label={`${label}: ${photo.originalName ?? 'Foto'}`}
+      className="absolute bottom-1 left-1 flex items-center gap-1 text-[10px] bg-bg/80 px-1.5 py-1 rounded">
+      {here && <span className="w-3 h-3 rounded-full border-2 border-muted border-t-accent animate-spin" />}
+      {label}
+    </span>
   );
 }

@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('@/firebase/db', () => ({ ...mocks, removeDoc: vi.fn() }));
 vi.mock('@/offline/outbox', () => ({
-  enqueue: mocks.enqueue, putLocalBlob: vi.fn(), dropLocalBlob: vi.fn(), removeJobsForPaths: vi.fn(),
+  enqueue: mocks.enqueue, putLocalBlob: vi.fn(), dropLocalBlob: vi.fn(), removeJob: vi.fn().mockResolvedValue(undefined), removeJobsForPaths: vi.fn(), localBlob: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock('@/platform/fileStore', () => ({ deleteFile: vi.fn() }));
 vi.mock('@/lib/image', () => ({
@@ -102,6 +102,12 @@ describe('receipt deduplication', () => {
     const photo = await operation;
     expect(photo.costId).toBe('cost-1');
     expect(mocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({ docId: photo.id }));
+  });
+
+  it('queues the file before it waits for the server, so closing the app cannot lose it', async () => {
+    mocks.saveDoc.mockImplementationOnce(() => new Promise(() => {}));
+    void addPhoto({ ...input, existingPhotos: [] });
+    await vi.waitFor(() => expect(mocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({ docField: 'uploadState' })));
   });
 
   it('finishes saving a cost locally when the server does not acknowledge', async () => {

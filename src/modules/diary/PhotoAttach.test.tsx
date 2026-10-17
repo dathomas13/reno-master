@@ -15,10 +15,12 @@ const mocks = vi.hoisted(() => ({
   pickPhotos: vi.fn(),
   saveDoc: vi.fn().mockResolvedValue('receipt-1'),
   enqueue: vi.fn().mockResolvedValue(undefined),
+  /** the file waits in this device's queue (true) or was taken on another device */
+  queuedHere: true,
 }));
 vi.mock('@/firebase/db', () => ({ saveDoc: mocks.saveDoc, patchDoc: vi.fn(), removeDoc: vi.fn() }));
 vi.mock('@/offline/outbox', () => ({
-  enqueue: mocks.enqueue, putLocalBlob: vi.fn(), dropLocalBlob: vi.fn(), removeJobsForPaths: vi.fn(),
+  enqueue: mocks.enqueue, putLocalBlob: vi.fn(), dropLocalBlob: vi.fn(), removeJob: vi.fn().mockResolvedValue(undefined), removeJobsForPaths: vi.fn(), localBlob: vi.fn(async () => (mocks.queuedHere ? new Blob(['x']) : undefined)),
 }));
 vi.mock('@/platform/fileStore', () => ({ deleteFile: vi.fn() }));
 vi.mock('@/platform/photos', () => ({
@@ -55,6 +57,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
   mocks.galleryAvailable = false;
+  mocks.queuedHere = true;
   mocks.thumbnail.mockReset().mockResolvedValue(null);
   mocks.readGallery.mockReset();
   mocks.pickFiles.mockResolvedValue([file]);
@@ -146,8 +149,19 @@ describe('receipt file picker', () => {
     expect(onBusyChange.mock.calls).toEqual([[true], [false]]);
     const photos = onAdded.mock.calls.map(([photo]) => photo as Photo);
     view.rerender(<PhotoAttach {...props} photos={photos} />);
-    expect(screen.getAllByRole('status', { name: /Upload ausstehend/ })).toHaveLength(2);
+    expect(await screen.findAllByRole('status', { name: /Upload ausstehend/ })).toHaveLength(2);
     view.rerender(<PhotoAttach {...props} photos={photos.map((photo) => ({ ...photo, uploadState: 'uploaded' }))} />);
+    expect(screen.queryByRole('status', { name: /Upload ausstehend/ })).not.toBeInTheDocument();
+  });
+
+  it('says a photo still waits on the device that took it, without a spinner here', async () => {
+    mocks.queuedHere = false;
+    const photo = {
+      id: 'p1', kind: 'receipt', storagePath: 'receipts/c1/p1.jpg', thumbPath: 'photos/p1_thumb.jpg',
+      contentType: 'image/jpeg', width: 1, height: 1, bytes: 1, roomIds: [], uploadState: 'pending',
+    } as Photo;
+    render(<PhotoAttach photos={[photo]} costId="c1" kind="receipt" onAdded={vi.fn()} onRemoved={vi.fn()} />);
+    expect(await screen.findByRole('status', { name: /Wartet auf anderes Gerät/ })).toBeInTheDocument();
     expect(screen.queryByRole('status', { name: /Upload ausstehend/ })).not.toBeInTheDocument();
   });
 

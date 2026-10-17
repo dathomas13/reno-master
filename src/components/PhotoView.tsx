@@ -32,13 +32,18 @@ export function PhotoImage({
   useEffect(() => {
     let active = true;
     setFailed(false);
-    void resolveFileUrl(path).then((resolved) => {
+    void resolveFileUrl(path).then(async (resolved) => {
+      // not uploaded yet by the device that took it: the thumbnail is already there, so the
+      // big view shows that instead of waiting for ever
+      if (!resolved && photo.uploadState === 'pending' && photo.thumbPath && path !== photo.thumbPath) {
+        resolved = await resolveFileUrl(photo.thumbPath);
+      }
       if (active) setUrl(resolved);
     });
     return () => {
       active = false;
     };
-  }, [path]);
+  }, [path, photo.uploadState, photo.thumbPath]);
 
   if (photo.contentType === 'application/pdf') {
     return (

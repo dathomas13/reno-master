@@ -11,6 +11,7 @@ import { openDB, type IDBPDatabase } from 'idb';
 import { patchDoc } from '@/firebase/db';
 import { putFile, deleteFile } from '@/platform/fileStore';
 import { backoffFor, documentGone, dueJobs, MAX_ATTEMPTS, queueState } from './outboxRules';
+import { debugLog } from '@/platform/debugLog';
 
 export { isFailed, MAX_ATTEMPTS } from './outboxRules';
 
@@ -100,6 +101,7 @@ export async function enqueue(job: Omit<OutboxJob, 'attempts' | 'createdAt' | 'n
     nextAttemptAt: 0,
   } satisfies OutboxJob);
   await database_.put(BLOBS, job.blob, job.storagePath);
+  debugLog('upload', `eingereiht: ${job.storagePath} (${Math.round(job.blob.size / 1024)} KB)`);
   await publish();
   void processOutbox();
 }
@@ -177,8 +179,10 @@ export async function processOutbox(force = false): Promise<void> {
         }
         if (problem) throw problem;
         await database_.delete(STORE, job.id);
+        debugLog('upload', `hochgeladen: ${job.storagePath}`);
       } catch (error) {
         const attempts = job.attempts + 1;
+        debugLog('upload', `Versuch ${attempts} gescheitert: ${job.storagePath} – ${error instanceof Error ? error.message : String(error)}`);
         await database_.put(STORE, {
           ...job,
           attempts,

@@ -6,7 +6,7 @@
 import { COL, type Cost, type Photo, type PhotoKind } from './types';
 import { pendingWrite } from './pendingWrite';
 import { saveDoc, patchDoc, removeDoc } from '@/firebase/db';
-import { enqueue, putLocalBlob, dropLocalBlob, removeJobsForPaths } from '@/offline/outbox';
+import { enqueue, putLocalBlob, dropLocalBlob, removeJob, removeJobsForPaths } from '@/offline/outbox';
 import { deleteFile } from '@/platform/fileStore';
 import { resizeImage, makeThumbnail, readTakenAt, PHOTO_MAX_EDGE, RECEIPT_MAX_EDGE } from '@/lib/image';
 import { newId, deviceId } from '@/lib/ids';
@@ -147,8 +147,10 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
   // strip undefined, Firestore rejects it
   const clean = Object.fromEntries(Object.entries(photo).filter(([, value]) => value !== undefined));
   const write = saveDoc<Photo>(COL.photos, clean as unknown as Photo);
-  await pendingWrite(write, input.kind === 'receipt' ? 10_000 : 0);
-
+  // The file goes into the queue right away, not after the wait below: closed within those
+  // seconds, the app used to leave the thumbnail uploaded and the picture itself never
+  // queued - "Upload ausstehend" for ever on every other device. The document write is
+  // already in Firestore's queue ahead of the job's "uploaded" flag, so the order holds.
   await enqueue({
     id,
     storagePath,
@@ -158,6 +160,13 @@ export async function addPhoto(input: AddPhotoInput): Promise<Photo> {
     docId: id,
     docField: 'uploadState',
   });
+  try {
+    await pendingWrite(write, input.kind === 'receipt' ? 10_000 : 0);
+  } catch (cause) {
+    // refused (rules, quota): no document, so the file has nowhere to go either
+    await removeJob(id).catch(() => undefined);
+    throw cause;
+  }
 
   return photo;
 }
