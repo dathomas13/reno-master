@@ -21,6 +21,7 @@ import {
   type Phase,
   type Photo,
   type Plan,
+  type ProjectDocument,
   type Task,
   type Trade,
 } from '@/data/types';
@@ -38,6 +39,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
   const trades = useCollection<Trade>(COL.trades);
   const phases = useCollection<Phase>(COL.phases);
   const plans = useCollection<Plan>(COL.plans);
+  const documents = useCollection<ProjectDocument>(COL.documents);
   const photos = useCollection<Photo>(COL.photos);
   // both room tables, each room with all its linked names: the search finds "Heizung",
   // "Öllager" and "Technikraum" whichever naming is set (roomsWithLinkedNames)
@@ -69,6 +71,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
         trades: trades.data,
         phases: phases.data,
         plans: plans.data,
+        documents: documents.data,
         photos: photos.data,
         rooms: roomsForSearch,
         sets,
@@ -83,6 +86,7 @@ export function useSearchIndex(): { index: SearchIndex; count: number; loading: 
       trades.data,
       phases.data,
       plans.data,
+      documents.data,
       photos.data,
       roomsForSearch,
       sets,

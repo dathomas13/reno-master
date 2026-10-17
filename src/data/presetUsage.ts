@@ -9,6 +9,7 @@ import {
   type Cost,
   type DiaryEntry,
   type Phase,
+  type ProjectDocument,
   type Task,
   type Trade,
 } from './types';
@@ -21,6 +22,7 @@ export interface UsageSources {
   contactLogs?: Pick<ContactLog, 'channel' | 'participants'>[];
   trades?: Pick<Trade, 'status' | 'priority'>[];
   phases?: Pick<Phase, 'status'>[];
+  documents?: Pick<ProjectDocument, 'docType'>[];
 }
 
 /**
@@ -86,6 +88,9 @@ export function countUsage(
     case 'contactChannels':
       sources.contactLogs?.forEach((log) => bumpOne(log.channel));
       break;
+    case 'documentTypes':
+      sources.documents?.forEach((document) => bumpOne(document.docType));
+      break;
   }
   return counts;
 }
@@ -99,6 +104,7 @@ export function usePresetUsage(setKey: OptionSetKey): Map<string, number> {
   const contactLogs = useCollection<ContactLog>(COL.contactLogs);
   const trades = useCollection<Trade>(COL.trades);
   const phases = useCollection<Phase>(COL.phases);
+  const documents = useCollection<ProjectDocument>(COL.documents);
   return useMemo(
     () =>
       countUsage(setKey, {
@@ -109,7 +115,8 @@ export function usePresetUsage(setKey: OptionSetKey): Map<string, number> {
         contactLogs: contactLogs.data,
         trades: trades.data,
         phases: phases.data,
+        documents: documents.data,
       }),
-    [setKey, diary.data, costs.data, tasks.data, contacts.data, contactLogs.data, trades.data, phases.data],
+    [setKey, diary.data, costs.data, tasks.data, contacts.data, contactLogs.data, trades.data, phases.data, documents.data],
   );
 }

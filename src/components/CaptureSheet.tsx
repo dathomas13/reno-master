@@ -56,6 +56,7 @@ export function CaptureSheet({ open, onClose }: { open: boolean; onClose(): void
     { icon: 'task', label: 'Aufgabe', hint: 'Etwas, das zu tun ist', to: withRoom('/aufgaben?neu=1', room) },
     { icon: 'note', label: 'Notiz', hint: 'Kurzer Gedanke', to: withRoom('/notizen?neu=1', room) },
     { icon: 'chat', label: 'Gespräch', hint: 'Was besprochen wurde', to: '/gespraeche?neu=1' },
+    { icon: 'files', label: 'Dokument', hint: 'Angebot, Berechnung, PDF', to: withRoom('/dokumente?neu=1', room) },
   ];
 
   return (

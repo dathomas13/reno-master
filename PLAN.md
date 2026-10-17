@@ -262,7 +262,7 @@ Seed (im Repo unter `src/data/seed/`, beim ersten App-Start eines eingeloggten N
 ```
 - **Kennung = Slug des Namens bei der Anlage** (`slugify`: klein, ä→ae, ß→ss, sonst `-`; Kollision `-2`, `-3`). Danach ändert sie sich nie, auch wenn der Eintrag umbenannt wird.
 - **Feste Sets** (die App rechnet mit ihnen): `taskStatus` (offen, in-arbeit, wartet-auf, erledigt), `phaseStatus` (geplant, in-arbeit, abgeschlossen, blockiert), `priority` (hoch, mittel, niedrig – Aufgaben und Gewerke), `paymentStatus` (offen, bezahlt, erstattet). Nur umbenennen und sortieren. Logik vergleicht ausschließlich über die Helfer und Konstanten in `src/data/options.ts` (`isTaskDone`, `isPhaseActive`, `isHighPriority`, `isPaid`, `hasAssignee`, `TASK_DONE` …), nie gegen Text.
-- **Freie Sets**: `people` (auch „Zuständig“), `weather`, `costCategories`, `taskAreas`, `contactRoles`, `paymentMethods`, `payers`, `contactChannels`, `tradeStatus`, `contactStatus`. Hinzufügen, umbenennen, sortieren, ausblenden (`archived`) statt löschen.
+- **Freie Sets**: `people` (auch „Zuständig“), `weather`, `costCategories`, `taskAreas`, `contactRoles`, `paymentMethods`, `payers`, `contactChannels`, `tradeStatus`, `contactStatus`, `documentTypes`. Hinzufügen, umbenennen, sortieren, ausblenden (`archived`) statt löschen.
 - **Eigene Objekte** (Räume, Gewerke, Phasen, Kontakte) sind über ihre Dokument-id verknüpft; Löschen heißt dort ebenfalls ausblenden, endgültig nur ohne Verwendung.
 - **Lesen nur über die id**: `labelOf(entries, id)` zeigt den Namen (bei unbekannter id die id selbst), Gruppieren, Zählen und Filtern geschieht über die gespeicherte id. Ausgeblendete oder unbekannte gespeicherte Werte bleiben in den Auswahlfeldern sichtbar.
 - **Namen zu Kennung** (`findOptionByName`: Name oder dessen Slug) gibt es nur dort, wo ein Mensch oder eine Engine einen Namen liefert: das Beleg-Auslesen (Kategorie aus Text) und die Prüfung auf Duplikate beim Hinzufügen.
@@ -348,6 +348,33 @@ Tag, der schon einen hat, wird angehängt (5.1: „Eintrag für heute“ ist ein
 der Startwerte der Auswahllisten; `src/data/__tests__/apiWorker.test.ts` hält sie gleich mit `options.ts`.
 Map-Einträge wie in 5.13, keine neue Regel nötig.
 
+### 5.15 `documents` – Dokumentespeicher
+```ts
+interface ProjectDocument {
+  id: string;
+  title: string;             // Vorgabe: Dateiname ohne Endung
+  docType: string;           // Kennung aus meta/options.documentTypes (Angebot, Berechnung/Nachweis, Lieferschein, …)
+  date: string;              // Datum auf dem Dokument, nicht das Hochladen
+  vendor?: string;           // von wem: Firma, Händler, Planer (frei, Vorschläge aus Kontakten und Kosten)
+  amount?: number;           // brutto, z. B. Angebotssumme
+  tradeId?: string; roomIds: string[]; notes?: string;
+  storagePath: string;       // documents/{id}.(pdf|jpg)
+  thumbPath?: string;        // documents/{id}_thumb.jpg, nur bei Bildern
+  contentType: string; bytes: number; originalName?: string;
+  uploadState: 'pending'|'uploaded'|'failed';
+}
+```
+Eine Datei je Dokument, nur PDF und Bild (bis 30 MB; Bilder wie Belege auf 2000 px). Datei und Datensatz gehen
+den Weg der Fotos: Datensatz sofort in die Firestore-Warteschlange, Bytes über die Outbox nach R2. Löschen mit
+„Rückgängig“; die Datei selbst wird erst nach 30 s entfernt, damit der Weg zurück eine öffnbare Datei findet.
+**Eigene Sammlung, braucht eine Regel** (`match /documents/{doc}`) – fehlt sie in der Konsole, sagt der
+Bildschirm das mit der Zeile zum Einfügen.
+
+**Lieferscheine** (Plan aus einem anderen Chat, noch nicht umgesetzt) gehören hierher statt als
+`kind:'delivery'` in `photos`: ein Lieferschein ist ein Dokument der Art `lieferschein`, „offen“ heißt ohne
+`costId`. Dafür kämen `costId?`, `docNumber?` und `items?` an `ProjectDocument`; Zuordnen und Prüfen im
+Kosten-Editor wie dort geplant.
+
 ---
 
 ## 6. Security Rules
@@ -423,7 +450,7 @@ Deploy mit `firebase deploy --only firestore,storage` (Service-Account: `GOOGLE_
   - Versteckte Gesten erklärt einmal ein Hinweis (`components/Hint.tsx`, gemerkt in `lib/hints.ts`).
   - Symbole kommen aus einem Satz (`components/Icon.tsx`), keine Emojis außer dem Wetter.
 - **Sheets werden per Portal an `document.body` gehängt.** `backdrop-blur` (wie `filter` und `transform`) macht ein Element zum Bezugsrahmen für `position: fixed` darin – TopBar und Bottom-Navigation haben es. Ein Sheet, das im Baum darunter steht, misst sich sonst an einer 56 px hohen Kopfzeile und erscheint am Telefon verschoben und unlesbar.
-- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/gespraeche` (alle Gesprächsprotokolle über alle Kontakte, Reiter im Bereich Kontakte), `/notizen`, `/fotos`, `/belege`, `/einstellungen/startseite`, `/einstellungen/voreinstellungen`, `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
+- Routen (HashRouter): `/`, `/tagebuch`, `/tagebuch/neu?date=YYYY-MM-DD`, `/tagebuch/:id`, `/tagebuch/:id/bearbeiten`, `/3d?variant=ist|soll&room=<id>`, `/plaene`, `/plaene/:id`, `/kosten`, `/kosten/neu`, `/kosten/:id`, `/aufgaben`, `/aufgaben/:id`, `/kontakte`, `/kontakte/:id`, `/gespraeche` (alle Gesprächsprotokolle über alle Kontakte, Reiter im Bereich Kontakte), `/notizen`, `/fotos`, `/belege`, `/dokumente`, `/dokumente/:id`, `/einstellungen/startseite`, `/einstellungen/voreinstellungen`, `/suche?q=<text>&typ=<art>`, `/einstellungen`, `/login`.
 - Filter und Sprungziele in der Adresse: `/tagebuch?raum=<id>`, `?phase=<id>` und `?maengel=1` (Chip „Mängel“ unter der Suche), `/kosten?raum=<id>`, `?kategorie=<name>` und `?gewerk=<id>`, `/aufgaben?raum=<id>` und `?aufgabe=<id>` (öffnet das Sheet), `/kontakte?kontakt=<id>` (öffnet das Sheet), `/gespraeche?eintrag=<id>` (öffnet den Gesprächseintrag), `/fotos?raum=<id>` und `?art=photo|receipt`, `?neu=1` bei Aufgaben, Notizen und Gesprächen (öffnet ein neues Sheet, mit `?raum=` schon zugeordnet), `/tagebuch/neu?fotos=heute` (öffnet die Tagesauswahl der Galerie), `/kosten?ansicht=uebersicht`. Die Suche verlinkt darüber; das Sheet schließt den Parameter wieder weg.
 - Unauthentifiziert → `/login` (E-Mail + Passwort, "Angemeldet bleiben" ist Standard über Firebase-Persistenz). Nach Login bleibt die Session auch offline gültig (Firebase Auth persistiert Token).
 - Theme: dunkel wie der 3D-Viewer (`--bg #1d2126`, `--panel #2a3038`, `--ink #e8e4da`, `--muted #9aa3ad`, `--accent #c9a86a`), `theme-color` im Manifest identisch. Touch-Ziele ≥ 44 px. Safe-Area-Insets beachten (`viewport-fit=cover`).
@@ -564,6 +591,18 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   keine Firestore-Kaskade). Unter `/gespraeche` zeigt so ein verwaister Eintrag "Kontakt gelöscht" statt
   eines Namens; über das "Kontakt"-Feld im Editor lässt er sich einem anderen zuordnen.
 
+### 8.11 Dokumente (`/dokumente`)
+- Eigener Menüpunkt (Symbol Ordner), Kachel im Schnellzugriff und „Dokument“ im Erfassen-Knopf (`?neu=1`, mit
+  `?raum=`). Liste nach Dokumentdatum, neueste zuerst; Suchfeld (Titel, Von, Notizen, Dateiname, Art) und
+  Chips je Art mit Anzahl, nur für Arten mit Dokumenten. Zeile: Vorschaubild bzw. „PDF“, Titel, Art · Von ·
+  Datum, rechts ein Betrag.
+- „Neu“: Sheet „Dokument ablegen“ – Datei wählen, Titel (aus dem Dateinamen), Art (Chips), Datum, Von; unter
+  „Weitere Angaben“ Betrag, Gewerk, Räume, Notizen. Lange drücken: Bearbeiten, Weitergeben, Löschen.
+- Ansicht `/dokumente/:id`: oben Art · Von · Datum · Betrag, Gewerk und Räume, Notizen, Knöpfe Weitergeben
+  (Teilen-Dialog in der App, Download im Browser) und Löschen; darunter die Datei im `PdfViewer` bzw. mit
+  Zoom. Offline aus dem Dateicache, einmal gesehen bleibt sie da.
+- Gefunden in der Suche (Art `document`), im Archiv-Export unter `dokumente/<Art>/<Datum>_<Titel>`.
+
 ### 8.10 Fotos (`/fotos`)
 - Alle Bilder an einem Ort, nach Monaten gruppiert, Raster aus quadratischen Vorschaubildern (3 Spalten am Telefon, 4 bzw. 6 breiter), Tippen öffnet die bestehende `Lightbox` mit Wischen, Original-Nachladen und einem Fuß, der zum Tagebucheintrag bzw. Beleg führt.
 - Die Standardgruppierung ist nach Monat (neuester zuerst); der Umschalter bietet rechts daneben „Nach Phase“ (höchste Phase zuerst, „Ohne Phase“ ganz unten). Fotos erben die Phase ausschließlich über ihren Tagebuch-Eintrag (`entry.phaseId`), nicht über ein eigenes Pflegefeld. Belege werden hier nicht nach Phase gruppiert; die Fotos-Seite zeigt nur `kind:'photo'`.
@@ -576,7 +615,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
   Beschreibung, Kategorie, Rechnungsnummer, Notizen und der vom Beleg **gescannte Text** aus
   `extraction.rawText`), Aufgaben, Kontakte (inklusive Rollen und Notizen), die Gesprächsprotokoll-Einträge
   der Kontakte (eigene Art `contactLog`, verlinkt zurück auf den Kontakt), Gewerke,
-  Phasen, Räume des Modells, Pläne und Fotountertitel. Verknüpfungen zählen mit: ein Eintrag wird auch über
+  Phasen, Räume des Modells, Pläne, Dokumente und Fotountertitel. Verknüpfungen zählen mit: ein Eintrag wird auch über
   den Namen seines Raums, seines Gewerks oder seiner Phase gefunden.
 - Mitgesucht wird, was nicht als Text dasteht: Status ("offen", "Beauftragt"), Zuständige, Beträge
   (`89,90` findet `89,90 €`) und Daten in jeder Schreibweise (`13.09`, `13.09.2026`, `September`).
@@ -610,7 +649,7 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Modelle (`ModelSection`): Tabelle Ist/Soll mit aktiver Version, Datum, Kanal und Ladedatum, Standardvariante, "Nach neuem Modell suchen". Darunter `ModelExchange`: "Modell exportieren" (ZIP mit Anleitung, Hausdateien, DXF – im Browser als Download, in der App über den Teilen-Dialog) und "Modell importieren" (Hausdatei oder ZIP → prüfen, bauen, Änderungsbericht, "Im 3D ansehen" als Vorschau, angemeldet "Als vX veröffentlichen"; entfallende Raum-ids müssen bestätigt werden). Der alte Upload einer fertigen Szene steht als "Fertige Szene hochladen (erweitert)" darunter.
 - Voreinstellungen (Untermenü `/einstellungen/voreinstellungen`, Registry `src/data/presets.ts`), gilt für beide Konten:
   - Haus: Räume (Namen in Bestand/Planung, Planungsraum ohne Fläche anlegen) und Zuordnung Bestand → Planung (`roomMap`). Ändert die Hausdatei selbst: Entwurf im localStorage (`useRoomDraft`), angewendet auf die neueste Fassung (`roomEdits.ts`) und veröffentlicht wie ein Import (`prepareModelImport` → `publishImport`, neue Version). Raum-ids bleiben unberührt.
-  - Gruppen: Haus · Bautagebuch (Personen, Wetter) · Projekt (Phasen, Phasenstatus, Gewerke, Gewerkstatus) · Kosten (Kategorien, Zahlungsarten, Bezahlt von, Zahlungsstatus) · Aufgaben (Bereiche, Status, Priorität) · Kontakte (Rollen, Status, Gesprächsarten). Alle Sets nach 5.7.
+  - Gruppen: Haus · Bautagebuch (Personen, Wetter) · Projekt (Phasen, Phasenstatus, Gewerke, Gewerkstatus, Dokumentarten) · Kosten (Kategorien, Zahlungsarten, Bezahlt von, Zahlungsstatus) · Aufgaben (Bereiche, Status, Priorität) · Kontakte (Rollen, Status, Gesprächsarten). Alle Sets nach 5.7.
   - Freie Listen: hinzufügen, umbenennen, sortieren, ausblenden mit Rückgängig, „Wieder anzeigen“, auf Standard zurücksetzen; Verwendungszähler nach Kennung. Feste Sets: nur umbenennen, sortieren, „Standardnamen wiederherstellen“.
   - Phasen und Gewerke: eigene Editoren (Name, Status, Start/Ende bzw. Budget/Angebot, Reihenfolge); Ausblenden statt Löschen (`archived`), endgültig löschen nur ohne Verwendung.
 - Offline: belegter Speicher (StorageManager.estimate), ausstehende Uploads, "Alle Thumbnails jetzt laden", "Cache leeren".

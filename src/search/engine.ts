@@ -31,6 +31,7 @@ export type SearchKind =
   | 'room'
   | 'phase'
   | 'plan'
+  | 'document'
   | 'photo';
 
 export interface SearchRecord {
@@ -97,7 +98,8 @@ const KIND_ORDER: Record<SearchKind, number> = {
   trade: 7,
   phase: 8,
   plan: 9,
-  photo: 10,
+  document: 10,
+  photo: 11,
 };
 
 const SPACE = 32;

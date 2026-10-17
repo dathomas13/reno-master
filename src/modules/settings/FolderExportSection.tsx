@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useCollection } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
-import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type Task, type Trade } from '@/data/types';
+import { COL, type Contact, type Cost, type DiaryEntry, type Photo, type ProjectDocument, type Task, type Trade } from '@/data/types';
 import { formatSize, planExport } from '@/data/exportArchive';
 import {
   describeResult,
@@ -39,6 +39,7 @@ export function FolderExportSection() {
   const tasks = useCollection<Task>(COL.tasks);
   const contacts = useCollection<Contact>(COL.contacts);
   const trades = useCollection<Trade>(COL.trades);
+  const documents = useCollection<ProjectDocument>(COL.documents);
 
   const [progress, setProgress] = useState<FolderProgress | null>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -93,9 +94,10 @@ export function FolderExportSection() {
         tasks: tasks.data,
         contacts: contacts.data,
         trades: trades.data,
+        documents: documents.data,
         sets,
       }),
-    [entries.data, resolvedPhotos, costs.data, tasks.data, contacts.data, trades.data, sets],
+    [documents.data, entries.data, resolvedPhotos, costs.data, tasks.data, contacts.data, trades.data, sets],
   );
 
   const fromGallery = plan.files.filter((file) => sourceFor(file, device) === 'gallery').length;

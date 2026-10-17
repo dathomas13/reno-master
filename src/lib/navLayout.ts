@@ -22,6 +22,7 @@ export const NAV_ENTRIES: readonly NavEntry[] = [
   { to: '/suche', label: 'Suche' },
   { to: '/aufgaben', label: 'Aufgaben' },
   { to: '/kontakte', label: 'Kontakte' },
+  { to: '/dokumente', label: 'Dokumente' },
   { to: '/einstellungen', label: 'Einstellungen' },
 ];
 

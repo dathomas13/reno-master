@@ -19,6 +19,7 @@ import type {
   Phase,
   Photo,
   Plan,
+  ProjectDocument,
   Task,
   Trade,
 } from '@/data/types';
@@ -52,6 +53,7 @@ export interface SearchSource {
   trades?: Trade[];
   phases?: Phase[];
   plans?: Plan[];
+  documents?: ProjectDocument[];
   photos?: Photo[];
   rooms?: RoomLike[];
   /** the option sets, to search and show names instead of ids; the start values when missing */
@@ -69,6 +71,7 @@ export const KIND_LABEL: Record<SearchKind, string> = {
   trade: 'Gewerke',
   phase: 'Phasen',
   plan: 'Pläne',
+  document: 'Dokumente',
   photo: 'Fotos',
 };
 
@@ -84,6 +87,7 @@ export const KIND_BADGE: Record<SearchKind, string> = {
   trade: 'Gewerk',
   phase: 'Phase',
   plan: 'Plan',
+  document: 'Dokument',
   photo: 'Foto',
 };
 
@@ -99,6 +103,7 @@ export const KINDS: SearchKind[] = [
   'trade',
   'phase',
   'plan',
+  'document',
   'photo',
 ];
 
@@ -339,6 +344,30 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
       body: plan.notes ?? '',
       meta: [plan.floor ?? '', plan.variant, plan.kind].filter(Boolean),
       to: `/plaene/${plan.id}`,
+    });
+  }
+
+  // ------------------------------------------------------------------ Dokumente
+  for (const document of source.documents ?? []) {
+    const type = name('documentTypes', document.docType);
+    records.push({
+      id: `document:${document.id}`,
+      kind: 'document',
+      title: document.title,
+      subtitle: [type, document.vendor, formatDate(document.date)].filter(Boolean).join(' · '),
+      body: document.notes ?? '',
+      meta: [
+        type,
+        document.vendor ?? '',
+        document.originalName ?? '',
+        ...dateWords(document.date),
+        ...amountWords(document.amount),
+        document.tradeId ? (tradeName.get(document.tradeId) ?? '') : '',
+        ...roomWords(document.roomIds, roomName, roomAliases),
+      ].filter(Boolean),
+      badge: document.amount !== undefined ? formatEuro(document.amount) : undefined,
+      date: document.date,
+      to: `/dokumente/${document.id}`,
     });
   }
 

@@ -24,6 +24,7 @@ const ROUTE_ICONS: Record<string, IconName> = {
   '/notizen': 'note',
   '/kontakte': 'contact',
   '/gespraeche': 'chat',
+  '/dokumente': 'files',
   '/einstellungen': 'settings',
 };
 

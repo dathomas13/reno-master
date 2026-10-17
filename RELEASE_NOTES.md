@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.90.0 – Dokumente
+
+- Neuer Bereich „Dokumente“ für Angebote, Berechnungen, Verträge, Datenblätter und andere PDFs oder Bilder.
+- Ablegen über „+“ → Dokument; Art, Datum, Firma und Betrag festhalten, später suchen und weitergeben.
+
 ## 0.89.6 – Sofort offen, auch bei schlechtem Netz
 
 - Die App startet jetzt sofort mit allem, was auf dem Telefon liegt – auch bei schwachem Empfang.

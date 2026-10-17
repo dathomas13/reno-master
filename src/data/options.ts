@@ -32,6 +32,7 @@ export const FREE_SET_KEYS = [
   'contactChannels',
   'tradeStatus',
   'contactStatus',
+  'documentTypes',
 ] as const;
 export type FreeSetKey = (typeof FREE_SET_KEYS)[number];
 
@@ -102,6 +103,18 @@ const CONTACT_STATUS_LABELS = [
   'Abgelehnt',
 ];
 
+const DOCUMENT_TYPE_LABELS = [
+  'Angebot',
+  'Berechnung/Nachweis',
+  'Lieferschein',
+  'Vertrag/Auftrag',
+  'Datenblatt/Anleitung',
+  'Genehmigung/Behörde',
+  'Förderung',
+  'Gutachten/Bericht',
+  'Sonstiges',
+];
+
 /** entries for a list of labels, ids from the slugs (collisions get a suffix) */
 export function entriesFromLabels(labels: readonly string[]): OptionEntry[] {
   const entries: OptionEntry[] = [];
@@ -129,6 +142,7 @@ export const DEFAULT_OPTIONS: OptionSets = {
   contactChannels: entriesFromLabels(CONTACT_CHANNEL_LABELS),
   tradeStatus: entriesFromLabels(TRADE_STATUS_LABELS),
   contactStatus: entriesFromLabels(CONTACT_STATUS_LABELS),
+  documentTypes: entriesFromLabels(DOCUMENT_TYPE_LABELS),
 };
 
 /** ids the code compares against */
@@ -145,6 +159,8 @@ export const CHANNEL_CALL = 'anruf';
 export const CHANNEL_MESSAGE = 'nachricht';
 /** `people` offered as chips in every contact log, before anyone has been picked there */
 export const LOG_DEFAULT_PEOPLE = ['thomas', 'sarah', 'wolfgang', 'handwerker'];
+/** what a new document is filed as until someone picks a type */
+export const DOCUMENT_TYPE_DEFAULT = 'sonstiges';
 /** default status of a new trade */
 export const TRADE_STATUS_DEFAULT = 'noch-offen';
 
