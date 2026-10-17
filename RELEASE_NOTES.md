@@ -8,6 +8,11 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.90.1 – Fotos von anderen Geräten
+
+- Belegfotos gehen nicht mehr verloren, wenn die App gleich nach dem Speichern geschlossen wird.
+- Ein Foto, das das andere Telefon noch nicht hochgeladen hat, zeigt „Wartet auf anderes Gerät“ und groß das Vorschaubild.
+
 ## 0.90.0 – Dokumente
 
 - Neuer Bereich „Dokumente“ für Angebote, Berechnungen, Verträge, Datenblätter und andere PDFs oder Bilder.
