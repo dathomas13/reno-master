@@ -139,7 +139,7 @@ export function costTable(costs: readonly Cost[], context: TableContext): string
   }
 
   const escape = (cell: unknown) => `"${String(cell ?? '').replace(/"/g, '""')}"`;
-  return `﻿${[header, ...rows].map((row) => row.map(escape).join(';')).join('\r\n')}`;
+  return `\ufeff${[header, ...rows].map((row) => row.map(escape).join(';')).join('\r\n')}`;
 }
 
 /** `rechnungen-kfw-2026-11-10`: the filter in the name, so two exports do not get mixed up */

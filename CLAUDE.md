@@ -216,7 +216,7 @@ Steht:
   Set `documentTypes`. **Braucht eine Zeile in den Regeln der Konsole** (`match /documents/{doc}`), sonst zeigt
   der Bildschirm einen Hinweis. Lieferscheine sollen hier als Art `lieferschein` andocken, nicht in `photos`.
 
-- **Kennzeichen an Rechnungen** (0.91.0): Set `costMarks` (KfW, Absetzbar), Feld `marks` an der Rechnung,
+- **Kennzeichen an Rechnungen** (0.91.1): Set `costMarks` (KfW, Absetzbar), Feld `marks` an der Rechnung,
   im Editor nur unter „Weitere Angaben“. Filter-Chips über der Kostenliste erst, wenn eine Rechnung eines trägt.
   „Export“ gibt die gefilterte Liste als ZIP (CSV + nummerierte Belege) weiter, auch in der App
   (`src/data/costExport.ts`, `PLAN.md` 8.5). Die API kennt `marks` ebenfalls.

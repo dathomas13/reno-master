@@ -34,7 +34,7 @@ function receipt(partial: Partial<Photo>): Photo {
 
 function rows(csv: string): string[][] {
   return csv
-    .replace(/^﻿/, '')
+    .replace(/^\ufeff/, '')
     .split('\r\n')
     .map((line) => line.split(';').map((cell) => cell.replace(/^"|"$/g, '').replace(/""/g, '"')));
 }

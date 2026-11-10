@@ -9,7 +9,7 @@ Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Bui
 Commit-Nachricht, und die liest sich im Banner auch so.
 
 
-## 0.91.0 – Rechnungen für KfW und Steuer
+## 0.91.1 – Rechnungen für KfW und Steuer
 
 - Rechnungen lassen sich unter „Weitere Angaben“ als „KfW“ oder „Absetzbar“ kennzeichnen.
 - Sobald eine Rechnung so markiert ist, filtert ein Schalter über der Liste danach.

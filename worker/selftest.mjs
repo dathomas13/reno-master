@@ -363,7 +363,9 @@ check('Auswertung nach Gewerk', summary.status === 200 && elektrik?.total === 10
 check('Auswertung: offene Summe', summary.body.unpaid.count === 0 && summary.body.count === docs.size - [...docs.keys()].filter((k) => !k.startsWith('costs/')).length);
 const october = await call('GET', '/api/v1/costs/summary?groupBy=category&from=2026-10-01', readOnly);
 check('Auswertung ab Datum ohne die Septemberrechnung', october.body.count > 0 && !october.body.groups.some((g) => g.total >= 1000));
-check('Auswertung nach Monat chronologisch', (await call('GET', '/api/v1/costs/summary?groupBy=month', readOnly)).body.groups.map((g) => g.key).join() === '2026-09,2026-10');
+// ohne Datum angelegte Kosten landen im laufenden Monat, also nur den festen Monat und die Reihenfolge prüfen
+const months = (await call('GET', '/api/v1/costs/summary?groupBy=month', readOnly)).body.groups.map((g) => g.key);
+check('Auswertung nach Monat chronologisch', months.length === 2 && months[0] === '2026-09' && months[1] > '2026-09');
 check('unbekannte Gruppierung: 400', (await call('GET', '/api/v1/costs/summary?groupBy=farbe', readOnly)).status === 400);
 
 const found = await call('GET', '/api/v1/search?q=estrich', readOnly);
