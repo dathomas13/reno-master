@@ -3,9 +3,9 @@ import { PRESETS, PRESET_SECTIONS, findPreset } from '@/data/presets';
 import { OPTION_SET_KEYS } from '@/data/options';
 
 describe('presets', () => {
-  it('has the nineteen entries with unique keys', () => {
-    expect(PRESETS).toHaveLength(19);
-    expect(new Set(PRESETS.map((p) => p.key)).size).toBe(19);
+  it('has the twenty entries with unique keys', () => {
+    expect(PRESETS).toHaveLength(20);
+    expect(new Set(PRESETS.map((p) => p.key)).size).toBe(20);
   });
 
   it('every options preset names a set, and every set has exactly one preset', () => {
@@ -21,7 +21,7 @@ describe('presets', () => {
     expect(PRESETS.map((p) => p.key).sort()).toEqual(
       [
         'raeume', 'raumzuordnung', 'personen', 'wetter', 'phasen', 'phasenstatus', 'gewerke', 'gewerkstatus', 'dokumentarten',
-        'kategorien', 'zahlungsarten', 'bezahlt-von', 'zahlungsstatus', 'bereiche', 'aufgabenstatus',
+        'kategorien', 'kennzeichen', 'zahlungsarten', 'bezahlt-von', 'zahlungsstatus', 'bereiche', 'aufgabenstatus',
         'prioritaet', 'rollen', 'kontaktstatus', 'gespraechsarten',
       ].sort(),
     );
