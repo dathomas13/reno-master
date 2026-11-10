@@ -22,7 +22,9 @@ check('eine frisch signierte Adresse gilt', await validSignature(path, soon, sig
 check('abgelaufen gilt nicht', !(await validSignature(path, Date.now() - 1000, signature, secret)));
 check('anderer Pfad gilt nicht', !(await validSignature('photos/anders.jpg', soon, signature, secret)));
 check('anderes Geheimnis gilt nicht', !(await validSignature(path, soon, signature, 'falsch')));
-check('verfälschte Signatur gilt nicht', !(await validSignature(path, soon, signature.slice(0, -1) + '0', secret)));
+// das letzte Zeichen sicher ändern: endet die Signatur schon auf 0, wäre „+ '0'“ keine Verfälschung
+const tampered = signature.slice(0, -1) + (signature.endsWith('0') ? '1' : '0');
+check('verfälschte Signatur gilt nicht', !(await validSignature(path, soon, tampered, secret)));
 check('leere Signatur gilt nicht', !(await validSignature(path, soon, '', secret)));
 check('gleiche Eingabe, gleiche Signatur', (await sign(path, soon, secret)) === signature);
 

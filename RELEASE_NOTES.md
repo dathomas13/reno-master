@@ -10,7 +10,7 @@ Commit-Nachricht, und die liest sich im Banner auch so.
 
 
 
-## 0.91.3 – Nur noch „KfW“
+## 0.91.4 – Nur noch „KfW“
 
 - Bei Rechnungen gibt es unter „Weitere Angaben“ → „Förderung“ nur noch den Schalter „KfW“; „Absetzbar“ ist weg.
 ## 0.91.2 – Rechnungen für KfW und Steuer
