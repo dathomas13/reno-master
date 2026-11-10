@@ -365,7 +365,7 @@ export const OPTION_LABELS = {
   ],
   contactChannels: ['Anruf', 'Termin', 'E-Mail', 'Nachricht', 'Sonstiges'],
   contactStatus: ['Angefragt', 'Angebot erhalten', 'Beauftragt', 'Aktiv', 'Abgeschlossen', 'Abgelehnt'],
-  costMarks: ['KfW', 'Absetzbar'],
+  costMarks: ['KfW'],
 };
 /** feste Sets: die Kennungen stehen im Code, das Dokument benennt und sortiert nur */
 const FIXED_OPTION_SETS = ['taskStatus', 'priority', 'paymentStatus'];
@@ -1631,7 +1631,7 @@ const MCP_TOOLS = [
         vatRate: { type: 'number', enum: [0, 7, 19], description: 'MwSt.-Satz, nur wenn bekannt' },
         invoiceNumber: ref('Rechnungsnummer'),
         notes: ref('Anmerkungen'),
-        marks: refs('Kennzeichen, z. B. KfW oder Absetzbar (options.costMarks); nur wenn der Benutzer es sagt'),
+        marks: refs('Förderung, auf die die Rechnung angerechnet wird, z. B. KfW (options.costMarks); nur wenn der Benutzer es sagt'),
         id: ref('freiwillig: eigene id (8–40 Zeichen), macht eine Wiederholung unschädlich'),
       },
       required: ['amountGross'],

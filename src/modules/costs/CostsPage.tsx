@@ -70,7 +70,7 @@ export default function CostsPage() {
   const tradeFilter = params.get('gewerk');
   const markFilter = params.get('kennzeichen');
 
-  /** KfW, Absetzbar …: offered as a filter only once some cost carries it, so nobody sees it who does not use it */
+  /** KfW …: offered as a filter only once some cost carries it, so nobody sees it who does not use it */
   const marksInUse = useMemo(() => {
     const used = new Set(costs.flatMap((cost) => cost.marks ?? []));
     if (markFilter) used.add(markFilter);

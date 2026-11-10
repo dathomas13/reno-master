@@ -72,7 +72,7 @@ describe('planCostExport', () => {
   it('writes marks by name, counts missing receipts and sums up', () => {
     const plan = planCostExport({
       costs: [
-        cost({ id: 'a', amountGross: 119, amountNet: 100, vatAmount: 19, vatRate: 19, marks: ['kfw', 'absetzbar'] }),
+        cost({ id: 'a', amountGross: 119, amountNet: 100, vatAmount: 19, vatRate: 19, marks: ['kfw'] }),
         cost({ id: 'b', date: '2026-09-02', amountGross: 1000.5 }),
       ],
       photos: [],
@@ -82,7 +82,7 @@ describe('planCostExport', () => {
     expect(plan.withoutReceipt).toBe(2);
     const table = rows(plan.files[0]!.text!);
     const header = table[0]!;
-    expect(table[1]![header.indexOf('Kennzeichen')]).toBe('KfW, Absetzbar');
+    expect(table[1]![header.indexOf('Kennzeichen')]).toBe('KfW');
     expect(table[1]![header.indexOf('Beleg')]).toBe('kein Beleg');
     const sum = table.at(-1)!;
     expect(sum[header.indexOf('Brutto')]).toBe('1.119,50');

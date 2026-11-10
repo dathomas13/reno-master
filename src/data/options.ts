@@ -116,8 +116,8 @@ const DOCUMENT_TYPE_LABELS = [
   'Sonstiges',
 ];
 
-/** what a cost is kept as proof for; most costs carry none */
-const COST_MARK_LABELS = ['KfW', 'Absetzbar'];
+/** what a cost counts towards, e.g. the KfW grant; most costs carry none */
+const COST_MARK_LABELS = ['KfW'];
 
 /** entries for a list of labels, ids from the slugs (collisions get a suffix) */
 export function entriesFromLabels(labels: readonly string[]): OptionEntry[] {

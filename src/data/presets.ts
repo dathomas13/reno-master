@@ -61,7 +61,7 @@ export const PRESETS: PresetDef[] = [
   options('kategorien', 'costCategories', 'Kosten', 'Kategorien', 'Kostenkategorien', 'Kategorie'),
   options('zahlungsarten', 'paymentMethods', 'Kosten', 'Zahlungsarten', 'Wie bezahlt wurde', 'Zahlungsart'),
   options('bezahlt-von', 'payers', 'Kosten', 'Bezahlt von', 'Wer bezahlt hat', 'Eintrag'),
-  options('kennzeichen', 'costMarks', 'Kosten', 'Kennzeichen', 'Wofür eine Rechnung gebraucht wird: KfW, Steuer …', 'Kennzeichen'),
+  options('kennzeichen', 'costMarks', 'Kosten', 'Förderung', 'Worauf eine Rechnung angerechnet wird: KfW …', 'Kennzeichen'),
   options('zahlungsstatus', 'paymentStatus', 'Kosten', 'Zahlungsstatus', 'Zustände einer Zahlung', 'Status'),
   options('bereiche', 'taskAreas', 'Aufgaben', 'Bereiche', 'Bereiche der Aufgaben', 'Bereich'),
   options('aufgabenstatus', 'taskStatus', 'Aufgaben', 'Status', 'Zustände einer Aufgabe', 'Status'),

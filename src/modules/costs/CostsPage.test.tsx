@@ -89,7 +89,6 @@ describe('cost marks', () => {
     renderCosts();
 
     const chip = screen.getByRole('button', { name: 'KfW' });
-    expect(screen.queryByRole('button', { name: 'Absetzbar' })).not.toBeInTheDocument();
     expect(screen.getByText('Hornbach')).toBeInTheDocument();
 
     fireEvent.click(chip);

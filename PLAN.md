@@ -206,7 +206,7 @@ interface Cost {
   receiptPhotoIds: string[]; // photos/* mit kind='receipt' (Bilder ODER PDFs)
   extraction?: { engine: 'mlkit'|'claude'|'gemini'|'none'; rawText?: string; confidence?: number; at: string };
   notes?: string;
-  marks?: string[];          // Kennungen aus meta/options.costMarks (KfW, Absetzbar …); fehlt bei den meisten
+  marks?: string[];          // Kennungen aus meta/options.costMarks (KfW …); fehlt bei den meisten
 }
 ```
 
@@ -533,7 +533,8 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 
 ### 8.5 Kosten
 - **Liste**: absteigend nach Datum; Zeile: Datum, Händler, Beschreibung, Betrag brutto, Kategorie-Chip, Status-Punkt, Beleg-Icon. Summenleiste oben (Gesamt, gefiltert). Filter: Zeitraum (Monat/Jahr/frei), Kategorie, Gewerk, Raum, Status, bezahlt von. Suchfeld.
-- **Kennzeichen** (`marks`, Set `costMarks`, Start: KfW, Absetzbar): im Editor unter „Weitere Angaben“, in der
+- **Kennzeichen** (`marks`, Set `costMarks`, Start nur „KfW“ = für die Förderung anrechenbar; weitere über die
+  Voreinstellungen „Förderung“): im Editor als Feld „Förderung“ unter „Weitere Angaben“, in der
   Zeile als kleine Marke. Die Filter-Chips über der Liste (`?kennzeichen=<id>`) erscheinen erst, wenn eine
   Rechnung das Kennzeichen trägt – wer es nie benutzt, sieht nichts davon. Gilt für Liste und Übersicht;
   „Filter aufheben“ lässt es stehen, es hat seinen eigenen Schalter.

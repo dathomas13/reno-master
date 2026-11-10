@@ -129,8 +129,9 @@ describe('cost marks', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Weitere Angaben/ }));
     fireEvent.click(screen.getByRole('button', { name: 'KfW' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Absetzbar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Absetzbar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'KfW' }));
+    expect(screen.getByRole('button', { name: 'KfW', pressed: false })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'KfW' }));
     expect(screen.getByRole('button', { name: 'KfW', pressed: true })).toBeInTheDocument();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Speichern' })[0]);

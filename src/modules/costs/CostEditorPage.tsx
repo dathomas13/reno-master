@@ -378,7 +378,7 @@ function CostEditor() {
         </Field>
 
         <MoreFields filled={moreFilled}>
-          <Field label="Kennzeichen">
+          <Field label="Förderung">
             <OptionToggleChips setKey="costMarks" value={cost.marks} onChange={(value) => update({ marks: value })} />
           </Field>
 

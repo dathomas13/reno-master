@@ -185,7 +185,7 @@ Sammlungen: `costs`, `tasks`, `diary`, `notes`, `contacts`, `contactLogs`.
 Felder wie im Datenmodell (`PLAN.md`, Abschnitt 5), z. B. für Kosten `amountGross`
 (Pflicht, Zahl oder „12,40“), `vendor`, `description`, `category`, `date`, `paidBy`,
 `paymentMethod`, `paymentStatus`, `tradeId`, `vatRate`, `invoiceNumber`, `notes`,
-`marks` (Kennzeichen wie KfW oder Absetzbar).
+`marks` (Förderung, auf die die Rechnung angerechnet wird, z. B. KfW).
 Auswahlwerte gehen als Kennung **oder** Name (`"category": "Verpflegung Helfer"`);
 gespeichert wird immer die Kennung, Unbekanntes lehnt der Worker mit den möglichen Werten
 ab. Gewerke und Phasen auch über einen eindeutigen Namensteil (`"trade": "Elektrik"`).
