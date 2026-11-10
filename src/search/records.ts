@@ -189,6 +189,7 @@ export function buildRecords(source: SearchSource): SearchRecord[] {
         name('paymentStatus', cost.paymentStatus),
         name('payers', cost.paidBy),
         name('paymentMethods', cost.paymentMethod),
+        ...nameAll('costMarks', cost.marks),
         ...amountWords(cost.amountGross),
         tradeName.get(cost.tradeId ?? '') ?? '',
         ...roomWords(cost.roomIds, roomName, roomAliases),

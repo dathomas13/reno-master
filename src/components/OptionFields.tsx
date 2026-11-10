@@ -48,6 +48,36 @@ export function OptionChips({ setKey, value, onChange, allowEmpty = true }: Opti
   );
 }
 
+interface OptionToggleChipsProps {
+  setKey: OptionSetKey;
+  value: readonly string[] | undefined;
+  onChange(value: string[]): void;
+}
+
+/** any number of values out of a short option set, as chips that switch on and off; writes ids */
+export function OptionToggleChips({ setKey, value, onChange }: OptionToggleChipsProps) {
+  const stored = useMemo(() => [...(value ?? [])], [value]);
+  const { choices, selected } = useChoices(setKey, stored);
+  return (
+    <div className="flex flex-wrap gap-2">
+      {choices.map((entry) => {
+        const on = selected.includes(entry.id);
+        return (
+          <button
+            key={entry.id}
+            type="button"
+            aria-pressed={on}
+            className={`chip ${on ? 'chip-on' : ''} ${entry.archived ? 'opacity-70' : ''}`}
+            onClick={() => onChange(on ? selected.filter((id) => id !== entry.id) : [...selected, entry.id])}
+          >
+            {entry.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 interface OptionSelectProps {
   setKey: OptionSetKey;
   value: string | undefined;

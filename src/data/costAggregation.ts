@@ -96,28 +96,3 @@ export function budgetPerTrade(costs: Cost[], trades: Trade[]): TradeBudget[] {
     .filter((row) => row.actual > 0 || row.planned > 0)
     .sort((a, b) => b.actual - a.actual);
 }
-
-/** German CSV: semicolon separated, comma as the decimal mark, BOM for Excel */
-export function toCsv(
-  costs: Cost[],
-  formatAmount: (value: number) => string,
-  sets: OptionSets = DEFAULT_OPTIONS,
-): string {
-  const header = [
-    'Datum', 'Händler', 'Beschreibung', 'Kategorie', 'Brutto', 'Netto', 'MwSt-Satz', 'Status', 'Rechnungsnummer',
-  ];
-  const rows = costs.map((cost) => [
-    cost.date,
-    cost.vendor,
-    cost.description,
-    labelOf(sets.costCategories, cost.category),
-    formatAmount(cost.amountGross),
-    cost.amountNet !== undefined ? formatAmount(cost.amountNet) : '',
-    cost.vatRate ?? '',
-    labelOf(sets.paymentStatus, cost.paymentStatus),
-    cost.invoiceNumber ?? '',
-  ]);
-  const escape = (cell: unknown) => `"${String(cell ?? '').replace(/"/g, '""')}"`;
-  // \uFEFF is the byte order mark that makes Excel read the file as UTF-8
-  return `\ufeff${[header, ...rows].map((row) => row.map(escape).join(';')).join('\r\n')}`;
-}

@@ -365,6 +365,7 @@ export const OPTION_LABELS = {
   ],
   contactChannels: ['Anruf', 'Termin', 'E-Mail', 'Nachricht', 'Sonstiges'],
   contactStatus: ['Angefragt', 'Angebot erhalten', 'Beauftragt', 'Aktiv', 'Abgeschlossen', 'Abgelehnt'],
+  costMarks: ['KfW', 'Absetzbar'],
 };
 /** feste Sets: die Kennungen stehen im Code, das Dokument benennt und sortiert nur */
 const FIXED_OPTION_SETS = ['taskStatus', 'priority', 'paymentStatus'];
@@ -635,6 +636,7 @@ const SPECS = {
       paymentMethod: { parse: option('paymentMethods', 'paymentMethod') },
       invoiceNumber: { parse: textField('invoiceNumber', 100) },
       notes: { parse: textField('notes', 5000) },
+      marks: { parse: options('costMarks', 'marks'), empty: [] },
     },
     created: { receiptPhotoIds: [] },
     /** Netto und MwSt. folgen Brutto und Satz, wie im Kosten-Editor */
@@ -647,7 +649,7 @@ const SPECS = {
     check(merged) {
       if (!merged.vendor && !merged.description) throw new ApiError(400, 'vendor oder description angeben');
     },
-    foreign: ['paymentStatus', 'paidBy', 'paymentMethod'],
+    foreign: ['paymentStatus', 'paidBy', 'paymentMethod', 'marks'],
     appendTo: 'notes',
     search: ['vendor', 'description', 'notes', 'invoiceNumber'],
     title: (doc) => `${doc.vendor || doc.description || 'Kosten'} · ${doc.amountGross} €`,
@@ -1629,6 +1631,7 @@ const MCP_TOOLS = [
         vatRate: { type: 'number', enum: [0, 7, 19], description: 'MwSt.-Satz, nur wenn bekannt' },
         invoiceNumber: ref('Rechnungsnummer'),
         notes: ref('Anmerkungen'),
+        marks: refs('Kennzeichen, z. B. KfW oder Absetzbar (options.costMarks); nur wenn der Benutzer es sagt'),
         id: ref('freiwillig: eigene id (8–40 Zeichen), macht eine Wiederholung unschädlich'),
       },
       required: ['amountGross'],
@@ -1737,7 +1740,7 @@ const MCP_TOOLS = [
     scope: 'write',
     description:
       'Ändert einen Eintrag. Über diese Schnittstelle angelegte Einträge: alle Felder wie beim Anlegen (null leert ein Feld). ' +
-      'Einträge aus der App nur: Kosten paymentStatus, paidBy, paymentMethod; Aufgaben status, due, priority, assignees, reminderAt; ' +
+      'Einträge aus der App nur: Kosten paymentStatus, paidBy, paymentMethod, marks; Aufgaben status, due, priority, assignees, reminderAt; ' +
       'Notizen pinned; Kontakte phone, email, status – und überall appendText (hängt einen Absatz an Text oder Notizen an).',
     inputSchema: {
       type: 'object',

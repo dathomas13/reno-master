@@ -63,6 +63,12 @@ describe('countUsage', () => {
     expect(countUsage('contactChannels', { contactLogs: [{ channel: 'e-mail' }, { channel: 'e-mail' }] }).get('e-mail')).toBe(2);
   });
 
+  it('counts cost marks once per cost', () => {
+    const usage = countUsage('costMarks', { costs: [{ marks: ['kfw', 'kfw'] }, { marks: ['kfw', 'absetzbar'] }, {}] } as never);
+    expect(usage.get('kfw')).toBe(2);
+    expect(usage.get('absetzbar')).toBe(1);
+  });
+
   it('counts contact roles', () => {
     const usage = countUsage('contactRoles', { contacts: [{ roles: ['maler'] }, { roles: ['maler', 'notar'] }] });
     expect(usage.get('maler')).toBe(2);

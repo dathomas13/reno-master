@@ -11,7 +11,7 @@ import { PhotoAttach } from '@/modules/diary/PhotoAttach';
 import { useCollection, useDocument } from '@/data/hooks';
 import { useOptions } from '@/data/useOptions';
 import { findOptionByName, PAYMENT_OPEN, PAYMENT_PAID } from '@/data/options';
-import { OptionChips, OptionSelect } from '@/components/OptionFields';
+import { OptionChips, OptionSelect, OptionToggleChips } from '@/components/OptionFields';
 import { COL, type Cost, type Photo } from '@/data/types';
 import { emptyCost, saveCost, deleteCost } from '@/data/repos';
 import { parseAmount, formatAmount, splitGross, round2 } from '@/lib/money';
@@ -211,6 +211,7 @@ function CostEditor() {
 
   // what sits behind "Weitere Angaben" - "bezahlt" is the default and does not count
   const moreFilled = [
+    (cost.marks?.length ?? 0) > 0,
     cost.vatRate != null,
     cost.paymentStatus !== PAYMENT_PAID,
     !!cost.paidBy,
@@ -377,6 +378,10 @@ function CostEditor() {
         </Field>
 
         <MoreFields filled={moreFilled}>
+          <Field label="Kennzeichen">
+            <OptionToggleChips setKey="costMarks" value={cost.marks} onChange={(value) => update({ marks: value })} />
+          </Field>
+
           <Field label="MwSt">
             <div className="flex gap-2 items-center">
               {[19, 7, 0].map((rate) => (

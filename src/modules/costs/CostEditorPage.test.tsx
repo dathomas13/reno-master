@@ -121,3 +121,19 @@ describe('receipt attachment', () => {
     })));
   });
 });
+describe('cost marks', () => {
+  it('keeps the marks behind "Weitere Angaben" and saves them as ids', async () => {
+    render(<MemoryRouter><CostEditorPage /></MemoryRouter>);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Speichern' })).toHaveLength(2));
+    expect(screen.queryByRole('button', { name: 'KfW' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Weitere Angaben/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'KfW' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Absetzbar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Absetzbar' }));
+    expect(screen.getByRole('button', { name: 'KfW', pressed: true })).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Speichern' })[0]);
+    await waitFor(() => expect(mocks.saveCost).toHaveBeenCalledWith(expect.objectContaining({ marks: ['kfw'] })));
+  });
+});

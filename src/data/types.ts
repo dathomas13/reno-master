@@ -113,6 +113,8 @@ export interface Cost extends BaseDoc {
   receiptPhotoIds: string[];
   extraction?: CostExtraction;
   notes?: string;
+  /** ids of the `costMarks` set (KfW, Absetzbar …); missing on most costs */
+  marks?: string[];
 }
 
 export type TaskStatus = string;

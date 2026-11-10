@@ -33,6 +33,7 @@ export const FREE_SET_KEYS = [
   'tradeStatus',
   'contactStatus',
   'documentTypes',
+  'costMarks',
 ] as const;
 export type FreeSetKey = (typeof FREE_SET_KEYS)[number];
 
@@ -115,6 +116,9 @@ const DOCUMENT_TYPE_LABELS = [
   'Sonstiges',
 ];
 
+/** what a cost is kept as proof for; most costs carry none */
+const COST_MARK_LABELS = ['KfW', 'Absetzbar'];
+
 /** entries for a list of labels, ids from the slugs (collisions get a suffix) */
 export function entriesFromLabels(labels: readonly string[]): OptionEntry[] {
   const entries: OptionEntry[] = [];
@@ -143,6 +147,7 @@ export const DEFAULT_OPTIONS: OptionSets = {
   tradeStatus: entriesFromLabels(TRADE_STATUS_LABELS),
   contactStatus: entriesFromLabels(CONTACT_STATUS_LABELS),
   documentTypes: entriesFromLabels(DOCUMENT_TYPE_LABELS),
+  costMarks: entriesFromLabels(COST_MARK_LABELS),
 };
 
 /** ids the code compares against */

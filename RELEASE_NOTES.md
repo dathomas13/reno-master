@@ -8,6 +8,12 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+
+## 0.91.0 – Rechnungen für KfW und Steuer
+
+- Rechnungen lassen sich unter „Weitere Angaben“ als „KfW“ oder „Absetzbar“ kennzeichnen.
+- Sobald eine Rechnung so markiert ist, filtert ein Schalter über der Liste danach.
+- „Export“ gibt die gefilterte Liste samt Belegen als ZIP weiter – fertig für Bank oder Steuer, auch in der App.
 ## 0.90.1 – Fotos von anderen Geräten
 
 - Belegfotos gehen nicht mehr verloren, wenn die App gleich nach dem Speichern geschlossen wird.

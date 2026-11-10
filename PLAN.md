@@ -206,6 +206,7 @@ interface Cost {
   receiptPhotoIds: string[]; // photos/* mit kind='receipt' (Bilder ODER PDFs)
   extraction?: { engine: 'mlkit'|'claude'|'gemini'|'none'; rawText?: string; confidence?: number; at: string };
   notes?: string;
+  marks?: string[];          // Kennungen aus meta/options.costMarks (KfW, Absetzbar …); fehlt bei den meisten
 }
 ```
 
@@ -262,7 +263,7 @@ Seed (im Repo unter `src/data/seed/`, beim ersten App-Start eines eingeloggten N
 ```
 - **Kennung = Slug des Namens bei der Anlage** (`slugify`: klein, ä→ae, ß→ss, sonst `-`; Kollision `-2`, `-3`). Danach ändert sie sich nie, auch wenn der Eintrag umbenannt wird.
 - **Feste Sets** (die App rechnet mit ihnen): `taskStatus` (offen, in-arbeit, wartet-auf, erledigt), `phaseStatus` (geplant, in-arbeit, abgeschlossen, blockiert), `priority` (hoch, mittel, niedrig – Aufgaben und Gewerke), `paymentStatus` (offen, bezahlt, erstattet). Nur umbenennen und sortieren. Logik vergleicht ausschließlich über die Helfer und Konstanten in `src/data/options.ts` (`isTaskDone`, `isPhaseActive`, `isHighPriority`, `isPaid`, `hasAssignee`, `TASK_DONE` …), nie gegen Text.
-- **Freie Sets**: `people` (auch „Zuständig“), `weather`, `costCategories`, `taskAreas`, `contactRoles`, `paymentMethods`, `payers`, `contactChannels`, `tradeStatus`, `contactStatus`, `documentTypes`. Hinzufügen, umbenennen, sortieren, ausblenden (`archived`) statt löschen.
+- **Freie Sets**: `people` (auch „Zuständig“), `weather`, `costCategories`, `taskAreas`, `contactRoles`, `paymentMethods`, `payers`, `contactChannels`, `tradeStatus`, `contactStatus`, `documentTypes`, `costMarks`. Hinzufügen, umbenennen, sortieren, ausblenden (`archived`) statt löschen.
 - **Eigene Objekte** (Räume, Gewerke, Phasen, Kontakte) sind über ihre Dokument-id verknüpft; Löschen heißt dort ebenfalls ausblenden, endgültig nur ohne Verwendung.
 - **Lesen nur über die id**: `labelOf(entries, id)` zeigt den Namen (bei unbekannter id die id selbst), Gruppieren, Zählen und Filtern geschieht über die gespeicherte id. Ausgeblendete oder unbekannte gespeicherte Werte bleiben in den Auswahlfeldern sichtbar.
 - **Namen zu Kennung** (`findOptionByName`: Name oder dessen Slug) gibt es nur dort, wo ein Mensch oder eine Engine einen Namen liefert: das Beleg-Auslesen (Kategorie aus Text) und die Prüfung auf Duplikate beim Hinzufügen.
@@ -532,10 +533,19 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 
 ### 8.5 Kosten
 - **Liste**: absteigend nach Datum; Zeile: Datum, Händler, Beschreibung, Betrag brutto, Kategorie-Chip, Status-Punkt, Beleg-Icon. Summenleiste oben (Gesamt, gefiltert). Filter: Zeitraum (Monat/Jahr/frei), Kategorie, Gewerk, Raum, Status, bezahlt von. Suchfeld.
-- **Übersicht** (Tab): Summe gesamt; Balken nach Kategorie; Balken nach Monat; Tabelle Kategorie × Summe; optional Vergleich mit Gewerk-Budget (`trades.budgetPlanned` vs. Summe der Kosten mit `tradeId`). Export CSV (Semikolon, `de-DE`-Zahlen) über Web Share / Download.
+- **Kennzeichen** (`marks`, Set `costMarks`, Start: KfW, Absetzbar): im Editor unter „Weitere Angaben“, in der
+  Zeile als kleine Marke. Die Filter-Chips über der Liste (`?kennzeichen=<id>`) erscheinen erst, wenn eine
+  Rechnung das Kennzeichen trägt – wer es nie benutzt, sieht nichts davon. Gilt für Liste und Übersicht;
+  „Filter aufheben“ lässt es stehen, es hat seinen eigenen Schalter.
+- **Export** (Knopf „Export“, Browser und App): genau die gefilterte Liste als ZIP für Bank oder Steuer –
+  `Rechnungen.csv` (älteste zuerst, laufende Nummer, Netto/MwSt/Brutto, Kennzeichen, Summenzeile; Netto- und
+  MwSt-Summe nur, wenn jede Zeile sie hat) und `Belege/<Nr>_<Datum>_<Firma>.<ext>` mit derselben Nummer,
+  das Original, wo eines gesichert ist (`src/data/costExport.ts`). Ohne Belege nur die CSV. In der App über
+  das Teilen-Menü (`handOverFile`).
+- **Übersicht** (Tab): Summe gesamt; Balken nach Kategorie; Balken nach Monat; Tabelle Kategorie × Summe; optional Vergleich mit Gewerk-Budget (`trades.budgetPlanned` vs. Summe der Kosten mit `tradeId`).
 - **Editor**:
   - Oben **Beleg-Bereich**: Buttons "Foto aufnehmen", "Aus Galerie", "Datei (PDF)". Sobald ein Beleg hinzugefügt wurde und die Felder noch leer sind → automatisch `platform/ocr.extract(file)` starten – gleich nach der Duplikatprüfung, parallel zum Verkleinern und Speichern, nicht erst danach (Spinner "Beleg wird gelesen…"), Ergebnis in die Felder vorbefüllen, jedes vorbefüllte Feld mit dezentem Marker "automatisch erkannt" (Tippen entfernt Marker); nichts wird ohne Speichern übernommen. Button "Erneut auslesen" und Engine-Anzeige ("ML Kit" / "Claude" / "nicht verfügbar – Felder manuell ausfüllen").
-  - Felder: Datum, Händler, Beschreibung, Betrag brutto (numerisches Tastatur-Feld, Komma erlaubt), MwSt-Satz (19/7/0) → Netto/MwSt automatisch, Kategorie (Chips + Select), Gewerk, Räume, Status, bezahlt von, Zahlungsart, Rechnungsnummer, Notizen.
+  - Felder: Datum, Händler, Beschreibung, Betrag brutto (numerisches Tastatur-Feld, Komma erlaubt), MwSt-Satz (19/7/0) → Netto/MwSt automatisch, Kategorie (Chips + Select), Kennzeichen, Gewerk, Räume, Status, bezahlt von, Zahlungsart, Rechnungsnummer, Notizen.
   - Nach dem Auslesen stehen Datum, Betrag, Händler und Kategorie oben in einer **Prüfkarte** („Bitte prüfen“, größere Felder, Marke „erkannt“) mit **„Passt – speichern“**; MwSt, Status, Zahlungsart, Gewerk, Räume, Nummer und Notizen unter „Weitere Angaben“.
   - Mehrere Belege pro Kosteneintrag möglich (Vorder-/Rückseite).
 - Belege werden wie Fotos verkleinert (max. 2000 px, damit Text lesbar bleibt), PDFs unverändert gespeichert.

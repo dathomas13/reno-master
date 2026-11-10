@@ -5,14 +5,14 @@ import { EmptyState, Spinner } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { SectionTabs } from '@/components/SectionTabs';
 import { useRowActions } from '@/components/RowActions';
-import { useUndoableDelete } from '@/components/Toast';
+import { useToast, useUndoableDelete } from '@/components/Toast';
 import { deleteCost, saveCost } from '@/data/repos';
 import { useCollection } from '@/data/hooks';
-import { COL, type Cost, type Trade } from '@/data/types';
+import { COL, type Cost, type Photo, type Trade } from '@/data/types';
 import { useOptions } from '@/data/useOptions';
 import { isPaid } from '@/data/options';
-import { orderBy } from '@/firebase/db';
-import { formatEuro, formatAmount } from '@/lib/money';
+import { orderBy, where } from '@/firebase/db';
+import { formatEuro } from '@/lib/money';
 import { formatDate, monthKey, today } from '@/lib/date';
 import { useRooms } from '@/data/RoomsContext';
 import {
@@ -21,11 +21,13 @@ import {
   byMonth,
   totalForMonth,
   budgetPerTrade,
-  toCsv,
   NO_CATEGORY,
   sortNewestFirst,
 } from '@/data/costAggregation';
-import { isNative } from '@/platform';
+import { costExportBaseName, planCostExport } from '@/data/costExport';
+import { memoryTarget, writeArchive } from '@/data/runExport';
+import { readFromStorage } from '@/data/exportFiles';
+import { handOverFile } from '@/platform/shareFile';
 
 type Tab = 'liste' | 'uebersicht';
 /** key, sum, text to show */
@@ -38,8 +40,11 @@ export default function CostsPage() {
   const { data: rawCosts, loading } = useCollection<Cost>(COL.costs, [orderBy('date', 'desc')]);
   const costs = useMemo(() => sortNewestFirst(rawCosts), [rawCosts]);
   const { data: trades } = useCollection<Trade>(COL.trades);
+  // only the receipts, for the export; the diary photos are none of this page's business
+  const { data: receipts } = useCollection<Photo>(COL.photos, [where('kind', '==', 'receipt')]);
   const { shortLabel: roomLabel, matches } = useRooms();
-  const { sets, label } = useOptions();
+  const { sets, label, active } = useOptions();
+  const toast = useToast();
   // the view is part of the address, so Liste · Übersicht · Belege are tabs like elsewhere
   const tab: Tab = params.get('ansicht') === 'uebersicht' ? 'uebersicht' : 'liste';
   function tabTo(next: Tab): string {
@@ -49,16 +54,37 @@ export default function CostsPage() {
     const text = query.toString();
     return text ? `/kosten?${text}` : '/kosten';
   }
-  /** the filters go, the view stays */
+  /** the filters go, the view stays - and so does a mark, which has its own switch */
   function clearFilters() {
-    setParams(tab === 'uebersicht' ? { ansicht: 'uebersicht' } : {}, { replace: true });
+    const query = new URLSearchParams();
+    if (tab === 'uebersicht') query.set('ansicht', 'uebersicht');
+    const mark = params.get('kennzeichen');
+    if (mark) query.set('kennzeichen', mark);
+    setParams(query, { replace: true });
   }
   const [search, setSearch] = useState('');
+  const [exporting, setExporting] = useState<string | null>(null);
 
   const roomFilter = params.get('raum');
   const categoryFilter = params.get('kategorie');
   const tradeFilter = params.get('gewerk');
+  const markFilter = params.get('kennzeichen');
 
+  /** KfW, Absetzbar …: offered as a filter only once some cost carries it, so nobody sees it who does not use it */
+  const marksInUse = useMemo(() => {
+    const used = new Set(costs.flatMap((cost) => cost.marks ?? []));
+    if (markFilter) used.add(markFilter);
+    const known = active('costMarks').filter((entry) => used.has(entry.id));
+    const unknown = [...used].filter((id) => !known.some((entry) => entry.id === id));
+    return [...known.map((entry) => entry.id), ...unknown];
+  }, [costs, markFilter, active]);
+
+  function toggleMark(mark: string) {
+    const query = new URLSearchParams(params);
+    if (markFilter === mark) query.delete('kennzeichen');
+    else query.set('kennzeichen', mark);
+    setParams(query, { replace: true });
+  }
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -66,29 +92,68 @@ export default function CostsPage() {
       if (roomFilter && !matches(cost.roomIds, roomFilter)) return false;
       if (categoryFilter && (cost.category.trim() || NO_CATEGORY) !== categoryFilter) return false;
       if (tradeFilter && cost.tradeId !== tradeFilter) return false;
+      if (markFilter && !(cost.marks ?? []).includes(markFilter)) return false;
       if (!needle) return true;
-      return [cost.vendor, cost.description, label('costCategories', cost.category), cost.invoiceNumber]
+      return [
+        cost.vendor,
+        cost.description,
+        label('costCategories', cost.category),
+        cost.invoiceNumber,
+        ...(cost.marks ?? []).map((mark) => label('costMarks', mark)),
+      ]
         .join(' ')
         .toLowerCase()
         .includes(needle);
     });
-  }, [costs, search, roomFilter, categoryFilter, tradeFilter, matches, label]);
+  }, [costs, search, roomFilter, categoryFilter, tradeFilter, markFilter, matches, label]);
 
   const total = sumGross(filtered);
   const thisMonth = totalForMonth(costs, monthKey(today()));
   const categories = useMemo(() => byCategory(filtered, sets), [filtered, sets]);
   const months = useMemo(() => byMonth(filtered), [filtered]);
   const tradeBudgets = useMemo(() => budgetPerTrade(filtered, trades), [filtered, trades]);
-  const canDownloadCsv = !isNative();
 
-  function exportCsv() {
-    const blob = new Blob([toCsv(filtered, formatAmount, sets)], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `kosten-${today()}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  /** what is on screen goes out: the table plus the receipts, numbered alike - for the bank or the tax adviser */
+  async function exportList() {
+    if (exporting || filtered.length === 0) return;
+    const plan = planCostExport({ costs: filtered, photos: receipts, trades, sets });
+    const base = costExportBaseName(today(), markFilter ? label('costMarks', markFilter) : undefined);
+    setExporting('Export…');
+    try {
+      let skipped = 0;
+      let name = `${base}.csv`;
+      let data: Uint8Array;
+      let mime = 'text/csv';
+      if (plan.receiptCount === 0) {
+        data = new TextEncoder().encode(plan.files[0]!.text ?? '');
+      } else {
+        const target = memoryTarget();
+        const result = await writeArchive(
+          plan,
+          target,
+          (progress) => setExporting(`Belege ${Math.max(progress.done - 1, 0)}/${plan.receiptCount}…`),
+          readFromStorage,
+        );
+        skipped = result.skipped.length;
+        data = new Uint8Array(await target.result()!.arrayBuffer());
+        name = `${base}.zip`;
+        mime = 'application/zip';
+      }
+      const how = await handOverFile(name, data, mime, 'Rechnungen weitergeben');
+      if (how === 'cancelled') return;
+      const notes = [
+        plan.withoutReceipt > 0 ? `${plan.withoutReceipt} ohne Beleg` : '',
+        skipped > 0 ? `${skipped} ${skipped === 1 ? 'Beleg' : 'Belege'} nicht geladen` : '',
+      ].filter(Boolean);
+      toast(
+        `${filtered.length} ${filtered.length === 1 ? 'Rechnung' : 'Rechnungen'} exportiert` +
+          (notes.length > 0 ? ` – ${notes.join(', ')}` : ''),
+      );
+    } catch (cause) {
+      toast(`Export fehlgeschlagen: ${cause instanceof Error ? cause.message : 'unbekannter Fehler'}`);
+    } finally {
+      setExporting(null);
+    }
   }
 
   return (
@@ -113,14 +178,29 @@ export default function CostsPage() {
         ]}
       />
 
-      {canDownloadCsv && (
-        <div className="flex justify-end px-3 pt-2">
-          <button type="button" className="btn btn-ghost px-3 min-h-10 text-sm" onClick={exportCsv}>
-            CSV-Export
-          </button>
+      <div className="flex items-center gap-2 px-3 pt-2 pb-3">
+        <div className="flex flex-wrap gap-2 flex-1 min-w-0">
+          {marksInUse.map((mark) => (
+            <button
+              key={mark}
+              type="button"
+              aria-pressed={markFilter === mark}
+              className={`chip ${markFilter === mark ? 'chip-on' : ''}`}
+              onClick={() => toggleMark(mark)}
+            >
+              {label('costMarks', mark)}
+            </button>
+          ))}
         </div>
-      )}
-      <div className="h-3" />
+        <button
+          type="button"
+          className="btn btn-ghost px-3 min-h-10 text-sm shrink-0"
+          onClick={() => void exportList()}
+          disabled={Boolean(exporting) || filtered.length === 0}
+        >
+          {exporting ?? 'Export'}
+        </button>
+      </div>
 
       {(roomFilter || categoryFilter || tradeFilter) && (
         <div className="px-3 pb-2">
@@ -189,6 +269,14 @@ export default function CostsPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium truncate">{cost.vendor || 'ohne Händler'}</span>
+                      {(cost.marks ?? []).map((mark) => (
+                        <span
+                          key={mark}
+                          className="shrink-0 rounded border border-accent/40 px-1 text-[10px] leading-4 font-semibold text-accent"
+                        >
+                          {label('costMarks', mark)}
+                        </span>
+                      ))}
                       {cost.receiptPhotoIds.length > 0 && (
                         <span className="text-muted shrink-0" title="Mit Beleg">
                           <Icon name="paperclip" className="w-4 h-4" />
@@ -226,7 +314,7 @@ export default function CostsPage() {
           <Bars
             title="Nach Kategorie"
             rows={categories.map((bucket) => [bucket.key, bucket.total, bucket.label ?? bucket.key] as BarRow)}
-            onPick={(key) => setParams({ ansicht: 'uebersicht', kategorie: key })}
+            onPick={(key) => setParams({ ansicht: 'uebersicht', kategorie: key, ...(markFilter ? { kennzeichen: markFilter } : {}) })}
           />
           <Bars title="Nach Monat" rows={months.map((bucket) => [bucket.key, bucket.total, bucket.key] as BarRow)} />
 

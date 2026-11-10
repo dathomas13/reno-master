@@ -5,11 +5,9 @@ import {
   byMonth,
   totalForMonth,
   budgetPerTrade,
-  toCsv,
   sortNewestFirst,
   NO_CATEGORY,
 } from '@/data/costAggregation';
-import { formatAmount } from '@/lib/money';
 import { DEFAULT_OPTIONS } from '@/data/options';
 import type { Cost, Trade } from '@/data/types';
 
@@ -139,15 +137,5 @@ describe('budgetPerTrade', () => {
   it('drops trades without budget and without spending', () => {
     const empty: Trade = { id: 't2', name: 'Maler', status: 'noch-offen', priority: 'niedrig' };
     expect(budgetPerTrade([], [empty])).toHaveLength(0);
-  });
-});
-
-describe('toCsv', () => {
-  it('writes a German CSV Excel can open', () => {
-    const csv = toCsv([cost({ date: '2026-09-01', amountGross: 1234.5, vendor: 'Bau "Meier"' })], formatAmount);
-    expect(csv.startsWith('\ufeff')).toBe(true);
-    expect(csv).toContain('"1.234,50"');
-    expect(csv).toContain('"Bau ""Meier"""');
-    expect(csv.split('\r\n')).toHaveLength(2);
   });
 });

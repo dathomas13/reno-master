@@ -16,7 +16,7 @@ import {
 
 export interface UsageSources {
   diary?: Pick<DiaryEntry, 'present' | 'weather'>[];
-  costs?: Pick<Cost, 'category' | 'paymentStatus' | 'paidBy' | 'paymentMethod'>[];
+  costs?: Pick<Cost, 'category' | 'paymentStatus' | 'paidBy' | 'paymentMethod' | 'marks'>[];
   tasks?: Pick<Task, 'status' | 'priority' | 'area' | 'assignees'>[];
   contacts?: Pick<Contact, 'roles' | 'status'>[];
   contactLogs?: Pick<ContactLog, 'channel' | 'participants'>[];
@@ -59,6 +59,9 @@ export function countUsage(
       break;
     case 'paymentMethods':
       sources.costs?.forEach((cost) => bumpOne(cost.paymentMethod));
+      break;
+    case 'costMarks':
+      sources.costs?.forEach((cost) => bumpEach(cost.marks));
       break;
     case 'paymentStatus':
       sources.costs?.forEach((cost) => bumpOne(cost.paymentStatus));

@@ -1,9 +1,9 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import CostsPage from './CostsPage';
 
-const mocks = vi.hoisted(() => ({ native: false }));
+const mocks = vi.hoisted(() => ({ costs: [] as unknown[] }));
 
 vi.mock('@/components/TopBar', () => ({
   TopBar: ({ title, action }: { title: string; action?: React.ReactNode }) => (
@@ -14,7 +14,7 @@ vi.mock('@/components/TopBar', () => ({
   ),
 }));
 vi.mock('@/data/hooks', () => ({
-  useCollection: () => ({ data: [], loading: false }),
+  useCollection: (name: string) => ({ data: name === 'costs' ? mocks.costs : [], loading: false }),
 }));
 vi.mock('@/data/useOptions', async () => {
   const options = await import('@/data/options');
@@ -27,7 +27,9 @@ vi.mock('@/data/useOptions', async () => {
   };
   return { useOptions: () => value };
 });
-vi.mock('@/firebase/db', () => ({ orderBy: vi.fn() }));
+vi.mock('@/firebase/db', () => ({ orderBy: vi.fn(), where: vi.fn() }));
+vi.mock('@/data/exportFiles', () => ({ readFromStorage: vi.fn() }));
+vi.mock('@/platform/shareFile', () => ({ handOverFile: vi.fn() }));
 vi.mock('@/data/repos', () => ({ deleteCost: vi.fn(), saveCost: vi.fn() }));
 vi.mock('@/data/RoomsContext', () => ({
   useRooms: () => ({
@@ -38,10 +40,9 @@ vi.mock('@/data/RoomsContext', () => ({
     writeId: (id: string) => id,
   }),
 }));
-vi.mock('@/platform', () => ({ isNative: () => mocks.native }));
 
 beforeEach(() => {
-  mocks.native = false;
+  mocks.costs = [];
 });
 afterEach(cleanup);
 
@@ -53,18 +54,48 @@ function renderCosts() {
   );
 }
 
-describe('cost CSV export', () => {
-  it('shows the CSV download in the browser', () => {
+function cost(id: string, vendor: string, marks?: string[]) {
+  return {
+    id, vendor, marks, date: '2026-09-01', description: '', amountGross: 10, category: '',
+    roomIds: [], paymentStatus: 'bezahlt', receiptPhotoIds: [],
+  };
+}
+
+describe('cost export', () => {
+  it('offers the export in the browser and in the app alike', () => {
+    mocks.costs = [cost('a', 'Hornbach')];
     renderCosts();
 
-    expect(screen.getByRole('button', { name: 'CSV-Export' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export' })).toBeEnabled();
   });
 
-  it('hides the CSV download in the app', () => {
-    mocks.native = true;
-
+  it('has nothing to export in an empty list', () => {
     renderCosts();
 
-    expect(screen.queryByRole('button', { name: 'CSV-Export' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export' })).toBeDisabled();
+  });
+});
+
+describe('cost marks', () => {
+  it('shows no mark filter while no cost carries a mark', () => {
+    mocks.costs = [cost('a', 'Hornbach')];
+    renderCosts();
+
+    expect(screen.queryByRole('button', { name: 'KfW' })).not.toBeInTheDocument();
+  });
+
+  it('filters by a mark once one is in use', () => {
+    mocks.costs = [cost('a', 'Hornbach'), cost('b', 'Fenster Müller', ['kfw'])];
+    renderCosts();
+
+    const chip = screen.getByRole('button', { name: 'KfW' });
+    expect(screen.queryByRole('button', { name: 'Absetzbar' })).not.toBeInTheDocument();
+    expect(screen.getByText('Hornbach')).toBeInTheDocument();
+
+    fireEvent.click(chip);
+
+    expect(screen.getByRole('button', { name: 'KfW', pressed: true })).toBeInTheDocument();
+    expect(screen.queryByText('Hornbach')).not.toBeInTheDocument();
+    expect(screen.getByText('Fenster Müller')).toBeInTheDocument();
   });
 });
