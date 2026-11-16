@@ -8,7 +8,9 @@ Stichpunkte von je ein bis zwei Zeilen. Keine Begründungen, keine Dateinamen, k
 Testzahlen – das gehört in den Commit. Fehlt eine Version hier, nimmt der Build die
 Commit-Nachricht, und die liest sich im Banner auch so.
 
+## 0.92.0 – Grundrisse als PDF
 
+- Neu in jedem Grundriss: „PDF“ oben rechts. Der Plan kommt maßstäblich aufs Blatt (A4 in 1:100, größere Formate bis A1) und lässt sich speichern, drucken oder verschicken.
 
 ## 0.91.4 – Nur noch „KfW“
 

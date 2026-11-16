@@ -187,6 +187,9 @@ Steht:
   Löschen, Zurück oder Umschalten zu erfinden. Offen und bewusst nicht begonnen: ein heller Modus.
 - **Maßband im 3D** (0.86.0): Chip „Messen“, freie Strecken zwischen zwei Punkten mit Einrasten an Ecken
   und Lupe beim Ziehen am Telefon. Regeln in `PLAN.md` 8.3.
+- **Grundrisse als PDF** (0.92.0): Plan öffnen → „PDF“, maßstäblich auf A4–A1 (`modules/plans/planPdf.ts`,
+  eigener Vektor-Schreiber ohne Bibliothek). Neue Klassen in `plansSvg.ts` dort in `SHAPE_STYLES`/`TEXT_STYLES`
+  nachtragen, sonst fehlen sie im PDF – der Test meldet es. Details in `PLAN.md` 8.4.
 - `public/img/nordansicht.jpg` liegt im Repo.
 - Das Bautagebuch ist vollständig in der App. Einträge entstehen dort oder über die API
   (nächster Punkt); einen Datei-Import von außen gibt es nicht mehr.

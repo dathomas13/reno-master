@@ -1,5 +1,5 @@
 /**
- * Hands a small generated file to the user - the model export.
+ * Hands a small generated file to the user - the model export, a plan as PDF.
  *
  * In the browser a download does it. In the Android app a blob download goes nowhere, so
  * the file is written to the app's cache and offered through the system share sheet:
@@ -56,7 +56,7 @@ export async function handOverFile(
       const message = error instanceof Error ? error.message : String(error);
       // closing the share sheet is not a failure
       if (/cancel/i.test(message)) return 'cancelled';
-      debugLog('modell-export', `Teilen fehlgeschlagen, weiter mit Ordnerwahl: ${message}`);
+      debugLog('datei-teilen', `${name}: Teilen fehlgeschlagen, weiter mit Ordnerwahl: ${message}`);
     }
   }
 

@@ -11,6 +11,8 @@ import { resolveFileUrl } from '@/offline/fileUrls';
 import { RoomPanel } from '@/modules/viewer3d/RoomPanel';
 import type { Room } from '@/modules/viewer3d/houseScene';
 import { setOpenRoom } from '@/lib/openRoom';
+import { Icon } from '@/components/Icon';
+import { PlanPdfSheet } from './PlanPdfSheet';
 
 export default function PlanViewPage() {
   const { id } = useParams();
@@ -21,6 +23,7 @@ export default function PlanViewPage() {
   const [svg, setSvg] = useState<string | null>(null);
   const [roomById, setRoomById] = useState<Map<string, Room>>(new Map());
   const [room, setRoom] = useState<Room | null>(null);
+  const [pdfOpen, setPdfOpen] = useState(false);
   // the capture button files new entries under the room shown here
   useEffect(() => {
     setOpenRoom(room?.id ?? null);
@@ -96,7 +99,19 @@ export default function PlanViewPage() {
   // room panel and the lower edge of the drawing sit underneath the bar
   return (
     <div className="h-[calc(100dvh-64px-env(safe-area-inset-bottom))] md:h-screen flex flex-col">
-      <TopBar title={plan.title} back="/plaene" />
+      <TopBar
+        title={plan.title}
+        back="/plaene"
+        action={
+          svg ? (
+            <button type="button" className="btn px-3 min-h-11" onClick={() => setPdfOpen(true)}>
+              <Icon name="share" className="w-5 h-5" />
+              PDF
+            </button>
+          ) : undefined
+        }
+      />
+      {svg && <PlanPdfSheet open={pdfOpen} onClose={() => setPdfOpen(false)} svg={svg} title={plan.title} />}
       <div className="flex-1 min-h-0 relative bg-bg">
         {svg && (
           <ZoomPan className="w-full h-full">

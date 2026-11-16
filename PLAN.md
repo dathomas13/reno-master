@@ -530,6 +530,16 @@ Der Viewer aus `viewer_template.html` wird **funktionsgleich** nach React/TypeSc
 - Upload: Datei (PDF/PNG/JPG, max. 30 MB), Titel, Geschoss, Variante, Notiz → Outbox → Storage `plans/{id}.ext`. Kamera-Aufnahme (Plan abfotografieren) ebenfalls möglich.
 - Schalter "Offline verfügbar" pro Upload (Abschnitt 7.4). Gebündelte SVGs immer offline.
 - SVG-Generierung: `tools/model/build_plans_svg.py` (Abschnitt 9.3).
+- **Als PDF** (0.92.0): Knopf „PDF“ in der Kopfzeile eines generierten Plans, Sheet mit Papierformat A4/A3/A2/A1
+  (gemerkt im localStorage). `modules/plans/planPdf.ts` schreibt das PDF selbst, ohne Bibliothek: es liest
+  genau die Elemente, die `plansSvg.ts` schreibt (rect, line, path mit M/l/z, text mit rotate und textLength),
+  und zeichnet sie als Vektoren mit den PDF-Grundschriften Helvetica/Helvetica-Bold (WinAnsi, nichts
+  eingebettet). Farben und Größen stehen dort ein zweites Mal (`SHAPE_STYLES`, `TEXT_STYLES`); **eine neue
+  Klasse in `plansSvg.ts` muss dort nachgetragen werden**, der Test prüft das an den Referenz-SVGs. Maßstab ist
+  der größte übliche (1:20 … 1:1000), bei dem das ganze Blatt passt, Hoch- oder Querformat nach dem größeren
+  Maßstab; ein Geschoss kommt auf A4/A3 in 1:100, auf A2 in 1:50. Unter der Zeichnung steht „Maßstab 1:100 · A4 ·
+  erstellt am …“. Übergabe wie beim Modell-Export (`platform/shareFile.ts`): Download im Browser, Teilen-Menü
+  in der App. Hochgeladene Pläne sind schon Dateien und haben den Knopf nicht; Möbel kennt das PDF noch nicht.
 
 ### 8.5 Kosten
 - **Liste**: absteigend nach Datum; Zeile: Datum, Händler, Beschreibung, Betrag brutto, Kategorie-Chip, Status-Punkt, Beleg-Icon. Summenleiste oben (Gesamt, gefiltert). Filter: Zeitraum (Monat/Jahr/frei), Kategorie, Gewerk, Raum, Status, bezahlt von. Suchfeld.
